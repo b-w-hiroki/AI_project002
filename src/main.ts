@@ -1,5 +1,9 @@
 import Phaser from "phaser";
-import { GameScene } from "./scenes/GameScene";
+import { initCrazyGames } from "./platform/crazygames";
+import { IdleScene } from "./scenes/IdleScene";
+
+// CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
+void initCrazyGames();
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -11,5 +15,5 @@ new Phaser.Game({
     default: "arcade",
     arcade: { gravity: { x: 0, y: 0 } },
   },
-  scene: [GameScene],
+  scene: [IdleScene],
 });
