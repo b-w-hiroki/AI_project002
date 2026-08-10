@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GameScene } from "./scenes/GameScene";
+import { IdleScene } from "./scenes/IdleScene";
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -11,5 +11,5 @@ new Phaser.Game({
     default: "arcade",
     arcade: { gravity: { x: 0, y: 0 } },
   },
-  scene: [GameScene],
+  scene: [IdleScene],
 });
