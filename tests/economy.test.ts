@@ -3,11 +3,15 @@ import {
   applyOfflineProgress,
   buyGenerator,
   click,
+  essenceMultiplier,
+  essenceOnPrestige,
   formatNumber,
   GENERATORS,
   generatorCost,
   newGame,
   OFFLINE_CAP_SEC,
+  prestige,
+  PRESTIGE_UNLOCK,
   productionPerSec,
   tick,
 } from "../src/logic/economy";
@@ -106,5 +110,45 @@ describe("formatNumber", () => {
   it("K/M表記", () => {
     expect(formatNumber(1500)).toBe("1.5K");
     expect(formatNumber(2_300_000)).toBe("2.3M");
+  });
+});
+
+describe("prestige", () => {
+  it("100万未満では転生できない", () => {
+    const s = { ...newGame(), totalBrewed: PRESTIGE_UNLOCK - 1 };
+    expect(essenceOnPrestige(s)).toBe(0);
+    expect(prestige(s)).toBeNull();
+  });
+
+  it("100万でエッセンス1、400万で2（平方根スケール）", () => {
+    expect(essenceOnPrestige({ ...newGame(), totalBrewed: PRESTIGE_UNLOCK })).toBe(1);
+    expect(essenceOnPrestige({ ...newGame(), totalBrewed: PRESTIGE_UNLOCK * 4 })).toBe(2);
+  });
+
+  it("転生で進行がリセットされエッセンスが積み上がる", () => {
+    const s = {
+      ...newGame(),
+      potions: 999,
+      totalBrewed: PRESTIGE_UNLOCK * 4,
+      essence: 3,
+      prestigeCount: 1,
+      counts: { ...newGame().counts, apprentice: 10 },
+    };
+    const next = prestige(s)!;
+    expect(next.potions).toBe(0);
+    expect(next.counts["apprentice"]).toBe(0);
+    expect(next.essence).toBe(5);
+    expect(next.prestigeCount).toBe(2);
+  });
+
+  it("エッセンスで生産とクリックが+10%/個される", () => {
+    const s = {
+      ...newGame(),
+      essence: 5,
+      counts: { ...newGame().counts, apprentice: 2 }, // base 1/sec
+    };
+    expect(essenceMultiplier(s)).toBeCloseTo(1.5);
+    expect(productionPerSec(s)).toBeCloseTo(1.5);
+    expect(click({ ...newGame(), essence: 5 }).potions).toBeCloseTo(1.5);
   });
 });

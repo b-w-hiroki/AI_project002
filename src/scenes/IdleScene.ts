@@ -3,11 +3,15 @@ import {
   applyOfflineProgress,
   buyGenerator,
   click,
+  essenceMultiplier,
+  essenceOnPrestige,
   formatNumber,
   GameState,
   GENERATORS,
   generatorCost,
   newGame,
+  prestige,
+  PRESTIGE_UNLOCK,
   productionPerSec,
   tick,
 } from "../logic/economy";
@@ -17,15 +21,18 @@ import { cg } from "../platform/crazygames";
 
 const SAVE_INTERVAL_MS = 5_000;
 
-/** ポーション工房 — 放置ゲーム MVP のメイン画面 */
+/** ポーション工房 — メイン画面 */
 export class IdleScene extends Phaser.Scene {
   private state: GameState = newGame();
   private lang: Lang = detectLang(navigator.language);
   private titleText!: Phaser.GameObjects.Text;
   private potionText!: Phaser.GameObjects.Text;
   private rateText!: Phaser.GameObjects.Text;
+  private essenceText!: Phaser.GameObjects.Text;
   private brewText!: Phaser.GameObjects.Text;
   private langText!: Phaser.GameObjects.Text;
+  private prestigeButton!: Phaser.GameObjects.Rectangle;
+  private prestigeText!: Phaser.GameObjects.Text;
   private welcomeText?: Phaser.GameObjects.Text;
   private welcomeGained = 0;
   private rows: {
@@ -49,9 +56,24 @@ export class IdleScene extends Phaser.Scene {
       if (gained >= 1) {
         this.welcomeGained = gained;
         this.welcomeText = this.add
-          .text(400, 570, "", { fontSize: "14px", color: "#ffd166" })
+          .text(400, 585, "", { fontSize: "14px", color: "#ffd166" })
           .setOrigin(0.5);
       }
+    }
+
+    // 背景の雰囲気（ゆっくり明滅する泡）
+    for (let i = 0; i < 14; i++) {
+      const x = Phaser.Math.Between(20, 780);
+      const y = Phaser.Math.Between(120, 560);
+      const bubble = this.add.circle(x, y, Phaser.Math.Between(2, 5), 0x4ecca3, 0.15);
+      this.tweens.add({
+        targets: bubble,
+        y: y - Phaser.Math.Between(30, 80),
+        alpha: 0,
+        duration: Phaser.Math.Between(4000, 9000),
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 4000),
+      });
     }
 
     this.titleText = this.add
@@ -63,6 +85,9 @@ export class IdleScene extends Phaser.Scene {
     this.rateText = this.add
       .text(400, 98, "", { fontSize: "14px", color: "#8888aa" })
       .setOrigin(0.5);
+    this.essenceText = this.add
+      .text(20, 20, "", { fontSize: "15px", color: "#d9a7ff" })
+      .setOrigin(0, 0);
 
     // 言語切り替えボタン（右上）
     const langButton = this.add
@@ -77,7 +102,7 @@ export class IdleScene extends Phaser.Scene {
       this.refreshStaticTexts();
     });
 
-    // 調合ボタン（クリックで生産）
+    // 調合ボタン
     const brew = this.add
       .circle(180, 300, 80, 0x7b2cbf)
       .setInteractive({ useHandCursor: true });
@@ -85,28 +110,53 @@ export class IdleScene extends Phaser.Scene {
       .text(180, 300, "", { fontSize: "24px", color: "#ffffff" })
       .setOrigin(0.5);
     brew.on("pointerdown", () => {
+      const gain = this.state.clickPower * essenceMultiplier(this.state);
       this.state = click(this.state);
       this.tweens.add({ targets: brew, scale: 0.92, duration: 60, yoyo: true });
+      this.spawnFloatingText(180, 210, `+${formatNumber(gain)}`, "#4ecca3");
     });
 
     // 設備購入ボタン
     GENERATORS.forEach((g, i) => {
-      const y = 170 + i * 70;
+      const y = 150 + i * 66;
       const button = this.add
-        .rectangle(560, y, 400, 56, 0x2a2a4a)
+        .rectangle(560, y, 400, 54, 0x2a2a4a)
         .setStrokeStyle(2, 0x44446a)
         .setInteractive({ useHandCursor: true });
       const label = this.add
-        .text(370, y - 18, "", { fontSize: "15px", color: "#ccccdd" })
+        .text(370, y - 17, "", { fontSize: "15px", color: "#ccccdd" })
         .setOrigin(0, 0);
       button.on("pointerdown", () => {
         const next = buyGenerator(this.state, g.id);
         if (next) {
           this.state = next;
           cg.happytime();
+          this.tweens.add({ targets: [button, label], scaleX: 1.03, duration: 70, yoyo: true });
+          this.spawnFloatingText(560, y - 34, `${generatorName(this.lang, g.id)} +1`, "#ffd166");
         }
       });
       this.rows.push({ id: g.id, button, label });
+    });
+
+    // 転生ボタン（下部中央）
+    this.prestigeButton = this.add
+      .rectangle(180, 470, 280, 48, 0x3a2a5a)
+      .setStrokeStyle(2, 0x7b2cbf)
+      .setInteractive({ useHandCursor: true });
+    this.prestigeText = this.add
+      .text(180, 470, "", { fontSize: "14px", color: "#d9a7ff" })
+      .setOrigin(0.5);
+    this.prestigeButton.on("pointerdown", () => {
+      const gained = essenceOnPrestige(this.state);
+      if (gained <= 0) return;
+      if (!window.confirm(t(this.lang, "prestigeConfirm", { n: formatNumber(gained) }))) return;
+      const next = prestige(this.state);
+      if (next) {
+        this.state = next;
+        save(this.state, localStorage, Date.now());
+        cg.happytime();
+        this.cameras.main.flash(600, 217, 167, 255);
+      }
     });
 
     this.refreshStaticTexts();
@@ -123,6 +173,20 @@ export class IdleScene extends Phaser.Scene {
       this.lastSave = 0;
       save(this.state, localStorage, Date.now());
     }
+  }
+
+  /** クリック位置から浮かんで消えるテキスト演出 */
+  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    const obj = this.add
+      .text(x + Phaser.Math.Between(-20, 20), y, text, { fontSize: "16px", color })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 50,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => obj.destroy(),
+    });
   }
 
   /** 言語に依存する固定文言を更新 */
@@ -142,6 +206,25 @@ export class IdleScene extends Phaser.Scene {
     this.rateText.setText(
       `${formatNumber(productionPerSec(this.state))} ${t(this.lang, "perSec")}`,
     );
+
+    const bonusPct = Math.round(this.state.essence * 10);
+    this.essenceText.setText(
+      this.state.essence > 0
+        ? `${t(this.lang, "essence")} ${formatNumber(this.state.essence)}\n${t(this.lang, "essenceBonus", { n: bonusPct.toString() })}`
+        : "",
+    );
+
+    const gained = essenceOnPrestige(this.state);
+    if (gained > 0) {
+      this.prestigeText.setText(t(this.lang, "prestige", { n: formatNumber(gained) }));
+      this.prestigeButton.setFillStyle(0x5a3a8a);
+    } else {
+      this.prestigeText.setText(
+        t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }),
+      );
+      this.prestigeButton.setFillStyle(0x3a2a5a);
+    }
+
     for (const row of this.rows) {
       const def = GENERATORS.find((g) => g.id === row.id)!;
       const count = this.state.counts[row.id] ?? 0;

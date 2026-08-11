@@ -13,6 +13,17 @@ const MESSAGES = {
     en: "Welcome back! You brewed {n} potions while away",
   },
   langButton: { ja: "EN", en: "日本語" },
+  essence: { ja: "✨ エッセンス", en: "✨ Essence" },
+  essenceBonus: { ja: "生産 +{n}%", en: "Production +{n}%" },
+  prestige: { ja: "転生する（+{n} ✨）", en: "Ascend (+{n} ✨)" },
+  prestigeLocked: {
+    ja: "累計 {n} 調合で転生解放",
+    en: "Brew {n} total to unlock ascension",
+  },
+  prestigeConfirm: {
+    ja: "進行をリセットして {n} エッセンスを獲得します。よろしいですか？",
+    en: "Reset progress and gain {n} essence. Are you sure?",
+  },
 } as const;
 
 export type MessageKey = keyof typeof MESSAGES;

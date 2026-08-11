@@ -21,9 +21,11 @@ export const GENERATORS: readonly GeneratorDef[] = [
 
 export interface GameState {
   potions: number; // 通貨
-  totalBrewed: number; // 累計（実績・転生用）
+  totalBrewed: number; // 今周回の累計（転生で獲得エッセンスの元）
   clickPower: number;
   counts: Record<string, number>; // generatorId -> 所持数
+  essence: number; // 転生通貨（永続）
+  prestigeCount: number;
 }
 
 export function newGame(): GameState {
@@ -32,6 +34,38 @@ export function newGame(): GameState {
     totalBrewed: 0,
     clickPower: 1,
     counts: Object.fromEntries(GENERATORS.map((g) => [g.id, 0])),
+    essence: 0,
+    prestigeCount: 0,
+  };
+}
+
+// ---- 転生（プレステージ） ----
+
+/** 転生に必要な今周回の累計調合数 */
+export const PRESTIGE_UNLOCK = 1_000_000;
+
+/** エッセンス1個あたりの生産・クリック倍率ボーナス（+10%） */
+export const ESSENCE_BONUS = 0.1;
+
+/** 今転生したら得られるエッセンス数 */
+export function essenceOnPrestige(state: GameState): number {
+  if (state.totalBrewed < PRESTIGE_UNLOCK) return 0;
+  return Math.floor(Math.sqrt(state.totalBrewed / PRESTIGE_UNLOCK));
+}
+
+/** エッセンスによる倍率（1 + 0.1 × essence） */
+export function essenceMultiplier(state: GameState): number {
+  return 1 + state.essence * ESSENCE_BONUS;
+}
+
+/** 転生: 進行をリセットしてエッセンスを獲得。不可なら null */
+export function prestige(state: GameState): GameState | null {
+  const gained = essenceOnPrestige(state);
+  if (gained <= 0) return null;
+  return {
+    ...newGame(),
+    essence: state.essence + gained,
+    prestigeCount: state.prestigeCount + 1,
   };
 }
 
@@ -40,12 +74,13 @@ export function generatorCost(def: GeneratorDef, count: number): number {
   return Math.ceil(def.baseCost * Math.pow(def.costGrowth, count));
 }
 
-/** 毎秒の総生産量 */
+/** 毎秒の総生産量（エッセンス倍率込み） */
 export function productionPerSec(state: GameState): number {
-  return GENERATORS.reduce(
+  const base = GENERATORS.reduce(
     (sum, g) => sum + g.baseRate * (state.counts[g.id] ?? 0),
     0,
   );
+  return base * essenceMultiplier(state);
 }
 
 /** dt 秒ぶん時間を進める */
@@ -59,12 +94,13 @@ export function tick(state: GameState, dtSec: number): GameState {
   };
 }
 
-/** クリック（手動調合） */
+/** クリック（手動調合、エッセンス倍率込み） */
 export function click(state: GameState): GameState {
+  const gain = state.clickPower * essenceMultiplier(state);
   return {
     ...state,
-    potions: state.potions + state.clickPower,
-    totalBrewed: state.totalBrewed + state.clickPower,
+    potions: state.potions + gain,
+    totalBrewed: state.totalBrewed + gain,
   };
 }
 
