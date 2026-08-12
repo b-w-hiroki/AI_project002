@@ -3,7 +3,19 @@
 - [x] ジャンル決定: 放置・育成系「ポーション工房」／販路: CrazyGames + 日本向け無料公開
 - [x] Phaser + TS 雛形、経済ロジックMVP、i18n（ja/en）、CrazyGames SDK ラッパー
 - [x] 転生（プレステージ）システム
-- [x] 見た目強化（浮遊テキスト・泡・購入演出・転生フラッシュ）※実績は未実装
-- [x] GitHub Pages デプロイ設定（要: リポジトリ設定で Pages ソースを GitHub Actions に変更）
+- [x] 見た目強化（浮遊テキスト・泡・購入演出・転生フラッシュ）
+- [x] GitHub Pages デプロイ設定・公開確認済み（https://b-w-hiroki.github.io/AI_project002/）
+- [x] 実績システム（10種）
+- [x] 設備の追加ティア（5→8種）、クリック強化アップグレード
+- [x] サウンド（Web Audio合成、ON/OFF切替）
+- [x] オフライン進行モーダル
+- [x] モバイル対応（Scale.FIT、タッチ操作、safe-area対応）
+- [x] バンドルサイズ最適化（Phaserをvendorチャンクに分離）
+- [x] セーブのエクスポート/インポート（JSON）
+- [x] 軽量アナリティクス（ローカル集計のみ、外部送信なし）
+- [x] CI強化（ESLint導入、Actionsに組み込み）
+- [x] OGP/メタタグ整備（プレースホルダー画像は要差し替え）
+- [x] CrazyGames/PLiCy投稿準備資料（docs/submission.md）
 - [ ] CrazyGames に開発者登録して投稿（人間の作業: アカウント作成）
 - [ ] PLiCy 投稿（人間の作業: アカウント作成）
+- [ ] OGP画像を単色プレースホルダーから差し替え（任意）

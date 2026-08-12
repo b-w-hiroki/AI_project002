@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   applyOfflineProgress,
+  buyClickUpgrade,
   buyGenerator,
   click,
+  clickUpgradeCost,
   essenceMultiplier,
   essenceOnPrestige,
   formatNumber,
@@ -15,7 +17,8 @@ import {
   productionPerSec,
   tick,
 } from "../src/logic/economy";
-import { load, save, KVStore } from "../src/logic/save";
+import { exportSaveJson, load, parseSaveJson, save, KVStore } from "../src/logic/save";
+import { ACHIEVEMENTS, checkNewAchievements, unlockAchievements } from "../src/logic/achievements";
 
 const apprentice = GENERATORS[0]!;
 
@@ -150,5 +153,78 @@ describe("prestige", () => {
     expect(essenceMultiplier(s)).toBeCloseTo(1.5);
     expect(productionPerSec(s)).toBeCloseTo(1.5);
     expect(click({ ...newGame(), essence: 5 }).potions).toBeCloseTo(1.5);
+  });
+});
+
+describe("buyClickUpgrade", () => {
+  it("初回コストは50", () => {
+    expect(clickUpgradeCost(newGame())).toBe(50);
+  });
+  it("資金不足なら null", () => {
+    expect(buyClickUpgrade(newGame())).toBeNull();
+  });
+  it("購入で clickPower が+1しコストが増える", () => {
+    const s1 = buyClickUpgrade({ ...newGame(), potions: 100 })!;
+    expect(s1.clickPower).toBe(2);
+    expect(s1.potions).toBe(50);
+    expect(clickUpgradeCost(s1)).toBe(Math.ceil(50 * 1.6));
+  });
+});
+
+describe("GENERATORS", () => {
+  it("8種類の設備がある", () => {
+    expect(GENERATORS.length).toBe(8);
+  });
+  it("ID重複が無い", () => {
+    const ids = GENERATORS.map((g) => g.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("achievements", () => {
+  it("初期状態では何も解除されていない", () => {
+    expect(checkNewAchievements(newGame())).toEqual([]);
+  });
+  it("条件を満たすと新規実績として検出される", () => {
+    const s = { ...newGame(), totalClicks: 1 };
+    expect(checkNewAchievements(s)).toContain("first_click");
+  });
+  it("既に解除済みなら再検出しない", () => {
+    const s = { ...newGame(), totalClicks: 1, unlockedAchievements: ["first_click"] };
+    expect(checkNewAchievements(s)).not.toContain("first_click");
+  });
+  it("unlockAchievements で状態に反映される", () => {
+    const s = unlockAchievements(newGame(), ["first_click", "click_100"]);
+    expect(s.unlockedAchievements).toEqual(["first_click", "click_100"]);
+  });
+  it("全設備所持の実績はどれか1つでも0台なら満たさない", () => {
+    const counts = Object.fromEntries(GENERATORS.map((g) => [g.id, 1]));
+    counts[GENERATORS[0]!.id] = 0;
+    const s = { ...newGame(), counts };
+    expect(ACHIEVEMENTS.find((a) => a.id === "all_generators")!.check(s)).toBe(false);
+  });
+  it("転生してもlifetimeBrewedベースの実績は保持される", () => {
+    const s = {
+      ...newGame(),
+      totalBrewed: PRESTIGE_UNLOCK,
+      lifetimeBrewed: PRESTIGE_UNLOCK,
+      unlockedAchievements: ["brewed_1m"],
+    };
+    const next = prestige(s)!;
+    expect(next.unlockedAchievements).toEqual(["brewed_1m"]);
+    expect(next.lifetimeBrewed).toBe(PRESTIGE_UNLOCK);
+  });
+});
+
+describe("save export/import", () => {
+  it("エクスポートしたJSONをインポートできる", () => {
+    const s = { ...newGame(), potions: 42 };
+    const json = exportSaveJson(s, 1000);
+    const parsed = parseSaveJson(json)!;
+    expect(parsed.state.potions).toBe(42);
+    expect(parsed.savedAt).toBe(1000);
+  });
+  it("壊れたJSONは null", () => {
+    expect(parseSaveJson("not json")).toBeNull();
   });
 });

@@ -1,8 +1,11 @@
 import Phaser from "phaser";
+import { ACHIEVEMENTS, checkNewAchievements, unlockAchievements } from "../logic/achievements";
 import {
   applyOfflineProgress,
+  buyClickUpgrade,
   buyGenerator,
   click,
+  clickUpgradeCost,
   essenceMultiplier,
   essenceOnPrestige,
   formatNumber,
@@ -15,31 +18,48 @@ import {
   productionPerSec,
   tick,
 } from "../logic/economy";
-import { detectLang, generatorName, Lang, t, toggleLang } from "../logic/i18n";
-import { load, save } from "../logic/save";
+import { achievementName, detectLang, generatorName, Lang, t, toggleLang } from "../logic/i18n";
+import {
+  AnalyticsData,
+  loadAnalytics,
+  newAnalytics,
+  recordPlaytime,
+  recordPrestige,
+  recordSessionStart,
+  saveAnalytics,
+} from "../logic/analytics";
+import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
+import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 
 const SAVE_INTERVAL_MS = 5_000;
+const SOUND_PREF_KEY = "ai_project002_sound_v1";
 
 /** ポーション工房 — メイン画面 */
 export class IdleScene extends Phaser.Scene {
   private state: GameState = newGame();
+  private analytics: AnalyticsData = newAnalytics();
   private lang: Lang = detectLang(navigator.language);
+  private soundOn = localStorage.getItem(SOUND_PREF_KEY) !== "off";
+
   private titleText!: Phaser.GameObjects.Text;
   private potionText!: Phaser.GameObjects.Text;
   private rateText!: Phaser.GameObjects.Text;
   private essenceText!: Phaser.GameObjects.Text;
   private brewText!: Phaser.GameObjects.Text;
   private langText!: Phaser.GameObjects.Text;
+  private soundText!: Phaser.GameObjects.Text;
+  private clickUpgradeText!: Phaser.GameObjects.Text;
+  private clickUpgradeButton!: Phaser.GameObjects.Rectangle;
   private prestigeButton!: Phaser.GameObjects.Rectangle;
   private prestigeText!: Phaser.GameObjects.Text;
-  private welcomeText?: Phaser.GameObjects.Text;
-  private welcomeGained = 0;
   private rows: {
     id: string;
     button: Phaser.GameObjects.Rectangle;
     label: Phaser.GameObjects.Text;
   }[] = [];
+
+  private welcomeGained = 0;
   private lastSave = 0;
 
   constructor() {
@@ -47,24 +67,53 @@ export class IdleScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.analytics = recordSessionStart(loadAnalytics(localStorage), Date.now());
+    saveAnalytics(this.analytics, localStorage);
+
     // セーブ復元＋オフライン進行
     const data = load(localStorage);
     if (data) {
       const elapsed = (Date.now() - data.savedAt) / 1000;
       const { state, gained } = applyOfflineProgress(data.state, elapsed);
       this.state = state;
-      if (gained >= 1) {
-        this.welcomeGained = gained;
-        this.welcomeText = this.add
-          .text(400, 585, "", { fontSize: "14px", color: "#ffd166" })
-          .setOrigin(0.5);
-      }
+      this.welcomeGained = gained;
     }
 
-    // 背景の雰囲気（ゆっくり明滅する泡）
+    this.buildBackground();
+    this.buildHeader();
+    this.buildBrewArea();
+    this.buildGeneratorList();
+    this.buildSaveTools();
+
+    this.refreshStaticTexts();
+    this.refreshUI();
+    cg.gameplayStart();
+
+    if (this.welcomeGained >= 1) {
+      this.showWelcomeModal(this.welcomeGained);
+    }
+  }
+
+  update(_time: number, delta: number): void {
+    this.state = tick(this.state, delta / 1000);
+    this.checkAchievements();
+    this.refreshUI();
+
+    this.lastSave += delta;
+    if (this.lastSave >= SAVE_INTERVAL_MS) {
+      this.lastSave = 0;
+      save(this.state, localStorage, Date.now());
+      this.analytics = recordPlaytime(this.analytics, SAVE_INTERVAL_MS / 1000, Date.now());
+      saveAnalytics(this.analytics, localStorage);
+    }
+  }
+
+  // ---- 画面構築 ----
+
+  private buildBackground(): void {
     for (let i = 0; i < 14; i++) {
       const x = Phaser.Math.Between(20, 780);
-      const y = Phaser.Math.Between(120, 560);
+      const y = Phaser.Math.Between(140, 700);
       const bubble = this.add.circle(x, y, Phaser.Math.Between(2, 5), 0x4ecca3, 0.15);
       this.tweens.add({
         targets: bubble,
@@ -75,76 +124,84 @@ export class IdleScene extends Phaser.Scene {
         delay: Phaser.Math.Between(0, 4000),
       });
     }
+  }
 
+  private buildHeader(): void {
     this.titleText = this.add
-      .text(400, 30, "", { fontSize: "28px", color: "#e0e0ff" })
+      .text(400, 26, "", { fontSize: "26px", color: "#e0e0ff" })
       .setOrigin(0.5);
     this.potionText = this.add
-      .text(400, 70, "", { fontSize: "22px", color: "#4ecca3" })
+      .text(400, 62, "", { fontSize: "20px", color: "#4ecca3" })
       .setOrigin(0.5);
     this.rateText = this.add
-      .text(400, 98, "", { fontSize: "14px", color: "#8888aa" })
+      .text(400, 88, "", { fontSize: "13px", color: "#8888aa" })
       .setOrigin(0.5);
     this.essenceText = this.add
-      .text(20, 20, "", { fontSize: "15px", color: "#d9a7ff" })
+      .text(16, 14, "", { fontSize: "14px", color: "#d9a7ff" })
       .setOrigin(0, 0);
 
-    // 言語切り替えボタン（右上）
-    const langButton = this.add
-      .rectangle(755, 30, 70, 32, 0x2a2a4a)
-      .setStrokeStyle(1, 0x44446a)
-      .setInteractive({ useHandCursor: true });
-    this.langText = this.add
-      .text(755, 30, "", { fontSize: "14px", color: "#ccccdd" })
-      .setOrigin(0.5);
-    langButton.on("pointerdown", () => {
+    // 右上ボタン群: 実績 / サウンド / 言語
+    const achButton = this.makeSmallButton(600, 26, 90, "", () => this.showAchievementsModal());
+    this.registerRefresh(() => achButton.label.setText(t(this.lang, "achievementsButton")));
+
+    const soundButton = this.makeSmallButton(700, 26, 44, "", () => {
+      this.soundOn = !this.soundOn;
+      localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+      this.refreshStaticTexts();
+    });
+    this.soundText = soundButton.label;
+
+    const langButton = this.makeSmallButton(760, 26, 60, "", () => {
       this.lang = toggleLang(this.lang);
       this.refreshStaticTexts();
     });
+    this.langText = langButton.label;
+  }
 
-    // 調合ボタン
+  private buildBrewArea(): void {
     const brew = this.add
-      .circle(180, 300, 80, 0x7b2cbf)
+      .circle(160, 260, 75, 0x7b2cbf)
       .setInteractive({ useHandCursor: true });
     this.brewText = this.add
-      .text(180, 300, "", { fontSize: "24px", color: "#ffffff" })
+      .text(160, 260, "", { fontSize: "22px", color: "#ffffff" })
       .setOrigin(0.5);
     brew.on("pointerdown", () => {
       const gain = this.state.clickPower * essenceMultiplier(this.state);
       this.state = click(this.state);
+      this.playSound(sfx.click);
       this.tweens.add({ targets: brew, scale: 0.92, duration: 60, yoyo: true });
-      this.spawnFloatingText(180, 210, `+${formatNumber(gain)}`, "#4ecca3");
+      this.spawnFloatingText(160, 175, `+${formatNumber(gain)}`, "#4ecca3");
     });
 
-    // 設備購入ボタン
-    GENERATORS.forEach((g, i) => {
-      const y = 150 + i * 66;
-      const button = this.add
-        .rectangle(560, y, 400, 54, 0x2a2a4a)
-        .setStrokeStyle(2, 0x44446a)
-        .setInteractive({ useHandCursor: true });
-      const label = this.add
-        .text(370, y - 17, "", { fontSize: "15px", color: "#ccccdd" })
-        .setOrigin(0, 0);
-      button.on("pointerdown", () => {
-        const next = buyGenerator(this.state, g.id);
-        if (next) {
-          this.state = next;
-          cg.happytime();
-          this.tweens.add({ targets: [button, label], scaleX: 1.03, duration: 70, yoyo: true });
-          this.spawnFloatingText(560, y - 34, `${generatorName(this.lang, g.id)} +1`, "#ffd166");
-        }
-      });
-      this.rows.push({ id: g.id, button, label });
+    // クリック強化
+    this.clickUpgradeButton = this.add
+      .rectangle(160, 380, 260, 54, 0x2a3a4a)
+      .setStrokeStyle(2, 0x44586a)
+      .setInteractive({ useHandCursor: true });
+    this.clickUpgradeText = this.add
+      .text(160, 380, "", { fontSize: "13px", color: "#ccccdd", align: "center" })
+      .setOrigin(0.5);
+    this.clickUpgradeButton.on("pointerdown", () => {
+      const next = buyClickUpgrade(this.state);
+      if (next) {
+        this.state = next;
+        this.playSound(sfx.buy);
+        this.spawnFloatingText(160, 350, "+1 ⚡", "#ffd166");
+      }
     });
 
-    // 転生ボタン（下部中央）
+    // 転生
     this.prestigeButton = this.add
-      .rectangle(180, 470, 280, 48, 0x3a2a5a)
+      .rectangle(160, 460, 260, 64, 0x3a2a5a)
       .setStrokeStyle(2, 0x7b2cbf)
       .setInteractive({ useHandCursor: true });
     this.prestigeText = this.add
-      .text(180, 470, "", { fontSize: "14px", color: "#d9a7ff" })
+      .text(160, 460, "", {
+        fontSize: "12px",
+        color: "#d9a7ff",
+        align: "center",
+        wordWrap: { width: 240 },
+      })
       .setOrigin(0.5);
     this.prestigeButton.on("pointerdown", () => {
       const gained = essenceOnPrestige(this.state);
@@ -154,25 +211,146 @@ export class IdleScene extends Phaser.Scene {
       if (next) {
         this.state = next;
         save(this.state, localStorage, Date.now());
-        cg.happytime();
+        this.analytics = recordPrestige(this.analytics, this.state.prestigeCount);
+        saveAnalytics(this.analytics, localStorage);
+        this.playSound(sfx.prestige);
         this.cameras.main.flash(600, 217, 167, 255);
       }
     });
-
-    this.refreshStaticTexts();
-    this.refreshUI();
-    cg.gameplayStart();
   }
 
-  update(_time: number, delta: number): void {
-    this.state = tick(this.state, delta / 1000);
-    this.refreshUI();
+  private buildGeneratorList(): void {
+    GENERATORS.forEach((g, i) => {
+      const y = 130 + i * 62;
+      const button = this.add
+        .rectangle(560, y, 400, 52, 0x2a2a4a)
+        .setStrokeStyle(2, 0x44446a)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(370, y - 16, "", { fontSize: "14px", color: "#ccccdd" })
+        .setOrigin(0, 0);
+      button.on("pointerdown", () => {
+        const next = buyGenerator(this.state, g.id);
+        if (next) {
+          this.state = next;
+          this.playSound(sfx.buy);
+          this.tweens.add({ targets: [button, label], scaleX: 1.03, duration: 70, yoyo: true });
+          this.spawnFloatingText(560, y - 30, `${generatorName(this.lang, g.id)} +1`, "#ffd166");
+        }
+      });
+      this.rows.push({ id: g.id, button, label });
+    });
+  }
 
-    this.lastSave += delta;
-    if (this.lastSave >= SAVE_INTERVAL_MS) {
-      this.lastSave = 0;
-      save(this.state, localStorage, Date.now());
+  private buildSaveTools(): void {
+    const exportButton = this.makeSmallButton(220, 730, 200, "", () => this.doExport());
+    this.registerRefresh(() => exportButton.label.setText(t(this.lang, "exportButton")));
+
+    const importButton = this.makeSmallButton(440, 730, 200, "", () => this.doImport());
+    this.registerRefresh(() => importButton.label.setText(t(this.lang, "importButton")));
+  }
+
+  // ---- 小さな汎用ボタン ----
+  private refreshCallbacks: (() => void)[] = [];
+  private registerRefresh(fn: () => void): void {
+    this.refreshCallbacks.push(fn);
+  }
+
+  private makeSmallButton(
+    x: number,
+    y: number,
+    width: number,
+    initialText: string,
+    onClick: () => void,
+  ): { rect: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
+    const rect = this.add
+      .rectangle(x, y, width, 32, 0x2a2a4a)
+      .setStrokeStyle(1, 0x44446a)
+      .setInteractive({ useHandCursor: true });
+    const label = this.add
+      .text(x, y, initialText, { fontSize: "13px", color: "#ccccdd" })
+      .setOrigin(0.5);
+    rect.on("pointerdown", onClick);
+    return { rect, label };
+  }
+
+  // ---- モーダル ----
+
+  private showModal(bodyText: string, onClose?: () => void): void {
+    const overlay = this.add.rectangle(400, 380, 800, 760, 0x000000, 0.7).setInteractive();
+    const panel = this.add.rectangle(400, 380, 560, 420, 0x1e1e38).setStrokeStyle(2, 0x7b2cbf);
+    const text = this.add
+      .text(400, 340, bodyText, {
+        fontSize: "14px",
+        color: "#e0e0ff",
+        align: "center",
+        wordWrap: { width: 500 },
+      })
+      .setOrigin(0.5);
+    const closeBtn = this.makeSmallButton(400, 550, 140, t(this.lang, "closeButton"), () => {
+      overlay.destroy();
+      panel.destroy();
+      text.destroy();
+      closeBtn.rect.destroy();
+      closeBtn.label.destroy();
+      onClose?.();
+    });
+  }
+
+  private showWelcomeModal(gained: number): void {
+    this.showModal(
+      `${t(this.lang, "welcomeTitle")}\n\n${t(this.lang, "welcomeBack", { n: formatNumber(gained) })}`,
+    );
+  }
+
+  private showAchievementsModal(): void {
+    const lines = ACHIEVEMENTS.map((a) => {
+      const unlocked = this.state.unlockedAchievements.includes(a.id);
+      return `${unlocked ? "✅" : "🔒"} ${achievementName(this.lang, a.id)}`;
+    }).join("\n");
+    this.showModal(`${t(this.lang, "achievementsTitle")}\n\n${lines}`);
+  }
+
+  // ---- セーブ書き出し/読み込み ----
+
+  private doExport(): void {
+    const json = exportSaveJson(this.state, Date.now());
+    void navigator.clipboard?.writeText(json).catch(() => {});
+    this.showModal(t(this.lang, "exportDone"));
+  }
+
+  private doImport(): void {
+    const raw = window.prompt(t(this.lang, "importPrompt"));
+    if (!raw) return;
+    const parsed = parseSaveJson(raw);
+    if (!parsed) {
+      this.showModal(t(this.lang, "importFailed"));
+      return;
     }
+    this.state = parsed.state;
+    save(this.state, localStorage, Date.now());
+    this.showModal(t(this.lang, "importDone"));
+  }
+
+  // ---- 実績チェック ----
+
+  private checkAchievements(): void {
+    const newly = checkNewAchievements(this.state);
+    if (newly.length === 0) return;
+    this.state = unlockAchievements(this.state, newly);
+    this.playSound(sfx.achievement);
+    for (const id of newly) {
+      this.spawnFloatingText(
+        400,
+        700,
+        t(this.lang, "achievementUnlocked", { n: achievementName(this.lang, id) }),
+        "#ffd166",
+      );
+    }
+  }
+
+  private playSound(fn: () => void): void {
+    if (this.soundOn) fn();
   }
 
   /** クリック位置から浮かんで消えるテキスト演出 */
@@ -184,19 +362,18 @@ export class IdleScene extends Phaser.Scene {
       targets: obj,
       y: y - 50,
       alpha: 0,
-      duration: 800,
+      duration: 900,
       onComplete: () => obj.destroy(),
     });
   }
 
-  /** 言語に依存する固定文言を更新 */
+  /** 言語・設定に依存する固定文言を更新 */
   private refreshStaticTexts(): void {
     this.titleText.setText(t(this.lang, "title"));
     this.brewText.setText(t(this.lang, "brew"));
     this.langText.setText(t(this.lang, "langButton"));
-    this.welcomeText?.setText(
-      t(this.lang, "welcomeBack", { n: formatNumber(this.welcomeGained) }),
-    );
+    this.soundText.setText(this.soundOn ? t(this.lang, "soundOn") : t(this.lang, "soundOff"));
+    for (const fn of this.refreshCallbacks) fn();
   }
 
   private refreshUI(): void {
@@ -213,6 +390,13 @@ export class IdleScene extends Phaser.Scene {
         ? `${t(this.lang, "essence")} ${formatNumber(this.state.essence)}\n${t(this.lang, "essenceBonus", { n: bonusPct.toString() })}`
         : "",
     );
+
+    const clickCost = clickUpgradeCost(this.state);
+    const clickAffordable = this.state.potions >= clickCost;
+    this.clickUpgradeText.setText(
+      `${t(this.lang, "clickUpgrade")} (${this.state.clickPower})\n${t(this.lang, "clickUpgradeDesc")}\n${t(this.lang, "cost")}: ${formatNumber(clickCost)}`,
+    );
+    this.clickUpgradeButton.setFillStyle(clickAffordable ? 0x2f5848 : 0x2a3a4a);
 
     const gained = essenceOnPrestige(this.state);
     if (gained > 0) {
