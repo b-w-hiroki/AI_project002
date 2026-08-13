@@ -11,3 +11,12 @@
 ## 2026-08-11
 - 転生システム: 累計100万調合で解放、エッセンス = floor(sqrt(累計/100万))、1個につき生産・クリック+10%（永続）。平方根スケールで転生を繰り返すほど周回が速くなる標準設計。
 - GitHub Pages デプロイを GitHub Actions で自動化（main への push で typecheck→test→build→deploy）。vite base は './'。リポジトリ設定で Pages のソースを「GitHub Actions」にする必要あり（人間の作業）。
+
+## 2026-08-12
+- 実績システムは lifetimeBrewed/totalClicks/unlockedAchievements を転生時にも保持するフィールドとして追加（totalBrewed/potions/counts は転生でリセット、実績関連は永続）。
+- クリック強化は既存の clickPower フィールドを購入のたびに+1する方式（コストは指数増加、baseCost 50 / growth 1.6）。新フィールドを増やさずシンプルに実装。
+- サウンドは外部音源を使わず Web Audio API でその場合成（アセット0・軽量・著作権フリー）。AudioContext はユーザー操作後にのみ開始できるため遅延初期化。
+- モバイル対応は Phaser の Scale.FIT + CENTER_BOTH のみで対応（タッチはPhaserのpointerイベントがマウス/タッチを統一的に扱うため追加実装不要）。ネイティブアプリ化はせず、あくまでブラウザのレスポンシブ対応に留める。
+- typescript-eslint が TypeScript 7.x に未対応（2026-08時点、upstream issue #10940）のため、eslint実行時のみ typescript を 6.0.3 に固定。tsc本体（tsconfig経由のtypecheck）は引き続きプロジェクトのtypescriptバージョンに従う。
+- OGP画像はPillow等の画像ライブラリが無い環境のため、Pythonのzlib/structで直接PNGバイトを生成した単色グラデーションのプレースホルダー。投稿前に差し替え推奨（docs/submission.mdに記載）。
+- バンドルサイズ警告はPhaser本体が1.3MB超のため恒久的に発生する。manualChunksでアプリコードと分離してキャッシュ効率を上げた上で、chunkSizeWarningLimitを実態に合わせて調整（警告を黙らせるのではなく閾値を正しくする方針）。

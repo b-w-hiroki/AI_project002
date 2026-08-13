@@ -17,6 +17,9 @@ export const GENERATORS: readonly GeneratorDef[] = [
   { id: "garden", name: "薬草園", baseCost: 1_100, costGrowth: 1.14, baseRate: 25 },
   { id: "golem", name: "調合ゴーレム", baseCost: 12_000, costGrowth: 1.13, baseRate: 140 },
   { id: "portal", name: "異界ポータル", baseCost: 130_000, costGrowth: 1.12, baseRate: 800 },
+  { id: "observatory", name: "星読みの塔", baseCost: 1_400_000, costGrowth: 1.12, baseRate: 4_400 },
+  { id: "dragon", name: "契約の竜", baseCost: 20_000_000, costGrowth: 1.11, baseRate: 26_000 },
+  { id: "worldTree", name: "世界樹の雫", baseCost: 330_000_000, costGrowth: 1.11, baseRate: 170_000 },
 ] as const;
 
 export interface GameState {
@@ -26,6 +29,9 @@ export interface GameState {
   counts: Record<string, number>; // generatorId -> 所持数
   essence: number; // 転生通貨（永続）
   prestigeCount: number;
+  lifetimeBrewed: number; // 転生を跨いだ累計（実績用、リセットされない）
+  totalClicks: number; // 転生を跨いだ累計クリック数
+  unlockedAchievements: string[]; // 実績ID（転生を跨いで保持）
 }
 
 export function newGame(): GameState {
@@ -36,6 +42,9 @@ export function newGame(): GameState {
     counts: Object.fromEntries(GENERATORS.map((g) => [g.id, 0])),
     essence: 0,
     prestigeCount: 0,
+    lifetimeBrewed: 0,
+    totalClicks: 0,
+    unlockedAchievements: [],
   };
 }
 
@@ -66,6 +75,9 @@ export function prestige(state: GameState): GameState | null {
     ...newGame(),
     essence: state.essence + gained,
     prestigeCount: state.prestigeCount + 1,
+    lifetimeBrewed: state.lifetimeBrewed,
+    totalClicks: state.totalClicks,
+    unlockedAchievements: state.unlockedAchievements,
   };
 }
 
@@ -91,6 +103,7 @@ export function tick(state: GameState, dtSec: number): GameState {
     ...state,
     potions: state.potions + gained,
     totalBrewed: state.totalBrewed + gained,
+    lifetimeBrewed: state.lifetimeBrewed + gained,
   };
 }
 
@@ -101,7 +114,27 @@ export function click(state: GameState): GameState {
     ...state,
     potions: state.potions + gain,
     totalBrewed: state.totalBrewed + gain,
+    lifetimeBrewed: state.lifetimeBrewed + gain,
+    totalClicks: state.totalClicks + 1,
   };
+}
+
+// ---- クリック強化 ----
+
+export const CLICK_UPGRADE_BASE_COST = 50;
+export const CLICK_UPGRADE_GROWTH = 1.6;
+
+/** 次のクリック強化のコスト（clickPower は 1 始まりなので level = clickPower - 1） */
+export function clickUpgradeCost(state: GameState): number {
+  const level = state.clickPower - 1;
+  return Math.ceil(CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, level));
+}
+
+/** クリックパワーを+1する。買えなければ null */
+export function buyClickUpgrade(state: GameState): GameState | null {
+  const cost = clickUpgradeCost(state);
+  if (state.potions < cost) return null;
+  return { ...state, potions: state.potions - cost, clickPower: state.clickPower + 1 };
 }
 
 /** 設備を1台購入。買えなければ null */

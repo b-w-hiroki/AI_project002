@@ -21,6 +21,11 @@ export function save(state: GameState, store: KVStore, now: number): void {
 export function load(store: KVStore): SaveData | null {
   const raw = store.getItem(SAVE_KEY);
   if (!raw) return null;
+  return parseSaveJson(raw);
+}
+
+/** JSON文字列からセーブデータを復元。壊れていたり形式が合わなければ null */
+export function parseSaveJson(raw: string): SaveData | null {
   try {
     const data = JSON.parse(raw) as SaveData;
     if (typeof data?.state?.potions !== "number") return null;
@@ -29,4 +34,10 @@ export function load(store: KVStore): SaveData | null {
   } catch {
     return null;
   }
+}
+
+/** エクスポート用のJSON文字列を生成 */
+export function exportSaveJson(state: GameState, now: number): string {
+  const data: SaveData = { state, savedAt: now };
+  return JSON.stringify(data, null, 2);
 }
