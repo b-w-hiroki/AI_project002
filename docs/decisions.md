@@ -20,3 +20,10 @@
 - typescript-eslint が TypeScript 7.x に未対応（2026-08時点、upstream issue #10940）のため、eslint実行時のみ typescript を 6.0.3 に固定。tsc本体（tsconfig経由のtypecheck）は引き続きプロジェクトのtypescriptバージョンに従う。
 - OGP画像はPillow等の画像ライブラリが無い環境のため、Pythonのzlib/structで直接PNGバイトを生成した単色グラデーションのプレースホルダー。投稿前に差し替え推奨（docs/submission.mdに記載）。
 - バンドルサイズ警告はPhaser本体が1.3MB超のため恒久的に発生する。manualChunksでアプリコードと分離してキャッシュ効率を上げた上で、chunkSizeWarningLimitを実態に合わせて調整（警告を黙らせるのではなく閾値を正しくする方針）。
+
+## 2026-08-22
+- 2本目のゲーム「剣戟の森」（横スクロールアクション、剣で敵を倒す）を追加。同一リポジトリ内 `games/side-scroller/` に完全独立の Phaser+TS+Vite プロジェクトとして配置（ルートのポーション工房とは node_modules/設定を共有しない）。既存の公開URL（ルート = ポーション工房）を壊さないため。
+- 戦闘ロジック（ダメージ計算、無敵時間、攻撃クールダウン、射程判定、ゴール判定）は `src/logic/combat.ts` に純粋関数として分離し Vitest で単体テスト（19件）。Phaser 側の GameScene は物理演算・入力・描画のみを担当し、実際のダメージ判定はロジック層の関数呼び出しに委譲する設計は1本目のポーション工房と同じ方針を踏襲。
+- スプライトは画像アセットを使わず Phaser の Graphics.generateTexture() でその場生成した単色矩形を使用（アセット0）。
+- デプロイワークフローを拡張し、ルートと `games/side-scroller/` を両方ビルドして `dist/side-scroller/` にマージしてから Pages にアップロード。同じ GitHub Pages サイト配下に `/` と `/side-scroller/` として共存させる。
+- 動作確認で「攻撃が敵に当たらない」ように見えた事象は、Playwright の `keyboard.press()` が非常に短い合成イベントで Phaser の JustDown 判定を取りこぼすケースがあったことと、敵の徘徊AIによりプレイヤーの向きに対して射程外に出ていたことが原因で、戦闘ロジック自体にバグは無かった（`keyboard.down()`/`up()` を分けて呼ぶテストで撃破・スコア加算まで確認済み）。

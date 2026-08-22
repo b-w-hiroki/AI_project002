@@ -26,11 +26,29 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # ポーション工房（ルートで配信、既存URLを維持）
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+      # 剣戟の森（/side-scroller/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/side-scroller
+      - run: npm run lint
+        working-directory: games/side-scroller
+      - run: npm run typecheck
+        working-directory: games/side-scroller
+      - run: npm test
+        working-directory: games/side-scroller
+      - run: npm run build
+        working-directory: games/side-scroller
+      - run: |
+          mkdir -p dist/side-scroller
+          cp -r games/side-scroller/dist/. dist/side-scroller/
+
       - uses: actions/configure-pages@v5
         with:
           # Pages 未設定のリポジトリでも自動で有効化する
