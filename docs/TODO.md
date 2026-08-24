@@ -47,7 +47,11 @@
 - [ ] OGP/メタタグ整備（ポーション工房と同様の対応が必要）
 - [ ] 武器の取得/所持システム（現状は3種類とも最初から使用可能）
 - [ ] スキル・奥義の種類追加（現状はそれぞれ1種類のみ）
-- [ ] 【設計合意済み・未着手】武器パラメータ体系の刷新（レア度、WeaponTemplate/WeaponInstance、ロードアウト＋召喚媒体、基本装備、防具/アイテム消耗品、インゲーム内重複強化、敵防御力とコンボダメージ、スーパーコンボ倍率）。詳細設計は`docs/decisions.md`の「2026-08-24（剣戟の森: 武器パラメータ体系の設計合意・未実装）」を参照。実装は型定義（WeaponTemplate/WeaponInstance/BaseEquipment/SummonMedium/Armor/Item）から着手すること
+- [x] 武器パラメータ体系のロジック層を実装（`src/logic/loadout.ts`）: レア度(N/R/SR/SSR/UR)、WeaponTemplate×6（各kind2種）、WeaponInstance（強化/進化/熟練度）、宝箱/鍛治入手、基本装備、インゲーム内重複強化（RunWeaponState、入手+強化2回+アルティメット化1回の最大4段階）、防具/アイテム消耗品、ロードアウト＋localStorage永続化。Vitest 34件追加（計80件）
+- [x] アウトゲーム画面（`LoadoutScene`）を実装: 所持武器一覧、宝箱/鍛治での入手、近/中/遠スロットへの割当（種別不一致は弾く）、ステージ開始でGameSceneへロードアウトを渡す。`main.ts`の起動シーンをLoadoutScene→GameSceneに変更
+- [ ] 【未着手】GameScene側でのロードアウト反映: 現状GameSceneは`combat.ts`の`WEAPONS`定数（固定値）で動作しており、LoadoutSceneから渡した`loadout`/`inventory`はまだ参照していない。次の実装対象は「ステージ開始時は基本装備（`baseEquipmentStats`）でスタートし、ステージ内の召喚媒体ピックアップでロードアウト武器（`WeaponInstance`の`effectiveStats`）に切り替える」流れの統合
+- [ ] 【未着手】召喚媒体のインゲーム実装: ヴァンサバ風の一時停止選択UI、空中から武器を受け取る演出、`RunWeaponState`のインゲーム重複強化との連携
+- [ ] 【未着手】敵の防御力パラメータ、コンボ継続によるダメージ増加、無被弾スーパーコンボ倍率（`docs/decisions.md`のダメージ計算式の節を参照）
 
 ## ルートハブページ
 
