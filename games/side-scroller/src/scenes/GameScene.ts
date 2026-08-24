@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import {
+  BuffKind,
   currentWeapon,
   ENEMY_TOUCH_DAMAGE,
   EnemyState,
@@ -7,6 +8,7 @@ import {
   GameStatus,
   HIOUGI_DAMAGE_MULTIPLIER,
   HIOUGI_RANGE,
+  ITEM_BUFF_DURATION_MS,
   OUGI_DAMAGE_MULTIPLIER,
   OUGI_GAUGE_MAX,
   OUGI_GAUGE_PER_HIT,
@@ -16,17 +18,25 @@ import {
   SKILL_COOLDOWN_MS,
   SKILL_DAMAGE_MULTIPLIER,
   SKILL_RANGE,
+  STAGE_BUFF_DURATION_MS,
   WEAPONS,
   WeaponKind,
   addScore,
+  applyBuff,
+  applyRegen,
+  buffDamageMultiplier,
+  buffSpeedMultiplier,
   canUseHiougi,
   canUseOugi,
   canUseSkill,
   checkHiougiUnlock,
   damageEnemy,
   damagePlayer,
+  gainArmor,
+  gainComboStreak,
   gainOugiGauge,
   gameStatus,
+  healPlayer,
   inAttackRange,
   isAttacking,
   isHiougiActive,
@@ -34,8 +44,11 @@ import {
   isOugiActive,
   newEnemy,
   newPlayer,
+  setCustomWeapon,
   startAttack,
+  superComboMultiplier,
   switchWeapon,
+  tickRegen,
   useHiougi,
   useOugi,
   useSkill,
@@ -48,6 +61,26 @@ import {
   OUGI_COMMAND,
   pushCommandEvent,
 } from "../logic/commandInput";
+import {
+  ITEM_DEFS,
+  KVStore,
+  Loadout,
+  LoadoutSaveData,
+  RunWeaponState,
+  StageBuffOption,
+  WeaponInstance,
+  baseEquipmentStats,
+  findArmorTemplate,
+  findItemDef,
+  findTemplate,
+  loadLoadout,
+  newLoadout,
+  resolveSummon,
+  rollStageBuffOptions,
+  toWeaponDef,
+  useItem,
+  type ItemInventory,
+} from "../logic/loadout";
 
 const GROUND_Y = 520;
 const GOAL_X = 3200;
@@ -56,6 +89,13 @@ const JUMP_VELOCITY = -520;
 /** 攻撃判定の縦方向の許容差。異なる高さの足場にいる敵を誤って巻き込まないための上限 */
 const ATTACK_RANGE_Y = 44;
 const PROJECTILE_SPEED = 640;
+
+/** アイテムID → 使用キーの割当（1/2/3は武器切替に使っているため別キーにする） */
+const ITEM_KEY_BINDINGS: { itemId: string; code: number; label: string }[] = [
+  { itemId: "potion", code: Phaser.Input.Keyboard.KeyCodes.Z, label: "Z" },
+  { itemId: "power_charm", code: Phaser.Input.Keyboard.KeyCodes.V, label: "V" },
+  { itemId: "haste_charm", code: Phaser.Input.Keyboard.KeyCodes.B, label: "B" },
+];
 
 interface EnemySprite {
   state: EnemyState;
@@ -69,6 +109,15 @@ interface Projectile {
   sprite: Phaser.Physics.Arcade.Sprite;
   spawnX: number;
   maxRange: number;
+}
+
+type PickupKind = "summonMedium" | "armor" | "item" | "stageBuff";
+
+interface Pickup {
+  kind: PickupKind;
+  sprite: Phaser.Physics.Arcade.Sprite;
+  collected: boolean;
+  itemId?: string; // kind === "item" の場合のみ使用
 }
 
 const WEAPON_KEY_BINDINGS: { code: number; kind: WeaponKind }[] = [
@@ -105,6 +154,7 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private weaponText!: Phaser.GameObjects.Text;
   private skillText!: Phaser.GameObjects.Text;
+  private comboText!: Phaser.GameObjects.Text;
   private gaugeBarBg!: Phaser.GameObjects.Rectangle;
   private gaugeBarFill!: Phaser.GameObjects.Rectangle;
   private gaugeLabel!: Phaser.GameObjects.Text;
@@ -120,8 +170,50 @@ export class GameScene extends Phaser.Scene {
 
   private commandBuffer: CommandEvent[] = [];
 
+  private loadout: Loadout = newLoadout();
+  private inventory: WeaponInstance[] = [];
+  private baseEquipmentLevels: Record<WeaponKind, number> = { melee: 0, mid: 0, ranged: 0 };
+  private selectedArmorId = "none";
+  private runWeaponStates: Partial<Record<WeaponKind, RunWeaponState>> = {};
+  private items: ItemInventory = {};
+  private itemKeys: { itemId: string; key: Phaser.Input.Keyboard.Key; label: string }[] = [];
+
+  private pickups: Pickup[] = [];
+  private summonOverlay?: Phaser.GameObjects.Container;
+  private summonOverlayTexts: Partial<Record<WeaponKind, Phaser.GameObjects.Text>> = {};
+  private summonHintText?: Phaser.GameObjects.Text;
+  private summonOverlayVisible = false;
+
+  private stageBuffOverlay?: Phaser.GameObjects.Container;
+  private stageBuffOverlayTexts: Phaser.GameObjects.Text[] = [];
+  private stageBuffOverlayVisible = false;
+  private currentStageBuffOptions: StageBuffOption[] = [];
+
+  private itemsText!: Phaser.GameObjects.Text;
+
   constructor() {
-    super("game");
+    super("GameScene");
+  }
+
+  init(data?: {
+    loadout?: Loadout;
+    inventory?: WeaponInstance[];
+    baseEquipmentLevels?: Record<WeaponKind, number>;
+    selectedArmorId?: string;
+  }): void {
+    if (data?.loadout && data?.inventory) {
+      this.loadout = data.loadout;
+      this.inventory = data.inventory;
+      this.baseEquipmentLevels = data.baseEquipmentLevels ?? { melee: 0, mid: 0, ranged: 0 };
+      this.selectedArmorId = data.selectedArmorId ?? "none";
+    } else {
+      // R キーでのシーン再スタートなど、data を伴わずに開始された場合は保存済みのロードアウトを読み込む
+      const saved: LoadoutSaveData = loadLoadout(window.localStorage as unknown as KVStore);
+      this.loadout = saved.loadout;
+      this.inventory = saved.inventory;
+      this.baseEquipmentLevels = saved.baseEquipmentLevels;
+      this.selectedArmorId = saved.selectedArmorId;
+    }
   }
 
   create(): void {
@@ -131,6 +223,18 @@ export class GameScene extends Phaser.Scene {
     this.projectiles = [];
     this.commandBuffer = [];
     this.tipsVisible = false;
+    this.runWeaponStates = {};
+    this.items = { potion: 0, power_charm: 0, haste_charm: 0 };
+    this.pickups = [];
+
+    for (const kind of ["melee", "mid", "ranged"] as const) {
+      const stats = baseEquipmentStats(kind, this.baseEquipmentLevels[kind] ?? 0);
+      this.playerState = setCustomWeapon(this.playerState, kind, toWeaponDef(stats, kind));
+    }
+    const armorTemplate = findArmorTemplate(this.selectedArmorId);
+    if (armorTemplate.maxDurability > 0) {
+      this.playerState = gainArmor(this.playerState, armorTemplate.maxDurability);
+    }
 
     this.physics.world.setBounds(0, 0, GOAL_X + 400, 600);
     this.cameras.main.setBounds(0, 0, GOAL_X + 400, 600);
@@ -139,8 +243,11 @@ export class GameScene extends Phaser.Scene {
     this.buildLevel();
     this.buildPlayer();
     this.buildEnemies();
+    this.buildPickups();
     this.buildHud();
     this.buildTipsOverlay();
+    this.buildSummonOverlay();
+    this.buildStageBuffOverlay();
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
@@ -153,6 +260,11 @@ export class GameScene extends Phaser.Scene {
     this.weaponKeys = WEAPON_KEY_BINDINGS.map(({ code, kind }) => ({
       key: this.input.keyboard!.addKey(code),
       kind,
+    }));
+    this.itemKeys = ITEM_KEY_BINDINGS.map(({ itemId, code, label }) => ({
+      itemId,
+      key: this.input.keyboard!.addKey(code),
+      label,
     }));
   }
 
@@ -181,6 +293,22 @@ export class GameScene extends Phaser.Scene {
     orb.fillCircle(6, 6, 6);
     orb.generateTexture("orb", 12, 12);
     orb.destroy();
+
+    this.drawPickupTexture("pickup_medium", 0xd9a7ff);
+    this.drawPickupTexture("pickup_armor", 0x7fd1ff);
+    this.drawPickupTexture("pickup_item", 0x7fffb0);
+    this.drawPickupTexture("pickup_buff", 0xffd166);
+  }
+
+  /** 召喚媒体/防具/アイテムのピックアップ用テクスチャ（星型のシンプルな輝き） */
+  private drawPickupTexture(key: string, color: number): void {
+    const gfx = this.make.graphics({ x: 0, y: 0 }, false);
+    gfx.fillStyle(color, 1);
+    gfx.fillCircle(10, 10, 8);
+    gfx.fillStyle(0xffffff, 0.6);
+    gfx.fillCircle(10, 10, 4);
+    gfx.generateTexture(key, 20, 20);
+    gfx.destroy();
   }
 
   /** 頭+胴+腕(剣)からなる簡易ヒューマノイドのテクスチャを生成 */
@@ -277,8 +405,10 @@ export class GameScene extends Phaser.Scene {
       sprite.setSize(18, 30).setOffset(6, 10);
       this.physics.add.collider(sprite, this.platforms);
 
+      // 後半の敵ほど防御力を持たせ、連撃で防御を削っていく手応えの差を作る
+      const defense = i >= 4 ? 2 : 0;
       const enemy: EnemySprite = {
-        state: newEnemy(`enemy-${i}`, 2),
+        state: newEnemy(`enemy-${i}`, 2, defense),
         sprite,
         patrolMinX: x - 80,
         patrolMaxX: x + 80,
@@ -292,8 +422,41 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** 召喚媒体/防具/アイテムのピックアップをステージ上に配置する */
+  private buildPickups(): void {
+    const mediumXs = [260, 1050, 1750, 2550];
+    const armorXs = [620];
+    const itemXs = [900, 1300, 1650, 2200, 2900];
+    const stageBuffXs = [1500, 2750];
+
+    const spawn = (x: number, kind: PickupKind, textureKey: string, itemId?: string) => {
+      // プレイヤーの当たり判定（GROUND_Y-13〜+19、地面立ち時は概ねGROUND_Y-19〜+13）と
+      // 確実に重なる高さに置き、ジャンプせず歩くだけで拾えるようにする
+      const sprite = this.physics.add.sprite(x, GROUND_Y - 24, textureKey);
+      (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+      this.tweens.add({
+        targets: sprite,
+        y: sprite.y - 6,
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+      const pickup: Pickup = { kind, sprite, collected: false, itemId };
+      this.pickups.push(pickup);
+      this.physics.add.overlap(this.player, sprite, () => this.onPickupCollected(pickup));
+    };
+
+    mediumXs.forEach((x) => spawn(x, "summonMedium", "pickup_medium"));
+    armorXs.forEach((x) => spawn(x, "armor", "pickup_armor"));
+    // アイテム種別を出現位置で巡回させ、複数種類が拾えるようにする
+    const itemIds = ITEM_DEFS.map((i) => i.id);
+    itemXs.forEach((x, i) => spawn(x, "item", "pickup_item", itemIds[i % itemIds.length]));
+    stageBuffXs.forEach((x) => spawn(x, "stageBuff", "pickup_buff"));
+  }
+
   private buildHud(): void {
-    this.add.rectangle(130, 46, 240, 80, 0x14142a, 0.7).setScrollFactor(0).setOrigin(0.5);
+    this.add.rectangle(150, 68, 280, 124, 0x14142a, 0.7).setScrollFactor(0).setOrigin(0.5);
     this.healthText = this.add
       .text(16, 12, "", { fontSize: "18px", color: "#ff6b8a" })
       .setScrollFactor(0);
@@ -305,6 +468,12 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0);
     this.skillText = this.add
       .text(16, 72, "", { fontSize: "12px", color: "#aaaacc" })
+      .setScrollFactor(0);
+    this.comboText = this.add
+      .text(16, 90, "", { fontSize: "12px", color: "#aaaacc" })
+      .setScrollFactor(0);
+    this.itemsText = this.add
+      .text(16, 108, "", { fontSize: "12px", color: "#7fffb0" })
       .setScrollFactor(0);
 
     this.gaugeBarBg = this.add
@@ -363,6 +532,7 @@ export class GameScene extends Phaser.Scene {
           "X : 通常攻撃（装備中の武器で攻撃）",
           "1 / 2 / 3 : 武器切替（近接／中距離／遠距離）",
           "C : スキル発動（クールダウンあり）",
+          "Z / V / B : ポーション／剛力の護符／俊足の護符を使用",
           "",
           "必殺ゲージが満タンの時：",
           "↓ → X の順に入力で【奥義】発動",
@@ -370,6 +540,7 @@ export class GameScene extends Phaser.Scene {
           "秘奥義解放後、ゲージ満タンの時：",
           "↓ → ↓ → X の順に入力で【秘奥義】発動",
           "",
+          "召喚媒体/ステージバフを拾うと一時停止して選択画面が開きます",
           "R : ゲームオーバー／クリア後にリトライ",
         ].join("\n"),
         { fontSize: "15px", color: "#e0e0ff", align: "center", lineSpacing: 8 },
@@ -387,11 +558,249 @@ export class GameScene extends Phaser.Scene {
     this.tipsOverlay?.setVisible(this.tipsVisible);
   }
 
+  /** ヴァンサバ風の一時停止＋選択UI。召喚媒体を拾うと開き、呼び出す武器スロットを選ぶ */
+  private buildSummonOverlay(): void {
+    const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(110).setVisible(false);
+    const bg = this.add
+      .rectangle(400, 300, 800, 600, 0x000000, 0.75)
+      .setInteractive()
+      .on("pointerdown", () => this.closeSummonOverlay());
+    const panel = this.add.rectangle(400, 300, 560, 280, 0x1e1e38).setStrokeStyle(2, 0xd9a7ff);
+    const title = this.add
+      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#ffffff" })
+      .setOrigin(0.5);
+    overlay.add([bg, panel, title]);
+
+    (["melee", "mid", "ranged"] as const).forEach((kind, i) => {
+      const x = 250 + i * 150;
+      const y = 300;
+      const box = this.add
+        .rectangle(x, y, 130, 110, 0x15152a)
+        .setStrokeStyle(1, 0x54547a)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", () => this.trySummon(kind));
+      const label = this.add
+        .text(x, y - 60, `${i + 1}: ${WEAPON_LABEL[kind]}`, { fontSize: "12px", color: "#9a9ac0" })
+        .setOrigin(0.5);
+      const text = this.add
+        .text(x, y, "", {
+          fontSize: "12px",
+          color: "#e8e8fb",
+          align: "center",
+          wordWrap: { width: 116 },
+        })
+        .setOrigin(0.5);
+      overlay.add([box, label, text]);
+      this.summonOverlayTexts[kind] = text;
+    });
+
+    this.summonHintText = this.add
+      .text(400, 410, "1 / 2 / 3 キー、またはクリックで選択", { fontSize: "12px", color: "#aaaacc" })
+      .setOrigin(0.5);
+    overlay.add(this.summonHintText);
+    this.summonOverlay = overlay;
+  }
+
+  private refreshSummonOverlayTexts(): void {
+    for (const kind of ["melee", "mid", "ranged"] as const) {
+      const text = this.summonOverlayTexts[kind];
+      if (!text) continue;
+      const instanceId = this.loadout[kind];
+      const instance = instanceId ? this.inventory.find((w) => w.id === instanceId) : undefined;
+      if (!instance) {
+        text.setText("(未設定)\nロードアウトで設定してください").setColor("#62628a");
+        continue;
+      }
+      const template = findTemplate(instance.templateId);
+      const run = this.runWeaponStates[kind];
+      const stageLabel = run && run.instanceId === instance.id ? `召喚中 stage${run.stage}` : "未召喚";
+      text
+        .setText(`${template?.name ?? "?"}\n[${instance.rarity}] ${stageLabel}`)
+        .setColor("#e8e8fb");
+    }
+  }
+
+  private openSummonOverlay(): void {
+    this.summonOverlayVisible = true;
+    this.physics.pause();
+    this.refreshSummonOverlayTexts();
+    this.summonHintText?.setText("1 / 2 / 3 キー、またはクリックで選択");
+    this.summonOverlay?.setVisible(true);
+  }
+
+  private closeSummonOverlay(): void {
+    this.summonOverlayVisible = false;
+    this.summonOverlay?.setVisible(false);
+    this.physics.resume();
+  }
+
+  private trySummon(kind: WeaponKind): void {
+    const result = resolveSummon(this.loadout, this.inventory, kind, this.runWeaponStates[kind]);
+    if (!result) {
+      this.summonHintText?.setText(`${WEAPON_LABEL[kind]}はロードアウト未設定です`);
+      return;
+    }
+    this.playerState = setCustomWeapon(this.playerState, kind, toWeaponDef(result.stats, kind));
+    this.runWeaponStates = { ...this.runWeaponStates, [kind]: result.runState };
+    this.closeSummonOverlay();
+    this.playCatchAnimation(kind);
+  }
+
+  /** 空中に現れた武器をプレイヤーが受け取る演出 */
+  private playCatchAnimation(kind: WeaponKind): void {
+    const icon = this.add
+      .sprite(this.player.x, this.player.y - 140, "orb")
+      .setScale(1.8)
+      .setTint(0xd9a7ff)
+      .setDepth(50);
+    this.tweens.add({
+      targets: icon,
+      y: this.player.y - 10,
+      duration: 260,
+      ease: "Cubic.easeIn",
+      onComplete: () => {
+        icon.destroy();
+        this.cameras.main.flash(150, 217, 167, 255);
+        this.tweens.add({ targets: this.player, scale: 1.2, duration: 80, yoyo: true });
+        this.spawnFloatingText(this.player.x, this.player.y - 50, `${WEAPON_LABEL[kind]} 召喚！`, "#d9a7ff");
+      },
+    });
+  }
+
+  /** 召喚媒体/防具/アイテム/ステージバフのピックアップを取得した時の処理 */
+  private onPickupCollected(pickup: Pickup): void {
+    if (pickup.collected) return;
+    pickup.collected = true;
+    pickup.sprite.disableBody(true, true);
+
+    if (pickup.kind === "summonMedium") {
+      this.openSummonOverlay();
+      return;
+    }
+    if (pickup.kind === "armor") {
+      this.playerState = gainArmor(this.playerState, 1);
+      this.spawnFloatingText(this.player.x, this.player.y - 40, "🛡️ 防具+1", "#7fd1ff");
+      return;
+    }
+    if (pickup.kind === "stageBuff") {
+      this.openStageBuffOverlay();
+      return;
+    }
+    // item: 所持数を増やすだけ。使用は対応するキー（Z/V/B）で行う
+    if (pickup.itemId) {
+      this.items = { ...this.items, [pickup.itemId]: (this.items[pickup.itemId] ?? 0) + 1 };
+      const name = findItemDef(pickup.itemId)?.name ?? pickup.itemId;
+      this.spawnFloatingText(this.player.x, this.player.y - 40, `📦 ${name}+1`, "#7fffb0");
+    }
+  }
+
+  /** アイテム使用キー（Z/V/B）の入力処理 */
+  private handleItemUse(time: number): void {
+    for (const { itemId, key } of this.itemKeys) {
+      if (!Phaser.Input.Keyboard.JustDown(key)) continue;
+      const consumed = useItem(this.items, itemId);
+      if (!consumed) {
+        this.spawnFloatingText(this.player.x, this.player.y - 40, "所持していない", "#ff6b8a");
+        continue;
+      }
+      this.items = consumed;
+      this.applyItemEffect(itemId, time);
+    }
+  }
+
+  private applyItemEffect(itemId: string, time: number): void {
+    const name = findItemDef(itemId)?.name ?? itemId;
+    if (itemId === "potion") {
+      this.playerState = healPlayer(this.playerState, 1);
+      this.spawnFloatingText(this.player.x, this.player.y - 40, `❤️ ${name}使用`, "#ff6b8a");
+      return;
+    }
+    const buffKind: BuffKind | null = itemId === "power_charm" ? "power" : itemId === "haste_charm" ? "haste" : null;
+    if (buffKind) {
+      this.playerState = applyBuff(this.playerState, buffKind, time, ITEM_BUFF_DURATION_MS);
+      this.spawnFloatingText(this.player.x, this.player.y - 40, `✨ ${name}使用`, "#ffd166");
+    }
+  }
+
+  /** ヴァンサバ風の一時停止＋選択UI。ステージバフ（アウトゲーム設定とは独立したプール）から1つ選ぶ */
+  private buildStageBuffOverlay(): void {
+    const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(120).setVisible(false);
+    const bg = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75).setInteractive();
+    const panel = this.add.rectangle(400, 300, 560, 280, 0x1e1e38).setStrokeStyle(2, 0xffd166);
+    const title = this.add
+      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#ffffff" })
+      .setOrigin(0.5);
+    overlay.add([bg, panel, title]);
+
+    for (let i = 0; i < 3; i++) {
+      const x = 250 + i * 150;
+      const y = 300;
+      const box = this.add
+        .rectangle(x, y, 130, 110, 0x15152a)
+        .setStrokeStyle(1, 0x54547a)
+        .setInteractive({ useHandCursor: true })
+        .on("pointerdown", () => this.selectStageBuff(i));
+      const text = this.add
+        .text(x, y, "", { fontSize: "12px", color: "#e8e8fb", align: "center", wordWrap: { width: 116 } })
+        .setOrigin(0.5);
+      overlay.add([box, text]);
+      this.stageBuffOverlayTexts.push(text);
+    }
+
+    this.stageBuffOverlay = overlay;
+  }
+
+  private openStageBuffOverlay(): void {
+    this.currentStageBuffOptions = rollStageBuffOptions(3);
+    this.currentStageBuffOptions.forEach((option, i) => {
+      this.stageBuffOverlayTexts[i]?.setText(`${option.label}\n${option.desc}`);
+    });
+    this.stageBuffOverlayVisible = true;
+    this.physics.pause();
+    this.stageBuffOverlay?.setVisible(true);
+  }
+
+  private closeStageBuffOverlay(): void {
+    this.stageBuffOverlayVisible = false;
+    this.stageBuffOverlay?.setVisible(false);
+    this.physics.resume();
+  }
+
+  private selectStageBuff(index: number): void {
+    const option = this.currentStageBuffOptions[index];
+    if (!option) return;
+    const time = this.time.now;
+    if (option.kind === "regen") {
+      this.playerState = applyRegen(this.playerState, time, STAGE_BUFF_DURATION_MS);
+    } else {
+      this.playerState = applyBuff(this.playerState, option.kind, time, STAGE_BUFF_DURATION_MS);
+    }
+    this.closeStageBuffOverlay();
+    this.cameras.main.flash(150, 255, 209, 102);
+    this.spawnFloatingText(this.player.x, this.player.y - 50, `${option.label}！`, "#ffd166");
+  }
+
   update(time: number): void {
     if (Phaser.Input.Keyboard.JustDown(this.tipsKey)) {
       this.toggleTips();
     }
     if (this.tipsVisible) return; // TIPS表示中は操作を止める
+
+    if (this.summonOverlayVisible) {
+      // 召喚選択中は他の操作を止め、1/2/3キーでの選択のみ受け付ける
+      for (const { key, kind } of this.weaponKeys) {
+        if (Phaser.Input.Keyboard.JustDown(key)) this.trySummon(kind);
+      }
+      return;
+    }
+
+    if (this.stageBuffOverlayVisible) {
+      // ステージバフ選択中は1/2/3キーで選択肢のインデックスを選ぶ
+      this.weaponKeys.forEach(({ key }, i) => {
+        if (Phaser.Input.Keyboard.JustDown(key)) this.selectStageBuff(i);
+      });
+      return;
+    }
 
     if (this.status !== "playing") {
       if (Phaser.Input.Keyboard.JustDown(this.restartKey)) {
@@ -400,8 +809,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.playerState = tickRegen(this.playerState, time);
     this.handleMovement();
     this.handleWeaponSwitch();
+    this.handleItemUse(time);
     this.handleSkill(time);
     this.handleAttack(time);
     this.handleSpecialMoves(time);
@@ -413,13 +824,14 @@ export class GameScene extends Phaser.Scene {
 
   private handleMovement(): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const speed = MOVE_SPEED * buffSpeedMultiplier(this.playerState, this.time.now);
     let vx = 0;
     if (this.cursors.left.isDown) {
-      vx = -MOVE_SPEED;
+      vx = -speed;
       this.playerState = { ...this.playerState, facing: -1 as Facing };
       this.player.setFlipX(true);
     } else if (this.cursors.right.isDown) {
-      vx = MOVE_SPEED;
+      vx = speed;
       this.playerState = { ...this.playerState, facing: 1 as Facing };
       this.player.setFlipX(false);
     }
@@ -602,13 +1014,18 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** ダメージを適用し、命中していれば演出・撃破処理・ゲージ加算まで行う */
+  /**
+   * ダメージを適用し、命中していれば演出・撃破処理・ゲージ加算まで行う。
+   * 無被弾スーパーコンボの倍率をかけたダメージを敵に通し、敵側の防御力減衰は damageEnemy が担う。
+   */
   private applyHit(enemy: EnemySprite, damage: number, time: number, grantsGauge: boolean): void {
     const wasAlive = enemy.state.alive;
     const prevHealth = enemy.state.health;
-    enemy.state = damageEnemy(enemy.state, damage, time);
+    const multiplier = superComboMultiplier(this.playerState.comboStreak) * buffDamageMultiplier(this.playerState, time);
+    enemy.state = damageEnemy(enemy.state, Math.round(damage * multiplier), time);
     if (enemy.state.health === prevHealth) return; // デバウンスで実際には未ヒット
 
+    this.playerState = gainComboStreak(this.playerState, 1);
     this.onEnemyHit(enemy);
     if (grantsGauge) {
       this.playerState = gainOugiGauge(this.playerState, OUGI_GAUGE_PER_HIT);
@@ -703,5 +1120,27 @@ export class GameScene extends Phaser.Scene {
     this.gaugeLabel.setText(gaugeRatio >= 1 ? "奥義 READY (↓→X)" : `必殺 ${Math.floor(this.playerState.ougiGauge)}%`);
     this.gaugeBarFill.setFillStyle(gaugeRatio >= 1 ? 0xffd166 : 0xd9a7ff);
     this.hiougiHint.setText(this.playerState.hiougiUnlocked ? "秘奥義: ↓→↓→X で発動可" : "");
+
+    const multiplier = superComboMultiplier(this.playerState.comboStreak);
+    const armorLabel = this.playerState.armorCharges > 0 ? ` 🛡️${this.playerState.armorCharges}` : "";
+    const buffLabels = [
+      buffDamageMultiplier(this.playerState, now) > 1 ? "💪" : "",
+      buffSpeedMultiplier(this.playerState, now) > 1 ? "⚡" : "",
+      now < this.playerState.regenUntil ? "💚" : "",
+    ]
+      .filter(Boolean)
+      .join("");
+    this.comboText.setText(
+      `コンボ ${this.playerState.comboStreak}${multiplier > 1 ? ` ×${multiplier.toFixed(1)}` : ""}${armorLabel}${
+        buffLabels ? ` ${buffLabels}` : ""
+      }`,
+    );
+    this.comboText.setColor(multiplier > 1 ? "#ffd166" : "#aaaacc");
+
+    this.itemsText.setText(
+      this.itemKeys
+        .map(({ itemId, label }) => `${label}:${findItemDef(itemId)?.name ?? itemId}×${this.items[itemId] ?? 0}`)
+        .join(" "),
+    );
   }
 }

@@ -47,7 +47,17 @@
 - [ ] OGP/メタタグ整備（ポーション工房と同様の対応が必要）
 - [ ] 武器の取得/所持システム（現状は3種類とも最初から使用可能）
 - [ ] スキル・奥義の種類追加（現状はそれぞれ1種類のみ）
-- [ ] 【設計合意済み・未着手】武器パラメータ体系の刷新（レア度、WeaponTemplate/WeaponInstance、ロードアウト＋召喚媒体、基本装備、防具/アイテム消耗品、インゲーム内重複強化、敵防御力とコンボダメージ、スーパーコンボ倍率）。詳細設計は`docs/decisions.md`の「2026-08-24（剣戟の森: 武器パラメータ体系の設計合意・未実装）」を参照。実装は型定義（WeaponTemplate/WeaponInstance/BaseEquipment/SummonMedium/Armor/Item）から着手すること
+- [x] 武器パラメータ体系のロジック層を実装（`src/logic/loadout.ts`）: レア度(N/R/SR/SSR/UR)、WeaponTemplate×6（各kind2種）、WeaponInstance（強化/進化/熟練度）、宝箱/鍛治入手、基本装備、インゲーム内重複強化（RunWeaponState、入手+強化2回+アルティメット化1回の最大4段階）、防具/アイテム消耗品、ロードアウト＋localStorage永続化。Vitest 34件追加（計80件）
+- [x] アウトゲーム画面（`LoadoutScene`）を実装: 所持武器一覧、宝箱/鍛治での入手、近/中/遠スロットへの割当（種別不一致は弾く）、ステージ開始でGameSceneへロードアウトを渡す。`main.ts`の起動シーンをLoadoutScene→GameSceneに変更
+- [x] GameScene側でのロードアウト反映: `combat.ts`に`customWeapons`（装備スロットごとの実効武器定義の上書き）を追加し、`setCustomWeapon`/`clearCustomWeapon`で`currentWeapon`の参照先を差し替え可能にした。ステージ開始時は`baseEquipmentStats`ベースの基本装備からスタートし、召喚媒体ピックアップで`resolveSummon`→`toWeaponDef`を通じてロードアウト武器へ切り替わる
+- [x] 召喚媒体のインゲーム実装: 拾うと`this.physics.pause()`で一時停止し、ヴァンサバ風の選択UI（近/中/遠を1/2/3キーまたはクリックで選択、`docs/decisions.md`の設計通り「アウトゲーム設定したものの中から選ぶ」方式）を表示。選択すると空中から武器が降ってきてプレイヤーが受け取る演出（Tweenで落下→フラッシュ→プレイヤーが一瞬拡大）を再生。同じ個体を再度召喚すると`resolveSummon`が自動的に`stackRunWeapon`を呼びインゲーム内重複強化が進む
+- [x] 敵の防御力パラメータ（`EnemyState.defense`、`damageEnemy`で連続ヒットごとに`DEFENSE_SHRED_PER_HIT`ずつ削れる）、無被弾スーパーコンボ倍率（`comboStreak`/`superComboMultiplier`、10コンボ→×1.1、30コンボ→×1.2、被弾でリセット）を実装し、`GameScene.applyHit`で敵への実ダメージに反映
+- [x] 防具/アイテム消耗品のインゲーム実装（拡張版）: 防具ピックアップで`armorCharges`を加算（`damagePlayer`がHPより先に耐久を消費）。アイテムは複数種類（ポーション/剛力の護符/俊足の護符）を所持でき、拾うと所持数が増え、Z/V/Bキーでそれぞれ使用する（HUDに所持数を常時表示）
+- [x] アイテムの所持一覧UI・複数種のアイテム: `ITEM_DEFS`に3種類を定義し、HUDの`itemsText`に「Z:ポーション×N V:剛力の護符×N B:俊足の護符×N」を表示。所持していない状態でキーを押すとヒントメッセージを表示するガードも実装
+- [x] 防具のアウトゲームでの事前設定・ロードアウト: `ARMOR_TEMPLATES`（なし/革の鎧/鎖帷子/板金鎧、Tierごとに耐久とコストが増加）を追加し、`LoadoutScene`で出撃のたびに1つ選択・購入する方式にした（武器のようなレア度ロール/所持在庫は持たせず、選択式のみ）。ステージ開始時に選択Tierの耐久が`armorCharges`として付与される
+- [x] ステージ側から提示される一時バフ: `STAGE_BUFF_POOL`（攻撃力アップ/俊足/HP自動回復）を新設し、専用のピックアップ「stageBuff」を拾うとヴァンサバ風の一時停止選択UI（`rollStageBuffOptions`でランダム3択）が開く。アウトゲームのロードアウトとは完全に独立したプール。攻撃力/俊足バフはアイテムの護符と共通の`combat.ts`の`buffs`機構（`applyBuff`/`isBuffActive`/`buffDamageMultiplier`/`buffSpeedMultiplier`）を再利用し、HP自動回復は`applyRegen`/`tickRegen`で実装
+- [ ] 【未着手】アイテム/防具のレア度・強化システム（現状これらは武器と異なり個体差やレア度を持たない、シンプルな種別のみ）
+- [ ] 【未着手】召喚媒体を失う演出（現状は一度召喚した武器はステージ中ずっと保持する設計のまま。ユーザー合意通りなので変更は不要だが、将来的な難易度調整の余地として記載）
 
 ## ルートハブページ
 
