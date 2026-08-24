@@ -26,6 +26,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          # リポジトリ直下は静的ハブページのみで package-lock.json が無いため、
+          # 各ゲームのロックファイルを明示的に指定する
+          cache-dependency-path: |
+            games/potion-workshop/package-lock.json
+            games/side-scroller/package-lock.json
 
       # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
