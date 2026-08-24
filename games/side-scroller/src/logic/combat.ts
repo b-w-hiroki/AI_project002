@@ -7,7 +7,8 @@
 export const PLAYER_MAX_HEALTH = 3;
 export const PLAYER_INVULNERABLE_MS = 1000; // 被弾後の無敵時間
 export const ATTACK_COOLDOWN_MS = 350;
-export const ATTACK_RANGE = 46; // プレイヤー中心からの攻撃判定距離
+export const ATTACK_RANGE = 60; // プレイヤー中心から前方への攻撃判定距離
+export const ATTACK_RANGE_BEHIND = 12; // 密着時に敵が僅かに背後判定になっても取りこぼさないための許容量
 export const ENEMY_TOUCH_DAMAGE = 1;
 export const SCORE_PER_KILL = 100;
 
@@ -99,10 +100,14 @@ export function damageEnemy(enemy: EnemyState, amount: number, now: number): Ene
   return { ...enemy, health, alive: health > 0, hitAt: now };
 }
 
-/** プレイヤーの攻撃範囲に敵が入っているか（1次元の距離判定） */
+/**
+ * プレイヤーの攻撃範囲に敵が入っているか（1次元の距離判定）。
+ * 密着時に敵の中心がわずかに背後へ回り込んでも取りこぼさないよう、
+ * 背後方向にも ATTACK_RANGE_BEHIND ぶんの許容を持たせる。
+ */
 export function inAttackRange(playerX: number, facing: Facing, enemyX: number): boolean {
   const dx = (enemyX - playerX) * facing;
-  return dx >= 0 && dx <= ATTACK_RANGE;
+  return dx >= -ATTACK_RANGE_BEHIND && dx <= ATTACK_RANGE;
 }
 
 /** ゴール地点に到達したか */
