@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { WeaponKind } from "../logic/combat";
 import {
+  ARMOR_TEMPLATES,
   BLACKSMITH_COST,
   DEFAULT_CHEST_WEIGHTS,
   WEAPON_TEMPLATES,
@@ -9,6 +10,7 @@ import {
   effectiveStats,
   findTemplate,
   loadLoadout,
+  newLoadoutSave,
   openChest,
   saveLoadout,
   type LoadoutSaveData,
@@ -37,12 +39,13 @@ const RARITY_COLOR: Readonly<Record<string, string>> = {
  * localStorage（KVStore経由）へ永続化する。
  */
 export class LoadoutScene extends Phaser.Scene {
-  private data_: LoadoutSaveData = { inventory: [], loadout: { melee: null, mid: null, ranged: null }, baseEquipmentLevels: { melee: 0, mid: 0, ranged: 0 }, currency: 0 };
+  private data_: LoadoutSaveData = newLoadoutSave();
   private selectedInstanceId: string | null = null;
   private inventoryTexts: Phaser.GameObjects.Text[] = [];
   private slotTexts: Partial<Record<WeaponKind, Phaser.GameObjects.Text>> = {};
   private currencyText?: Phaser.GameObjects.Text;
   private hintText?: Phaser.GameObjects.Text;
+  private armorTexts: { id: string; label: string; text: Phaser.GameObjects.Text }[] = [];
 
   constructor() {
     super("LoadoutScene");
@@ -70,6 +73,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildSlotPanel();
     this.buildInventoryPanel();
     this.buildAcquirePanel();
+    this.buildArmorPanel();
     this.buildStartButton();
     this.hintText = this.add.text(400, 560, "", { fontSize: "13px", color: "#4ecca3" }).setOrigin(0.5, 0);
 
@@ -132,6 +136,45 @@ export class LoadoutScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 防具はアウトゲームで固定Tierから1つ選ぶ方式（武器のようなレア度ロール/所持在庫は無い）。
+   * 選択のたびにコストを支払い、選んだTierの耐久でステージに出撃する。
+   */
+  private buildArmorPanel(): void {
+    this.add.text(500, 355, "🛡️ 防具を選択（出撃ごとに購入）", { fontSize: "13px", color: "#e8e8fb" });
+    let y = 378;
+    for (const armor of ARMOR_TEMPLATES) {
+      const label =
+        armor.id === "none"
+          ? "なし（耐久0）"
+          : `${armor.name}（耐久${armor.maxDurability}） (${armor.cost})`;
+      const text = this.add
+        .text(500, y, label, { fontSize: "12px", color: "#7fd1ff" })
+        .setInteractive({ useHandCursor: true });
+      text.on("pointerdown", () => this.selectArmor(armor.id));
+      this.armorTexts.push({ id: armor.id, label, text });
+      y += 20;
+    }
+  }
+
+  private selectArmor(armorId: string): void {
+    if (this.data_.selectedArmorId === armorId) return; // 既に選択中なら再課金しない
+    const template = ARMOR_TEMPLATES.find((a) => a.id === armorId);
+    if (!template) return;
+    if (this.data_.currency < template.cost) {
+      this.setHint("通貨が足りません");
+      return;
+    }
+    this.data_ = {
+      ...this.data_,
+      currency: this.data_.currency - template.cost,
+      selectedArmorId: armorId,
+    };
+    this.persist();
+    this.setHint(`${template.name} を選択した`);
+    this.refresh();
+  }
+
   private craft(templateId: string): void {
     // 鍛治のUIを簡略化するため、本画面からは最も入手しやすい N 固定で発注する
     const crafted = craftAtBlacksmith(templateId, "N", this.data_.currency);
@@ -161,6 +204,7 @@ export class LoadoutScene extends Phaser.Scene {
         loadout: this.data_.loadout,
         inventory: this.data_.inventory,
         baseEquipmentLevels: this.data_.baseEquipmentLevels,
+        selectedArmorId: this.data_.selectedArmorId,
       });
     });
   }
@@ -191,6 +235,11 @@ export class LoadoutScene extends Phaser.Scene {
 
   private refresh(): void {
     this.currencyText?.setText(`💰 ${this.data_.currency}`);
+
+    for (const { id, label, text } of this.armorTexts) {
+      const selected = id === this.data_.selectedArmorId;
+      text.setColor(selected ? "#4ecca3" : "#7fd1ff").setText(selected ? `▶ ${label}` : label);
+    }
 
     for (const kind of ["melee", "mid", "ranged"] as const) {
       const instanceId = this.data_.loadout[kind];

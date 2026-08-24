@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  ARMOR_TEMPLATES,
   BASE_EQUIPMENT_MAX_LEVEL,
+  ITEM_DEFS,
   MAX_ENHANCE_LEVEL,
   MAX_EVOLUTION_STAGE,
   RARITIES,
   RUN_ENHANCE_MAX_STAGE,
+  STAGE_BUFF_POOL,
   WEAPON_TEMPLATES,
   assignLoadoutSlot,
   baseEquipmentStats,
@@ -13,6 +16,8 @@ import {
   effectiveStats,
   enhanceWeapon,
   evolveWeapon,
+  findArmorTemplate,
+  findItemDef,
   findTemplate,
   gainProficiency,
   isArmorBroken,
@@ -22,6 +27,7 @@ import {
   openChest,
   proficiencyComboBonus,
   resolveSummon,
+  rollStageBuffOptions,
   rollWeaponInstance,
   runEffectiveStats,
   saveLoadout,
@@ -320,5 +326,51 @@ describe("永続データ（アウトゲームのセーブ）", () => {
     const store = memoryStore();
     store.setItem("ai_project002_sideScroller_loadout_v1", "{not json");
     expect(loadLoadout(store)).toEqual(newLoadoutSave());
+  });
+  it("初期状態の防具選択は「なし」", () => {
+    expect(newLoadoutSave().selectedArmorId).toBe("none");
+  });
+});
+
+describe("防具（ARMOR_TEMPLATES）", () => {
+  it("「なし」は耐久0・コスト0", () => {
+    const none = findArmorTemplate("none");
+    expect(none.maxDurability).toBe(0);
+    expect(none.cost).toBe(0);
+  });
+  it("Tierが上がるほど耐久・コストが高い", () => {
+    for (let i = 1; i < ARMOR_TEMPLATES.length; i++) {
+      expect(ARMOR_TEMPLATES[i]!.maxDurability).toBeGreaterThan(ARMOR_TEMPLATES[i - 1]!.maxDurability);
+      expect(ARMOR_TEMPLATES[i]!.cost).toBeGreaterThan(ARMOR_TEMPLATES[i - 1]!.cost);
+    }
+  });
+  it("未知のidは「なし」にフォールバックする", () => {
+    expect(findArmorTemplate("bogus").id).toBe("none");
+  });
+});
+
+describe("アイテム（ITEM_DEFS）", () => {
+  it("複数種類のアイテムが定義されている", () => {
+    expect(ITEM_DEFS.length).toBeGreaterThanOrEqual(3);
+  });
+  it("findItemDef で取得できる", () => {
+    expect(findItemDef("potion")?.name).toBe("ポーション");
+    expect(findItemDef("bogus")).toBeUndefined();
+  });
+});
+
+describe("ステージバフ（rollStageBuffOptions）", () => {
+  it("指定件数を重複なく返す", () => {
+    const options = rollStageBuffOptions(3, STAGE_BUFF_POOL, () => 0.5);
+    expect(options).toHaveLength(3);
+    const kinds = new Set(options.map((o) => o.kind));
+    expect(kinds.size).toBe(3);
+  });
+  it("プールより多い件数を要求してもプール分だけ返す", () => {
+    const options = rollStageBuffOptions(10, STAGE_BUFF_POOL, () => 0.5);
+    expect(options).toHaveLength(STAGE_BUFF_POOL.length);
+  });
+  it("rngが0でもエラーにならない", () => {
+    expect(() => rollStageBuffOptions(3, STAGE_BUFF_POOL, () => 0)).not.toThrow();
   });
 });

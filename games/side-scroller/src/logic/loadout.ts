@@ -467,9 +467,47 @@ export function isArmorBroken(armor: ArmorState): boolean {
   return armor.durability <= 0;
 }
 
+/**
+ * 防具はアウトゲームで固定Tierから1つ選ぶ方式（武器のようなレア度ロール/個体差は持たせない）。
+ * `cost` を支払ってステージ開始時の耐久として選択する（在庫として所持するのではなく、
+ * 出撃のたびに選び直す消耗前提のロードアウト）。
+ */
+export interface ArmorTemplate {
+  id: string;
+  name: string;
+  maxDurability: number;
+  cost: number;
+}
+
+export const ARMOR_TEMPLATES: readonly ArmorTemplate[] = [
+  { id: "none", name: "なし", maxDurability: 0, cost: 0 },
+  { id: "leather", name: "革の鎧", maxDurability: 1, cost: 80 },
+  { id: "chain", name: "鎖帷子", maxDurability: 2, cost: 200 },
+  { id: "plate", name: "板金鎧", maxDurability: 3, cost: 450 },
+];
+
+export function findArmorTemplate(id: string): ArmorTemplate {
+  return ARMOR_TEMPLATES.find((a) => a.id === id) ?? ARMOR_TEMPLATES[0]!;
+}
+
 export interface ItemDef {
   id: string;
   name: string;
+}
+
+/**
+ * アイテムはステージ内ピックアップで所持数が増え、対応するキー入力で使用する想定。
+ * 武器と異なりアウトゲームでの育成・レア度は持たせない（ユーザー要望「まずは地盤」の範囲を
+ * 超えるため、複数種を用意しつつシンプルな即時効果に留めている）。
+ */
+export const ITEM_DEFS: readonly ItemDef[] = [
+  { id: "potion", name: "ポーション" },
+  { id: "power_charm", name: "剛力の護符" },
+  { id: "haste_charm", name: "俊足の護符" },
+];
+
+export function findItemDef(id: string): ItemDef | undefined {
+  return ITEM_DEFS.find((i) => i.id === id);
 }
 
 /** アイテムは使用したら1回で消滅するため、状態としては所持数のみ持てば十分 */
@@ -479,6 +517,40 @@ export function useItem(inventory: ItemInventory, itemId: string): ItemInventory
   const count = inventory[itemId] ?? 0;
   if (count <= 0) return null;
   return { ...inventory, [itemId]: count - 1 };
+}
+
+// ---- ステージ側から提示される一時バフ（アウトゲームのロードアウトとは独立したプール） ----
+
+export type StageBuffKind = "power" | "haste" | "regen";
+
+export interface StageBuffOption {
+  kind: StageBuffKind;
+  label: string;
+  desc: string;
+}
+
+export const STAGE_BUFF_POOL: readonly StageBuffOption[] = [
+  { kind: "power", label: "攻撃力アップ", desc: "しばらくの間ダメージが増加する" },
+  { kind: "haste", label: "俊足", desc: "しばらくの間移動速度が上昇する" },
+  { kind: "regen", label: "HP自動回復", desc: "しばらくの間HPが少しずつ回復する" },
+];
+
+/**
+ * ステージ側バフの選択肢を count 個、重複なくランダムに提示する。
+ * プールが count 未満なら全件返す。
+ */
+export function rollStageBuffOptions(
+  count = 3,
+  pool: readonly StageBuffOption[] = STAGE_BUFF_POOL,
+  rng: () => number = Math.random,
+): StageBuffOption[] {
+  const remaining = [...pool];
+  const picked: StageBuffOption[] = [];
+  while (remaining.length > 0 && picked.length < count) {
+    const index = Math.floor(rng() * remaining.length) % remaining.length;
+    picked.push(remaining.splice(index, 1)[0]!);
+  }
+  return picked;
 }
 
 // ---- 永続データ（アウトゲームのセーブ） ----
@@ -496,6 +568,8 @@ export interface LoadoutSaveData {
   loadout: Loadout;
   baseEquipmentLevels: Record<WeaponKind, number>;
   currency: number;
+  /** アウトゲームで選択した防具Tier（ARMOR_TEMPLATES のid）。出撃のたびに選び直す消耗前提 */
+  selectedArmorId: string;
 }
 
 export function newLoadoutSave(): LoadoutSaveData {
@@ -504,6 +578,7 @@ export function newLoadoutSave(): LoadoutSaveData {
     loadout: newLoadout(),
     baseEquipmentLevels: { melee: 0, mid: 0, ranged: 0 },
     currency: 0,
+    selectedArmorId: "none",
   };
 }
 

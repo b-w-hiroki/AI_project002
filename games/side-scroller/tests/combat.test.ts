@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   ATTACK_COOLDOWN_MS,
   DEFENSE_SHRED_PER_HIT,
+  HASTE_BUFF_MULTIPLIER,
   HIOUGI_UNLOCK_SCORE,
+  ITEM_BUFF_DURATION_MS,
   OUGI_GAUGE_MAX,
   OUGI_WINDOW_MS,
   PLAYER_INVULNERABLE_MS,
   PLAYER_MAX_HEALTH,
+  POWER_BUFF_MULTIPLIER,
+  REGEN_TICK_MS,
   SKILL_COOLDOWN_MS,
   SKILL_WINDOW_MS,
   SUPER_COMBO_TIER1_MULTIPLIER,
@@ -15,6 +19,10 @@ import {
   SUPER_COMBO_TIER2_THRESHOLD,
   WEAPONS,
   addScore,
+  applyBuff,
+  applyRegen,
+  buffDamageMultiplier,
+  buffSpeedMultiplier,
   canAttack,
   canUseHiougi,
   canUseOugi,
@@ -30,6 +38,7 @@ import {
   gameStatus,
   healPlayer,
   inAttackRange,
+  isBuffActive,
   isAlive,
   isAttacking,
   isHiougiActive,
@@ -43,6 +52,7 @@ import {
   startAttack,
   superComboMultiplier,
   switchWeapon,
+  tickRegen,
   useHiougi,
   useOugi,
   useSkill,
@@ -361,5 +371,49 @@ describe("敵の防御力", () => {
     enemy = damageEnemy(enemy, 5, 1000);
     const damageDealtSecond = healthAfterFirst - enemy.health;
     expect(damageDealtSecond).toBeGreaterThanOrEqual(5 - (5 - DEFENSE_SHRED_PER_HIT));
+  });
+});
+
+describe("一時バフ（アイテム/ステージバフ共通）", () => {
+  it("付与直後は有効、時間経過で切れる", () => {
+    const p = applyBuff(newPlayer(), "power", 0, ITEM_BUFF_DURATION_MS);
+    expect(isBuffActive(p, "power", 100)).toBe(true);
+    expect(isBuffActive(p, "power", ITEM_BUFF_DURATION_MS)).toBe(false);
+  });
+  it("powerバフ中はダメージ倍率が上がる", () => {
+    const p = applyBuff(newPlayer(), "power", 0, ITEM_BUFF_DURATION_MS);
+    expect(buffDamageMultiplier(p, 100)).toBe(POWER_BUFF_MULTIPLIER);
+    expect(buffDamageMultiplier(newPlayer(), 100)).toBe(1);
+  });
+  it("hasteバフ中は移動速度倍率が上がる", () => {
+    const p = applyBuff(newPlayer(), "haste", 0, ITEM_BUFF_DURATION_MS);
+    expect(buffSpeedMultiplier(p, 100)).toBe(HASTE_BUFF_MULTIPLIER);
+    expect(buffSpeedMultiplier(newPlayer(), 100)).toBe(1);
+  });
+});
+
+describe("HP自動回復（tickRegen）", () => {
+  it("回復中はティック間隔ごとにHPが増える", () => {
+    let p = damagePlayer(newPlayer(), 2, 0); // HP1に
+    p = applyRegen(p, 0, 5000);
+    p = tickRegen(p, REGEN_TICK_MS);
+    expect(p.health).toBe(2);
+  });
+  it("ティック間隔未満では回復しない", () => {
+    let p = damagePlayer(newPlayer(), 2, 0);
+    p = applyRegen(p, 0, 5000);
+    p = tickRegen(p, REGEN_TICK_MS - 1);
+    expect(p.health).toBe(1);
+  });
+  it("持続時間が切れたら回復しない", () => {
+    let p = damagePlayer(newPlayer(), 2, 0);
+    p = applyRegen(p, 0, 500);
+    p = tickRegen(p, 1000);
+    expect(p.health).toBe(1);
+  });
+  it("最大HPを超えて回復しない", () => {
+    let p = applyRegen(newPlayer(), 0, 5000);
+    p = tickRegen(p, REGEN_TICK_MS);
+    expect(p.health).toBe(PLAYER_MAX_HEALTH);
   });
 });

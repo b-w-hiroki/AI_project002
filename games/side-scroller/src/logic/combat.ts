@@ -133,6 +133,10 @@ export interface PlayerState {
   skillActiveUntil: number; // この時刻までスキルの判定が有効
   comboStreak: number; // 無被弾で継続している連撃数。被弾で0に戻る
   armorCharges: number; // 防具の残り耐久。被弾時、HPより先にここが減る
+  /** アイテム/ステージバフによる一時強化。値はその効果が切れる時刻 */
+  buffs: { power?: number; haste?: number };
+  regenUntil: number; // この時刻までHP自動回復が有効
+  lastRegenTickAt: number; // 直近の自動回復ティック時刻
 }
 
 export function newPlayer(): PlayerState {
@@ -154,6 +158,9 @@ export function newPlayer(): PlayerState {
     skillActiveUntil: 0,
     comboStreak: 0,
     armorCharges: 0,
+    buffs: {},
+    regenUntil: 0,
+    lastRegenTickAt: -Infinity,
   };
 }
 
@@ -275,6 +282,51 @@ export function gainArmor(player: PlayerState, amount = 1): PlayerState {
 /** HPを回復する（アイテム使用時などに呼ぶ）。最大HPでクランプ */
 export function healPlayer(player: PlayerState, amount: number): PlayerState {
   return { ...player, health: Math.min(player.maxHealth, player.health + amount) };
+}
+
+// ---- 一時バフ（アイテム/ステージ側から提示されるバフの両方が使う共通の仕組み） ----
+
+export type BuffKind = "power" | "haste";
+
+export const ITEM_BUFF_DURATION_MS = 8000;
+export const STAGE_BUFF_DURATION_MS = 12000;
+export const POWER_BUFF_MULTIPLIER = 1.5;
+export const HASTE_BUFF_MULTIPLIER = 1.3;
+
+/** バフを付与（既に付与中なら残り時間を延長せず今回の効果時間で上書き） */
+export function applyBuff(player: PlayerState, kind: BuffKind, now: number, durationMs: number): PlayerState {
+  return { ...player, buffs: { ...player.buffs, [kind]: now + durationMs } };
+}
+
+export function isBuffActive(player: PlayerState, kind: BuffKind, now: number): boolean {
+  return (player.buffs[kind] ?? 0) > now;
+}
+
+/** 攻撃力バフ込みのダメージ倍率 */
+export function buffDamageMultiplier(player: PlayerState, now: number): number {
+  return isBuffActive(player, "power", now) ? POWER_BUFF_MULTIPLIER : 1;
+}
+
+/** 俊足バフ込みの移動速度倍率 */
+export function buffSpeedMultiplier(player: PlayerState, now: number): number {
+  return isBuffActive(player, "haste", now) ? HASTE_BUFF_MULTIPLIER : 1;
+}
+
+// ---- HP自動回復（ステージバフの一種） ----
+
+export const REGEN_TICK_MS = 1000;
+export const REGEN_TICK_AMOUNT = 1;
+
+/** 自動回復状態を付与する */
+export function applyRegen(player: PlayerState, now: number, durationMs: number): PlayerState {
+  return { ...player, regenUntil: now + durationMs, lastRegenTickAt: now };
+}
+
+/** 毎フレーム呼ぶ。回復中でティック間隔が経過していればHPを1回復する */
+export function tickRegen(player: PlayerState, now: number): PlayerState {
+  if (now >= player.regenUntil) return player;
+  if (now - player.lastRegenTickAt < REGEN_TICK_MS) return player;
+  return healPlayer({ ...player, lastRegenTickAt: now }, REGEN_TICK_AMOUNT);
 }
 
 // ---- 敵 ----
