@@ -1,20 +1,30 @@
 import { describe, expect, it } from "vitest";
 import {
+  addOfflineCapBonus,
   applyOfflineProgress,
   buyClickUpgrade,
+  buyClickUpgrades,
   buyGenerator,
+  buyOfflineExtension,
   click,
   clickUpgradeCost,
+  clickUpgradeCostForQuantity,
   essenceMultiplier,
   essenceOnPrestige,
   formatNumber,
   GENERATORS,
   generatorCost,
+  maxAffordableClickUpgrades,
   newGame,
-  OFFLINE_CAP_SEC,
+  OFFLINE_CAP_BASE_SEC,
+  OFFLINE_CAP_MAX_SEC,
+  offlineCapSec,
+  OFFLINE_EXT_MAX_LEVEL,
+  offlineExtensionCost,
   prestige,
   PRESTIGE_UNLOCK,
   productionPerSec,
+  setOfflineCapBonus,
   tick,
 } from "../src/logic/economy";
 import { exportSaveJson, load, parseSaveJson, save, KVStore } from "../src/logic/save";
@@ -71,9 +81,9 @@ describe("applyOfflineProgress", () => {
     expect(gained).toBeCloseTo(600);
     expect(state.potions).toBeCloseTo(600);
   });
-  it("上限8時間でキャップされる", () => {
-    const { gained } = applyOfflineProgress(base, OFFLINE_CAP_SEC * 10);
-    expect(gained).toBeCloseTo(OFFLINE_CAP_SEC);
+  it("拡張していなければ基本上限（12時間）でキャップされる", () => {
+    const { gained } = applyOfflineProgress(base, OFFLINE_CAP_BASE_SEC * 10);
+    expect(gained).toBeCloseTo(OFFLINE_CAP_BASE_SEC);
   });
   it("負の経過時間は無視", () => {
     expect(applyOfflineProgress(base, -100).gained).toBe(0);
@@ -171,6 +181,41 @@ describe("buyClickUpgrade", () => {
   });
 });
 
+describe("buyClickUpgrades（一括購入）", () => {
+  it("qtyぶんのコスト合計は等比級数で計算される", () => {
+    const s = newGame();
+    const c1 = clickUpgradeCost(s); // 50
+    const c2 = Math.ceil(50 * 1.6); // 2回目のコスト
+    expect(clickUpgradeCostForQuantity(s, 2)).toBe(c1 + c2);
+  });
+  it("資金が足りる分だけ買え、余りは繰り越されない端数消費", () => {
+    const total3 = clickUpgradeCostForQuantity(newGame(), 3);
+    const s = buyClickUpgrades({ ...newGame(), potions: total3 }, 3)!;
+    expect(s.clickPower).toBe(4); // 1 + 3
+    expect(s.potions).toBe(0);
+  });
+  it("qtyより所持金が少なければ買える分だけ購入する（部分約定）", () => {
+    const c1 = clickUpgradeCost(newGame()); // 50
+    const s = buyClickUpgrades({ ...newGame(), potions: c1 }, 100)!;
+    expect(s.clickPower).toBe(2); // 1回ぶんしか買えない
+  });
+  it("1回も買えなければ null", () => {
+    expect(buyClickUpgrades(newGame(), 5)).toBeNull();
+  });
+  it("Infinity（MAX）を渡すと買えるだけ買う", () => {
+    const s = buyClickUpgrades({ ...newGame(), potions: 100_000 }, Infinity)!;
+    expect(s.clickPower).toBeGreaterThan(1);
+    // 使い切っているか、次の1回が買えない額まで使っていることを確認
+    expect(clickUpgradeCost(s)).toBeGreaterThan(s.potions);
+  });
+  it("maxAffordableClickUpgrades は実際に buyClickUpgrades(Infinity) と一致する", () => {
+    const start = { ...newGame(), potions: 5_000 };
+    const n = maxAffordableClickUpgrades(start);
+    const bought = buyClickUpgrades(start, Infinity)!;
+    expect(bought.clickPower).toBe(1 + n);
+  });
+});
+
 describe("GENERATORS", () => {
   it("8種類の設備がある", () => {
     expect(GENERATORS.length).toBe(8);
@@ -226,5 +271,89 @@ describe("save export/import", () => {
   });
   it("壊れたJSONは null", () => {
     expect(parseSaveJson("not json")).toBeNull();
+  });
+});
+
+describe("オフライン上限（柔軟な拡張の仕組み）", () => {
+  it("初期状態は基本上限（12時間）", () => {
+    expect(offlineCapSec(newGame())).toBe(OFFLINE_CAP_BASE_SEC);
+  });
+
+  it("ソースを追加すると加算される", () => {
+    const s = setOfflineCapBonus(newGame(), "buff_equipment", 3600);
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_BASE_SEC + 3600);
+  });
+
+  it("複数ソースは合算される（課金/強化/バフなど別々に管理できる）", () => {
+    let s = setOfflineCapBonus(newGame(), "purchase", 3600 * 6);
+    s = setOfflineCapBonus(s, "prestige_breakthrough", 3600 * 4);
+    s = setOfflineCapBonus(s, "buff_equipment", 3600 * 2);
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_BASE_SEC + 3600 * 12);
+  });
+
+  it("同じソースを再設定しても二重加算されない（上書き）", () => {
+    let s = setOfflineCapBonus(newGame(), "purchase", 3600 * 6);
+    s = setOfflineCapBonus(s, "purchase", 3600 * 6); // 同じ値で再設定
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_BASE_SEC + 3600 * 6);
+  });
+
+  it("addOfflineCapBonus は既存の値に加算する", () => {
+    let s = addOfflineCapBonus(newGame(), "buff_equipment", 1000);
+    s = addOfflineCapBonus(s, "buff_equipment", 500);
+    expect(s.offlineCapBonuses["buff_equipment"]).toBe(1500);
+  });
+
+  it("どれだけ加算しても絶対上限（72時間）を超えない", () => {
+    const s = setOfflineCapBonus(newGame(), "purchase", 1_000_000);
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_MAX_SEC);
+  });
+
+  it("applyOfflineProgress は offlineCapSec の値でキャップする", () => {
+    const base = {
+      ...newGame(),
+      counts: { ...newGame().counts, apprentice: 2 }, // 1/sec
+    };
+    const extended = setOfflineCapBonus(base, "buff_equipment", 3600);
+    const { gained } = applyOfflineProgress(extended, (OFFLINE_CAP_BASE_SEC + 3600) * 10);
+    expect(gained).toBeCloseTo(OFFLINE_CAP_BASE_SEC + 3600);
+  });
+});
+
+describe("buyOfflineExtension", () => {
+  it("essence不足なら null", () => {
+    expect(buyOfflineExtension(newGame())).toBeNull();
+  });
+
+  it("購入するとレベルが上がりオフライン上限が伸びる", () => {
+    const cost = offlineExtensionCost(newGame())!;
+    const s = buyOfflineExtension({ ...newGame(), essence: cost })!;
+    expect(s.offlineExtLevel).toBe(1);
+    expect(s.essence).toBe(0);
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_BASE_SEC + 6 * 3600);
+  });
+
+  it("最大レベルに到達すると購入不可（null）になる", () => {
+    let s = { ...newGame(), essence: 1_000_000_000 };
+    for (let i = 0; i < OFFLINE_EXT_MAX_LEVEL; i++) {
+      s = buyOfflineExtension(s)!;
+      expect(s).not.toBeNull();
+    }
+    expect(s.offlineExtLevel).toBe(OFFLINE_EXT_MAX_LEVEL);
+    expect(offlineExtensionCost(s)).toBeNull();
+    expect(buyOfflineExtension(s)).toBeNull();
+    // 満レベルでちょうど絶対上限（72時間）に到達する設計
+    expect(offlineCapSec(s)).toBe(OFFLINE_CAP_MAX_SEC);
+  });
+
+  it("転生してもオフライン拡張レベル・ボーナスは保持される", () => {
+    const cost = offlineExtensionCost(newGame())!;
+    const extended = buyOfflineExtension({ ...newGame(), essence: cost })!;
+    const s = {
+      ...extended,
+      totalBrewed: PRESTIGE_UNLOCK,
+    };
+    const next = prestige(s)!;
+    expect(next.offlineExtLevel).toBe(1);
+    expect(offlineCapSec(next)).toBe(OFFLINE_CAP_BASE_SEC + 6 * 3600);
   });
 });

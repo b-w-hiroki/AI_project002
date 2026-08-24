@@ -2,17 +2,22 @@ import Phaser from "phaser";
 import { ACHIEVEMENTS, checkNewAchievements, unlockAchievements } from "../logic/achievements";
 import {
   applyOfflineProgress,
-  buyClickUpgrade,
+  buyClickUpgrades,
   buyGenerator,
+  buyOfflineExtension,
   click,
-  clickUpgradeCost,
+  CLICK_UPGRADE_QUANTITIES,
+  clickUpgradeCostForQuantity,
   essenceMultiplier,
   essenceOnPrestige,
   formatNumber,
   GameState,
   GENERATORS,
   generatorCost,
+  maxAffordableClickUpgrades,
   newGame,
+  offlineCapSec,
+  offlineExtensionCost,
   prestige,
   PRESTIGE_UNLOCK,
   productionPerSec,
@@ -51,8 +56,12 @@ export class IdleScene extends Phaser.Scene {
   private soundText!: Phaser.GameObjects.Text;
   private clickUpgradeText!: Phaser.GameObjects.Text;
   private clickUpgradeButton!: Phaser.GameObjects.Rectangle;
+  private offlineCapText!: Phaser.GameObjects.Text;
+  private offlineCapButton!: Phaser.GameObjects.Rectangle;
   private prestigeButton!: Phaser.GameObjects.Rectangle;
   private prestigeText!: Phaser.GameObjects.Text;
+  private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
+  private qtyButtons: { qty: number; rect: Phaser.GameObjects.Rectangle }[] = [];
   private rows: {
     id: string;
     button: Phaser.GameObjects.Rectangle;
@@ -160,43 +169,88 @@ export class IdleScene extends Phaser.Scene {
 
   private buildBrewArea(): void {
     const brew = this.add
-      .circle(160, 260, 75, 0x7b2cbf)
+      .circle(160, 230, 65, 0x7b2cbf)
       .setInteractive({ useHandCursor: true });
     this.brewText = this.add
-      .text(160, 260, "", { fontSize: "22px", color: "#ffffff" })
+      .text(160, 230, "", { fontSize: "22px", color: "#ffffff" })
       .setOrigin(0.5);
     brew.on("pointerdown", () => {
       const gain = this.state.clickPower * essenceMultiplier(this.state);
       this.state = click(this.state);
       this.playSound(sfx.click);
       this.tweens.add({ targets: brew, scale: 0.92, duration: 60, yoyo: true });
-      this.spawnFloatingText(160, 175, `+${formatNumber(gain)}`, "#4ecca3");
+      this.spawnFloatingText(160, 155, `+${formatNumber(gain)}`, "#4ecca3");
     });
 
-    // クリック強化
+    // 購入数セレクター（クリック強化に使う一括購入数）
+    CLICK_UPGRADE_QUANTITIES.forEach((qty, i) => {
+      const bx = 40 + i * 60;
+      const rect = this.add
+        .rectangle(bx, 322, 52, 26, qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a)
+        .setStrokeStyle(1, 0x44446a)
+        .setInteractive({ useHandCursor: true });
+      const label = this.add
+        .text(bx, 322, qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`, {
+          fontSize: "12px",
+          color: "#ccccdd",
+        })
+        .setOrigin(0.5);
+      rect.on("pointerdown", () => {
+        this.buyQty = qty;
+        for (const b of this.qtyButtons) {
+          b.rect.setFillStyle(b.qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a);
+        }
+      });
+      this.qtyButtons.push({ qty, rect });
+      this.registerRefresh(() =>
+        label.setText(qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`),
+      );
+    });
+
+    // クリック強化（購入数セレクターに応じて一括購入）
     this.clickUpgradeButton = this.add
-      .rectangle(160, 380, 260, 54, 0x2a3a4a)
+      .rectangle(160, 375, 260, 56, 0x2a3a4a)
       .setStrokeStyle(2, 0x44586a)
       .setInteractive({ useHandCursor: true });
     this.clickUpgradeText = this.add
-      .text(160, 380, "", { fontSize: "13px", color: "#ccccdd", align: "center" })
+      .text(160, 375, "", { fontSize: "13px", color: "#ccccdd", align: "center" })
       .setOrigin(0.5);
     this.clickUpgradeButton.on("pointerdown", () => {
-      const next = buyClickUpgrade(this.state);
+      const before = this.state.clickPower;
+      const next = buyClickUpgrades(this.state, this.buyQty);
       if (next) {
+        const gained = next.clickPower - before;
         this.state = next;
         this.playSound(sfx.buy);
-        this.spawnFloatingText(160, 350, "+1 ⚡", "#ffd166");
+        this.spawnFloatingText(160, 345, `+${gained} ⚡`, "#ffd166");
+      }
+    });
+
+    // 放置上限拡張（essence消費、複数ソース加算式で将来の課金/バフ等にも対応できる設計）
+    this.offlineCapButton = this.add
+      .rectangle(160, 440, 260, 44, 0x2a3a4a)
+      .setStrokeStyle(2, 0x44586a)
+      .setInteractive({ useHandCursor: true });
+    this.offlineCapText = this.add
+      .text(160, 440, "", { fontSize: "12px", color: "#ccccdd", align: "center" })
+      .setOrigin(0.5);
+    this.offlineCapButton.on("pointerdown", () => {
+      const next = buyOfflineExtension(this.state);
+      if (next) {
+        this.state = next;
+        save(this.state, localStorage, Date.now());
+        this.playSound(sfx.buy);
+        this.spawnFloatingText(160, 415, "+6h ⏳", "#7fd1ff");
       }
     });
 
     // 転生
     this.prestigeButton = this.add
-      .rectangle(160, 460, 260, 64, 0x3a2a5a)
+      .rectangle(160, 525, 260, 64, 0x3a2a5a)
       .setStrokeStyle(2, 0x7b2cbf)
       .setInteractive({ useHandCursor: true });
     this.prestigeText = this.add
-      .text(160, 460, "", {
+      .text(160, 525, "", {
         fontSize: "12px",
         color: "#d9a7ff",
         align: "center",
@@ -391,12 +445,31 @@ export class IdleScene extends Phaser.Scene {
         : "",
     );
 
-    const clickCost = clickUpgradeCost(this.state);
-    const clickAffordable = this.state.potions >= clickCost;
+    const affordableQty = maxAffordableClickUpgrades(this.state);
+    const displayQty =
+      this.buyQty === Infinity ? Math.max(affordableQty, 1) : this.buyQty;
+    const clickCost = clickUpgradeCostForQuantity(this.state, displayQty);
+    const clickAffordable = affordableQty >= 1;
     this.clickUpgradeText.setText(
-      `${t(this.lang, "clickUpgrade")} (${this.state.clickPower})\n${t(this.lang, "clickUpgradeDesc")}\n${t(this.lang, "cost")}: ${formatNumber(clickCost)}`,
+      `${t(this.lang, "clickUpgrade")} (${this.state.clickPower})\n` +
+        `${t(this.lang, "clickUpgradeDesc", { n: displayQty.toString() })}\n` +
+        `${t(this.lang, "cost")}: ${formatNumber(clickCost)}`,
     );
     this.clickUpgradeButton.setFillStyle(clickAffordable ? 0x2f5848 : 0x2a3a4a);
+
+    const capSec = offlineCapSec(this.state);
+    const capHours = Math.round(capSec / 3600);
+    const extCost = offlineExtensionCost(this.state);
+    if (extCost === null) {
+      this.offlineCapText.setText(t(this.lang, "offlineCapMaxed", { h: capHours.toString() }));
+      this.offlineCapButton.setFillStyle(0x2a3a4a);
+    } else {
+      const capAffordable = this.state.essence >= extCost;
+      this.offlineCapText.setText(
+        `${t(this.lang, "offlineCapLabel", { h: capHours.toString() })}\n${t(this.lang, "offlineCapButton")}: ${formatNumber(extCost)}✨`,
+      );
+      this.offlineCapButton.setFillStyle(capAffordable ? 0x2f4858 : 0x2a3a4a);
+    }
 
     const gained = essenceOnPrestige(this.state);
     if (gained > 0) {
