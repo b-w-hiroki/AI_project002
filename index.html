@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI_project002 — ゲーム一覧</title>
-    <meta name="description" content="AIフル活用で開発したブラウザゲーム集。" />
+    <title>AI_project002 — 制作物一覧</title>
+    <meta name="description" content="AIフル活用で開発したゲーム・アプリ集。" />
     <style>
       :root {
         color-scheme: dark;
@@ -16,8 +16,8 @@
       body {
         margin: 0;
         min-height: 100%;
-        background: #0d0d14;
-        color: #e0e0ff;
+        background: #0a0a12;
+        color: #e8e8fb;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
           "Yu Gothic", sans-serif;
       }
@@ -25,57 +25,129 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 48px 20px 80px;
+        padding: 64px 20px 90px;
+        background:
+          radial-gradient(ellipse 900px 500px at 50% -10%, rgba(123, 44, 191, 0.25), transparent),
+          #0a0a12;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 48px;
       }
       h1 {
-        font-size: 1.8rem;
-        margin: 0 0 8px;
+        font-size: 2.1rem;
+        margin: 0 0 10px;
+        letter-spacing: 0.02em;
       }
       p.lead {
-        color: #8888aa;
-        margin: 0 0 40px;
-        text-align: center;
+        color: #9a9ac0;
+        margin: 0;
+        font-size: 1rem;
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 28px;
         width: 100%;
-        max-width: 720px;
+        max-width: 880px;
       }
       a.card {
-        display: block;
-        background: #1e1e38;
-        border: 1px solid #33335a;
-        border-radius: 16px;
-        padding: 28px 24px;
+        display: flex;
+        flex-direction: column;
+        background: #15152a;
+        border: 1px solid #2c2c50;
+        border-radius: 18px;
+        overflow: hidden;
         text-decoration: none;
         color: inherit;
-        transition: transform 0.15s ease, border-color 0.15s ease;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
       }
       a.card:hover {
-        transform: translateY(-4px);
-        border-color: #4ecca3;
+        transform: translateY(-6px);
+        border-color: var(--accent, #4ecca3);
+        box-shadow: 0 16px 40px -12px var(--accent-glow, rgba(78, 204, 163, 0.35));
       }
-      .emoji {
-        font-size: 2.4rem;
-        display: block;
-        margin-bottom: 12px;
+      .thumb {
+        position: relative;
+        height: 150px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--accent, #4ecca3) 0%, #0a0a12 130%);
+        overflow: hidden;
+      }
+      .thumb::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18), transparent 60%);
+      }
+      .thumb .emoji {
+        font-size: 3.4rem;
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+        transition: transform 0.2s ease;
+      }
+      a.card:hover .thumb .emoji {
+        transform: scale(1.08) translateY(-2px);
+      }
+      .badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.68rem;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: rgba(10, 10, 18, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: #e8e8fb;
+        backdrop-filter: blur(4px);
+      }
+      .body {
+        padding: 20px 22px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+      }
+      .tags {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .tag {
+        font-size: 0.7rem;
+        color: var(--accent, #4ecca3);
+        background: color-mix(in srgb, var(--accent, #4ecca3) 16%, transparent);
+        border: 1px solid color-mix(in srgb, var(--accent, #4ecca3) 40%, transparent);
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
       }
       .card h2 {
-        font-size: 1.2rem;
-        margin: 0 0 6px;
+        font-size: 1.15rem;
+        margin: 0;
       }
-      .card p {
+      .card p.desc {
         margin: 0;
         color: #aaaacc;
-        font-size: 0.9rem;
-        line-height: 1.5;
+        font-size: 0.88rem;
+        line-height: 1.55;
+        flex: 1;
+      }
+      .repo-line {
+        margin: 0;
+        font-size: 0.72rem;
+        color: #62628a;
+        display: flex;
+        align-items: center;
+        gap: 5px;
       }
       footer {
-        margin-top: 56px;
+        margin-top: 64px;
         color: #55557a;
         font-size: 0.8rem;
+        text-align: center;
       }
       footer a {
         color: #8888aa;
@@ -83,24 +155,92 @@
     </style>
   </head>
   <body>
-    <h1>🎮 AI_project002</h1>
-    <p class="lead">AIフル活用で開発したブラウザゲーム集</p>
-    <div class="grid">
-      <a class="card" href="./potion-workshop/">
-        <span class="emoji">🧪</span>
-        <h2>ポーション工房</h2>
-        <p>クリックして調合、設備を集めて自動生産、転生して強くなる放置ゲーム。</p>
-      </a>
-      <a class="card" href="./side-scroller/">
-        <span class="emoji">⚔️</span>
-        <h2>剣戟の森</h2>
-        <p>剣で敵を倒しながらゴールを目指す横スクロールアクション。</p>
-      </a>
-    </div>
+    <header>
+      <h1>🛠️ AI_project002</h1>
+      <p class="lead">AIフル活用で開発したゲーム・Webアプリ集</p>
+    </header>
+    <div class="grid" id="grid"></div>
     <footer>
       <a href="https://github.com/b-w-hiroki/AI_project002" target="_blank" rel="noreferrer"
         >ソースコード（GitHub）</a
       >
     </footer>
+
+    <script>
+      /**
+       * 制作物一覧データ（ゲームに限らず、Webアプリ全般を想定）。
+       *
+       * このリポジトリ内の制作物は url を "./<name>/" のような相対パスにする。
+       * 別リポジトリで作った制作物を追加したい場合は、公開されている
+       * URL（GitHub Pages 等）を url にフルURLで指定し、external: true を付けるだけでよい。
+       * ビルドへの取り込みは不要——このページはあくまでリンク集として動作する。
+       *
+       * accent は色（#rrggbb）。サムネの背景グラデーションとタグの色に使われる。
+       */
+      const PROJECTS = [
+        {
+          emoji: "🧪",
+          title: "ポーション工房",
+          tags: ["ゲーム", "放置・育成"],
+          desc: "クリックして調合、設備を集めて自動生産、転生して強くなる放置ゲーム。",
+          url: "./potion-workshop/",
+          accent: "#4ecca3",
+          external: false,
+        },
+        {
+          emoji: "⚔️",
+          title: "剣戟の森",
+          tags: ["ゲーム", "アクション"],
+          desc: "剣で敵を倒しながらゴールを目指す横スクロールアクション。武器切替・スキル・奥義あり。",
+          url: "./side-scroller/",
+          accent: "#ff6b8a",
+          external: false,
+        },
+        // 別リポジトリの制作物を追加する例（コメントを外して url/repo を書き換えるだけで使えます）:
+        // {
+        //   emoji: "🚀",
+        //   title: "サンプルアプリ",
+        //   tags: ["Webアプリ"],
+        //   desc: "別リポジトリで開発したアプリの説明文。",
+        //   url: "https://your-account.github.io/other-repo/",
+        //   repo: "your-account/other-repo",
+        //   accent: "#7fd1ff",
+        //   external: true,
+        // },
+      ];
+
+      const grid = document.getElementById("grid");
+      for (const project of PROJECTS) {
+        const card = document.createElement("a");
+        card.className = "card";
+        card.href = project.url;
+        card.style.setProperty("--accent", project.accent);
+        if (project.external) {
+          card.target = "_blank";
+          card.rel = "noreferrer";
+        }
+
+        const tagsHtml = (project.tags || [])
+          .map((t) => `<span class="tag">${t}</span>`)
+          .join("");
+        const repoLine = project.external
+          ? `<p class="repo-line">🔗 外部リポジトリ${project.repo ? `（${project.repo}）` : ""}</p>`
+          : "";
+
+        card.innerHTML = `
+          <div class="thumb">
+            <span class="emoji">${project.emoji}</span>
+            ${project.external ? '<span class="badge">外部</span>' : ""}
+          </div>
+          <div class="body">
+            <div class="tags">${tagsHtml}</div>
+            <h2>${project.title}</h2>
+            <p class="desc">${project.desc}</p>
+            ${repoLine}
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    </script>
   </body>
 </html>
