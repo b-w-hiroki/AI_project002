@@ -27,3 +27,8 @@
 - スプライトは画像アセットを使わず Phaser の Graphics.generateTexture() でその場生成した単色矩形を使用（アセット0）。
 - デプロイワークフローを拡張し、ルートと `games/side-scroller/` を両方ビルドして `dist/side-scroller/` にマージしてから Pages にアップロード。同じ GitHub Pages サイト配下に `/` と `/side-scroller/` として共存させる。
 - 動作確認で「攻撃が敵に当たらない」ように見えた事象は、Playwright の `keyboard.press()` が非常に短い合成イベントで Phaser の JustDown 判定を取りこぼすケースがあったことと、敵の徘徊AIによりプレイヤーの向きに対して射程外に出ていたことが原因で、戦闘ロジック自体にバグは無かった（`keyboard.down()`/`up()` を分けて呼ぶテストで撃破・スコア加算まで確認済み）。
+
+## 2026-08-24
+- ポーション工房をリポジトリ直下から `games/potion-workshop/` に移動し、剣戟の森と構成を統一（両方とも `games/<name>/` の独立プロジェクト）。
+- リポジトリ直下は Node プロジェクトをやめ、静的なゲーム一覧ハブページ（`index.html` 1枚、ビルド不要）に変更。旧ルートURL（ポーション工房が直接表示）は `/potion-workshop/` に変わる（今回は既存URLの互換維持よりも構成の一貫性を優先）。
+- deploy.yml は両ゲームをビルドしてそれぞれ `/potion-workshop/`・`/side-scroller/` サブパスに配置し、ハブページと合わせて1つの dist にまとめてから Pages にアップロードする方式に変更。

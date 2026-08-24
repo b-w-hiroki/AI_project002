@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>ポーション工房 | Potion Workshop</title>
+    <meta
+      name="description"
+      content="クリックして調合、設備を集めて自動生産、転生して強くなる放置ゲーム。ブラウザですぐ遊べます。"
+    />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ポーション工房 | Potion Workshop" />
+    <meta
+      property="og:description"
+      content="クリックして調合、設備を集めて自動生産、転生して強くなる放置ゲーム。ブラウザですぐ遊べます。"
+    />
+    <meta property="og:image" content="/og-image.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ポーション工房 | Potion Workshop" />
+    <meta
+      name="twitter:description"
+      content="クリックして調合、設備を集めて自動生産、転生して強くなる放置ゲーム。ブラウザですぐ遊べます。"
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <style>
+      html, body { margin: 0; background: #111; height: 100%; }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        /* iOS Safari のノッチ等を避けつつ画面いっぱいに使う */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      #game canvas { max-width: 100vw; max-height: 100vh; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
