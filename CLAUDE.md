@@ -21,6 +21,16 @@ Claude のセッションはコンテナごとに使い捨てで、会話コン�
 - ヘッドレス環境のため Unity / Unreal / ネイティブGUI は使えない
 - したがって **ゲームはブラウザベース（HTML5 / Canvas / JavaScript）** で開発する
 
+## 複数ゲーム構成
+
+このリポジトリは1リポジトリに複数のゲームを収録するモノレポ構成。
+
+- リポジトリ直下 = 1本目のゲーム（ポーション工房・放置ゲーム）。既存URLを維持するためルート直下のまま
+- `games/<name>/` = 2本目以降のゲーム。それぞれ独立した package.json / vite.config.ts / tsconfig.json / eslint.config.js / playwright.config.ts を持つ完全に独立した Phaser + TS + Vite プロジェクト（ルートの node_modules や設定には依存しない）
+- 新しいゲームを追加する時は `games/side-scroller/` を雛形としてコピーする
+- デプロイは `.github/workflows/deploy.yml` が一括で担当。ルートは Pages の `/` に、`games/<name>/` は `/​<name>/` サブパスにビルド出力をコピーして同じ GitHub Pages サイトにまとめて公開する
+- 各ゲームの README/README代わりの説明は `README.md` の一覧表に追記する
+
 ## 開発ワークフロー
 
 1. 指定されたフィーチャーブランチで開発する（main へ直接 push しない）
