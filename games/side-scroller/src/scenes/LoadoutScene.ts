@@ -157,7 +157,11 @@ export class LoadoutScene extends Phaser.Scene {
       .setBackgroundColor("#4ecca3")
       .setInteractive({ useHandCursor: true });
     btn.on("pointerdown", () => {
-      this.scene.start("GameScene", { loadout: this.data_.loadout, inventory: this.data_.inventory });
+      this.scene.start("GameScene", {
+        loadout: this.data_.loadout,
+        inventory: this.data_.inventory,
+        baseEquipmentLevels: this.data_.baseEquipmentLevels,
+      });
     });
   }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ATTACK_COOLDOWN_MS,
+  DEFENSE_SHRED_PER_HIT,
   HIOUGI_UNLOCK_SCORE,
   OUGI_GAUGE_MAX,
   OUGI_WINDOW_MS,
@@ -8,6 +9,10 @@ import {
   PLAYER_MAX_HEALTH,
   SKILL_COOLDOWN_MS,
   SKILL_WINDOW_MS,
+  SUPER_COMBO_TIER1_MULTIPLIER,
+  SUPER_COMBO_TIER1_THRESHOLD,
+  SUPER_COMBO_TIER2_MULTIPLIER,
+  SUPER_COMBO_TIER2_THRESHOLD,
   WEAPONS,
   addScore,
   canAttack,
@@ -15,11 +20,15 @@ import {
   canUseOugi,
   canUseSkill,
   checkHiougiUnlock,
+  clearCustomWeapon,
   currentWeapon,
   damageEnemy,
   damagePlayer,
+  gainArmor,
+  gainComboStreak,
   gainOugiGauge,
   gameStatus,
+  healPlayer,
   inAttackRange,
   isAlive,
   isAttacking,
@@ -30,7 +39,9 @@ import {
   newEnemy,
   newPlayer,
   reachedGoal,
+  setCustomWeapon,
   startAttack,
+  superComboMultiplier,
   switchWeapon,
   useHiougi,
   useOugi,
@@ -257,5 +268,98 @@ describe("inAttackRange（武器射程の可変対応）", () => {
   it("range を渡すとその射程で判定する（中距離武器など）", () => {
     expect(inAttackRange(100, 1, 100 + WEAPONS.mid.range, WEAPONS.mid.range)).toBe(true);
     expect(inAttackRange(100, 1, 100 + WEAPONS.mid.range + 1, WEAPONS.mid.range)).toBe(false);
+  });
+});
+
+describe("customWeapons（基本装備/召喚武器の上書き）", () => {
+  it("未設定なら WEAPONS の既定値を使う", () => {
+    expect(currentWeapon(newPlayer())).toEqual(WEAPONS.melee);
+  });
+  it("setCustomWeapon で装備スロットの実効定義を上書きできる", () => {
+    const custom = { ...WEAPONS.melee, damage: 99 };
+    const p = setCustomWeapon(newPlayer(), "melee", custom);
+    expect(currentWeapon(p).damage).toBe(99);
+  });
+  it("clearCustomWeapon で既定値に戻る", () => {
+    const custom = { ...WEAPONS.melee, damage: 99 };
+    let p = setCustomWeapon(newPlayer(), "melee", custom);
+    p = clearCustomWeapon(p, "melee");
+    expect(currentWeapon(p)).toEqual(WEAPONS.melee);
+  });
+});
+
+describe("無被弾スーパーコンボ", () => {
+  it("閾値未満は倍率1", () => {
+    expect(superComboMultiplier(0)).toBe(1);
+    expect(superComboMultiplier(SUPER_COMBO_TIER1_THRESHOLD - 1)).toBe(1);
+  });
+  it("Tier1閾値で倍率が上がる", () => {
+    expect(superComboMultiplier(SUPER_COMBO_TIER1_THRESHOLD)).toBe(SUPER_COMBO_TIER1_MULTIPLIER);
+  });
+  it("Tier2閾値でさらに上がる", () => {
+    expect(superComboMultiplier(SUPER_COMBO_TIER2_THRESHOLD)).toBe(SUPER_COMBO_TIER2_MULTIPLIER);
+  });
+  it("gainComboStreak で加算される", () => {
+    const p = gainComboStreak(gainComboStreak(newPlayer()));
+    expect(p.comboStreak).toBe(2);
+  });
+  it("被弾するとコンボがリセットされる", () => {
+    let p = gainComboStreak(newPlayer(), 15);
+    p = damagePlayer(p, 1, 0);
+    expect(p.comboStreak).toBe(0);
+  });
+});
+
+describe("防具（armorCharges）", () => {
+  it("耐久がある間はHPの代わりに耐久が減る", () => {
+    let p = gainArmor(newPlayer(), 1);
+    p = damagePlayer(p, 1, 0);
+    expect(p.health).toBe(PLAYER_MAX_HEALTH);
+    expect(p.armorCharges).toBe(0);
+  });
+  it("耐久が尽きればHPが減る", () => {
+    let p = gainArmor(newPlayer(), 1);
+    p = damagePlayer(p, 1, 0); // 防具で吸収
+    p = damagePlayer(p, 1, PLAYER_INVULNERABLE_MS); // 耐久0、HPが減る
+    expect(p.health).toBe(PLAYER_MAX_HEALTH - 1);
+  });
+  it("防具で吸収してもスーパーコンボはリセットされる", () => {
+    let p = gainArmor(gainComboStreak(newPlayer(), 15), 1);
+    p = damagePlayer(p, 1, 0);
+    expect(p.comboStreak).toBe(0);
+  });
+});
+
+describe("healPlayer", () => {
+  it("HPを回復する", () => {
+    const p = damagePlayer(newPlayer(), 2, 0);
+    const healed = healPlayer(p, 1);
+    expect(healed.health).toBe(p.health + 1);
+  });
+  it("最大HPを超えない", () => {
+    const healed = healPlayer(newPlayer(), 10);
+    expect(healed.health).toBe(PLAYER_MAX_HEALTH);
+  });
+});
+
+describe("敵の防御力", () => {
+  it("防御力ぶんダメージが軽減される", () => {
+    const enemy = newEnemy("e1", 10, 3);
+    const hit = damageEnemy(enemy, 5, 0);
+    expect(hit.health).toBe(10 - (5 - 3));
+  });
+  it("軽減されても最低1ダメージは通る", () => {
+    const enemy = newEnemy("e1", 10, 99);
+    const hit = damageEnemy(enemy, 5, 0);
+    expect(hit.health).toBe(9);
+  });
+  it("ヒットのたびに防御力が削れ、後段ほど通りが良くなる", () => {
+    let enemy = newEnemy("e1", 100, 5);
+    enemy = damageEnemy(enemy, 5, 0);
+    expect(enemy.defense).toBe(5 - DEFENSE_SHRED_PER_HIT);
+    const healthAfterFirst = enemy.health;
+    enemy = damageEnemy(enemy, 5, 1000);
+    const damageDealtSecond = healthAfterFirst - enemy.health;
+    expect(damageDealtSecond).toBeGreaterThanOrEqual(5 - (5 - DEFENSE_SHRED_PER_HIT));
   });
 });

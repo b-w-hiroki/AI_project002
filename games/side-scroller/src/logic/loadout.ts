@@ -6,11 +6,12 @@
  * プレイヤーは近距離/中距離/遠距離の各スロットに個体を1本ずつ設定（ロードアウト）しておき、
  * ステージ側ではその設定に基づいて「召喚」できる武器が決まる（召喚の実行はステージ側ロジックの責務）。
  *
- * ステージ開始時に使う弱い固定武器（基本装備）は本モジュールでは扱わない。
- * `combat.ts` の `WEAPONS`（既存の melee/mid/ranged 定数）がそれに相当する。
+ * ステージ開始時は基本装備（baseEquipmentStats）からスタートし、召喚媒体を拾ったタイミングで
+ * ロードアウト済みの WeaponInstance（toWeaponDef を通じて combat.ts の WeaponDef 形式に変換）へ
+ * 切り替える。実際の切り替え適用は combat.ts の setCustomWeapon を GameScene 側から呼ぶ。
  */
 
-import type { WeaponKind } from "./combat";
+import type { WeaponDef, WeaponKind } from "./combat";
 
 // ---- レア度 ----
 
@@ -405,6 +406,47 @@ export function runEffectiveStats(baseStats: BaseWeaponStats, runState: RunWeapo
     swingSpeedMs: baseStats.swingSpeedMs * RUN_STAGE_SPEED_MULTIPLIER[runState.stage],
     comboHits: Math.min(MAX_COMBO_HITS, baseStats.comboHits + RUN_STAGE_COMBO_BONUS[runState.stage]),
   };
+}
+
+/** BaseWeaponStats を combat.ts の WeaponDef 形式に変換する（GameScene への適用に使う） */
+export function toWeaponDef(stats: BaseWeaponStats, kind: WeaponKind): WeaponDef {
+  return {
+    kind,
+    range: stats.range,
+    damage: stats.power,
+    cooldownMs: stats.swingSpeedMs,
+    attackWindowMs: Math.max(60, Math.round(stats.swingSpeedMs * 0.4)),
+    projectile: kind === "ranged",
+  };
+}
+
+export interface SummonResult {
+  stats: BaseWeaponStats;
+  runState: RunWeaponState;
+  instance: WeaponInstance;
+}
+
+/**
+ * 召喚媒体でスロット kind を呼び出す。
+ * 同じ個体を既に召喚済み（existingRun.instanceId が一致）なら、インゲーム内重複強化として扱う。
+ * ロードアウトが未設定、または所持していない個体なら null。
+ */
+export function resolveSummon(
+  loadout: Loadout,
+  inventory: readonly WeaponInstance[],
+  kind: WeaponKind,
+  existingRun: RunWeaponState | undefined,
+): SummonResult | null {
+  const instanceId = loadout[kind];
+  if (!instanceId) return null;
+  const instance = inventory.find((w) => w.id === instanceId);
+  if (!instance) return null;
+  const runState =
+    existingRun && existingRun.instanceId === instance.id
+      ? stackRunWeapon(existingRun, instance.rarity)
+      : summonRunWeapon(instance.id);
+  const stats = runEffectiveStats(effectiveStats(instance), runState);
+  return { stats, runState, instance };
 }
 
 // ---- 消耗品（防具/アイテム） ----

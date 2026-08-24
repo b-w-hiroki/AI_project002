@@ -49,9 +49,13 @@
 - [ ] スキル・奥義の種類追加（現状はそれぞれ1種類のみ）
 - [x] 武器パラメータ体系のロジック層を実装（`src/logic/loadout.ts`）: レア度(N/R/SR/SSR/UR)、WeaponTemplate×6（各kind2種）、WeaponInstance（強化/進化/熟練度）、宝箱/鍛治入手、基本装備、インゲーム内重複強化（RunWeaponState、入手+強化2回+アルティメット化1回の最大4段階）、防具/アイテム消耗品、ロードアウト＋localStorage永続化。Vitest 34件追加（計80件）
 - [x] アウトゲーム画面（`LoadoutScene`）を実装: 所持武器一覧、宝箱/鍛治での入手、近/中/遠スロットへの割当（種別不一致は弾く）、ステージ開始でGameSceneへロードアウトを渡す。`main.ts`の起動シーンをLoadoutScene→GameSceneに変更
-- [ ] 【未着手】GameScene側でのロードアウト反映: 現状GameSceneは`combat.ts`の`WEAPONS`定数（固定値）で動作しており、LoadoutSceneから渡した`loadout`/`inventory`はまだ参照していない。次の実装対象は「ステージ開始時は基本装備（`baseEquipmentStats`）でスタートし、ステージ内の召喚媒体ピックアップでロードアウト武器（`WeaponInstance`の`effectiveStats`）に切り替える」流れの統合
-- [ ] 【未着手】召喚媒体のインゲーム実装: ヴァンサバ風の一時停止選択UI、空中から武器を受け取る演出、`RunWeaponState`のインゲーム重複強化との連携
-- [ ] 【未着手】敵の防御力パラメータ、コンボ継続によるダメージ増加、無被弾スーパーコンボ倍率（`docs/decisions.md`のダメージ計算式の節を参照）
+- [x] GameScene側でのロードアウト反映: `combat.ts`に`customWeapons`（装備スロットごとの実効武器定義の上書き）を追加し、`setCustomWeapon`/`clearCustomWeapon`で`currentWeapon`の参照先を差し替え可能にした。ステージ開始時は`baseEquipmentStats`ベースの基本装備からスタートし、召喚媒体ピックアップで`resolveSummon`→`toWeaponDef`を通じてロードアウト武器へ切り替わる
+- [x] 召喚媒体のインゲーム実装: 拾うと`this.physics.pause()`で一時停止し、ヴァンサバ風の選択UI（近/中/遠を1/2/3キーまたはクリックで選択、`docs/decisions.md`の設計通り「アウトゲーム設定したものの中から選ぶ」方式）を表示。選択すると空中から武器が降ってきてプレイヤーが受け取る演出（Tweenで落下→フラッシュ→プレイヤーが一瞬拡大）を再生。同じ個体を再度召喚すると`resolveSummon`が自動的に`stackRunWeapon`を呼びインゲーム内重複強化が進む
+- [x] 敵の防御力パラメータ（`EnemyState.defense`、`damageEnemy`で連続ヒットごとに`DEFENSE_SHRED_PER_HIT`ずつ削れる）、無被弾スーパーコンボ倍率（`comboStreak`/`superComboMultiplier`、10コンボ→×1.1、30コンボ→×1.2、被弾でリセット）を実装し、`GameScene.applyHit`で敵への実ダメージに反映
+- [x] 防具/アイテム消耗品のインゲーム実装: 防具ピックアップで`armorCharges`を加算（`damagePlayer`がHPより先に耐久を消費）、アイテムピックアップは拾った瞬間にポーションとして使用しHPを1回復（アイテム所持一覧UIは未実装のため即時使用の簡略実装）
+- [ ] 【未着手】アイテムの所持一覧UI・複数種のアイテム（現状は拾った瞬間に使う回復専用の1種類のみ）
+- [ ] 【未着手】武器以外（防具・アイテム）のアウトゲームでの事前設定・ロードアウト（現状は防具/アイテムはステージ内ピックアップの即時効果のみで、武器のような個体/レア度/強化システムは無い）
+- [ ] 【未着手】ステージ側から提示される一時バフ（ヴァンサバのレベルアップ選択のような、アウトゲーム設定と独立した別プール）
 
 ## ルートハブページ
 

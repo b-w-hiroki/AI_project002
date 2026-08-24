@@ -21,11 +21,13 @@ import {
   newLoadoutSave,
   openChest,
   proficiencyComboBonus,
+  resolveSummon,
   rollWeaponInstance,
   runEffectiveStats,
   saveLoadout,
   stackRunWeapon,
   summonRunWeapon,
+  toWeaponDef,
   useItem,
   type KVStore,
 } from "../src/logic/loadout";
@@ -216,6 +218,56 @@ describe("インゲーム内重複強化（RunWeaponState）", () => {
     expect(s3.power).toBeGreaterThan(s0.power);
     expect(s3.swingSpeedMs).toBeLessThan(s0.swingSpeedMs);
     expect(s3.comboHits).toBeGreaterThanOrEqual(s0.comboHits);
+  });
+});
+
+describe("toWeaponDef", () => {
+  it("BaseWeaponStats を WeaponDef 形式に変換する", () => {
+    const inst = rollWeaponInstance("iron_sword", "SR", () => 0.5);
+    const stats = effectiveStats(inst);
+    const def = toWeaponDef(stats, "melee");
+    expect(def.range).toBe(stats.range);
+    expect(def.damage).toBe(stats.power);
+    expect(def.cooldownMs).toBe(stats.swingSpeedMs);
+    expect(def.projectile).toBe(false);
+  });
+  it("遠距離は projectile: true になる", () => {
+    const inst = rollWeaponInstance("short_bow", "SR", () => 0.5);
+    const def = toWeaponDef(effectiveStats(inst), "ranged");
+    expect(def.projectile).toBe(true);
+  });
+});
+
+describe("resolveSummon", () => {
+  it("スロットが未設定なら null", () => {
+    expect(resolveSummon(newLoadout(), [], "melee", undefined)).toBeNull();
+  });
+  it("所持していない個体を指しているなら null", () => {
+    const lo = { melee: "not_owned", mid: null, ranged: null };
+    expect(resolveSummon(lo, [], "melee", undefined)).toBeNull();
+  });
+  it("初回召喚は stage0", () => {
+    const inst = rollWeaponInstance("iron_sword", "SR", () => 0.5);
+    const lo = assignLoadoutSlot(newLoadout(), [inst], "melee", inst.id);
+    const result = resolveSummon(lo, [inst], "melee", undefined);
+    expect(result?.runState.stage).toBe(0);
+    expect(result?.instance.id).toBe(inst.id);
+  });
+  it("同じ個体を再度召喚すると重複強化が進む", () => {
+    const inst = rollWeaponInstance("iron_sword", "SR", () => 0.5);
+    const lo = assignLoadoutSlot(newLoadout(), [inst], "melee", inst.id);
+    const first = resolveSummon(lo, [inst], "melee", undefined)!;
+    const second = resolveSummon(lo, [inst], "melee", first.runState)!;
+    expect(second.runState.stage).toBe(1);
+    expect(second.stats.power).toBeGreaterThan(first.stats.power);
+  });
+  it("別の個体を召喚した場合は重複強化にならず新規stage0になる", () => {
+    const swordA = rollWeaponInstance("iron_sword", "SR", () => 0.5);
+    const swordB = rollWeaponInstance("greatsword", "SR", () => 0.5);
+    const lo = assignLoadoutSlot(newLoadout(), [swordB], "melee", swordB.id);
+    const result = resolveSummon(lo, [swordB], "melee", summonRunWeapon(swordA.id));
+    expect(result?.runState.stage).toBe(0);
+    expect(result?.runState.instanceId).toBe(swordB.id);
   });
 });
 

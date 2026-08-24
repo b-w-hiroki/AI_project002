@@ -109,3 +109,18 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - アウトゲームのセーブは`potion-workshop`の`save.ts`と同じ`KVStore`インターフェース注入パターンを踏襲（`saveLoadout`/`loadLoadout`）。壊れたJSONや初回未セーブ時は`newLoadoutSave()`にフォールバック。
 - `LoadoutScene`は初回プレイ時のみ通貨500を配布し、宝箱（100通貨、確率抽選）と鍛治（テンプレート指定でN固定・50通貨、確定入手）で武器を集められるようにした。スロットへの割当時、テンプレートの`kind`と割当先スロットが一致しない場合は弾き、ヒントメッセージを表示する。Playwrightでのスクリーンショット確認で、宝箱入手・スロット割当・種別不一致の拒否をそれぞれ確認済み。
 - **未実装（次のスコープ）**: GameScene（インゲーム側）は今回のロードアウト機構をまだ一切参照していない。現状のインゲームは従来通り`combat.ts`の`WEAPONS`（固定値の近/中/遠3種）で動作する。次に着手する際は、ステージ開始時に`baseEquipmentStats`ベースの弱い武器からスタートし、召喚媒体ピックアップで`effectiveStats(instance)`（＋`runEffectiveStats`のインゲーム内重複強化）に切り替える流れをGameScene側に実装すること。あわせて、ヴァンサバ風の一時停止選択UI・武器を受け取る演出・敵の防御力パラメータ・コンボ継続ダメージ増加・無被弾スーパーコンボ倍率も未着手。
+
+## 2026-08-24（剣戟の森: 武器パラメータ体系 実装第2弾 — GameScene統合）
+
+前回の未実装スコープを実装した。ユーザーからの「今の要求に必要な機能を全部実装してください」という指示を受け、設計合意していた範囲を一通りインゲームに繋いだ。
+
+- `combat.ts`に`PlayerState.customWeapons: Partial<Record<WeaponKind, WeaponDef>>`を追加し、`currentWeapon`が`customWeapons`優先でWEAPONSにフォールバックするようにした。既存の`newPlayer()`はcustomWeapons空で始まるため、既存のテスト・挙動は完全に無傷（デフォルトはWEAPONSのまま）。`setCustomWeapon`/`clearCustomWeapon`で外部（GameScene）から実効武器を差し替えられるようにした、という最小侵襲の設計。これによりロードアウト/召喚システムを、既存の`canAttack`/`startAttack`等の全ロジックを一切書き換えずに統合できた。
+- `loadout.ts`に`toWeaponDef(stats, kind)`（BaseWeaponStats→WeaponDef変換）と`resolveSummon(loadout, inventory, kind, existingRun)`（召喚実行の中心ロジック：未設定/未所持ならnull、既に同じ個体を召喚済みなら`stackRunWeapon`で重複強化、そうでなければ`summonRunWeapon`で新規召喚）を追加。GameSceneはこの2関数を呼ぶだけで済むようにし、Phaser側にロジックを持たせないという既存方針を維持した。
+- GameSceneのシーンキーを`"game"`→`"GameScene"`に変更（`LoadoutScene`からの`scene.start("GameScene", ...)`と一致させるため。旧キーのままだと遷移が失敗していた）。
+- ステージ開始時（`create()`）は3スロットとも`baseEquipmentStats(kind, baseEquipmentLevels[kind])`を`setCustomWeapon`で適用してからプレイを始める。`init(data)`でLoadoutSceneから渡されたロードアウト/所持品/基本装備レベルを受け取り、Rキーでのシーン再スタート等data無しで開始された場合は`loadLoadout(localStorage)`にフォールバックする。
+- 召喚媒体・防具・アイテムの3種のピックアップをステージ上に配置（`buildPickups`）。当初ピックアップの物理判定を`GROUND_Y-90`に置いたところ、プレイヤーの当たり判定（`setSize(18,32).setOffset(6,8)`から算出される垂直レンジ）と重ならず拾えない不具合があった。Playwrightでの実操作確認で発覚し、`GROUND_Y-24`に修正して解消（ジャンプ不要で歩くだけで確実に重なる高さ）。
+- 召喚媒体を拾うと`this.physics.pause()`で一時停止し、ヴァンサバ風の選択UI（近/中/遠の3枠、1/2/3キーまたはクリックで選択、ロードアウト未設定のスロットは「(未設定)」とグレー表示）を表示する。選択すると`resolveSummon`→`setCustomWeapon`で即座に武器が切り替わり、空中から武器が降ってきてプレイヤーが受け取る演出（Tweenでアイコンが降下→カメラフラッシュ→プレイヤーが一瞬拡大→フローティングテキスト）を再生してからオーバーレイを閉じる。ユーザーが要望した「武器/装備/アイテムはアウトゲーム設定したものから選ぶ」の実装で、ステージ側から提示される一時バフ（ヴァンサバのレベルアップ選択のような別プール）は今回のスコープ外として`docs/TODO.md`に残した。
+- 敵に`EnemyState.defense`を追加し、`damageEnemy`で`effectiveDamage = max(1, amount - defense)`を適用した後`defense`を`DEFENSE_SHRED_PER_HIT`（1）ずつ削る方式にした。連続ヒットが続くほど防御が削れて後段の通りが良くなる、という合意通りの挙動。ステージ後半の敵（インデックス4以降）にのみ`defense: 2`を持たせ、防御貫通の手応えの差を演出した。
+- 無被弾スーパーコンボは`PlayerState.comboStreak`（命中のたびに+1、`damagePlayer`が実際にダメージ処理を行うたび0にリセット）と`superComboMultiplier(streak)`（10で×1.1、30で×1.2）で実装し、`GameScene.applyHit`で`Math.round(damage * multiplier)`として敵への実ダメージに反映した。
+- 防具は`PlayerState.armorCharges`（`gainArmor`で加算）とし、`damagePlayer`をHPより先に耐久を1消費するよう変更。耐久で防いだ場合も無敵時間の付与とコンボリセットは行う（「被弾」自体は発生している）。アイテムは所持一覧UIまでは作らず、拾った瞬間に`useItem`→`healPlayer`でHP+1する簡略実装とした（複数種のアイテム/所持UIは`docs/TODO.md`に未着手として記載）。
+- Vitest 22件追加（combat.ts 14件、loadout.ts 8件）。計103件。`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて✅。Playwrightで、宝箱→スロット割当→ステージ開始→召喚媒体ピックアップ→選択UI表示→武器召喚（「近接 召喚！」のフローティングテキスト確認）までの一連の流れを実操作で確認済み。
