@@ -27,12 +27,17 @@ jobs:
           node-version: 22
           cache: npm
 
-      # ポーション工房（ルートで配信、既存URLを維持）
+      # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
+        working-directory: games/potion-workshop
       - run: npm run lint
+        working-directory: games/potion-workshop
       - run: npm run typecheck
+        working-directory: games/potion-workshop
       - run: npm test
+        working-directory: games/potion-workshop
       - run: npm run build
+        working-directory: games/potion-workshop
 
       # 剣戟の森（/side-scroller/ サブパスで配信）
       - run: npm ci
@@ -45,7 +50,13 @@ jobs:
         working-directory: games/side-scroller
       - run: npm run build
         working-directory: games/side-scroller
+
+      # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
+          mkdir -p dist
+          cp index.html dist/index.html
+          mkdir -p dist/potion-workshop
+          cp -r games/potion-workshop/dist/. dist/potion-workshop/
           mkdir -p dist/side-scroller
           cp -r games/side-scroller/dist/. dist/side-scroller/
 

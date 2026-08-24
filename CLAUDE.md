@@ -25,11 +25,11 @@ Claude のセッションはコンテナごとに使い捨てで、会話コン�
 
 このリポジトリは1リポジトリに複数のゲームを収録するモノレポ構成。
 
-- リポジトリ直下 = 1本目のゲーム（ポーション工房・放置ゲーム）。既存URLを維持するためルート直下のまま
-- `games/<name>/` = 2本目以降のゲーム。それぞれ独立した package.json / vite.config.ts / tsconfig.json / eslint.config.js / playwright.config.ts を持つ完全に独立した Phaser + TS + Vite プロジェクト（ルートの node_modules や設定には依存しない）
-- 新しいゲームを追加する時は `games/side-scroller/` を雛形としてコピーする
-- デプロイは `.github/workflows/deploy.yml` が一括で担当。ルートは Pages の `/` に、`games/<name>/` は `/​<name>/` サブパスにビルド出力をコピーして同じ GitHub Pages サイトにまとめて公開する
-- 各ゲームの README/README代わりの説明は `README.md` の一覧表に追記する
+- 各ゲームは `games/<name>/` に格納。それぞれ独立した package.json / vite.config.ts / tsconfig.json / eslint.config.js / playwright.config.ts を持つ完全に独立した Phaser + TS + Vite プロジェクト（ルートの node_modules や設定には依存しない）
+- リポジトリ直下は Node プロジェクトではなく、静的なゲーム一覧ハブページ（`index.html` 1枚のみ、ビルド不要）
+- 新しいゲームを追加する時は `games/side-scroller/` を雛形としてコピーし、ハブページ（ルート `index.html`）にカードを追加する
+- デプロイは `.github/workflows/deploy.yml` が一括で担当。各 `games/<name>/` をビルドし、ルートのハブページと合わせて `/<name>/` サブパスにまとめて GitHub Pages に公開する
+- 各ゲームの説明は `README.md` の一覧表とルートのハブページ両方に追記する
 
 ## 開発ワークフロー
 
