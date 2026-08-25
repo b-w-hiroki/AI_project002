@@ -162,3 +162,20 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - `src/ui/touch.ts`に`bindVirtualJoystick`を追加。左半分（x:0-400, y:0-600）を丸ごと入力ゾーンとし、`pointerdown`があった座標を中心にベース円＋つまみ円を表示、`pointermove`で指の動きにつまみが追従（`maxRadius`でクランプ）、`pointerup`で両方非表示に戻す。方向判定は原点からの相対距離がデッドゾーン（14px）を超えたかどうかで`left/right/up/down`それぞれ独立に真偽判定し、`bindHeldKey`と同じ`Key#onDown`/`onUp`橋渡しパターンで既存の`cursors`判定ロジックを無変更のまま流用した。JustDown消失防止のrequestAnimationFrame遅延も同様に適用。
 - 常時表示のボタンをやめたことで「表示しない」という要望通り、触れるまで画面に何も出ない状態になった。攻撃/スキル/武器切替/アイテム使用/TIPSの右側ボタン群は変更していない（要望は明示的にD-pad＝移動操作についてのものだったため）。
 - Playwrightでの検証はタッチ操作特有の難しさがあった。`new Touch()`/`TouchEvent`を手動構築してcanvasにdispatchする方法ではPhaserのInputManagerに拾われず（Phaser 4はPointer Events APIベースで、生のTouchEventを直接listenしていないと見られる）、`page.mouse.move/down/move/up`のシーケンスに切り替えて検証した（Playwrightの`isMobile`/`hasTouch`コンテキストではマウスイベントも同じポインタープラグインで処理されるため機能した）。この切り替えでスティックの出現・追従・召喚媒体ピックアップまでの移動・release後の非表示までを確認できた。
+
+## 2026-08-25（両ゲーム: UIビジュアル刷新）
+
+ユーザーから「UIをもっと行けてる感じにして」との要望を受け、対象を確認したところ「両方（ポーション工房・剣戟の森）」との回答。両ゲームともフラットな`add.rectangle`＋単色塗りが中心だったのを、角丸パネル・グラデーション背景・グロー枠を使ったモダンな見た目に刷新した。
+
+### 剣戟の森（`games/side-scroller/src/ui/theme.ts`、新規）
+- `drawPanel(scene,x,y,w,h,options)`: Graphicsで角丸パネルを描画。下寄りの柔らかい影＋上部のガラス風ハイライト帯を重ねる。HUDパネル、TIPS/召喚媒体/ステージバフの各オーバーレイ、LoadoutSceneの全パネルに適用。
+- `makeButton(scene,x,y,w,h,label,onClick,options)`: 角丸＋ホバー/押下フィードバック（`pointerover`/`pointerout`/`pointerdown`で塗り色を切り替え、押下時に軽くスケールダウンするtween）付きのボタン。LoadoutSceneの宝箱ボタン・ステージ開始ボタンに使用。
+- 召喚媒体/ステージバフの選択カードは、視覚は`drawPanel`（非interactive）、当たり判定は透明な`Rectangle`（interactive、hoverで枠線を`Graphics.lineStyle`で描き直す）という2層構成にした。1つのGraphicsに複雑なホバー状態を持たせるより、視覚と入力判定を分離した方がシンプルだったため。
+- LoadoutSceneはレイアウト衝突が複数発生した: (1) 所持武器一覧パネルを画面幅いっぱいに描くと右側の宝箱/防具パネルと二重に箱が重なって見える問題→左カラムのみに幅を絞った。(2) ステージ開始ボタンをmakeButton化して少し大きくした結果、防具パネルの右下と当たり判定が数十px重なる問題→ボタンを防具パネルの下（y=545）に配置し直して解消。既存のcoordinateベースレイアウトにGraphicsパネルを足す作業は、要素ごとの矩形範囲を都度計算して重なりを確認する必要があり、Phaserにはレイアウトエンジンが無いため手動調整が中心になった。
+
+### ポーション工房（`games/potion-workshop/src/ui/theme.ts`、新規）
+- こちらは`refreshUI()`が毎フレーム`.setFillStyle(color)`を呼んで購入可否を色で示す設計だったため、単純に`add.rectangle`をGraphicsへ置き換えると全呼び出し箇所の書き換えが必要になり影響範囲が大きくなる。そこで`makeRoundedRect(scene,x,y,w,h,fillColor,options)`が、返り値に`setFillStyle`互換メソッドをモンキーパッチした`Graphics`（`RoundedRect`型）を返す設計にし、既存の`this.clickUpgradeButton.setFillStyle(...)`等の呼び出しをほぼ無変更のまま角丸化できるようにした。
+- Graphicsは中心を原点としたローカル座標で描画し、GameObject自体を`(x,y)`に配置する方式にした。理由は、生成ボタン（`buildGeneratorList`）が`tweens.add({targets:[button,label], scaleX:1.03,...})`で購入時に拡大演出を行っており、Graphicsを絶対座標で描くとスケールが左上基準になってボタン中心からズレて見える問題があったため。ローカル座標＋GameObject位置指定にすることで、既存のtweenコードを一切変更せずにスケール演出が中心基準のまま動くようにした。
+- ブリューボタン（クリックの起点）は単色円のままだと寂しいため、外側にうっすらとしたグロー円と、内側にストロークだけのリングを追加して二重リング風の演出にした。クリック時のtweenも`ring`を含めて縮小させ、リングごと脈動するような手応えを足した。
+- 背景は単色黒からグラデーション（濃紺→紫がかった紺）と放射状のうっすらとしたグローに変更。既存の浮遊する泡アニメーションはそのまま活かした。
+- Vitest（66件）は見た目の変更のみで対象外。両プロジェクトで`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`実行、Playwrightで実際の画面を確認（LoadoutScene一式、GameScene HUD/TIPS/召喚媒体オーバーレイ、ポーション工房のブリュー操作・実績モーダル）。

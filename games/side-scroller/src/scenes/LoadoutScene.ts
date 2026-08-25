@@ -15,7 +15,8 @@ import {
   saveLoadout,
   type LoadoutSaveData,
 } from "../logic/loadout";
-import { RECOMMENDED_TAP_SIZE, buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
+import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
+import { THEME, drawPanel, makeButton } from "../ui/theme";
 
 const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
   melee: "近距離",
@@ -59,28 +60,45 @@ export class LoadoutScene extends Phaser.Scene {
       this.data_ = { ...this.data_, currency: 500 };
     }
 
+    this.buildBackground();
+
     this.add
-      .text(400, 36, "⚔️ 剣戟の森 — ロードアウト設定", { fontSize: "22px", color: "#e8e8fb" })
+      .text(400, 34, "⚔️ 剣戟の森", { fontSize: "26px", color: THEME.textPrimary, fontStyle: "700" })
       .setOrigin(0.5, 0);
     this.add
-      .text(400, 66, "所持武器を選んでスロットに設定してください", {
+      .text(400, 66, "ロードアウト設定 — 所持武器を選んでスロットに設定してください", {
         fontSize: "13px",
-        color: "#9a9ac0",
+        color: THEME.textMuted,
       })
       .setOrigin(0.5, 0);
 
-    this.currencyText = this.add.text(20, 20, "", { fontSize: "14px", color: "#ffcc66" });
+    drawPanel(this, 68, 24, 100, 32, { radius: 8, fillColor: 0x2a2210, borderColor: 0xffcc66, borderAlpha: 0.5 });
+    this.currencyText = this.add
+      .text(68, 24, "", { fontSize: "14px", color: "#ffcc66", fontStyle: "600" })
+      .setOrigin(0.5);
 
     this.buildSlotPanel();
     this.buildInventoryPanel();
     this.buildAcquirePanel();
     this.buildArmorPanel();
     this.buildStartButton();
-    this.hintText = this.add.text(400, 560, "", { fontSize: "13px", color: "#4ecca3" }).setOrigin(0.5, 0);
+    this.hintText = this.add
+      .text(400, 580, "", { fontSize: "13px", color: "#4ecca3", fontStyle: "600" })
+      .setOrigin(0.5, 0);
 
     if (isTouchDevice(this)) buildOrientationWarning(this);
 
     this.refresh();
+  }
+
+  /** 深いグラデーション背景＋うっすらとした放射状の光で、フラットな単色より奥行きを出す */
+  private buildBackground(): void {
+    const g = this.add.graphics();
+    g.fillGradientStyle(0x100e22, 0x100e22, 0x1c1030, 0x1c1030, 1);
+    g.fillRect(0, 0, 800, 600);
+    const glow = this.add.graphics();
+    glow.fillStyle(0xff6b8a, 0.06);
+    glow.fillCircle(400, -40, 260);
   }
 
   private persist(): void {
@@ -89,11 +107,14 @@ export class LoadoutScene extends Phaser.Scene {
 
   private buildSlotPanel(): void {
     const kinds: WeaponKind[] = ["melee", "mid", "ranged"];
+    const kindAccent: Record<WeaponKind, number> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
     kinds.forEach((kind, i) => {
       const x = 140 + i * 180;
       const y = 130;
-      this.add.rectangle(x, y, 160, 90, 0x15152a).setStrokeStyle(1, 0x2c2c50);
-      this.add.text(x, y - 34, KIND_LABEL[kind], { fontSize: "13px", color: "#9a9ac0" }).setOrigin(0.5);
+      drawPanel(this, x, y, 160, 90, { radius: 12, borderColor: kindAccent[kind], borderAlpha: 0.45 });
+      this.add
+        .text(x, y - 34, KIND_LABEL[kind], { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
+        .setOrigin(0.5);
       const text = this.add
         .text(x, y, "(未設定)", { fontSize: "13px", color: "#e8e8fb", align: "center", wordWrap: { width: 150 } })
         .setOrigin(0.5);
@@ -105,13 +126,13 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private buildInventoryPanel(): void {
-    this.add.text(20, 180, "所持武器（クリックして選択）", { fontSize: "14px", color: "#e8e8fb" });
+    drawPanel(this, 245, 330, 460, 310, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    this.add.text(20, 180, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
   }
 
   private buildAcquirePanel(): void {
-    this.add.text(500, 180, "🎁 宝箱を開ける (100)", { fontSize: "14px", color: "#4ecca3" });
-    // 単独ボタンなので推奨サイズいっぱいの当たり判定を取れる
-    makeTappable(this, 610, 180 + 7, 220, RECOMMENDED_TAP_SIZE, () => {
+    drawPanel(this, 640, 265, 300, 170, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    const chestBtn = makeButton(this, 610, 187, 200, 30, "🎁 宝箱を開ける (100)", () => {
       if (this.data_.currency < 100) {
         this.setHint("通貨が足りません");
         return;
@@ -125,9 +146,10 @@ export class LoadoutScene extends Phaser.Scene {
       this.persist();
       this.setHint(`${findTemplate(instance.templateId)?.name}(${instance.rarity}) を入手した！`);
       this.refresh();
-    });
+    }, { fillColor: 0x2a3a2f, borderColor: 0x4ecca3, textColor: "#4ecca3", fontSize: "13px", radius: 8 });
+    chestBtn.container.setDepth(1);
 
-    let y = 210;
+    let y = 218;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
       this.add.text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#ff6b8a" });
@@ -142,8 +164,9 @@ export class LoadoutScene extends Phaser.Scene {
    * 選択のたびにコストを支払い、選んだTierの耐久でステージに出撃する。
    */
   private buildArmorPanel(): void {
-    this.add.text(500, 355, "🛡️ 防具を選択（出撃ごとに購入）", { fontSize: "13px", color: "#e8e8fb" });
-    let y = 378;
+    drawPanel(this, 640, 448, 300, 130, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    this.add.text(500, 390, "🛡️ 防具を選択（出撃ごとに購入）", { fontSize: "13px", color: THEME.textPrimary, fontStyle: "600" });
+    let y = 413;
     for (const armor of ARMOR_TEMPLATES) {
       const label =
         armor.id === "none"
@@ -192,20 +215,23 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private buildStartButton(): void {
-    const btn = this.add
-      .text(400, 500, "▶ ステージ開始", { fontSize: "18px", color: "#0a0a12" })
-      .setOrigin(0.5)
-      .setPadding(16, 10)
-      .setBackgroundColor("#4ecca3")
-      .setInteractive({ useHandCursor: true });
-    btn.on("pointerdown", () => {
-      this.scene.start("GameScene", {
-        loadout: this.data_.loadout,
-        inventory: this.data_.inventory,
-        baseEquipmentLevels: this.data_.baseEquipmentLevels,
-        selectedArmorId: this.data_.selectedArmorId,
-      });
-    });
+    makeButton(
+      this,
+      400,
+      545,
+      240,
+      52,
+      "▶ ステージ開始",
+      () => {
+        this.scene.start("GameScene", {
+          loadout: this.data_.loadout,
+          inventory: this.data_.inventory,
+          baseEquipmentLevels: this.data_.baseEquipmentLevels,
+          selectedArmorId: this.data_.selectedArmorId,
+        });
+      },
+      { radius: 26, fillColor: 0x3a9d78, hoverColor: 0x4ecca3, textColor: "#0a0a12", fontSize: "18px" },
+    );
   }
 
   private assignSelectedToSlot(kind: WeaponKind): void {
@@ -267,7 +293,7 @@ export class LoadoutScene extends Phaser.Scene {
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
       const y = 205 + i * 20;
       const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" });
-      const zone = makeTappable(this, 400, y + 6, 760, 18, () => {
+      const zone = makeTappable(this, 250, y + 6, 440, 18, () => {
         this.selectedInstanceId = instance.id;
         this.refresh();
       });

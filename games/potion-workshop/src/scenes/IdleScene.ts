@@ -36,6 +36,7 @@ import {
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
+import { RoundedRect, drawPanel, makeRoundedRect } from "../ui/theme";
 
 const SAVE_INTERVAL_MS = 5_000;
 const SOUND_PREF_KEY = "ai_project002_sound_v1";
@@ -55,16 +56,16 @@ export class IdleScene extends Phaser.Scene {
   private langText!: Phaser.GameObjects.Text;
   private soundText!: Phaser.GameObjects.Text;
   private clickUpgradeText!: Phaser.GameObjects.Text;
-  private clickUpgradeButton!: Phaser.GameObjects.Rectangle;
+  private clickUpgradeButton!: RoundedRect;
   private offlineCapText!: Phaser.GameObjects.Text;
-  private offlineCapButton!: Phaser.GameObjects.Rectangle;
-  private prestigeButton!: Phaser.GameObjects.Rectangle;
+  private offlineCapButton!: RoundedRect;
+  private prestigeButton!: RoundedRect;
   private prestigeText!: Phaser.GameObjects.Text;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
-  private qtyButtons: { qty: number; rect: Phaser.GameObjects.Rectangle }[] = [];
+  private qtyButtons: { qty: number; rect: RoundedRect }[] = [];
   private rows: {
     id: string;
-    button: Phaser.GameObjects.Rectangle;
+    button: RoundedRect;
     label: Phaser.GameObjects.Text;
   }[] = [];
 
@@ -120,6 +121,13 @@ export class IdleScene extends Phaser.Scene {
   // ---- 画面構築 ----
 
   private buildBackground(): void {
+    const g = this.add.graphics();
+    g.fillGradientStyle(0x0f1022, 0x0f1022, 0x162238, 0x162238, 1);
+    g.fillRect(0, 0, 800, 760);
+    const glow = this.add.graphics();
+    glow.fillStyle(0x4ecca3, 0.06);
+    glow.fillCircle(160, 230, 220);
+
     for (let i = 0; i < 14; i++) {
       const x = Phaser.Math.Between(20, 780);
       const y = Phaser.Math.Between(140, 700);
@@ -168,27 +176,31 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private buildBrewArea(): void {
+    // 柔らかいグロー＋二重リングで単色円より奥行きを出す
+    this.add.circle(160, 230, 78, 0x7b2cbf, 0.18);
+    const ring = this.add.circle(160, 230, 70, 0x7b2cbf, 0).setStrokeStyle(2, 0xd9a7ff, 0.5);
     const brew = this.add
       .circle(160, 230, 65, 0x7b2cbf)
+      .setStrokeStyle(2, 0x9d5fd6, 0.9)
       .setInteractive({ useHandCursor: true });
     this.brewText = this.add
-      .text(160, 230, "", { fontSize: "22px", color: "#ffffff" })
+      .text(160, 230, "", { fontSize: "22px", color: "#ffffff", fontStyle: "700" })
       .setOrigin(0.5);
     brew.on("pointerdown", () => {
       const gain = this.state.clickPower * essenceMultiplier(this.state);
       this.state = click(this.state);
       this.playSound(sfx.click);
-      this.tweens.add({ targets: brew, scale: 0.92, duration: 60, yoyo: true });
+      this.tweens.add({ targets: [brew, ring], scale: 0.92, duration: 60, yoyo: true });
       this.spawnFloatingText(160, 155, `+${formatNumber(gain)}`, "#4ecca3");
     });
 
     // 購入数セレクター（クリック強化に使う一括購入数）
     CLICK_UPGRADE_QUANTITIES.forEach((qty, i) => {
       const bx = 40 + i * 60;
-      const rect = this.add
-        .rectangle(bx, 322, 52, 26, qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a)
-        .setStrokeStyle(1, 0x44446a)
-        .setInteractive({ useHandCursor: true });
+      const rect = makeRoundedRect(this, bx, 322, 52, 26, qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a, {
+        radius: 8,
+        borderWidth: 1,
+      });
       const label = this.add
         .text(bx, 322, qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`, {
           fontSize: "12px",
@@ -208,10 +220,10 @@ export class IdleScene extends Phaser.Scene {
     });
 
     // クリック強化（購入数セレクターに応じて一括購入）
-    this.clickUpgradeButton = this.add
-      .rectangle(160, 375, 260, 56, 0x2a3a4a)
-      .setStrokeStyle(2, 0x44586a)
-      .setInteractive({ useHandCursor: true });
+    this.clickUpgradeButton = makeRoundedRect(this, 160, 375, 260, 56, 0x2a3a4a, {
+      radius: 12,
+      borderColor: 0x44586a,
+    });
     this.clickUpgradeText = this.add
       .text(160, 375, "", { fontSize: "13px", color: "#ccccdd", align: "center" })
       .setOrigin(0.5);
@@ -227,10 +239,10 @@ export class IdleScene extends Phaser.Scene {
     });
 
     // 放置上限拡張（essence消費、複数ソース加算式で将来の課金/バフ等にも対応できる設計）
-    this.offlineCapButton = this.add
-      .rectangle(160, 440, 260, 44, 0x2a3a4a)
-      .setStrokeStyle(2, 0x44586a)
-      .setInteractive({ useHandCursor: true });
+    this.offlineCapButton = makeRoundedRect(this, 160, 440, 260, 44, 0x2a3a4a, {
+      radius: 12,
+      borderColor: 0x44586a,
+    });
     this.offlineCapText = this.add
       .text(160, 440, "", { fontSize: "12px", color: "#ccccdd", align: "center" })
       .setOrigin(0.5);
@@ -245,10 +257,10 @@ export class IdleScene extends Phaser.Scene {
     });
 
     // 転生
-    this.prestigeButton = this.add
-      .rectangle(160, 525, 260, 64, 0x3a2a5a)
-      .setStrokeStyle(2, 0x7b2cbf)
-      .setInteractive({ useHandCursor: true });
+    this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0x3a2a5a, {
+      radius: 14,
+      borderColor: 0x7b2cbf,
+    });
     this.prestigeText = this.add
       .text(160, 525, "", {
         fontSize: "12px",
@@ -276,10 +288,7 @@ export class IdleScene extends Phaser.Scene {
   private buildGeneratorList(): void {
     GENERATORS.forEach((g, i) => {
       const y = 130 + i * 62;
-      const button = this.add
-        .rectangle(560, y, 400, 52, 0x2a2a4a)
-        .setStrokeStyle(2, 0x44446a)
-        .setInteractive({ useHandCursor: true });
+      const button = makeRoundedRect(this, 560, y, 400, 52, 0x2a2a4a, { radius: 10, borderColor: 0x44446a });
       const label = this.add
         .text(370, y - 16, "", { fontSize: "14px", color: "#ccccdd" })
         .setOrigin(0, 0);
@@ -316,11 +325,8 @@ export class IdleScene extends Phaser.Scene {
     width: number,
     initialText: string,
     onClick: () => void,
-  ): { rect: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
-    const rect = this.add
-      .rectangle(x, y, width, 32, 0x2a2a4a)
-      .setStrokeStyle(1, 0x44446a)
-      .setInteractive({ useHandCursor: true });
+  ): { rect: RoundedRect; label: Phaser.GameObjects.Text } {
+    const rect = makeRoundedRect(this, x, y, width, 32, 0x2a2a4a, { radius: 8, borderWidth: 1 });
     const label = this.add
       .text(x, y, initialText, { fontSize: "13px", color: "#ccccdd" })
       .setOrigin(0.5);
@@ -332,7 +338,7 @@ export class IdleScene extends Phaser.Scene {
 
   private showModal(bodyText: string, onClose?: () => void): void {
     const overlay = this.add.rectangle(400, 380, 800, 760, 0x000000, 0.7).setInteractive();
-    const panel = this.add.rectangle(400, 380, 560, 420, 0x1e1e38).setStrokeStyle(2, 0x7b2cbf);
+    const panel = drawPanel(this, 400, 380, 560, 420, { radius: 20, fillColor: 0x1a1a30, shadow: false });
     const text = this.add
       .text(400, 340, bodyText, {
         fontSize: "14px",

@@ -89,6 +89,7 @@ import {
   isTouchDevice,
   makeTappable,
 } from "../ui/touch";
+import { THEME, drawPanel } from "../ui/theme";
 
 const GROUND_Y = 520;
 const GOAL_X = 3200;
@@ -169,7 +170,7 @@ export class GameScene extends Phaser.Scene {
   private hiougiHint!: Phaser.GameObjects.Text;
   private tipsHint!: Phaser.GameObjects.Text;
 
-  private statusPanel!: Phaser.GameObjects.Rectangle;
+  private statusPanel!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
   private restartText!: Phaser.GameObjects.Text;
 
@@ -498,12 +499,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildHud(): void {
-    this.add.rectangle(150, 68, 280, 124, 0x14142a, 0.7).setScrollFactor(0).setOrigin(0.5);
+    drawPanel(this, 150, 68, 284, 128, {
+      radius: 14,
+      fillColor: THEME.panelFill,
+      fillAlpha: 0.72,
+      borderColor: THEME.accent,
+      borderAlpha: 0.3,
+      scrollFactor: 0,
+      shadow: false,
+    });
     this.healthText = this.add
       .text(16, 12, "", { fontSize: "18px", color: "#ff6b8a" })
       .setScrollFactor(0);
     this.scoreText = this.add
-      .text(16, 34, "", { fontSize: "14px", color: "#ffd166" })
+      .text(16, 34, "", { fontSize: "14px", color: "#ffd166", fontStyle: "600" })
       .setScrollFactor(0);
     this.weaponText = this.add
       .text(16, 54, "", { fontSize: "13px", color: "#7fd1ff" })
@@ -518,16 +527,23 @@ export class GameScene extends Phaser.Scene {
       .text(16, 108, "", { fontSize: "12px", color: "#7fffb0" })
       .setScrollFactor(0);
 
+    drawPanel(this, 660, 20, 228, 22, {
+      radius: 11,
+      fillColor: 0x1a1a30,
+      borderColor: 0xd9a7ff,
+      borderAlpha: 0.35,
+      scrollFactor: 0,
+      shadow: false,
+    });
     this.gaugeBarBg = this.add
-      .rectangle(660, 20, 220, 16, 0x2a2a4a)
-      .setStrokeStyle(1, 0x54547a)
+      .rectangle(660, 20, 220, 16, 0x2a2a4a, 0)
       .setScrollFactor(0);
     this.gaugeBarFill = this.add
       .rectangle(660 - 108, 20, 0, 12, 0xd9a7ff)
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
     this.gaugeLabel = this.add
-      .text(660, 20, "", { fontSize: "11px", color: "#ffffff" })
+      .text(660, 20, "", { fontSize: "11px", color: "#ffffff", fontStyle: "600" })
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.hiougiHint = this.add
@@ -540,13 +556,16 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0);
 
-    this.statusPanel = this.add
-      .rectangle(400, 300, 360, 140, 0x1e1e38, 0.92)
-      .setStrokeStyle(2, 0x7b2cbf)
-      .setScrollFactor(0)
-      .setVisible(false);
+    this.statusPanel = drawPanel(this, 400, 300, 360, 140, {
+      radius: 18,
+      fillColor: 0x1e1e38,
+      fillAlpha: 0.95,
+      borderColor: 0x7b2cbf,
+      borderAlpha: 0.7,
+      scrollFactor: 0,
+    }).setVisible(false);
     this.statusText = this.add
-      .text(400, 280, "", { fontSize: "34px", color: "#ffffff", align: "center" })
+      .text(400, 280, "", { fontSize: "34px", color: "#ffffff", align: "center", fontStyle: "700" })
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.restartText = this.add
@@ -566,11 +585,16 @@ export class GameScene extends Phaser.Scene {
       .rectangle(400, 380, 800, 760, 0x000000, 0.75)
       .setInteractive()
       .on("pointerdown", () => this.toggleTips());
-    const panel = this.add
-      .rectangle(400, 380, 560, 480, 0x1e1e38)
-      .setStrokeStyle(2, 0x7b2cbf);
+    const panel = drawPanel(this, 400, 380, 560, 480, {
+      radius: 20,
+      fillColor: 0x1a1a30,
+      fillAlpha: 0.97,
+      borderColor: 0x7b2cbf,
+      borderAlpha: 0.7,
+      shadow: false,
+    });
     const title = this.add
-      .text(400, 170, "操作方法", { fontSize: "24px", color: "#ffffff" })
+      .text(400, 170, "操作方法", { fontSize: "24px", color: "#ffffff", fontStyle: "700" })
       .setOrigin(0.5);
     const body = this.add
       .text(
@@ -614,19 +638,38 @@ export class GameScene extends Phaser.Scene {
       .rectangle(400, 300, 800, 600, 0x000000, 0.75)
       .setInteractive()
       .on("pointerdown", () => this.closeSummonOverlay());
-    const panel = this.add.rectangle(400, 300, 560, 280, 0x1e1e38).setStrokeStyle(2, 0xd9a7ff);
+    const panel = drawPanel(this, 400, 300, 560, 280, {
+      radius: 18,
+      fillColor: 0x1a1a30,
+      fillAlpha: 0.97,
+      borderColor: 0xd9a7ff,
+      borderAlpha: 0.7,
+      shadow: false,
+    });
     const title = this.add
-      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#ffffff" })
+      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#ffffff", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
     (["melee", "mid", "ranged"] as const).forEach((kind, i) => {
       const x = 250 + i * 150;
       const y = 300;
+      const cardPanel = drawPanel(this, x, y, 130, 110, {
+        radius: 12,
+        fillColor: 0x15152a,
+        borderColor: 0x54547a,
+        borderAlpha: 0.8,
+        shadow: false,
+      });
       const box = this.add
-        .rectangle(x, y, 130, 110, 0x15152a)
-        .setStrokeStyle(1, 0x54547a)
+        .rectangle(x, y, 130, 110, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
+        .on("pointerover", () =>
+          cardPanel.lineStyle(2, 0xd9a7ff, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+        )
+        .on("pointerout", () =>
+          cardPanel.lineStyle(1, 0x54547a, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+        )
         .on("pointerdown", () => this.trySummon(kind));
       const label = this.add
         .text(x, y - 60, `${i + 1}: ${WEAPON_LABEL[kind]}`, { fontSize: "12px", color: "#9a9ac0" })
@@ -639,7 +682,7 @@ export class GameScene extends Phaser.Scene {
           wordWrap: { width: 116 },
         })
         .setOrigin(0.5);
-      overlay.add([box, label, text]);
+      overlay.add([cardPanel, box, label, text]);
       this.summonOverlayTexts[kind] = text;
     });
 
@@ -775,24 +818,43 @@ export class GameScene extends Phaser.Scene {
   private buildStageBuffOverlay(): void {
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(120).setVisible(false);
     const bg = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75).setInteractive();
-    const panel = this.add.rectangle(400, 300, 560, 280, 0x1e1e38).setStrokeStyle(2, 0xffd166);
+    const panel = drawPanel(this, 400, 300, 560, 280, {
+      radius: 18,
+      fillColor: 0x1a1a30,
+      fillAlpha: 0.97,
+      borderColor: 0xffd166,
+      borderAlpha: 0.7,
+      shadow: false,
+    });
     const title = this.add
-      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#ffffff" })
+      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#ffffff", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
     for (let i = 0; i < 3; i++) {
       const x = 250 + i * 150;
       const y = 300;
+      const cardPanel = drawPanel(this, x, y, 130, 110, {
+        radius: 12,
+        fillColor: 0x15152a,
+        borderColor: 0x54547a,
+        borderAlpha: 0.8,
+        shadow: false,
+      });
       const box = this.add
-        .rectangle(x, y, 130, 110, 0x15152a)
-        .setStrokeStyle(1, 0x54547a)
+        .rectangle(x, y, 130, 110, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
+        .on("pointerover", () =>
+          cardPanel.lineStyle(2, 0xffd166, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+        )
+        .on("pointerout", () =>
+          cardPanel.lineStyle(1, 0x54547a, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+        )
         .on("pointerdown", () => this.selectStageBuff(i));
       const text = this.add
         .text(x, y, "", { fontSize: "12px", color: "#e8e8fb", align: "center", wordWrap: { width: 116 } })
         .setOrigin(0.5);
-      overlay.add([box, text]);
+      overlay.add([cardPanel, box, text]);
       this.stageBuffOverlayTexts.push(text);
     }
 
