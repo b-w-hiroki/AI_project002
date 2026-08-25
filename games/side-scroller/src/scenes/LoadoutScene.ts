@@ -16,7 +16,7 @@ import {
   type LoadoutSaveData,
 } from "../logic/loadout";
 import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
-import { THEME, drawPanel, makeButton } from "../ui/theme";
+import { ELEVATION, THEME, drawPanel, makeButton } from "../ui/theme";
 
 const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
   melee: "近距離",
@@ -126,12 +126,12 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private buildInventoryPanel(): void {
-    drawPanel(this, 245, 330, 460, 310, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    drawPanel(this, 245, 330, 460, 310, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
     this.add.text(20, 180, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
   }
 
   private buildAcquirePanel(): void {
-    drawPanel(this, 640, 265, 300, 170, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    drawPanel(this, 640, 265, 300, 170, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
     const chestBtn = makeButton(this, 610, 187, 200, 30, "🎁 宝箱を開ける (100)", () => {
       if (this.data_.currency < 100) {
         this.setHint("通貨が足りません");
@@ -164,7 +164,7 @@ export class LoadoutScene extends Phaser.Scene {
    * 選択のたびにコストを支払い、選んだTierの耐久でステージに出撃する。
    */
   private buildArmorPanel(): void {
-    drawPanel(this, 640, 448, 300, 130, { radius: 14, fillAlpha: 0.55, borderAlpha: 0.4 });
+    drawPanel(this, 640, 448, 300, 130, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
     this.add.text(500, 390, "🛡️ 防具を選択（出撃ごとに購入）", { fontSize: "13px", color: THEME.textPrimary, fontStyle: "600" });
     let y = 413;
     for (const armor of ARMOR_TEMPLATES) {

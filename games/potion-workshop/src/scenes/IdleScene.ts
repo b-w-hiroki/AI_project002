@@ -36,7 +36,17 @@ import {
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
-import { RoundedRect, SmoothedCounter, THEME, TYPE, drawPanel, makeRoundedRect, popOnChange } from "../ui/theme";
+import {
+  ELEVATION,
+  RoundedRect,
+  SmoothedCounter,
+  THEME,
+  TYPE,
+  drawFlaskIcon,
+  drawPanel,
+  makeRoundedRect,
+  popOnChange,
+} from "../ui/theme";
 
 const SAVE_INTERVAL_MS = 5_000;
 const SOUND_PREF_KEY = "ai_project002_sound_v1";
@@ -49,6 +59,7 @@ export class IdleScene extends Phaser.Scene {
   private soundOn = localStorage.getItem(SOUND_PREF_KEY) !== "off";
 
   private titleText!: Phaser.GameObjects.Text;
+  private titleIcon!: Phaser.GameObjects.Graphics;
   private potionText!: Phaser.GameObjects.Text;
   private rateText!: Phaser.GameObjects.Text;
   private essenceText!: Phaser.GameObjects.Text;
@@ -92,6 +103,7 @@ export class IdleScene extends Phaser.Scene {
     this.potionCounter = new SmoothedCounter(this.state.potions);
 
     this.buildBackground();
+    this.buildZonePanels();
     this.buildHeader();
     this.buildBrewArea();
     this.buildGeneratorList();
@@ -145,10 +157,32 @@ export class IdleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * ブリューエリアと設備リストをそれぞれ1枚のゾーンパネルで囲み、階層(背景/ゾーン/カード)を
+   * 明確にする。カード側の色は既存の購入可否ロジックをそのまま使うため変更しない。
+   */
+  private buildZonePanels(): void {
+    drawPanel(this, 160, 350, 300, 430, {
+      radius: 18,
+      fillColor: ELEVATION.zone,
+      fillAlpha: 0.9,
+      borderColor: THEME.panelBorder,
+      borderAlpha: 0.5,
+    });
+    drawPanel(this, 560, 348, 440, 508, {
+      radius: 18,
+      fillColor: ELEVATION.zone,
+      fillAlpha: 0.9,
+      borderColor: THEME.panelBorder,
+      borderAlpha: 0.5,
+    });
+  }
+
   private buildHeader(): void {
     this.titleText = this.add
       .text(400, 26, "", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
+    this.titleIcon = drawFlaskIcon(this, 400, 26, 22);
     this.potionText = this.add
       .text(400, 62, "", { ...TYPE.numeric, color: "#4ecca3" })
       .setOrigin(0.5);
@@ -432,6 +466,7 @@ export class IdleScene extends Phaser.Scene {
   /** 言語・設定に依存する固定文言を更新 */
   private refreshStaticTexts(): void {
     this.titleText.setText(t(this.lang, "title"));
+    this.titleIcon.setPosition(400 - this.titleText.width / 2 - 18, 26);
     this.brewText.setText(t(this.lang, "brew"));
     this.langText.setText(t(this.lang, "langButton"));
     this.soundText.setText(this.soundOn ? t(this.lang, "soundOn") : t(this.lang, "soundOff"));

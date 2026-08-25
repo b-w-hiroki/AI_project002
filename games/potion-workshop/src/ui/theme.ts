@@ -13,6 +13,19 @@ export const THEME = {
   textMuted: "#8888aa",
 } as const;
 
+/**
+ * 階層（エレベーション）カラー。背景／ゾーンパネル／カード の3段階で明度を変え、
+ * 「今どの階層を見ているか」が色だけで判別できるようにする。数字が大きいほど手前＝明るい。
+ */
+export const ELEVATION = {
+  bg: 0x0f1022,
+  zone: 0x161a35, // セクションのグルーピング用パネル
+  card: 0x22254a, // ゾーン内の個別カード/行
+} as const;
+
+/** 4/8/16/24/32px の余白スケール。マジックナンバーの散在を避けるために使う */
+export const SPACE = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+
 const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
 
 /**
@@ -165,6 +178,35 @@ export class SmoothedCounter {
     }
     return this.displayed;
   }
+}
+
+/**
+ * フラスコのシルエットアイコンをGraphicsで描画する。絵文字はOS/フォント依存で
+ * 環境によって表示が崩れる（豆腐化）ため、ブランドの顔であるタイトル横のアイコンは
+ * 自前描画にして見た目を環境非依存にする。(x, y) はアイコン中心。
+ */
+export function drawFlaskIcon(scene: Phaser.Scene, x: number, y: number, size = 20): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  const neckW = size * 0.22;
+  const neckH = size * 0.32;
+  const bodyR = size * 0.42;
+  g.fillStyle(0x9d5fd6, 0.25);
+  g.fillCircle(0, size * 0.12, bodyR + 3);
+  g.lineStyle(2, THEME.accent, 0.95);
+  g.beginPath();
+  g.moveTo(-neckW / 2, -size / 2);
+  g.lineTo(-neckW / 2, -size / 2 + neckH);
+  g.lineTo(-bodyR, size * 0.12 + bodyR * 0.6);
+  g.arc(0, size * 0.12, bodyR, Phaser.Math.DegToRad(150), Phaser.Math.DegToRad(30), true);
+  g.lineTo(neckW / 2, -size / 2 + neckH);
+  g.lineTo(neckW / 2, -size / 2);
+  g.strokePath();
+  g.lineStyle(2, THEME.accent, 0.95);
+  g.strokeLineShape(new Phaser.Geom.Line(-neckW / 2 - 3, -size / 2, neckW / 2 + 3, -size / 2));
+  g.fillStyle(0x4ecca3, 0.85);
+  g.fillCircle(-bodyR * 0.3, size * 0.28, size * 0.09);
+  g.fillCircle(bodyR * 0.15, size * 0.4, size * 0.06);
+  return g;
 }
 
 /** テキストの値が変わった時だけ、軽くポップさせて変化に気付きやすくする */
