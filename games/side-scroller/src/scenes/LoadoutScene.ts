@@ -49,6 +49,7 @@ export class LoadoutScene extends Phaser.Scene {
   private hintText?: Phaser.GameObjects.Text;
   private armorTexts: { id: string; label: string; text: Phaser.GameObjects.Text }[] = [];
   private rarityBar!: Phaser.GameObjects.Graphics;
+  private slotGlows: Partial<Record<WeaponKind, Phaser.GameObjects.Graphics>> = {};
 
   constructor() {
     super("LoadoutScene");
@@ -120,6 +121,20 @@ export class LoadoutScene extends Phaser.Scene {
         .text(x, y, "(未設定)", { fontSize: "13px", color: "#e8e8fb", align: "center", wordWrap: { width: 150 } })
         .setOrigin(0.5);
       this.slotTexts[kind] = text;
+
+      // 未設定スロットに気付きやすいよう、パネルの外周をゆっくりパルスさせるグローを重ねる
+      const glow = this.add.graphics({ x, y });
+      glow.lineStyle(3, kindAccent[kind], 1);
+      glow.strokeRoundedRect(-84, -49, 168, 98, 14);
+      this.slotGlows[kind] = glow;
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.15, to: 0.55 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
 
       const zone = this.add.zone(x, y, 160, 90).setInteractive({ useHandCursor: true });
       zone.on("pointerdown", () => this.assignSelectedToSlot(kind));
@@ -302,12 +317,14 @@ export class LoadoutScene extends Phaser.Scene {
       if (!text) continue;
       if (!instance) {
         text.setText("(未設定)").setColor("#62628a");
+        this.slotGlows[kind]?.setVisible(true);
         continue;
       }
       const template = findTemplate(instance.templateId);
       text
         .setText(`${template?.name ?? "?"}\n[${instance.rarity}] +${instance.enhanceLevel}`)
         .setColor(RARITY_COLOR[instance.rarity] ?? "#e8e8fb");
+      this.slotGlows[kind]?.setVisible(false);
     }
 
     this.inventoryTexts.forEach((t) => t.destroy());
@@ -316,8 +333,11 @@ export class LoadoutScene extends Phaser.Scene {
       const template = findTemplate(instance.templateId);
       const stats = effectiveStats(instance);
       const selected = instance.id === this.selectedInstanceId;
+      // SR以上はソシャゲ的な★演出で高レアリティを一目で分かるようにする
+      const rarityStars: Readonly<Record<string, string>> = { SR: "★", SSR: "★★", UR: "★★★" };
+      const star = rarityStars[instance.rarity] ?? "";
       const label =
-        `${selected ? "▶ " : "  "}${template?.name ?? "?"} [${instance.rarity}] ` +
+        `${selected ? "▶ " : "  "}${template?.name ?? "?"} [${instance.rarity}]${star ? ` ${star}` : ""} ` +
         `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
       const y = 234 + i * 20;
