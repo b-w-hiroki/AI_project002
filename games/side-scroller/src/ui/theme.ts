@@ -6,15 +6,20 @@ import Phaser from "phaser";
  * 薄いユーティリティで、ロジック側には一切踏み込まない。
  */
 
+/**
+ * 「淡い青空・ファンタジー」トーン。ユーザーから「もっと明るいソシャゲ調に」との要望を受け、
+ * 濃紺ベースの配色から水色〜白のグラデーションを基調にしたパステル系に刷新した。
+ * パネルが明るくなった分、テキストは濃紺〜紺青系の暗色に統一している（明るい背景での可読性優先）。
+ */
 export const THEME = {
-  panelFill: 0x181830,
-  panelFillAlt: 0x1e1e3a,
-  panelBorder: 0x4a4a72,
-  shadow: 0x000000,
+  panelFill: 0xf3f9ff,
+  panelFillAlt: 0xeaf5ff,
+  panelBorder: 0x9ecbef,
+  shadow: 0x9db8d6,
   accent: 0xff6b8a,
   accentSoft: 0xffb3c1,
-  textPrimary: "#f0f0ff",
-  textMuted: "#9a9ac0",
+  textPrimary: "#2d3a52",
+  textMuted: "#7488a0",
 } as const;
 
 /**
@@ -22,9 +27,9 @@ export const THEME = {
  * 「今どの階層を見ているか」が色だけで判別できるようにする（ポーション工房と共通の考え方）。
  */
 export const ELEVATION = {
-  bg: 0x0a0a18,
-  zone: 0x181c38,
-  card: 0x242850,
+  bg: 0xcfe9ff,
+  zone: 0xffffff,
+  card: 0xeaf5ff,
 } as const;
 
 /** 4/8/16/24/32px の余白スケール。マジックナンバーの散在を避けるために使う */
@@ -89,7 +94,7 @@ export function drawPanel(
   g.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
 
   // 上部のガラス風ハイライト帯
-  g.fillStyle(0xffffff, 0.05);
+  g.fillStyle(0xffffff, 0.45);
   g.fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, Math.max(6, h * 0.28), radius * 0.8);
 
   g.lineStyle(options.borderWidth ?? 1.5, options.borderColor ?? THEME.panelBorder, options.borderAlpha ?? 0.9);
@@ -130,17 +135,17 @@ export function makeButton(
   options: ButtonOptions = {},
 ): ThemedButton {
   const radius = options.radius ?? 10;
-  const fill = options.fillColor ?? 0x2a2a4a;
-  const hover = options.hoverColor ?? blend(fill, 0xffffff, 0.12);
-  const press = options.pressColor ?? blend(fill, 0x000000, 0.2);
-  const disabledColor = options.disabledColor ?? 0x25253a;
+  const fill = options.fillColor ?? 0xe4eef8;
+  const hover = options.hoverColor ?? blend(fill, 0x8ecbf5, 0.4);
+  const press = options.pressColor ?? blend(fill, 0x000000, 0.12);
+  const disabledColor = options.disabledColor ?? 0xdfe6ec;
 
   const g = scene.add.graphics();
   const draw = (color: number, alpha = 1) => {
     g.clear();
     g.fillStyle(color, alpha);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
-    g.lineStyle(1.5, options.borderColor ?? 0xffffff, 0.14);
+    g.lineStyle(1.5, options.borderColor ?? 0x9ecbef, 0.6);
     g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
   };
   draw(fill);

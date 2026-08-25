@@ -394,14 +394,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildLevel(): void {
-    this.add.rectangle(GOAL_X / 2, 300, GOAL_X + 400, 600, 0x14142a);
+    // 淡い青空グラデーション。ソシャゲ調の明るいファンタジー基調にする
+    const sky = this.add.graphics();
+    sky.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xe8f6ff, 0xe8f6ff, 1);
+    sky.fillRect(0, 0, GOAL_X + 400, 600);
 
     this.platforms = this.physics.add.staticGroup();
     for (let x = 0; x < GOAL_X + 400; x += 64) {
       this.platforms.create(x + 32, GROUND_Y + 32, "solid").setVisible(false);
     }
-    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y + 32, GOAL_X + 400, 64, 0x2a2a4a);
-    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y, GOAL_X + 400, 4, 0x3f6f5c);
+    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y + 32, GOAL_X + 400, 64, 0x8b6b47);
+    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y, GOAL_X + 400, 4, 0x5cb85c);
 
     const floatingPlatforms = [
       { x: 500, y: 400 },
@@ -412,8 +415,9 @@ export class GameScene extends Phaser.Scene {
       { x: 2800, y: 340 },
     ];
     for (const p of floatingPlatforms) {
-      const rect = this.add.rectangle(p.x, p.y, 140, 20, 0x3a3a5a);
-      rect.setStrokeStyle(2, 0x54547a);
+      // 雲のようなプラットフォームで空・ファンタジー感を強める
+      const rect = this.add.rectangle(p.x, p.y, 140, 20, 0xffffff, 0.9);
+      rect.setStrokeStyle(2, 0x9ecbef);
       rect.setDepth(1);
       this.platforms
         .create(p.x, p.y, "solid")
@@ -424,10 +428,16 @@ export class GameScene extends Phaser.Scene {
 
     this.platforms.refresh();
 
-    this.add.rectangle(GOAL_X, GROUND_Y - 60, 6, 120, 0xcccccc);
+    this.add.rectangle(GOAL_X, GROUND_Y - 60, 6, 120, 0x6a7a8a);
     this.add.triangle(GOAL_X + 3, GROUND_Y - 100, 0, 0, 36, 10, 0, 20, 0xffd166).setOrigin(0, 0.5);
     this.add
-      .text(GOAL_X, GROUND_Y - 140, "GOAL", { fontSize: "20px", color: "#ffd166" })
+      .text(GOAL_X, GROUND_Y - 140, "GOAL", {
+        fontSize: "20px",
+        color: "#c98a12",
+        fontStyle: "700",
+        stroke: "#ffffff",
+        strokeThickness: 4,
+      })
       .setOrigin(0.5);
   }
 
@@ -509,29 +519,29 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     this.healthText = this.add
-      .text(16, 12, "", { ...TYPE.numeric, fontSize: "18px", color: "#ff6b8a" })
+      .text(16, 12, "", { ...TYPE.numeric, fontSize: "18px", color: "#e0447a" })
       .setScrollFactor(0);
     this.scoreText = this.add
-      .text(16, 34, "", { ...TYPE.body, fontSize: "14px", color: "#ffd166" })
+      .text(16, 34, "", { ...TYPE.body, fontSize: "14px", color: "#c98a12" })
       .setScrollFactor(0);
     this.weaponText = this.add
-      .text(16, 54, "", { ...TYPE.body, color: "#7fd1ff" })
+      .text(16, 54, "", { ...TYPE.body, color: "#2f8fd1" })
       .setScrollFactor(0);
     this.skillText = this.add
-      .text(16, 72, "", { ...TYPE.small, color: "#aaaacc" })
+      .text(16, 72, "", { ...TYPE.small, color: THEME.textMuted })
       .setScrollFactor(0);
     this.comboText = this.add
-      .text(16, 90, "", { ...TYPE.small, color: "#aaaacc" })
+      .text(16, 90, "", { ...TYPE.small, color: THEME.textMuted })
       .setScrollFactor(0);
     this.itemsText = this.add
-      .text(16, 108, "", { ...TYPE.small, color: "#7fffb0" })
+      .text(16, 108, "", { ...TYPE.small, color: "#1f8a63" })
       .setScrollFactor(0);
 
     drawPanel(this, 660, 20, 228, 22, {
       radius: 11,
-      fillColor: 0x1a1a30,
+      fillColor: 0xffffff,
       borderColor: 0xd9a7ff,
-      borderAlpha: 0.35,
+      borderAlpha: 0.5,
       scrollFactor: 0,
       shadow: false,
     });
@@ -547,29 +557,29 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.hiougiHint = this.add
-      .text(660, 38, "", { fontSize: "11px", color: "#ffd166" })
+      .text(660, 38, "", { fontSize: "11px", color: "#c98a12" })
       .setOrigin(0.5)
       .setScrollFactor(0);
 
     this.tipsHint = this.add
-      .text(400, 748, "Enterキーで操作方法を表示", { fontSize: "12px", color: "#666688" })
+      .text(400, 748, "Enterキーで操作方法を表示", { fontSize: "12px", color: "#7488a0" })
       .setOrigin(0.5)
       .setScrollFactor(0);
 
     this.statusPanel = drawPanel(this, 400, 300, 360, 140, {
       radius: 18,
-      fillColor: 0x1e1e38,
-      fillAlpha: 0.95,
-      borderColor: 0x7b2cbf,
+      fillColor: 0xffffff,
+      fillAlpha: 0.97,
+      borderColor: 0xb98af0,
       borderAlpha: 0.7,
       scrollFactor: 0,
     }).setVisible(false);
     this.statusText = this.add
-      .text(400, 280, "", { fontSize: "34px", color: "#ffffff", align: "center", fontStyle: "700" })
+      .text(400, 280, "", { fontSize: "34px", color: "#2d3a52", align: "center", fontStyle: "700" })
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.restartText = this.add
-      .text(400, 325, "", { fontSize: "14px", color: "#aaaacc", align: "center" })
+      .text(400, 325, "", { fontSize: "14px", color: "#7488a0", align: "center" })
       .setOrigin(0.5)
       .setScrollFactor(0);
     // ステータスパネル全体をタップ可能にする。表示中（gameover/cleared）以外は何もしない
@@ -582,19 +592,19 @@ export class GameScene extends Phaser.Scene {
   private buildTipsOverlay(): void {
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(100).setVisible(false);
     const bg = this.add
-      .rectangle(400, 380, 800, 760, 0x000000, 0.75)
+      .rectangle(400, 380, 800, 760, 0x3a5a78, 0.55)
       .setInteractive()
       .on("pointerdown", () => this.toggleTips());
     const panel = drawPanel(this, 400, 380, 560, 480, {
       radius: 20,
-      fillColor: 0x1a1a30,
-      fillAlpha: 0.97,
-      borderColor: 0x7b2cbf,
+      fillColor: 0xffffff,
+      fillAlpha: 0.98,
+      borderColor: 0xb98af0,
       borderAlpha: 0.7,
       shadow: false,
     });
     const title = this.add
-      .text(400, 170, "操作方法", { fontSize: "24px", color: "#ffffff", fontStyle: "700" })
+      .text(400, 170, "操作方法", { fontSize: "24px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     const body = this.add
       .text(
@@ -616,11 +626,11 @@ export class GameScene extends Phaser.Scene {
           "召喚媒体/ステージバフを拾うと一時停止して選択画面が開きます",
           "R : ゲームオーバー／クリア後にリトライ",
         ].join("\n"),
-        { fontSize: "15px", color: "#e0e0ff", align: "center", lineSpacing: 8 },
+        { fontSize: "15px", color: "#3a4a5a", align: "center", lineSpacing: 8 },
       )
       .setOrigin(0.5);
     const closeHint = this.add
-      .text(400, 590, "Enter でとじる", { fontSize: "13px", color: "#aaaacc" })
+      .text(400, 590, "Enter でとじる", { fontSize: "13px", color: "#7488a0" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title, body, closeHint]);
     this.tipsOverlay = overlay;
@@ -635,19 +645,19 @@ export class GameScene extends Phaser.Scene {
   private buildSummonOverlay(): void {
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(110).setVisible(false);
     const bg = this.add
-      .rectangle(400, 300, 800, 600, 0x000000, 0.75)
+      .rectangle(400, 300, 800, 600, 0x3a5a78, 0.55)
       .setInteractive()
       .on("pointerdown", () => this.closeSummonOverlay());
     const panel = drawPanel(this, 400, 300, 560, 280, {
       radius: 18,
-      fillColor: 0x1a1a30,
-      fillAlpha: 0.97,
+      fillColor: 0xffffff,
+      fillAlpha: 0.98,
       borderColor: 0xd9a7ff,
       borderAlpha: 0.7,
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#ffffff", fontStyle: "700" })
+      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
@@ -656,8 +666,8 @@ export class GameScene extends Phaser.Scene {
       const y = 300;
       const cardPanel = drawPanel(this, x, y, 130, 110, {
         radius: 12,
-        fillColor: 0x15152a,
-        borderColor: 0x54547a,
+        fillColor: 0xeaf5ff,
+        borderColor: 0x9ecbef,
         borderAlpha: 0.8,
         shadow: false,
       });
@@ -665,19 +675,19 @@ export class GameScene extends Phaser.Scene {
         .rectangle(x, y, 130, 110, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
         .on("pointerover", () =>
-          cardPanel.lineStyle(2, 0xd9a7ff, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(2, 0xb98af0, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
         )
         .on("pointerout", () =>
-          cardPanel.lineStyle(1, 0x54547a, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(1, 0x9ecbef, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
         )
         .on("pointerdown", () => this.trySummon(kind));
       const label = this.add
-        .text(x, y - 60, `${i + 1}: ${WEAPON_LABEL[kind]}`, { fontSize: "12px", color: "#9a9ac0" })
+        .text(x, y - 60, `${i + 1}: ${WEAPON_LABEL[kind]}`, { fontSize: "12px", color: "#6a7a95" })
         .setOrigin(0.5);
       const text = this.add
         .text(x, y, "", {
           fontSize: "12px",
-          color: "#e8e8fb",
+          color: "#3a4a5a",
           align: "center",
           wordWrap: { width: 116 },
         })
@@ -687,7 +697,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.summonHintText = this.add
-      .text(400, 410, "1 / 2 / 3 キー、またはクリックで選択", { fontSize: "12px", color: "#aaaacc" })
+      .text(400, 410, "1 / 2 / 3 キー、またはクリックで選択", { fontSize: "12px", color: "#7488a0" })
       .setOrigin(0.5);
     overlay.add(this.summonHintText);
     this.summonOverlay = overlay;
@@ -708,7 +718,7 @@ export class GameScene extends Phaser.Scene {
       const stageLabel = run && run.instanceId === instance.id ? `召喚中 stage${run.stage}` : "未召喚";
       text
         .setText(`${template?.name ?? "?"}\n[${instance.rarity}] ${stageLabel}`)
-        .setColor("#e8e8fb");
+        .setColor("#3a4a5a");
     }
   }
 
@@ -817,17 +827,17 @@ export class GameScene extends Phaser.Scene {
   /** ヴァンサバ風の一時停止＋選択UI。ステージバフ（アウトゲーム設定とは独立したプール）から1つ選ぶ */
   private buildStageBuffOverlay(): void {
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(120).setVisible(false);
-    const bg = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.75).setInteractive();
+    const bg = this.add.rectangle(400, 300, 800, 600, 0x3a5a78, 0.55).setInteractive();
     const panel = drawPanel(this, 400, 300, 560, 280, {
       radius: 18,
-      fillColor: 0x1a1a30,
-      fillAlpha: 0.97,
+      fillColor: 0xffffff,
+      fillAlpha: 0.98,
       borderColor: 0xffd166,
       borderAlpha: 0.7,
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#ffffff", fontStyle: "700" })
+      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
@@ -836,8 +846,8 @@ export class GameScene extends Phaser.Scene {
       const y = 300;
       const cardPanel = drawPanel(this, x, y, 130, 110, {
         radius: 12,
-        fillColor: 0x15152a,
-        borderColor: 0x54547a,
+        fillColor: 0xeaf5ff,
+        borderColor: 0x9ecbef,
         borderAlpha: 0.8,
         shadow: false,
       });
@@ -845,14 +855,14 @@ export class GameScene extends Phaser.Scene {
         .rectangle(x, y, 130, 110, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
         .on("pointerover", () =>
-          cardPanel.lineStyle(2, 0xffd166, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(2, 0xc98a12, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
         )
         .on("pointerout", () =>
-          cardPanel.lineStyle(1, 0x54547a, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(1, 0x9ecbef, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
         )
         .on("pointerdown", () => this.selectStageBuff(i));
       const text = this.add
-        .text(x, y, "", { fontSize: "12px", color: "#e8e8fb", align: "center", wordWrap: { width: 116 } })
+        .text(x, y, "", { fontSize: "12px", color: "#3a4a5a", align: "center", wordWrap: { width: 116 } })
         .setOrigin(0.5);
       overlay.add([cardPanel, box, text]);
       this.stageBuffOverlayTexts.push(text);
@@ -1200,8 +1210,15 @@ export class GameScene extends Phaser.Scene {
 
   /** クリック位置から浮かんで消えるテキスト演出 */
   private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    // 明るい空背景の上でも読めるよう、白フチを付けて可読性を確保する
     const obj = this.add
-      .text(x + Phaser.Math.Between(-20, 20), y, text, { fontSize: "16px", color })
+      .text(x + Phaser.Math.Between(-20, 20), y, text, {
+        fontSize: "16px",
+        color,
+        fontStyle: "700",
+        stroke: "#ffffff",
+        strokeThickness: 3,
+      })
       .setOrigin(0.5);
     this.tweens.add({
       targets: obj,
@@ -1224,7 +1241,7 @@ export class GameScene extends Phaser.Scene {
     this.skillText.setText(
       cdRemainingSec > 0 ? `スキル: 準備中 ${cdRemainingSec.toFixed(1)}s` : "スキル: 使用可能（C）",
     );
-    this.skillText.setColor(canUseSkill(this.playerState, now) ? "#7fffb0" : "#aaaacc");
+    this.skillText.setColor(canUseSkill(this.playerState, now) ? "#1f8a63" : THEME.textMuted);
 
     const gaugeRatio = this.playerState.ougiGauge / OUGI_GAUGE_MAX;
     this.gaugeBarFill.width = 216 * gaugeRatio;
@@ -1246,7 +1263,7 @@ export class GameScene extends Phaser.Scene {
         buffLabels ? ` ${buffLabels}` : ""
       }`,
     );
-    this.comboText.setColor(multiplier > 1 ? "#ffd166" : "#aaaacc");
+    this.comboText.setColor(multiplier > 1 ? "#c98a12" : THEME.textMuted);
 
     this.itemsText.setText(
       this.itemKeys

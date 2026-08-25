@@ -143,17 +143,18 @@ export class IdleScene extends Phaser.Scene {
   // ---- 画面構築 ----
 
   private buildBackground(): void {
+    // 淡い青空〜白のグラデーション。ソシャゲ調の明るいファンタジー基調にする
     const g = this.add.graphics();
-    g.fillGradientStyle(0x0f1022, 0x0f1022, 0x162238, 0x162238, 1);
+    g.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 1);
     g.fillRect(0, 0, 800, 760);
     const glow = this.add.graphics();
-    glow.fillStyle(0x4ecca3, 0.06);
+    glow.fillStyle(0xffffff, 0.35);
     glow.fillCircle(160, 230, 220);
 
     for (let i = 0; i < 14; i++) {
       const x = Phaser.Math.Between(20, 780);
       const y = Phaser.Math.Between(140, 700);
-      const bubble = this.add.circle(x, y, Phaser.Math.Between(2, 5), 0x4ecca3, 0.15);
+      const bubble = this.add.circle(x, y, Phaser.Math.Between(2, 5), 0xffffff, 0.55);
       this.tweens.add({
         targets: bubble,
         y: y - Phaser.Math.Between(30, 80),
@@ -193,13 +194,13 @@ export class IdleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.titleIcon = drawFlaskIcon(this, 400, 26, 22);
     this.potionText = this.add
-      .text(400, 62, "", { ...TYPE.numeric, color: "#4ecca3" })
+      .text(400, 62, "", { ...TYPE.numeric, color: "#1f8a63" })
       .setOrigin(0.5);
     this.rateText = this.add
       .text(400, 88, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.essenceText = this.add
-      .text(16, 14, "", { ...TYPE.body, color: "#d9a7ff" })
+      .text(16, 14, "", { ...TYPE.body, color: "#8a4fd1" })
       .setOrigin(0, 0);
 
     // 右上ボタン群: 実績 / サウンド / 言語
@@ -222,11 +223,11 @@ export class IdleScene extends Phaser.Scene {
 
   private buildBrewArea(): void {
     // 柔らかいグロー＋二重リングで単色円より奥行きを出す
-    this.add.circle(160, 230, 78, 0x7b2cbf, 0.18);
-    const ring = this.add.circle(160, 230, 70, 0x7b2cbf, 0).setStrokeStyle(2, 0xd9a7ff, 0.5);
+    this.add.circle(160, 230, 78, 0x9d5cff, 0.18);
+    const ring = this.add.circle(160, 230, 70, 0x9d5cff, 0).setStrokeStyle(2, 0xd9a7ff, 0.6);
     const brew = this.add
-      .circle(160, 230, 65, 0x7b2cbf)
-      .setStrokeStyle(2, 0x9d5fd6, 0.9)
+      .circle(160, 230, 65, 0x9d5cff)
+      .setStrokeStyle(2, 0xffffff, 0.8)
       .setInteractive({ useHandCursor: true });
     this.brewText = this.add
       .text(160, 230, "", { fontSize: "22px", color: "#ffffff", fontStyle: "700" })
@@ -236,26 +237,27 @@ export class IdleScene extends Phaser.Scene {
       this.state = click(this.state);
       this.playSound(sfx.click);
       this.tweens.add({ targets: [brew, ring], scale: 0.92, duration: 60, yoyo: true });
-      this.spawnFloatingText(160, 155, `+${formatNumber(gain)}`, "#4ecca3");
+      this.spawnFloatingText(160, 155, `+${formatNumber(gain)}`, "#1f8a63");
     });
 
     // 購入数セレクター（クリック強化に使う一括購入数）
     CLICK_UPGRADE_QUANTITIES.forEach((qty, i) => {
       const bx = 40 + i * 60;
-      const rect = makeRoundedRect(this, bx, 322, 52, 26, qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a, {
+      const rect = makeRoundedRect(this, bx, 322, 52, 26, qty === this.buyQty ? 0xd9c2ff : 0xe4eef8, {
         radius: 8,
         borderWidth: 1,
+        borderColor: 0x9ecbef,
       });
       const label = this.add
         .text(bx, 322, qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`, {
           fontSize: "12px",
-          color: "#ccccdd",
+          color: "#3a4a5a",
         })
         .setOrigin(0.5);
       rect.on("pointerdown", () => {
         this.buyQty = qty;
         for (const b of this.qtyButtons) {
-          b.rect.setFillStyle(b.qty === this.buyQty ? 0x5a3a8a : 0x2a2a4a);
+          b.rect.setFillStyle(b.qty === this.buyQty ? 0xd9c2ff : 0xe4eef8);
         }
       });
       this.qtyButtons.push({ qty, rect });
@@ -265,12 +267,12 @@ export class IdleScene extends Phaser.Scene {
     });
 
     // クリック強化（購入数セレクターに応じて一括購入）
-    this.clickUpgradeButton = makeRoundedRect(this, 160, 375, 260, 56, 0x2a3a4a, {
+    this.clickUpgradeButton = makeRoundedRect(this, 160, 375, 260, 56, 0xe4eef8, {
       radius: 12,
-      borderColor: 0x44586a,
+      borderColor: 0x9ecbef,
     });
     this.clickUpgradeText = this.add
-      .text(160, 375, "", { fontSize: "13px", color: "#ccccdd", align: "center" })
+      .text(160, 375, "", { fontSize: "13px", color: "#3a4a5a", align: "center" })
       .setOrigin(0.5);
     this.clickUpgradeButton.on("pointerdown", () => {
       const before = this.state.clickPower;
@@ -279,17 +281,17 @@ export class IdleScene extends Phaser.Scene {
         const gained = next.clickPower - before;
         this.state = next;
         this.playSound(sfx.buy);
-        this.spawnFloatingText(160, 345, `+${gained} ⚡`, "#ffd166");
+        this.spawnFloatingText(160, 345, `+${gained} ⚡`, "#c98a12");
       }
     });
 
     // 放置上限拡張（essence消費、複数ソース加算式で将来の課金/バフ等にも対応できる設計）
-    this.offlineCapButton = makeRoundedRect(this, 160, 440, 260, 44, 0x2a3a4a, {
+    this.offlineCapButton = makeRoundedRect(this, 160, 440, 260, 44, 0xe4eef8, {
       radius: 12,
-      borderColor: 0x44586a,
+      borderColor: 0x9ecbef,
     });
     this.offlineCapText = this.add
-      .text(160, 440, "", { fontSize: "12px", color: "#ccccdd", align: "center" })
+      .text(160, 440, "", { fontSize: "12px", color: "#3a4a5a", align: "center" })
       .setOrigin(0.5);
     this.offlineCapButton.on("pointerdown", () => {
       const next = buyOfflineExtension(this.state);
@@ -297,7 +299,7 @@ export class IdleScene extends Phaser.Scene {
         this.state = next;
         save(this.state, localStorage, Date.now());
         this.playSound(sfx.buy);
-        this.spawnFloatingText(160, 415, "+6h ⏳", "#7fd1ff");
+        this.spawnFloatingText(160, 415, "+6h ⏳", "#2f8fd1");
       }
     });
 
@@ -307,22 +309,22 @@ export class IdleScene extends Phaser.Scene {
     this.prestigeGlow.fillRoundedRect(-148, -50, 296, 100, 22);
     this.prestigeGlow.setAlpha(0);
 
-    this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0x3a2a5a, {
+    this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0xf3ecff, {
       radius: 14,
-      borderColor: 0x7b2cbf,
+      borderColor: 0xb98af0,
     });
     this.prestigeText = this.add
       .text(160, 512, "", {
         fontSize: "12px",
-        color: "#d9a7ff",
+        color: "#8a4fd1",
         align: "center",
         wordWrap: { width: 240 },
       })
       .setOrigin(0.5);
     // 転生解放（累計醸造数）までの進捗を可視化する。解放後は非表示にする
     this.prestigeProgress = drawProgressBar(this, 160, 546, 220, 8, 0, {
-      trackColor: 0x241a3a,
-      fillColor: 0xd9a7ff,
+      trackColor: 0xece0fb,
+      fillColor: 0x9d5cff,
     });
     this.prestigeButton.on("pointerdown", () => {
       const gained = essenceOnPrestige(this.state);
@@ -343,11 +345,11 @@ export class IdleScene extends Phaser.Scene {
   private buildGeneratorList(): void {
     GENERATORS.forEach((g, i) => {
       const y = 130 + i * 62;
-      const button = makeRoundedRect(this, 560, y, 400, 52, 0x2a2a4a, { radius: 10, borderColor: 0x44446a });
+      const button = makeRoundedRect(this, 560, y, 400, 52, 0xeaf5ff, { radius: 10, borderColor: 0x9ecbef });
 
       // 設備ごとに色相をずらしたジェム風アイコンを表示し、一覧を一目で見分けやすくする（装飾）
       const hue = (i / GENERATORS.length) * 0.8;
-      const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.55, 0.95).color;
+      const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.65, 0.85).color;
       const gem = this.add.graphics({ x: 382, y });
       gem.fillStyle(gemColor, 1);
       gem.fillCircle(0, 0, 12);
@@ -357,7 +359,7 @@ export class IdleScene extends Phaser.Scene {
       gem.strokeCircle(0, 0, 12);
 
       const label = this.add
-        .text(400, y - 16, "", { fontSize: "14px", color: "#ccccdd" })
+        .text(400, y - 16, "", { fontSize: "14px", color: "#a7b4c2" })
         .setOrigin(0, 0);
       button.on("pointerdown", () => {
         const next = buyGenerator(this.state, g.id);
@@ -423,9 +425,13 @@ export class IdleScene extends Phaser.Scene {
     initialText: string,
     onClick: () => void,
   ): { rect: RoundedRect; label: Phaser.GameObjects.Text } {
-    const rect = makeRoundedRect(this, x, y, width, 32, 0x2a2a4a, { radius: 8, borderWidth: 1 });
+    const rect = makeRoundedRect(this, x, y, width, 32, 0xe4eef8, {
+      radius: 8,
+      borderWidth: 1,
+      borderColor: 0x9ecbef,
+    });
     const label = this.add
-      .text(x, y, initialText, { fontSize: "13px", color: "#ccccdd" })
+      .text(x, y, initialText, { fontSize: "13px", color: "#3a4a5a" })
       .setOrigin(0.5);
     rect.on("pointerdown", onClick);
     return { rect, label };
@@ -434,12 +440,12 @@ export class IdleScene extends Phaser.Scene {
   // ---- モーダル ----
 
   private showModal(bodyText: string, onClose?: () => void): void {
-    const overlay = this.add.rectangle(400, 380, 800, 760, 0x000000, 0.7).setInteractive();
-    const panel = drawPanel(this, 400, 380, 560, 420, { radius: 20, fillColor: 0x1a1a30, shadow: false });
+    const overlay = this.add.rectangle(400, 380, 800, 760, 0x3a5a78, 0.55).setInteractive();
+    const panel = drawPanel(this, 400, 380, 560, 420, { radius: 20, fillColor: 0xffffff, shadow: false });
     const text = this.add
       .text(400, 340, bodyText, {
         fontSize: "14px",
-        color: "#e0e0ff",
+        color: "#3a4a5a",
         align: "center",
         wordWrap: { width: 500 },
       })
@@ -562,26 +568,26 @@ export class IdleScene extends Phaser.Scene {
         `${t(this.lang, "clickUpgradeDesc", { n: displayQty.toString() })}\n` +
         `${t(this.lang, "cost")}: ${formatNumber(clickCost)}`,
     );
-    this.clickUpgradeButton.setFillStyle(clickAffordable ? 0x2f5848 : 0x2a3a4a);
+    this.clickUpgradeButton.setFillStyle(clickAffordable ? 0xcdf3e3 : 0xe4eef8);
 
     const capSec = offlineCapSec(this.state);
     const capHours = Math.round(capSec / 3600);
     const extCost = offlineExtensionCost(this.state);
     if (extCost === null) {
       this.offlineCapText.setText(t(this.lang, "offlineCapMaxed", { h: capHours.toString() }));
-      this.offlineCapButton.setFillStyle(0x2a3a4a);
+      this.offlineCapButton.setFillStyle(0xe4eef8);
     } else {
       const capAffordable = this.state.essence >= extCost;
       this.offlineCapText.setText(
         `${t(this.lang, "offlineCapLabel", { h: capHours.toString() })}\n${t(this.lang, "offlineCapButton")}: ${formatNumber(extCost)}✨`,
       );
-      this.offlineCapButton.setFillStyle(capAffordable ? 0x2f4858 : 0x2a3a4a);
+      this.offlineCapButton.setFillStyle(capAffordable ? 0xcfe9ff : 0xe4eef8);
     }
 
     const gained = essenceOnPrestige(this.state);
     if (gained > 0) {
       this.prestigeText.setText(t(this.lang, "prestige", { n: formatNumber(gained) }));
-      this.prestigeButton.setFillStyle(0x5a3a8a);
+      this.prestigeButton.setFillStyle(0xd9c2ff);
       this.prestigeProgress.graphics.setVisible(false);
       if (!this.prestigeWasAffordable) {
         // 転生可能になった瞬間だけパルス演出を開始する（毎フレーム呼ぶrefreshUIからtween.addを連打しないため）
@@ -600,7 +606,7 @@ export class IdleScene extends Phaser.Scene {
       this.prestigeText.setText(
         t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }),
       );
-      this.prestigeButton.setFillStyle(0x3a2a5a);
+      this.prestigeButton.setFillStyle(0xf3ecff);
       this.prestigeProgress.graphics.setVisible(true);
       this.prestigeProgress.setRatio(this.state.totalBrewed / PRESTIGE_UNLOCK);
       if (this.prestigeWasAffordable) {
@@ -619,8 +625,8 @@ export class IdleScene extends Phaser.Scene {
         `${generatorName(this.lang, def.id)}  ×${count}\n` +
           `${t(this.lang, "cost")}: ${formatNumber(cost)}   +${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`,
       );
-      row.button.setFillStyle(affordable ? 0x2f4858 : 0x2a2a4a);
-      row.label.setColor(affordable ? "#aaffdd" : "#777788");
+      row.button.setFillStyle(affordable ? 0xcdf3e3 : 0xeaf5ff);
+      row.label.setColor(affordable ? "#1f8a63" : "#a7b4c2");
     }
   }
 }
