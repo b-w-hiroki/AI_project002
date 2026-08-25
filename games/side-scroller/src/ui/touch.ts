@@ -99,6 +99,111 @@ export function bindHeldKey(
   btn.on("pointerout", deferredUp);
 }
 
+export interface JoystickKeys {
+  left: Phaser.Input.Keyboard.Key;
+  right: Phaser.Input.Keyboard.Key;
+  up: Phaser.Input.Keyboard.Key;
+  down: Phaser.Input.Keyboard.Key;
+}
+
+export interface JoystickOptions {
+  maxRadius?: number;
+  deadzone?: number;
+}
+
+/**
+ * 「今風」の動的仮想スティック。常時表示のD-padボタンではなく、
+ * 指定ゾーン内をタッチした瞬間にそこを中心として現れ、指の動きに追従し、
+ * 離すと消える（Fortnite Mobile 等のモバイルアクションゲームで一般的な方式）。
+ * bindHeldKey と同じく、既存の Key オブジェクトへ onDown/onUp を橋渡しするだけなので
+ * handleMovement 等の既存ロジックは無変更で流用できる。
+ */
+export function bindVirtualJoystick(
+  scene: Phaser.Scene,
+  zoneRect: { x: number; y: number; width: number; height: number },
+  keys: JoystickKeys,
+  options: JoystickOptions = {},
+): void {
+  const maxRadius = options.maxRadius ?? 52;
+  const deadzone = options.deadzone ?? 14;
+
+  const base = scene.add
+    .circle(0, 0, maxRadius, 0xffffff, 0.12)
+    .setStrokeStyle(2, 0xffffff, 0.25)
+    .setScrollFactor(0)
+    .setDepth(85)
+    .setVisible(false);
+  const thumb = scene.add
+    .circle(0, 0, maxRadius * 0.45, 0xffffff, 0.3)
+    .setScrollFactor(0)
+    .setDepth(86)
+    .setVisible(false);
+
+  let origin: { x: number; y: number } | null = null;
+  let pointerId: number | null = null;
+  const pressed: Record<keyof JoystickKeys, boolean> = { left: false, right: false, up: false, down: false };
+
+  const setPressed = (dir: keyof JoystickKeys, want: boolean) => {
+    if (pressed[dir] === want) return;
+    pressed[dir] = want;
+    const key = keys[dir];
+    if (want) {
+      key.onDown(fakeKeyEvent(scene));
+    } else {
+      // bindHeldKey と同じ理由（同一フレーム内での JustDown 消失防止）で次フレームへ遅延
+      requestAnimationFrame(() => key.onUp(fakeKeyEvent(scene)));
+    }
+  };
+
+  const releaseAll = () => {
+    (Object.keys(pressed) as (keyof JoystickKeys)[]).forEach((dir) => setPressed(dir, false));
+    origin = null;
+    pointerId = null;
+    base.setVisible(false);
+    thumb.setVisible(false);
+  };
+
+  const inputZone = scene.add
+    .zone(zoneRect.x, zoneRect.y, zoneRect.width, zoneRect.height)
+    .setOrigin(0, 0)
+    .setScrollFactor(0)
+    .setInteractive();
+
+  inputZone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    origin = { x: pointer.x, y: pointer.y };
+    pointerId = pointer.id;
+    base.setPosition(origin.x, origin.y).setVisible(true);
+    thumb.setPosition(origin.x, origin.y).setVisible(true);
+  });
+
+  scene.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
+    if (!origin || pointer.id !== pointerId) return;
+    const dx = pointer.x - origin.x;
+    const dy = pointer.y - origin.y;
+    const mag = Math.hypot(dx, dy);
+    const clamped = Math.min(maxRadius, mag);
+    const angle = Math.atan2(dy, dx);
+    thumb.setPosition(origin.x + Math.cos(angle) * clamped, origin.y + Math.sin(angle) * clamped);
+
+    if (mag < deadzone) {
+      setPressed("left", false);
+      setPressed("right", false);
+      setPressed("up", false);
+      setPressed("down", false);
+      return;
+    }
+    setPressed("left", dx < -deadzone);
+    setPressed("right", dx > deadzone);
+    setPressed("up", dy < -deadzone);
+    setPressed("down", dy > deadzone);
+  });
+
+  scene.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (pointer.id === pointerId) releaseAll();
+  });
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, releaseAll);
+}
+
 /**
  * 縦向きでは操作しづらいため、横向きを促す全画面オーバーレイを出す。
  * タッチデバイス判定を行った上で LoadoutScene・GameScene の両方から呼ぶ想定

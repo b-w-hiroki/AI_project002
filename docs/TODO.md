@@ -43,7 +43,8 @@
 - [ ] レベルデザインの拡充（現状は敵8体・浮遊足場6個の1ステージのみ）
 - [ ] 効果音・BGM（ポーション工房と同様 Web Audio 合成を想定）
 - [ ] タイトル画面（現状いきなりプレイ開始）
-- [x] モバイル対応（タッチ操作）: `src/ui/touch.ts`に共通ヘルパー（`makeTappable`/`bindHeldKey`/`isTouchDevice`/`buildOrientationWarning`）を新設。`bindHeldKey`はKey#onDown/onUpを直接呼ぶことで既存のキーボード判定ロジック（`handleMovement`/`handleAttack`等）を一切変更せずタッチ入力を統合。タッチデバイス検知時のみ`GameScene`に4方向D-pad＋攻撃/スキル/武器切替/アイテム使用/TIPSの仮想ボタンを表示、`LoadoutScene`の各行もタップ判定を広げた。縦向き時は両画面で横向きを促すオーバーレイを表示。コマンド入力（↓→X等）はD-padのJustDown経由で自動的に動作
+- [x] モバイル対応（タッチ操作）: `src/ui/touch.ts`に共通ヘルパー（`makeTappable`/`bindHeldKey`/`bindVirtualJoystick`/`isTouchDevice`/`buildOrientationWarning`）を新設。`bindHeldKey`/`bindVirtualJoystick`はKey#onDown/onUpを直接呼ぶことで既存のキーボード判定ロジック（`handleMovement`/`handleAttack`等）を一切変更せずタッチ入力を統合。タッチデバイス検知時のみ`GameScene`に左半分の動的仮想スティック（触れた場所を中心に現れ指の動きに追従し離すと消える）＋右下に攻撃/スキル/武器切替/アイテム使用/TIPSの仮想ボタンを表示、`LoadoutScene`の各行もタップ判定を広げた。縦向き時は両画面で横向きを促すオーバーレイを表示。コマンド入力（↓→X等）はスティックのJustDown経由で自動的に動作
+  - 当初は固定表示の4方向D-padボタンだったが、ユーザーから「もっと今風にできる？表示しないとか」との要望を受け、常時表示のD-padから動的仮想スティック（Fortnite Mobile等のモバイルアクションゲームで一般的な、非表示→タッチ地点に出現→追従→離すと消える方式）に置き換えた
   - 実装中に発見・修正したバグ: Key#onUpはisDown/_justDownを無条件でリセットするため、タップ操作でtouchstart→touchendが同一フレーム内（Scene#updateより前のPRE_STEPで入力処理される）に処理されると、瞬間タップの入力（武器切替やアイテム使用等のJustDown系操作）が消えてしまう事象があった。`scene.time.delayedCall(0,...)`では同じフレーム内でClockが処理されてしまい対策にならず、ブラウザ標準の`requestAnimationFrame`で次の描画フレームまで確実に遅延させて解消
   - 既存コードの抜けも合わせて修正: TIPSオーバーレイの背景タップで閉じられなかった／ゲームオーバー・クリア画面のリトライがタップできなかった（いずれもキーボードのみ対応だった）
   - Vitest対象外（Phaser/DOM依存のUI）だが、Playwrightのタッチエミュレーション（`hasTouch: true`）で状態1〜5すべてを一通り確認済み

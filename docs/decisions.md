@@ -154,3 +154,11 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - `index.html`に`maximum-scale=1.0, user-scalable=no`（ダブルタップズームの誤爆防止）と`touch-action: none; overscroll-behavior: none`（プルツーリフレッシュ等のブラウザジェスチャー抑止）を追加
 - 既存コード変更なしで済んだ箇所: 召喚媒体/ステージバフの選択オーバーレイ、LoadoutSceneのスロットzone等は元々`setInteractive({ useHandCursor: true })`のRectangle/Zoneで実装されており、Phaserのポインター機構がマウス/タッチを統一的に扱うためそのままタッチ対応していた
 - 残課題: 実機（iOS Safari/Android Chrome）での確認は未実施（Playwrightのタッチエミュレーションのみ）。ゲームオーバー/クリア画面表示中も仮想ボタンが視覚的に残る点（機能的には無害、`update()`の早期returnで無視される）は見た目の整理余地として`docs/TODO.md`に記載
+
+## 2026-08-25（剣戟の森: 動的仮想スティックへの置き換え）
+
+ユーザーから「デジタルパッドもっと今風にできる？表示しないとか」との要望を受け、固定表示だった4方向D-padボタンを動的仮想スティックに置き換えた。
+
+- `src/ui/touch.ts`に`bindVirtualJoystick`を追加。左半分（x:0-400, y:0-600）を丸ごと入力ゾーンとし、`pointerdown`があった座標を中心にベース円＋つまみ円を表示、`pointermove`で指の動きにつまみが追従（`maxRadius`でクランプ）、`pointerup`で両方非表示に戻す。方向判定は原点からの相対距離がデッドゾーン（14px）を超えたかどうかで`left/right/up/down`それぞれ独立に真偽判定し、`bindHeldKey`と同じ`Key#onDown`/`onUp`橋渡しパターンで既存の`cursors`判定ロジックを無変更のまま流用した。JustDown消失防止のrequestAnimationFrame遅延も同様に適用。
+- 常時表示のボタンをやめたことで「表示しない」という要望通り、触れるまで画面に何も出ない状態になった。攻撃/スキル/武器切替/アイテム使用/TIPSの右側ボタン群は変更していない（要望は明示的にD-pad＝移動操作についてのものだったため）。
+- Playwrightでの検証はタッチ操作特有の難しさがあった。`new Touch()`/`TouchEvent`を手動構築してcanvasにdispatchする方法ではPhaserのInputManagerに拾われず（Phaser 4はPointer Events APIベースで、生のTouchEventを直接listenしていないと見られる）、`page.mouse.move/down/move/up`のシーケンスに切り替えて検証した（Playwrightの`isMobile`/`hasTouch`コンテキストではマウスイベントも同じポインタープラグインで処理されるため機能した）。この切り替えでスティックの出現・追従・召喚媒体ピックアップまでの移動・release後の非表示までを確認できた。
