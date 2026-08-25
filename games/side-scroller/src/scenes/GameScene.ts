@@ -81,6 +81,7 @@ import {
   useItem,
   type ItemInventory,
 } from "../logic/loadout";
+import { bindHeldKey, buildOrientationWarning, fakeKeyEvent, isTouchDevice, makeTappable } from "../ui/touch";
 
 const GROUND_Y = 520;
 const GOAL_X = 3200;
@@ -266,6 +267,41 @@ export class GameScene extends Phaser.Scene {
       key: this.input.keyboard!.addKey(code),
       label,
     }));
+
+    if (isTouchDevice(this)) {
+      this.buildVirtualControls();
+      buildOrientationWarning(this);
+    }
+  }
+
+  /**
+   * 通常プレイ（状態5）専用の仮想ボタン一式。
+   * 既存の Key オブジェクトへ onDown/onUp を橋渡しするだけなので、
+   * handleMovement/handleAttack 等の既存ロジックは一切変更していない。
+   * 左下=4方向D-pad（移動・ジャンプ・しゃがみ/コマンド下）、右下=攻撃・スキル・武器切替・アイテム使用。
+   */
+  private buildVirtualControls(): void {
+    const dpadCx = 100;
+    const dpadCy = 500;
+    const dpadGap = 56;
+    bindHeldKey(this, dpadCx - dpadGap, dpadCy, "◀", this.cursors.left, { radius: 26 });
+    bindHeldKey(this, dpadCx + dpadGap, dpadCy, "▶", this.cursors.right, { radius: 26 });
+    bindHeldKey(this, dpadCx, dpadCy - dpadGap, "▲", this.cursors.up, { radius: 26 });
+    bindHeldKey(this, dpadCx, dpadCy + dpadGap, "▼", this.cursors.down, { radius: 26 });
+
+    bindHeldKey(this, 730, 520, "X", this.attackKey, { radius: 40, color: 0xff6b8a, alpha: 0.5, fontSize: "20px" });
+    bindHeldKey(this, 650, 500, "C", this.skillKey, { radius: 28, color: 0x7fd1ff, alpha: 0.5 });
+
+    WEAPON_KEY_BINDINGS.forEach((_binding, i) => {
+      const key = this.weaponKeys[i]?.key;
+      if (key) bindHeldKey(this, 580 + i * 36, 450, `${i + 1}`, key, { radius: 16, fontSize: "13px" });
+    });
+    ITEM_KEY_BINDINGS.forEach(({ label }, i) => {
+      const key = this.itemKeys[i]?.key;
+      if (key) bindHeldKey(this, 580 + i * 36, 410, label, key, { radius: 16, fontSize: "13px", color: 0x7fffb0 });
+    });
+
+    bindHeldKey(this, 770, 24, "?", this.tipsKey, { radius: 18, fontSize: "14px" });
   }
 
   /**
@@ -511,12 +547,19 @@ export class GameScene extends Phaser.Scene {
       .text(400, 325, "", { fontSize: "14px", color: "#aaaacc", align: "center" })
       .setOrigin(0.5)
       .setScrollFactor(0);
+    // ステータスパネル全体をタップ可能にする。表示中（gameover/cleared）以外は何もしない
+    makeTappable(this, 400, 300, 360, 140, () => {
+      if (this.status !== "playing") this.restartKey.onDown(fakeKeyEvent(this));
+    }).setScrollFactor(0);
     this.refreshHud();
   }
 
   private buildTipsOverlay(): void {
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(100).setVisible(false);
-    const bg = this.add.rectangle(400, 380, 800, 760, 0x000000, 0.75).setInteractive();
+    const bg = this.add
+      .rectangle(400, 380, 800, 760, 0x000000, 0.75)
+      .setInteractive()
+      .on("pointerdown", () => this.toggleTips());
     const panel = this.add
       .rectangle(400, 380, 560, 480, 0x1e1e38)
       .setStrokeStyle(2, 0x7b2cbf);

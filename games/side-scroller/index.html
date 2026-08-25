@@ -2,21 +2,24 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>剣戟の森 | Blade Woods</title>
     <meta
       name="description"
       content="剣で敵を倒しながらゴールを目指す横スクロールアクション。ブラウザですぐ遊べます。"
     />
     <style>
-      html, body { margin: 0; background: #0d0d14; height: 100%; }
+      html, body { margin: 0; background: #0d0d14; height: 100%; touch-action: none; overscroll-behavior: none; }
       body {
         display: grid;
         place-items: center;
         overflow: hidden;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
-      #game canvas { max-width: 100vw; max-height: 100vh; }
+      #game canvas { max-width: 100vw; max-height: 100vh; touch-action: none; }
     </style>
   </head>
   <body>

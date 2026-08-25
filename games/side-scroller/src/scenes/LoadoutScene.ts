@@ -15,6 +15,7 @@ import {
   saveLoadout,
   type LoadoutSaveData,
 } from "../logic/loadout";
+import { RECOMMENDED_TAP_SIZE, buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
 
 const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
   melee: "近距離",
@@ -41,7 +42,7 @@ const RARITY_COLOR: Readonly<Record<string, string>> = {
 export class LoadoutScene extends Phaser.Scene {
   private data_: LoadoutSaveData = newLoadoutSave();
   private selectedInstanceId: string | null = null;
-  private inventoryTexts: Phaser.GameObjects.Text[] = [];
+  private inventoryTexts: Phaser.GameObjects.GameObject[] = [];
   private slotTexts: Partial<Record<WeaponKind, Phaser.GameObjects.Text>> = {};
   private currencyText?: Phaser.GameObjects.Text;
   private hintText?: Phaser.GameObjects.Text;
@@ -77,6 +78,8 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildStartButton();
     this.hintText = this.add.text(400, 560, "", { fontSize: "13px", color: "#4ecca3" }).setOrigin(0.5, 0);
 
+    if (isTouchDevice(this)) buildOrientationWarning(this);
+
     this.refresh();
   }
 
@@ -106,10 +109,9 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private buildAcquirePanel(): void {
-    const chestBtn = this.add
-      .text(500, 180, "🎁 宝箱を開ける (100)", { fontSize: "14px", color: "#4ecca3" })
-      .setInteractive({ useHandCursor: true });
-    chestBtn.on("pointerdown", () => {
+    this.add.text(500, 180, "🎁 宝箱を開ける (100)", { fontSize: "14px", color: "#4ecca3" });
+    // 単独ボタンなので推奨サイズいっぱいの当たり判定を取れる
+    makeTappable(this, 610, 180 + 7, 220, RECOMMENDED_TAP_SIZE, () => {
       if (this.data_.currency < 100) {
         this.setHint("通貨が足りません");
         return;
@@ -128,10 +130,9 @@ export class LoadoutScene extends Phaser.Scene {
     let y = 210;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
-      const btn = this.add
-        .text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#ff6b8a" })
-        .setInteractive({ useHandCursor: true });
-      btn.on("pointerdown", () => this.craft(template.id));
+      this.add.text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#ff6b8a" });
+      // 密なリスト（行間20px）のため高さは行間ぎりぎりまで、横幅は右端まで広げて妥協する
+      makeTappable(this, 640, y + 6, 300, 18, () => this.craft(template.id));
       y += 20;
     }
   }
@@ -148,10 +149,8 @@ export class LoadoutScene extends Phaser.Scene {
         armor.id === "none"
           ? "なし（耐久0）"
           : `${armor.name}（耐久${armor.maxDurability}） (${armor.cost})`;
-      const text = this.add
-        .text(500, y, label, { fontSize: "12px", color: "#7fd1ff" })
-        .setInteractive({ useHandCursor: true });
-      text.on("pointerdown", () => this.selectArmor(armor.id));
+      const text = this.add.text(500, y, label, { fontSize: "12px", color: "#7fd1ff" });
+      makeTappable(this, 640, y + 6, 300, 18, () => this.selectArmor(armor.id));
       this.armorTexts.push({ id: armor.id, label, text });
       y += 20;
     }
@@ -267,14 +266,12 @@ export class LoadoutScene extends Phaser.Scene {
         `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
       const y = 205 + i * 20;
-      const text = this.add
-        .text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" })
-        .setInteractive({ useHandCursor: true });
-      text.on("pointerdown", () => {
+      const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" });
+      const zone = makeTappable(this, 400, y + 6, 760, 18, () => {
         this.selectedInstanceId = instance.id;
         this.refresh();
       });
-      this.inventoryTexts.push(text);
+      this.inventoryTexts.push(text, zone);
     });
 
     if (this.data_.inventory.length === 0) {
