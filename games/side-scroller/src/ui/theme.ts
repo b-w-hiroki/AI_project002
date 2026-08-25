@@ -17,6 +17,27 @@ export const THEME = {
   textMuted: "#9a9ac0",
 } as const;
 
+const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
+
+/**
+ * タイポグラフィスケール。サイズ・太さ・字間をここに集約し、画面ごとにバラバラだった
+ * フォント指定を統一する。見出し系は字間を少し広げて締まった印象にする。
+ */
+export const TYPE = {
+  h1: { fontFamily: FONT_FAMILY, fontSize: "26px", fontStyle: "700", letterSpacing: 1 },
+  h2: { fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "700", letterSpacing: 0.5 },
+  numeric: { fontFamily: FONT_FAMILY, fontSize: "22px", fontStyle: "800" },
+  body: { fontFamily: FONT_FAMILY, fontSize: "13px", fontStyle: "500" },
+  small: { fontFamily: FONT_FAMILY, fontSize: "11px", fontStyle: "500" },
+} as const;
+
+/** テキストの値が変わった時だけ、軽くポップさせて変化に気付きやすくする */
+export function popOnChange(scene: Phaser.Scene, target: Phaser.GameObjects.Text, newText: string): void {
+  if (target.text === newText) return;
+  target.setText(newText);
+  scene.tweens.add({ targets: target, scale: 1.15, duration: 90, yoyo: true, ease: "Sine.easeOut" });
+}
+
 export interface PanelOptions {
   radius?: number;
   fillColor?: number;
