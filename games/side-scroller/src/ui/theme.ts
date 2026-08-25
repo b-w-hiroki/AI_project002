@@ -17,6 +17,19 @@ export const THEME = {
   textMuted: "#9a9ac0",
 } as const;
 
+/**
+ * 階層（エレベーション）カラー。背景／ゾーンパネル／カード の3段階で明度を変え、
+ * 「今どの階層を見ているか」が色だけで判別できるようにする（ポーション工房と共通の考え方）。
+ */
+export const ELEVATION = {
+  bg: 0x0a0a18,
+  zone: 0x181c38,
+  card: 0x242850,
+} as const;
+
+/** 4/8/16/24/32px の余白スケール。マジックナンバーの散在を避けるために使う */
+export const SPACE = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+
 const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
 
 /**

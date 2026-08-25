@@ -3,7 +3,7 @@
 export type Lang = "ja" | "en";
 
 const MESSAGES = {
-  title: { ja: "🧪 ポーション工房", en: "🧪 Potion Workshop" },
+  title: { ja: "ポーション工房", en: "Potion Workshop" },
   potions: { ja: "ポーション", en: "potions" },
   perSec: { ja: "/秒", en: "/sec" },
   brew: { ja: "調合！", en: "Brew!" },
