@@ -136,3 +136,21 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - Vitest 16件追加（combat.ts 10件、loadout.ts 6件）。計119件。`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて✅。
 - Playwright検証中、召喚媒体オーバーレイが期待通りに開閉しない（ように見える）事象があったが、一時的に`console.log`でトレースした結果、実際にはテストスクリプトの待機時間が短すぎてプレイヤーがまだピックアップ地点まで歩き切っていなかっただけで、アプリ側のバグではなかったことを確認（デバッグログは検証後に削除済み）。この経緯から、Playwrightでのタイミング検証では「移動距離÷MOVE_SPEED」から逆算した十分な待機時間を確保すること、という教訓を得た。
 - 実操作確認: 防具パネルでの購入・選択（革の鎧を選択し通貨が正しく減ることを確認）、ステージ開始後に敵を撃破してスコア/必殺ゲージが正しく増えること、アイテム未所持時にキーを押すとガードメッセージが出ることを確認済み。
+
+## 2026-08-25（剣戟の森: モバイル対応の設計・実装）
+
+ユーザーから「スマホ対応できる？」と聞かれ、まず設計だけを提示（実装はしない）。その後「抜け漏れなく明確かつMECEな設計を心がけてください」との指摘を受け、既存コードを監査して設計を精緻化してから実装した。
+
+### 設計方針（MECE）
+- 対象画面は`LoadoutScene`と`GameScene`の2つのみ（漏れなく全て）
+- `GameScene`は`update()`の早期returnの分岐（tipsVisible / summonOverlayVisible / stageBuffOverlayVisible / status!=="playing" / 通常プレイ）をそのまま状態表として扱い、各状態で有効な入力アクションを列挙。実装（コードの分岐構造）と設計（状態表）を一致させることで漏れを防いだ
+- 監査の結果、既存コードに2つの抜けを発見: TIPSオーバーレイの背景がinteractiveなのにpointerdownハンドラが無く、タップでは閉じられなかった。ゲームオーバー/クリア画面のリトライテキストがinteractiveですらなく、タップでリトライできなかった。どちらも「新規実装」ではなく「既存コードの修正」として設計に含めた
+
+### 実装の中核設計判断
+- Phaserの`Key`クラスのソースを直接確認し、`Key#onDown(event)`/`Key#onUp(event)`が実際のキーボードイベント受信時に呼ばれるのと全く同じ処理（`isDown`/`_justDown`のセット）を行う公開メソッドであることを確認した。これにより、仮想ボタンのpointerdown/pointerupから既存の`Key`オブジェクトへ直接`onDown`/`onUp`を橋渡しするだけで、`handleMovement`/`handleAttack`/`handleSkill`/`handleWeaponSwitch`/`handleItemUse`など既存の判定ロジックを一切変更せずにタッチ入力を統合できた（`src/ui/touch.ts`の`bindHeldKey`）
+- **発見して修正した実バグ**: `Key#onUp`は`isDown`/`_justDown`を無条件でリセットする。タップ操作は`touchstart`→`touchend`が同一フレーム内で処理されることがあり（Phaserの入力処理は`Scene#update`より前の`PRE_STEP`で走るため）、その場合`Scene#update`が`JustDown`を読む前に`onUp`が`_justDown`を`false`に戻してしまい、瞬間タップの入力（武器切替・アイテム使用など）が消えてしまう事象を実機シミュレーション（Playwrightのタッチエミュレーション）で発見した。`scene.time.delayedCall(0, ...)`で遅延させる案を試したが、Phaserの`Clock`更新も同じフレームの`Scene#update`より前に走るため対策にならないことをソースコード（`Clock.js`/`TimerEvent.js`）で確認。最終的にブラウザ標準の`requestAnimationFrame`（次の描画フレーム＝今フレームの`Scene#update`完了後まで確実に遅延）で`onUp`を遅延させることで解消した。修正前後をPlaywrightで比較し、修正前は`装備: 近接`のまま変化しなかった武器切替タップが、修正後は`装備: 中距離`→`装備: 遠距離`と正しく切り替わることを確認した
+- タップ判定サイズは「単独ボタン（宝箱ボタン、スロット、開始ボタン等）は44px以上」「密なリスト行（所持武器一覧、鍛治/防具の選択肢、行間20px）は44px強制だと隣の行と重なってしまうため強制せず、高さは行間ぎりぎりまで・横幅は画面端まで広げる」という2方針に分け、`makeTappable`はサイズを強制しない汎用ヘルパーとし、呼び出し側で明示的に指定する設計にした
+- 縦向き対策は`buildOrientationWarning`を`GameScene`専用で実装した後、`LoadoutScene`側に無いことに気付き（両画面が対象という設計方針との齟齬）、`src/ui/touch.ts`の共通関数として抽出し両シーンから呼ぶよう修正した
+- `index.html`に`maximum-scale=1.0, user-scalable=no`（ダブルタップズームの誤爆防止）と`touch-action: none; overscroll-behavior: none`（プルツーリフレッシュ等のブラウザジェスチャー抑止）を追加
+- 既存コード変更なしで済んだ箇所: 召喚媒体/ステージバフの選択オーバーレイ、LoadoutSceneのスロットzone等は元々`setInteractive({ useHandCursor: true })`のRectangle/Zoneで実装されており、Phaserのポインター機構がマウス/タッチを統一的に扱うためそのままタッチ対応していた
+- 残課題: 実機（iOS Safari/Android Chrome）での確認は未実施（Playwrightのタッチエミュレーションのみ）。ゲームオーバー/クリア画面表示中も仮想ボタンが視覚的に残る点（機能的には無害、`update()`の早期returnで無視される）は見た目の整理余地として`docs/TODO.md`に記載
