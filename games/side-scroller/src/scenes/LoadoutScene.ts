@@ -126,13 +126,15 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private buildInventoryPanel(): void {
-    drawPanel(this, 245, 330, 460, 310, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    this.add.text(20, 180, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
+    // スロットパネル（近/中/遠距離、下端y=175）との間に隙間を空け、枠線同士が接触しないようにする
+    drawPanel(this, 245, 335, 460, 300, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
+    this.add.text(20, 195, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
   }
 
   private buildAcquirePanel(): void {
-    drawPanel(this, 640, 265, 300, 170, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    const chestBtn = makeButton(this, 610, 187, 200, 30, "🎁 宝箱を開ける (100)", () => {
+    // ボタンがゾーンパネルの外にはみ出さないよう、パネル上端(180)から十分な余白を確保する
+    drawPanel(this, 640, 270, 300, 180, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
+    const chestBtn = makeButton(this, 610, 200, 200, 30, "🎁 宝箱を開ける (100)", () => {
       if (this.data_.currency < 100) {
         this.setHint("通貨が足りません");
         return;
@@ -149,7 +151,7 @@ export class LoadoutScene extends Phaser.Scene {
     }, { fillColor: 0x2a3a2f, borderColor: 0x4ecca3, textColor: "#4ecca3", fontSize: "13px", radius: 8 });
     chestBtn.container.setDepth(1);
 
-    let y = 218;
+    let y = 231;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
       this.add.text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#ff6b8a" });
@@ -291,7 +293,7 @@ export class LoadoutScene extends Phaser.Scene {
         `${selected ? "▶ " : "  "}${template?.name ?? "?"} [${instance.rarity}] ` +
         `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
-      const y = 205 + i * 20;
+      const y = 220 + i * 20;
       const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" });
       const zone = makeTappable(this, 250, y + 6, 440, 18, () => {
         this.selectedInstanceId = instance.id;
@@ -301,7 +303,7 @@ export class LoadoutScene extends Phaser.Scene {
     });
 
     if (this.data_.inventory.length === 0) {
-      const text = this.add.text(20, 205, "（所持武器なし。宝箱か鍛治で入手してください）", {
+      const text = this.add.text(20, 220, "（所持武器なし。宝箱か鍛治で入手してください）", {
         fontSize: "12px",
         color: "#62628a",
       });
