@@ -36,7 +36,7 @@ import {
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
-import { RoundedRect, drawPanel, makeRoundedRect } from "../ui/theme";
+import { RoundedRect, SmoothedCounter, THEME, TYPE, drawPanel, makeRoundedRect, popOnChange } from "../ui/theme";
 
 const SAVE_INTERVAL_MS = 5_000;
 const SOUND_PREF_KEY = "ai_project002_sound_v1";
@@ -71,6 +71,7 @@ export class IdleScene extends Phaser.Scene {
 
   private welcomeGained = 0;
   private lastSave = 0;
+  private potionCounter = new SmoothedCounter(0);
 
   constructor() {
     super("idle");
@@ -88,6 +89,7 @@ export class IdleScene extends Phaser.Scene {
       this.state = state;
       this.welcomeGained = gained;
     }
+    this.potionCounter = new SmoothedCounter(this.state.potions);
 
     this.buildBackground();
     this.buildHeader();
@@ -107,7 +109,7 @@ export class IdleScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.state = tick(this.state, delta / 1000);
     this.checkAchievements();
-    this.refreshUI();
+    this.refreshUI(delta / 1000);
 
     this.lastSave += delta;
     if (this.lastSave >= SAVE_INTERVAL_MS) {
@@ -145,16 +147,16 @@ export class IdleScene extends Phaser.Scene {
 
   private buildHeader(): void {
     this.titleText = this.add
-      .text(400, 26, "", { fontSize: "26px", color: "#e0e0ff" })
+      .text(400, 26, "", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     this.potionText = this.add
-      .text(400, 62, "", { fontSize: "20px", color: "#4ecca3" })
+      .text(400, 62, "", { ...TYPE.numeric, color: "#4ecca3" })
       .setOrigin(0.5);
     this.rateText = this.add
-      .text(400, 88, "", { fontSize: "13px", color: "#8888aa" })
+      .text(400, 88, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.essenceText = this.add
-      .text(16, 14, "", { fontSize: "14px", color: "#d9a7ff" })
+      .text(16, 14, "", { ...TYPE.body, color: "#d9a7ff" })
       .setOrigin(0, 0);
 
     // 右上ボタン群: 実績 / サウンド / 言語
@@ -436,16 +438,17 @@ export class IdleScene extends Phaser.Scene {
     for (const fn of this.refreshCallbacks) fn();
   }
 
-  private refreshUI(): void {
-    this.potionText.setText(
-      `${formatNumber(this.state.potions)} ${t(this.lang, "potions")}`,
-    );
+  private refreshUI(deltaSec = 0): void {
+    const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
+    this.potionText.setText(`${formatNumber(displayedPotions)} ${t(this.lang, "potions")}`);
     this.rateText.setText(
       `${formatNumber(productionPerSec(this.state))} ${t(this.lang, "perSec")}`,
     );
 
     const bonusPct = Math.round(this.state.essence * 10);
-    this.essenceText.setText(
+    popOnChange(
+      this,
+      this.essenceText,
       this.state.essence > 0
         ? `${t(this.lang, "essence")} ${formatNumber(this.state.essence)}\n${t(this.lang, "essenceBonus", { n: bonusPct.toString() })}`
         : "",

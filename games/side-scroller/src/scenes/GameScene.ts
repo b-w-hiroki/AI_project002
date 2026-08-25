@@ -89,7 +89,7 @@ import {
   isTouchDevice,
   makeTappable,
 } from "../ui/touch";
-import { THEME, drawPanel } from "../ui/theme";
+import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 
 const GROUND_Y = 520;
 const GOAL_X = 3200;
@@ -509,22 +509,22 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     this.healthText = this.add
-      .text(16, 12, "", { fontSize: "18px", color: "#ff6b8a" })
+      .text(16, 12, "", { ...TYPE.numeric, fontSize: "18px", color: "#ff6b8a" })
       .setScrollFactor(0);
     this.scoreText = this.add
-      .text(16, 34, "", { fontSize: "14px", color: "#ffd166", fontStyle: "600" })
+      .text(16, 34, "", { ...TYPE.body, fontSize: "14px", color: "#ffd166" })
       .setScrollFactor(0);
     this.weaponText = this.add
-      .text(16, 54, "", { fontSize: "13px", color: "#7fd1ff" })
+      .text(16, 54, "", { ...TYPE.body, color: "#7fd1ff" })
       .setScrollFactor(0);
     this.skillText = this.add
-      .text(16, 72, "", { fontSize: "12px", color: "#aaaacc" })
+      .text(16, 72, "", { ...TYPE.small, color: "#aaaacc" })
       .setScrollFactor(0);
     this.comboText = this.add
-      .text(16, 90, "", { fontSize: "12px", color: "#aaaacc" })
+      .text(16, 90, "", { ...TYPE.small, color: "#aaaacc" })
       .setScrollFactor(0);
     this.itemsText = this.add
-      .text(16, 108, "", { fontSize: "12px", color: "#7fffb0" })
+      .text(16, 108, "", { ...TYPE.small, color: "#7fffb0" })
       .setScrollFactor(0);
 
     drawPanel(this, 660, 20, 228, 22, {
@@ -1217,7 +1217,7 @@ export class GameScene extends Phaser.Scene {
       `${"♥".repeat(this.playerState.health)}${"♡".repeat(this.playerState.maxHealth - this.playerState.health)}`,
     );
     this.scoreText.setText(`SCORE ${this.playerState.score}`);
-    this.weaponText.setText(`装備: ${WEAPON_LABEL[this.playerState.equippedWeapon]}（1/2/3で切替）`);
+    popOnChange(this, this.weaponText, `装備: ${WEAPON_LABEL[this.playerState.equippedWeapon]}（1/2/3で切替）`);
 
     const now = this.time.now;
     const cdRemainingSec = Math.max(0, (SKILL_COOLDOWN_MS - (now - this.playerState.lastSkillAt)) / 1000);
