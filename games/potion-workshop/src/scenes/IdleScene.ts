@@ -38,12 +38,14 @@ import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
   ELEVATION,
+  ProgressBar,
   RoundedRect,
   SmoothedCounter,
   THEME,
   TYPE,
   drawFlaskIcon,
   drawPanel,
+  drawProgressBar,
   drawSpeakerIcon,
   makeRoundedRect,
   popOnChange,
@@ -73,6 +75,8 @@ export class IdleScene extends Phaser.Scene {
   private offlineCapButton!: RoundedRect;
   private prestigeButton!: RoundedRect;
   private prestigeText!: Phaser.GameObjects.Text;
+  private prestigeProgress!: ProgressBar;
+  private footerStatsText!: Phaser.GameObjects.Text;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect }[] = [];
   private rows: {
@@ -300,13 +304,18 @@ export class IdleScene extends Phaser.Scene {
       borderColor: 0x7b2cbf,
     });
     this.prestigeText = this.add
-      .text(160, 525, "", {
+      .text(160, 512, "", {
         fontSize: "12px",
         color: "#d9a7ff",
         align: "center",
         wordWrap: { width: 240 },
       })
       .setOrigin(0.5);
+    // 転生解放（累計醸造数）までの進捗を可視化する。解放後は非表示にする
+    this.prestigeProgress = drawProgressBar(this, 160, 546, 220, 8, 0, {
+      trackColor: 0x241a3a,
+      fillColor: 0xd9a7ff,
+    });
     this.prestigeButton.on("pointerdown", () => {
       const gained = essenceOnPrestige(this.state);
       if (gained <= 0) return;
@@ -343,12 +352,42 @@ export class IdleScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * 画面下部の空白（ゾーンパネル下端〜キャンバス下端）をフッターとして活用し、
+   * これまで数値化されていなかった生涯統計（累計醸造・実績・転生回数・プレイ時間）を表示する。
+   */
   private buildSaveTools(): void {
-    const exportButton = this.makeSmallButton(220, 730, 200, "", () => this.doExport());
+    drawPanel(this, 400, 685, 780, 140, {
+      radius: 16,
+      fillColor: ELEVATION.zone,
+      fillAlpha: 0.85,
+      borderColor: THEME.panelBorder,
+      borderAlpha: 0.4,
+      shadow: false,
+    });
+    this.footerStatsText = this.add
+      .text(400, 630, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
+      .setOrigin(0.5);
+
+    const exportButton = this.makeSmallButton(220, 715, 200, "", () => this.doExport());
     this.registerRefresh(() => exportButton.label.setText(t(this.lang, "exportButton")));
 
-    const importButton = this.makeSmallButton(440, 730, 200, "", () => this.doImport());
+    const importButton = this.makeSmallButton(440, 715, 200, "", () => this.doImport());
     this.registerRefresh(() => importButton.label.setText(t(this.lang, "importButton")));
+  }
+
+  /** フッターの生涯統計テキストを更新する */
+  private refreshFooterStats(): void {
+    const unlockedCount = this.state.unlockedAchievements.length;
+    const totalCount = ACHIEVEMENTS.length;
+    const hours = Math.floor(this.analytics.totalPlaytimeSec / 3600);
+    const minutes = Math.floor((this.analytics.totalPlaytimeSec % 3600) / 60);
+    this.footerStatsText.setText(
+      `${t(this.lang, "footerLifetimeBrewed")}: ${formatNumber(this.state.lifetimeBrewed)}  |  ` +
+        `${t(this.lang, "achievementsButton")}: ${unlockedCount}/${totalCount}  |  ` +
+        `${t(this.lang, "footerPrestigeCount")}: ${this.state.prestigeCount}  |  ` +
+        `${t(this.lang, "footerPlaytime")}: ${hours}h ${minutes}m`,
+    );
   }
 
   // ---- 小さな汎用ボタン ----
@@ -477,6 +516,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private refreshUI(deltaSec = 0): void {
+    this.refreshFooterStats();
     const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
     this.potionText.setText(`${formatNumber(displayedPotions)} ${t(this.lang, "potions")}`);
     this.rateText.setText(
@@ -522,11 +562,14 @@ export class IdleScene extends Phaser.Scene {
     if (gained > 0) {
       this.prestigeText.setText(t(this.lang, "prestige", { n: formatNumber(gained) }));
       this.prestigeButton.setFillStyle(0x5a3a8a);
+      this.prestigeProgress.graphics.setVisible(false);
     } else {
       this.prestigeText.setText(
         t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }),
       );
       this.prestigeButton.setFillStyle(0x3a2a5a);
+      this.prestigeProgress.graphics.setVisible(true);
+      this.prestigeProgress.setRatio(this.state.totalBrewed / PRESTIGE_UNLOCK);
     }
 
     for (const row of this.rows) {

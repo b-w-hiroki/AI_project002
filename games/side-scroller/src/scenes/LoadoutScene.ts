@@ -48,6 +48,7 @@ export class LoadoutScene extends Phaser.Scene {
   private currencyText?: Phaser.GameObjects.Text;
   private hintText?: Phaser.GameObjects.Text;
   private armorTexts: { id: string; label: string; text: Phaser.GameObjects.Text }[] = [];
+  private rarityBar!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("LoadoutScene");
@@ -129,6 +130,31 @@ export class LoadoutScene extends Phaser.Scene {
     // スロットパネル（近/中/遠距離、下端y=175）との間に隙間を空け、枠線同士が接触しないようにする
     drawPanel(this, 245, 335, 460, 300, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
     this.add.text(20, 195, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
+    // 所持武器のレアリティ内訳を積み上げバーで可視化する（実データはrefresh()で反映）
+    this.rarityBar = this.add.graphics();
+  }
+
+  /** 所持武器のレアリティ別内訳を積み上げバーとして描画する */
+  private renderRarityBar(): void {
+    const order = ["N", "R", "SR", "SSR", "UR"] as const;
+    const counts = order.map((r) => this.data_.inventory.filter((w) => w.rarity === r).length);
+    const total = counts.reduce((a, b) => a + b, 0);
+    const x0 = 20;
+    const y = 218;
+    const w = 440;
+    const h = 6;
+    this.rarityBar.clear();
+    this.rarityBar.fillStyle(0x14162c, 1);
+    this.rarityBar.fillRoundedRect(x0, y, w, h, 4);
+    if (total === 0) return;
+    let cx = x0;
+    order.forEach((r, i) => {
+      const cw = ((counts[i] ?? 0) / total) * w;
+      if (cw <= 0) return;
+      this.rarityBar.fillStyle(Phaser.Display.Color.ValueToColor(RARITY_COLOR[r] ?? "#e8e8fb").color, 1);
+      this.rarityBar.fillRect(cx, y, cw, h);
+      cx += cw;
+    });
   }
 
   private buildAcquirePanel(): void {
@@ -262,6 +288,7 @@ export class LoadoutScene extends Phaser.Scene {
 
   private refresh(): void {
     this.currencyText?.setText(`💰 ${this.data_.currency}`);
+    this.renderRarityBar();
 
     for (const { id, label, text } of this.armorTexts) {
       const selected = id === this.data_.selectedArmorId;
@@ -293,7 +320,7 @@ export class LoadoutScene extends Phaser.Scene {
         `${selected ? "▶ " : "  "}${template?.name ?? "?"} [${instance.rarity}] ` +
         `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
-      const y = 220 + i * 20;
+      const y = 234 + i * 20;
       const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" });
       const zone = makeTappable(this, 250, y + 6, 440, 18, () => {
         this.selectedInstanceId = instance.id;
@@ -303,7 +330,7 @@ export class LoadoutScene extends Phaser.Scene {
     });
 
     if (this.data_.inventory.length === 0) {
-      const text = this.add.text(20, 220, "（所持武器なし。宝箱か鍛治で入手してください）", {
+      const text = this.add.text(20, 234, "（所持武器なし。宝箱か鍛治で入手してください）", {
         fontSize: "12px",
         color: "#62628a",
       });

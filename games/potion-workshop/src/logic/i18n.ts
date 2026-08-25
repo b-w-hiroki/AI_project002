@@ -45,6 +45,9 @@ const MESSAGES = {
   importFailed: { ja: "セーブデータの読み込みに失敗しました", en: "Failed to import save data" },
   importDone: { ja: "セーブデータを読み込みました", en: "Save data imported" },
   closeButton: { ja: "閉じる", en: "Close" },
+  footerLifetimeBrewed: { ja: "累計醸造", en: "Lifetime Brewed" },
+  footerPrestigeCount: { ja: "転生回数", en: "Ascensions" },
+  footerPlaytime: { ja: "プレイ時間", en: "Playtime" },
 } as const;
 
 export type MessageKey = keyof typeof MESSAGES;

@@ -209,6 +209,46 @@ export function drawFlaskIcon(scene: Phaser.Scene, x: number, y: number, size = 
   return g;
 }
 
+export interface ProgressBar {
+  graphics: Phaser.GameObjects.Graphics;
+  /** ratio(0-1)で塗りつぶし量を更新する。ratio自体はサチュレーションしないので呼び出し側で0-1にクランプすること */
+  setRatio: (ratio: number) => void;
+}
+
+/**
+ * 横向きのプログレスバー。(x, y)は中央左寄せではなく中心。トラック(下地)とフィル(進捗)の
+ * 2枚のGraphicsで構成し、`setRatio`で再描画コストの低い更新ができるようにする。
+ */
+export function drawProgressBar(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  ratio: number,
+  options: { trackColor?: number; fillColor?: number; radius?: number } = {},
+): ProgressBar {
+  const radius = options.radius ?? h / 2;
+  const track = scene.add.graphics({ x, y });
+  track.fillStyle(options.trackColor ?? 0x14162c, 1);
+  track.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+  track.lineStyle(1, THEME.panelBorder, 0.6);
+  track.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+
+  const fill = scene.add.graphics({ x: x - w / 2, y });
+  const fillColor = options.fillColor ?? THEME.accent;
+  const paint = (r: number) => {
+    const clamped = Phaser.Math.Clamp(r, 0, 1);
+    fill.clear();
+    if (clamped <= 0) return;
+    fill.fillStyle(fillColor, 1);
+    fill.fillRoundedRect(0, -h / 2, Math.max(clamped * w, h), h, Math.min(radius, (clamped * w) / 2 || radius));
+  };
+  paint(ratio);
+
+  return { graphics: fill, setRatio: paint };
+}
+
 /**
  * スピーカーアイコンをGraphicsで描画する。🔊/🔇絵文字はこの環境で潰れて表示されることを
  * 確認したため、フラスコアイコンと同じ理由でオリジナル描画に置き換える。onなら音波を、
