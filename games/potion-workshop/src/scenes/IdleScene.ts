@@ -44,6 +44,7 @@ import {
   TYPE,
   drawFlaskIcon,
   drawPanel,
+  drawSpeakerIcon,
   makeRoundedRect,
   popOnChange,
 } from "../ui/theme";
@@ -65,7 +66,7 @@ export class IdleScene extends Phaser.Scene {
   private essenceText!: Phaser.GameObjects.Text;
   private brewText!: Phaser.GameObjects.Text;
   private langText!: Phaser.GameObjects.Text;
-  private soundText!: Phaser.GameObjects.Text;
+  private soundIcon!: Phaser.GameObjects.Graphics;
   private clickUpgradeText!: Phaser.GameObjects.Text;
   private clickUpgradeButton!: RoundedRect;
   private offlineCapText!: Phaser.GameObjects.Text;
@@ -162,7 +163,8 @@ export class IdleScene extends Phaser.Scene {
    * 明確にする。カード側の色は既存の購入可否ロジックをそのまま使うため変更しない。
    */
   private buildZonePanels(): void {
-    drawPanel(this, 160, 350, 300, 430, {
+    // 転生ボタン（y=525,h=64→下端557）とパネル下端の間に十分な余白を確保する
+    drawPanel(this, 160, 360, 300, 450, {
       radius: 18,
       fillColor: ELEVATION.zone,
       fillAlpha: 0.9,
@@ -197,12 +199,12 @@ export class IdleScene extends Phaser.Scene {
     const achButton = this.makeSmallButton(600, 26, 90, "", () => this.showAchievementsModal());
     this.registerRefresh(() => achButton.label.setText(t(this.lang, "achievementsButton")));
 
-    const soundButton = this.makeSmallButton(700, 26, 44, "", () => {
+    this.makeSmallButton(700, 26, 44, "", () => {
       this.soundOn = !this.soundOn;
       localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
       this.refreshStaticTexts();
     });
-    this.soundText = soundButton.label;
+    this.soundIcon = drawSpeakerIcon(this, 700, 26, this.soundOn, 18);
 
     const langButton = this.makeSmallButton(760, 26, 60, "", () => {
       this.lang = toggleLang(this.lang);
@@ -469,7 +471,8 @@ export class IdleScene extends Phaser.Scene {
     this.titleIcon.setPosition(400 - this.titleText.width / 2 - 18, 26);
     this.brewText.setText(t(this.lang, "brew"));
     this.langText.setText(t(this.lang, "langButton"));
-    this.soundText.setText(this.soundOn ? t(this.lang, "soundOn") : t(this.lang, "soundOff"));
+    this.soundIcon.destroy();
+    this.soundIcon = drawSpeakerIcon(this, 700, 26, this.soundOn, 18);
     for (const fn of this.refreshCallbacks) fn();
   }
 
