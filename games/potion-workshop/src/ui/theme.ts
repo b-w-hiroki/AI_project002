@@ -5,12 +5,17 @@ import Phaser from "phaser";
  * 多用しているため、それと同じ呼び出し感覚のまま角丸パネルに置き換えられる薄いユーティリティにした。
  */
 
+/**
+ * 「淡い青空・ファンタジー」トーン。ユーザーから「もっと明るいソシャゲ調に」との要望を受け、
+ * 濃紺ベースの配色から水色〜白のグラデーションを基調にしたパステル系に刷新した。
+ * パネルが明るくなった分、テキストは濃紺〜紺青系の暗色に統一している（明るい背景での可読性優先）。
+ */
 export const THEME = {
-  panelFill: 0x181830,
-  panelBorder: 0x44446a,
-  accent: 0x4ecca3,
-  textPrimary: "#e0e0ff",
-  textMuted: "#8888aa",
+  panelFill: 0xf3f9ff,
+  panelBorder: 0x9ecbef,
+  accent: 0x2ba876,
+  textPrimary: "#2d3a52",
+  textMuted: "#7488a0",
 } as const;
 
 /**
@@ -18,9 +23,9 @@ export const THEME = {
  * 「今どの階層を見ているか」が色だけで判別できるようにする。数字が大きいほど手前＝明るい。
  */
 export const ELEVATION = {
-  bg: 0x0f1022,
-  zone: 0x161a35, // セクションのグルーピング用パネル
-  card: 0x22254a, // ゾーン内の個別カード/行
+  bg: 0xcfe9ff,
+  zone: 0xffffff, // セクションのグルーピング用パネル
+  card: 0xeaf5ff, // ゾーン内の個別カード/行
 } as const;
 
 /** 4/8/16/24/32px の余白スケール。マジックナンバーの散在を避けるために使う */
@@ -95,12 +100,13 @@ export function makeRoundedRect(
   let hovering = false;
 
   const paint = () => {
-    const color = hovering && hoverLighten > 0 ? blend(baseColor, 0xffffff, hoverLighten) : baseColor;
+    // 明るい配色では白方向へのブレンドがほぼ効かないため、ホバー時は水色方向へブレンドして視認性を出す
+    const color = hovering && hoverLighten > 0 ? blend(baseColor, 0x8ecbf5, hoverLighten * 1.6) : baseColor;
     g.clear();
     g.fillStyle(color, baseAlpha);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
     // 上部のガラス風ハイライト帯
-    g.fillStyle(0xffffff, hovering ? 0.09 : 0.05);
+    g.fillStyle(0xffffff, hovering ? 0.55 : 0.4);
     g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, Math.max(4, h * 0.25), radius * 0.7);
     if (borderWidth > 0) {
       g.lineStyle(borderWidth, borderColor, hovering ? Math.min(1, borderAlpha + 0.15) : borderAlpha);
@@ -143,14 +149,14 @@ export function drawPanel(
   const radius = options.radius ?? 16;
   const g = scene.add.graphics();
   if (options.shadow !== false) {
-    g.fillStyle(0x000000, 0.35);
+    g.fillStyle(0x9db8d6, 0.4);
     g.fillRoundedRect(x - w / 2 + 3, y - h / 2 + 5, w, h, radius);
   }
   g.fillStyle(options.fillColor ?? THEME.panelFill, options.fillAlpha ?? 0.95);
   g.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
-  g.fillStyle(0xffffff, 0.05);
+  g.fillStyle(0xffffff, 0.4);
   g.fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, Math.max(6, h * 0.2), radius * 0.7);
-  g.lineStyle(options.borderWidth ?? 2, options.borderColor ?? 0x7b2cbf, options.borderAlpha ?? 0.8);
+  g.lineStyle(options.borderWidth ?? 2, options.borderColor ?? 0xb98af0, options.borderAlpha ?? 0.8);
   g.strokeRoundedRect(x - w / 2, y - h / 2, w, h, radius);
   return g;
 }
@@ -230,7 +236,7 @@ export function drawProgressBar(
 ): ProgressBar {
   const radius = options.radius ?? h / 2;
   const track = scene.add.graphics({ x, y });
-  track.fillStyle(options.trackColor ?? 0x14162c, 1);
+  track.fillStyle(options.trackColor ?? 0xdde9f5, 1);
   track.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
   track.lineStyle(1, THEME.panelBorder, 0.6);
   track.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);

@@ -25,11 +25,11 @@ const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
 };
 
 const RARITY_COLOR: Readonly<Record<string, string>> = {
-  N: "#9a9ac0",
-  R: "#4ecca3",
-  SR: "#7fd1ff",
-  SSR: "#c792ea",
-  UR: "#ffcc66",
+  N: "#6a7a95",
+  R: "#1f8a63",
+  SR: "#2f8fd1",
+  SSR: "#8a4fd1",
+  UR: "#c98a12",
 };
 
 /**
@@ -85,7 +85,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildArmorPanel();
     this.buildStartButton();
     this.hintText = this.add
-      .text(400, 580, "", { fontSize: "13px", color: "#4ecca3", fontStyle: "600" })
+      .text(400, 580, "", { fontSize: "13px", color: "#1f8a63", fontStyle: "600" })
       .setOrigin(0.5, 0);
 
     if (isTouchDevice(this)) buildOrientationWarning(this);
@@ -93,13 +93,13 @@ export class LoadoutScene extends Phaser.Scene {
     this.refresh();
   }
 
-  /** 深いグラデーション背景＋うっすらとした放射状の光で、フラットな単色より奥行きを出す */
+  /** 淡い青空グラデーション＋うっすらとした放射状の光で、ソシャゲ調の明るいファンタジー基調にする */
   private buildBackground(): void {
     const g = this.add.graphics();
-    g.fillGradientStyle(0x100e22, 0x100e22, 0x1c1030, 0x1c1030, 1);
+    g.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 1);
     g.fillRect(0, 0, 800, 600);
     const glow = this.add.graphics();
-    glow.fillStyle(0xff6b8a, 0.06);
+    glow.fillStyle(0xffffff, 0.4);
     glow.fillCircle(400, -40, 260);
   }
 
@@ -118,7 +118,7 @@ export class LoadoutScene extends Phaser.Scene {
         .text(x, y - 34, KIND_LABEL[kind], { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
         .setOrigin(0.5);
       const text = this.add
-        .text(x, y, "(未設定)", { fontSize: "13px", color: "#e8e8fb", align: "center", wordWrap: { width: 150 } })
+        .text(x, y, "(未設定)", { fontSize: "13px", color: "#8a97a8", align: "center", wordWrap: { width: 150 } })
         .setOrigin(0.5);
       this.slotTexts[kind] = text;
 
@@ -159,14 +159,14 @@ export class LoadoutScene extends Phaser.Scene {
     const w = 440;
     const h = 6;
     this.rarityBar.clear();
-    this.rarityBar.fillStyle(0x14162c, 1);
+    this.rarityBar.fillStyle(0xdde9f5, 1);
     this.rarityBar.fillRoundedRect(x0, y, w, h, 4);
     if (total === 0) return;
     let cx = x0;
     order.forEach((r, i) => {
       const cw = ((counts[i] ?? 0) / total) * w;
       if (cw <= 0) return;
-      this.rarityBar.fillStyle(Phaser.Display.Color.ValueToColor(RARITY_COLOR[r] ?? "#e8e8fb").color, 1);
+      this.rarityBar.fillStyle(Phaser.Display.Color.ValueToColor(RARITY_COLOR[r] ?? "#8a97a8").color, 1);
       this.rarityBar.fillRect(cx, y, cw, h);
       cx += cw;
     });
@@ -195,7 +195,7 @@ export class LoadoutScene extends Phaser.Scene {
     let y = 231;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
-      this.add.text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#ff6b8a" });
+      this.add.text(500, y, `🔨 ${template.name} を鍛治(${cost})`, { fontSize: "12px", color: "#e0447a" });
       // 密なリスト（行間20px）のため高さは行間ぎりぎりまで、横幅は右端まで広げて妥協する
       makeTappable(this, 640, y + 6, 300, 18, () => this.craft(template.id));
       y += 20;
@@ -215,7 +215,7 @@ export class LoadoutScene extends Phaser.Scene {
         armor.id === "none"
           ? "なし（耐久0）"
           : `${armor.name}（耐久${armor.maxDurability}） (${armor.cost})`;
-      const text = this.add.text(500, y, label, { fontSize: "12px", color: "#7fd1ff" });
+      const text = this.add.text(500, y, label, { fontSize: "12px", color: "#2f8fd1" });
       makeTappable(this, 640, y + 6, 300, 18, () => this.selectArmor(armor.id));
       this.armorTexts.push({ id: armor.id, label, text });
       y += 20;
@@ -307,7 +307,7 @@ export class LoadoutScene extends Phaser.Scene {
 
     for (const { id, label, text } of this.armorTexts) {
       const selected = id === this.data_.selectedArmorId;
-      text.setColor(selected ? "#4ecca3" : "#7fd1ff").setText(selected ? `▶ ${label}` : label);
+      text.setColor(selected ? "#1f8a63" : "#2f8fd1").setText(selected ? `▶ ${label}` : label);
     }
 
     for (const kind of ["melee", "mid", "ranged"] as const) {
@@ -323,7 +323,7 @@ export class LoadoutScene extends Phaser.Scene {
       const template = findTemplate(instance.templateId);
       text
         .setText(`${template?.name ?? "?"}\n[${instance.rarity}] +${instance.enhanceLevel}`)
-        .setColor(RARITY_COLOR[instance.rarity] ?? "#e8e8fb");
+        .setColor(RARITY_COLOR[instance.rarity] ?? "#8a97a8");
       this.slotGlows[kind]?.setVisible(false);
     }
 
@@ -341,7 +341,7 @@ export class LoadoutScene extends Phaser.Scene {
         `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
         `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
       const y = 234 + i * 20;
-      const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#4ecca3" : "#c8c8e8" });
+      const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#1f8a63" : "#4a5a72" });
       const zone = makeTappable(this, 250, y + 6, 440, 18, () => {
         this.selectedInstanceId = instance.id;
         this.refresh();
