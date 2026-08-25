@@ -76,6 +76,9 @@ export class IdleScene extends Phaser.Scene {
   private prestigeButton!: RoundedRect;
   private prestigeText!: Phaser.GameObjects.Text;
   private prestigeProgress!: ProgressBar;
+  private prestigeGlow!: Phaser.GameObjects.Graphics;
+  private prestigeGlowTween?: Phaser.Tweens.Tween;
+  private prestigeWasAffordable = false;
   private footerStatsText!: Phaser.GameObjects.Text;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect }[] = [];
@@ -298,7 +301,12 @@ export class IdleScene extends Phaser.Scene {
       }
     });
 
-    // 転生
+    // 転生: 解放中は背後にパルスするグロー（drawPanel/makeRoundedRectより先に追加し、必ずボタンの背後に描画する）
+    this.prestigeGlow = this.add.graphics({ x: 160, y: 525 });
+    this.prestigeGlow.fillStyle(0xd9a7ff, 1);
+    this.prestigeGlow.fillRoundedRect(-148, -50, 296, 100, 22);
+    this.prestigeGlow.setAlpha(0);
+
     this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0x3a2a5a, {
       radius: 14,
       borderColor: 0x7b2cbf,
@@ -336,8 +344,20 @@ export class IdleScene extends Phaser.Scene {
     GENERATORS.forEach((g, i) => {
       const y = 130 + i * 62;
       const button = makeRoundedRect(this, 560, y, 400, 52, 0x2a2a4a, { radius: 10, borderColor: 0x44446a });
+
+      // 設備ごとに色相をずらしたジェム風アイコンを表示し、一覧を一目で見分けやすくする（装飾）
+      const hue = (i / GENERATORS.length) * 0.8;
+      const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.55, 0.95).color;
+      const gem = this.add.graphics({ x: 382, y });
+      gem.fillStyle(gemColor, 1);
+      gem.fillCircle(0, 0, 12);
+      gem.fillStyle(0xffffff, 0.35);
+      gem.fillCircle(-4, -4, 4);
+      gem.lineStyle(1.5, 0xffffff, 0.4);
+      gem.strokeCircle(0, 0, 12);
+
       const label = this.add
-        .text(370, y - 16, "", { fontSize: "14px", color: "#ccccdd" })
+        .text(400, y - 16, "", { fontSize: "14px", color: "#ccccdd" })
         .setOrigin(0, 0);
       button.on("pointerdown", () => {
         const next = buyGenerator(this.state, g.id);
@@ -563,6 +583,19 @@ export class IdleScene extends Phaser.Scene {
       this.prestigeText.setText(t(this.lang, "prestige", { n: formatNumber(gained) }));
       this.prestigeButton.setFillStyle(0x5a3a8a);
       this.prestigeProgress.graphics.setVisible(false);
+      if (!this.prestigeWasAffordable) {
+        // 転生可能になった瞬間だけパルス演出を開始する（毎フレーム呼ぶrefreshUIからtween.addを連打しないため）
+        this.prestigeWasAffordable = true;
+        this.prestigeGlowTween?.stop();
+        this.prestigeGlowTween = this.tweens.add({
+          targets: this.prestigeGlow,
+          alpha: { from: 0.12, to: 0.42 },
+          duration: 900,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
+      }
     } else {
       this.prestigeText.setText(
         t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }),
@@ -570,6 +603,11 @@ export class IdleScene extends Phaser.Scene {
       this.prestigeButton.setFillStyle(0x3a2a5a);
       this.prestigeProgress.graphics.setVisible(true);
       this.prestigeProgress.setRatio(this.state.totalBrewed / PRESTIGE_UNLOCK);
+      if (this.prestigeWasAffordable) {
+        this.prestigeWasAffordable = false;
+        this.prestigeGlowTween?.stop();
+        this.prestigeGlow.setAlpha(0);
+      }
     }
 
     for (const row of this.rows) {
