@@ -92,9 +92,13 @@ import {
   makeTappable,
 } from "../ui/touch";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
+import { loadBestWave, saveBestWave } from "../logic/progress";
+import { enemiesInWave, enemySpecForWave, pickupsForWave } from "../logic/waves";
 
 const GROUND_Y = 520;
-const GOAL_X = 3200;
+/** ウェーブ式サバイバル用の固定サイズアリーナ幅。固定ゴールへ向かうステージ制から変更した */
+const ARENA_WIDTH = 1600;
+const WAVE_INTERMISSION_MS = 2200;
 const MOVE_SPEED = 220;
 const JUMP_VELOCITY = -520;
 /** 攻撃判定の縦方向の許容差。異なる高さの足場にいる敵を誤って巻き込まないための上限 */
@@ -155,6 +159,11 @@ export class GameScene extends Phaser.Scene {
   private tipsKey!: Phaser.Input.Keyboard.Key;
   private restartKey!: Phaser.Input.Keyboard.Key;
   private weaponKeys: { key: Phaser.Input.Keyboard.Key; kind: WeaponKind }[] = [];
+  private wave = 1;
+  private waveEnemiesAlive = 0;
+  private waveActive = true;
+  private bestWave = 0;
+  private gameOverHandled = false;
   private guardKey!: Phaser.Input.Keyboard.Key;
   private guarding = false;
   private guardIcon!: Phaser.GameObjects.Graphics;
@@ -243,6 +252,11 @@ export class GameScene extends Phaser.Scene {
     this.runWeaponStates = {};
     this.items = { potion: 0, power_charm: 0, haste_charm: 0 };
     this.pickups = [];
+    this.wave = 1;
+    this.waveEnemiesAlive = 0;
+    this.waveActive = true;
+    this.gameOverHandled = false;
+    this.bestWave = loadBestWave(window.localStorage as unknown as KVStore);
 
     for (const kind of ["melee", "mid", "ranged"] as const) {
       const stats = baseEquipmentStats(kind, this.baseEquipmentLevels[kind] ?? 0);
@@ -253,18 +267,17 @@ export class GameScene extends Phaser.Scene {
       this.playerState = gainArmor(this.playerState, armorTemplate.maxDurability);
     }
 
-    this.physics.world.setBounds(0, 0, GOAL_X + 400, 600);
-    this.cameras.main.setBounds(0, 0, GOAL_X + 400, 600);
+    this.physics.world.setBounds(0, 0, ARENA_WIDTH, 600);
+    this.cameras.main.setBounds(0, 0, ARENA_WIDTH, 600);
 
     this.generateTextures();
     this.buildLevel();
     this.buildPlayer();
-    this.buildEnemies();
-    this.buildPickups();
     this.buildHud();
     this.buildTipsOverlay();
     this.buildSummonOverlay();
     this.buildStageBuffOverlay();
+    this.spawnWave(this.wave);
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
@@ -402,26 +415,26 @@ export class GameScene extends Phaser.Scene {
     gfx.destroy();
   }
 
+  /** 固定ゴールへ向かうステージ制から、ウェーブ式サバイバル用の固定サイズアリーナに変更した */
   private buildLevel(): void {
     // 淡い青空グラデーション。ソシャゲ調の明るいファンタジー基調にする
     const sky = this.add.graphics();
     sky.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xe8f6ff, 0xe8f6ff, 1);
-    sky.fillRect(0, 0, GOAL_X + 400, 600);
+    sky.fillRect(0, 0, ARENA_WIDTH, 600);
 
     this.platforms = this.physics.add.staticGroup();
-    for (let x = 0; x < GOAL_X + 400; x += 64) {
+    for (let x = 0; x < ARENA_WIDTH; x += 64) {
       this.platforms.create(x + 32, GROUND_Y + 32, "solid").setVisible(false);
     }
-    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y + 32, GOAL_X + 400, 64, 0x8b6b47);
-    this.add.rectangle((GOAL_X + 400) / 2, GROUND_Y, GOAL_X + 400, 4, 0x5cb85c);
+    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y + 32, ARENA_WIDTH, 64, 0x8b6b47);
+    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y, ARENA_WIDTH, 4, 0x5cb85c);
 
     const floatingPlatforms = [
-      { x: 500, y: 400 },
-      { x: 900, y: 340 },
-      { x: 1400, y: 420 },
-      { x: 1900, y: 360 },
-      { x: 2400, y: 420 },
-      { x: 2800, y: 340 },
+      { x: 260, y: 400 },
+      { x: 520, y: 340 },
+      { x: 800, y: 420 },
+      { x: 1080, y: 360 },
+      { x: 1340, y: 420 },
     ];
     for (const p of floatingPlatforms) {
       // 雲のようなプラットフォームで空・ファンタジー感を強める
@@ -436,18 +449,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.platforms.refresh();
-
-    this.add.rectangle(GOAL_X, GROUND_Y - 60, 6, 120, 0x6a7a8a);
-    this.add.triangle(GOAL_X + 3, GROUND_Y - 100, 0, 0, 36, 10, 0, 20, 0xffd166).setOrigin(0, 0.5);
-    this.add
-      .text(GOAL_X, GROUND_Y - 140, "GOAL", {
-        fontSize: "20px",
-        color: "#c98a12",
-        fontStyle: "700",
-        stroke: "#ffffff",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
   }
 
   private buildPlayer(): void {
@@ -469,62 +470,78 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon.setVisible(false);
   }
 
-  private buildEnemies(): void {
-    const enemyXs = [420, 780, 1150, 1550, 2000, 2350, 2700, 3050];
-    enemyXs.forEach((x, i) => {
-      const sprite = this.physics.add.sprite(x, GROUND_Y - 30, "goblin");
-      sprite.setCollideWorldBounds(true);
-      sprite.setSize(18, 30).setOffset(6, 10);
-      this.physics.add.collider(sprite, this.platforms);
+  /** 1体の敵をウェーブ番号に応じた強さでスポーンする */
+  private spawnEnemy(wave: number, x: number, index: number): void {
+    const spec = enemySpecForWave(wave);
+    const sprite = this.physics.add.sprite(x, GROUND_Y - 30, "goblin");
+    sprite.setCollideWorldBounds(true);
+    sprite.setSize(18, 30).setOffset(6, 10);
+    this.physics.add.collider(sprite, this.platforms);
 
-      // 後半の敵ほど防御力を持たせ、連撃で防御を削っていく手応えの差を作る
-      const defense = i >= 4 ? 2 : 0;
-      const enemy: EnemySprite = {
-        state: newEnemy(`enemy-${i}`, 2, defense),
-        sprite,
-        patrolMinX: x - 80,
-        patrolMaxX: x + 80,
-        dir: 1,
-      };
-      this.enemies.push(enemy);
+    const enemy: EnemySprite = {
+      state: newEnemy(`w${wave}-${index}`, spec.health, spec.defense),
+      sprite,
+      patrolMinX: Math.max(40, x - 80),
+      patrolMaxX: Math.min(ARENA_WIDTH - 40, x + 80),
+      dir: 1,
+    };
+    this.enemies.push(enemy);
 
-      // すり抜けず物理的にぶつかるようにする（overlap のみだと敵の体を通り抜けてしまい、
-      // 剣の間合いに留まれず「当たらない」と感じる原因になっていた）
-      this.physics.add.collider(this.player, sprite, () => this.onPlayerTouchEnemy(enemy));
-    });
+    // すり抜けず物理的にぶつかるようにする（overlap のみだと敵の体を通り抜けてしまい、
+    // 剣の間合いに留まれず「当たらない」と感じる原因になっていた）
+    this.physics.add.collider(this.player, sprite, () => this.onPlayerTouchEnemy(enemy));
   }
 
-  /** 召喚媒体/防具/アイテムのピックアップをステージ上に配置する */
-  private buildPickups(): void {
-    const mediumXs = [260, 1050, 1750, 2550];
-    const armorXs = [620];
-    const itemXs = [900, 1300, 1650, 2200, 2900];
-    const stageBuffXs = [1500, 2750];
+  /**
+   * ウェーブを開始する。敵をウェーブ番号に応じた数・強さでランダムな位置にスポーンし、
+   * ピックアップも合わせて配置する。全滅させると次のウェーブが始まる（onEnemyKilled参照）。
+   */
+  private spawnWave(wave: number): void {
+    const count = enemiesInWave(wave);
+    this.waveEnemiesAlive = count;
+    this.waveActive = true;
+    for (let i = 0; i < count; i++) {
+      const x = Phaser.Math.Between(200, ARENA_WIDTH - 100);
+      this.spawnEnemy(wave, x, i);
+    }
+    this.spawnWavePickups(wave);
+    this.spawnFloatingText(this.player.x, this.player.y - 70, `WAVE ${wave}`, "#8a4fd1");
+  }
 
-    const spawn = (x: number, kind: PickupKind, textureKey: string, itemId?: string) => {
-      // プレイヤーの当たり判定（GROUND_Y-13〜+19、地面立ち時は概ねGROUND_Y-19〜+13）と
-      // 確実に重なる高さに置き、ジャンプせず歩くだけで拾えるようにする
-      const sprite = this.physics.add.sprite(x, GROUND_Y - 24, textureKey);
-      (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-      this.tweens.add({
-        targets: sprite,
-        y: sprite.y - 6,
-        duration: 700,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-      const pickup: Pickup = { kind, sprite, collected: false, itemId };
-      this.pickups.push(pickup);
-      this.physics.add.overlap(this.player, sprite, () => this.onPickupCollected(pickup));
-    };
-
-    mediumXs.forEach((x) => spawn(x, "summonMedium", "pickup_medium"));
-    armorXs.forEach((x) => spawn(x, "armor", "pickup_armor"));
-    // アイテム種別を出現位置で巡回させ、複数種類が拾えるようにする
+  /** 召喚媒体/防具/アイテム/ステージバフのピックアップをアリーナ内のランダムな位置に配置する */
+  private spawnWavePickups(wave: number): void {
     const itemIds = ITEM_DEFS.map((i) => i.id);
-    itemXs.forEach((x, i) => spawn(x, "item", "pickup_item", itemIds[i % itemIds.length]));
-    stageBuffXs.forEach((x) => spawn(x, "stageBuff", "pickup_buff"));
+    const pool: { kind: PickupKind; texture: string; itemId?: string }[] = [
+      { kind: "summonMedium", texture: "pickup_medium" },
+      { kind: "armor", texture: "pickup_armor" },
+      { kind: "item", texture: "pickup_item", itemId: itemIds[Phaser.Math.Between(0, itemIds.length - 1)] },
+      { kind: "stageBuff", texture: "pickup_buff" },
+    ];
+    const count = pickupsForWave(wave);
+    for (let i = 0; i < count; i++) {
+      const choice = pool[Phaser.Math.Between(0, pool.length - 1)];
+      if (!choice) continue;
+      const x = Phaser.Math.Between(150, ARENA_WIDTH - 150);
+      this.spawnPickup(x, choice.kind, choice.texture, choice.itemId);
+    }
+  }
+
+  private spawnPickup(x: number, kind: PickupKind, textureKey: string, itemId?: string): void {
+    // プレイヤーの当たり判定（GROUND_Y-13〜+19、地面立ち時は概ねGROUND_Y-19〜+13）と
+    // 確実に重なる高さに置き、ジャンプせず歩くだけで拾えるようにする
+    const sprite = this.physics.add.sprite(x, GROUND_Y - 24, textureKey);
+    (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+    this.tweens.add({
+      targets: sprite,
+      y: sprite.y - 6,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    const pickup: Pickup = { kind, sprite, collected: false, itemId };
+    this.pickups.push(pickup);
+    this.physics.add.overlap(this.player, sprite, () => this.onPickupCollected(pickup));
   }
 
   private buildHud(): void {
@@ -645,7 +662,10 @@ export class GameScene extends Phaser.Scene {
           "↓ → ↓ → X の順に入力で【秘奥義】発動",
           "",
           "召喚媒体/ステージバフを拾うと一時停止して選択画面が開きます",
-          "R : ゲームオーバー／クリア後にリトライ",
+          "",
+          "敵を全滅させるとウェーブクリア。少し休んだら次のウェーブが始まります",
+          "ウェーブが進むほど敵の数・体力・防御力が上がっていきます。どこまで生き残れるか挑戦！",
+          "R : ゲームオーバー後にリトライ",
         ].join("\n"),
         { fontSize: "15px", color: "#3a4a5a", align: "center", lineSpacing: 8 },
       )
@@ -1319,18 +1339,29 @@ export class GameScene extends Phaser.Scene {
       this.spawnFloatingText(this.player.x, this.player.y - 60, "秘奥義解放！", "#ffd166");
       this.cameras.main.flash(400, 255, 209, 102);
     }
+
+    this.waveEnemiesAlive -= 1;
+    if (this.waveEnemiesAlive <= 0 && this.waveActive) {
+      this.waveActive = false;
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `WAVE ${this.wave} CLEAR!`, "#1f8a63");
+      this.cameras.main.flash(200, 127, 209, 255);
+      this.time.delayedCall(WAVE_INTERMISSION_MS, () => {
+        if (this.status !== "playing") return; // 死亡直後などは次ウェーブを出さない
+        this.wave += 1;
+        this.spawnWave(this.wave);
+      });
+    }
   }
 
   private checkStatus(): void {
-    this.status = gameStatus(this.playerState, this.player.x, GOAL_X);
-    if (this.status === "cleared") {
-      this.statusText.setText("CLEAR!");
-      this.restartText.setText("R キーでもう一度遊ぶ");
-      this.statusPanel.setVisible(true);
-      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
-    } else if (this.status === "gameover") {
+    // GOAL_X相当の到達判定は使わないため goalX に到達不可能な値を渡し、常に playing/gameover のみになる
+    this.status = gameStatus(this.playerState, this.player.x, Number.POSITIVE_INFINITY);
+    if (this.status === "gameover" && !this.gameOverHandled) {
+      this.gameOverHandled = true;
+      saveBestWave(window.localStorage as unknown as KVStore, this.wave);
+      this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
-      this.restartText.setText("R キーでリトライ");
+      this.restartText.setText(`到達: Wave ${this.wave}  ベスト: Wave ${this.bestWave}\nR キーでリトライ`);
       this.statusPanel.setVisible(true);
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
@@ -1361,7 +1392,7 @@ export class GameScene extends Phaser.Scene {
     this.healthText.setText(
       `${"♥".repeat(this.playerState.health)}${"♡".repeat(this.playerState.maxHealth - this.playerState.health)}`,
     );
-    this.scoreText.setText(`SCORE ${this.playerState.score}`);
+    this.scoreText.setText(`SCORE ${this.playerState.score}  WAVE ${this.wave}`);
     popOnChange(this, this.weaponText, `装備: ${WEAPON_LABEL[this.playerState.equippedWeapon]}（1/2/3で切替）`);
 
     const now = this.time.now;
