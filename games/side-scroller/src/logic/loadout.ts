@@ -521,7 +521,7 @@ export function useItem(inventory: ItemInventory, itemId: string): ItemInventory
 
 // ---- ステージ側から提示される一時バフ（アウトゲームのロードアウトとは独立したプール） ----
 
-export type StageBuffKind = "power" | "haste" | "regen";
+export type StageBuffKind = "power" | "haste" | "regen" | "doubleJump";
 
 export interface StageBuffOption {
   kind: StageBuffKind;
@@ -533,6 +533,7 @@ export const STAGE_BUFF_POOL: readonly StageBuffOption[] = [
   { kind: "power", label: "攻撃力アップ", desc: "しばらくの間ダメージが増加する" },
   { kind: "haste", label: "俊足", desc: "しばらくの間移動速度が上昇する" },
   { kind: "regen", label: "HP自動回復", desc: "しばらくの間HPが少しずつ回復する" },
+  { kind: "doubleJump", label: "空中二段ジャンプ", desc: "しばらくの間、空中でもう一度ジャンプできる" },
 ];
 
 /**

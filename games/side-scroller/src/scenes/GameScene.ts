@@ -20,6 +20,7 @@ import {
   SKILL_RANGE,
   STAGE_BUFF_DURATION_MS,
   WEAPONS,
+  WeaponDef,
   WeaponKind,
   addScore,
   applyBuff,
@@ -39,6 +40,7 @@ import {
   healPlayer,
   inAttackRange,
   isAttacking,
+  isBuffActive,
   isHiougiActive,
   isInvulnerable,
   isOugiActive,
@@ -153,7 +155,13 @@ export class GameScene extends Phaser.Scene {
   private tipsKey!: Phaser.Input.Keyboard.Key;
   private restartKey!: Phaser.Input.Keyboard.Key;
   private weaponKeys: { key: Phaser.Input.Keyboard.Key; kind: WeaponKind }[] = [];
-  private swordSlash!: Phaser.GameObjects.Rectangle;
+  private guardKey!: Phaser.Input.Keyboard.Key;
+  private guarding = false;
+  private guardIcon!: Phaser.GameObjects.Graphics;
+  private lastGuardBlockAt = -Infinity;
+  private crouching = false;
+  private wasCrouching = false;
+  private airJumpsUsed = 0;
 
   private enemies: EnemySprite[] = [];
   private projectiles: Projectile[] = [];
@@ -264,6 +272,7 @@ export class GameScene extends Phaser.Scene {
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.attackKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
     this.skillKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+    this.guardKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     this.tipsKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.weaponKeys = WEAPON_KEY_BINDINGS.map(({ code, kind }) => ({
@@ -447,7 +456,17 @@ export class GameScene extends Phaser.Scene {
     this.player.setSize(18, 32).setOffset(6, 8);
     this.physics.add.collider(this.player, this.platforms);
 
-    this.swordSlash = this.add.rectangle(0, 0, WEAPONS.mid.range, 14, 0xffffff, 0);
+    // ガード中に表示する盾アイコン（ローカル原点基準で一度だけ描画し、以後は位置だけ更新する）
+    this.guardIcon = this.add.graphics();
+    this.guardIcon.lineStyle(3, 0xffd166, 0.95);
+    this.guardIcon.beginPath();
+    this.guardIcon.arc(0, 0, 16, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60));
+    this.guardIcon.strokePath();
+    this.guardIcon.fillStyle(0xffd166, 0.18);
+    this.guardIcon.slice(0, 0, 16, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
+    this.guardIcon.fillPath();
+    this.guardIcon.setDepth(5);
+    this.guardIcon.setVisible(false);
   }
 
   private buildEnemies(): void {
@@ -611,10 +630,12 @@ export class GameScene extends Phaser.Scene {
         400,
         380,
         [
-          "← → : 移動　　↑ : ジャンプ",
+          "← → : 移動　　↑ : ジャンプ　　↓ : しゃがみ",
           "X : 通常攻撃（装備中の武器で攻撃）",
           "1 / 2 / 3 : 武器切替（近接／中距離／遠距離）",
           "C : スキル発動（クールダウンあり）",
+          "Shift : ガード（正面からの接触ダメージを防ぐ。移動・攻撃はできない）",
+          "空中二段ジャンプのバフ中は空中でもう一度↑でジャンプできる",
           "Z / V / B : ポーション／剛力の護符／俊足の護符を使用",
           "",
           "必殺ゲージが満タンの時：",
@@ -931,6 +952,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.playerState = tickRegen(this.playerState, time);
+    this.handleGuard();
     this.handleMovement();
     this.handleWeaponSwitch();
     this.handleItemUse(time);
@@ -945,9 +967,18 @@ export class GameScene extends Phaser.Scene {
 
   private handleMovement(): void {
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    const speed = MOVE_SPEED * buffSpeedMultiplier(this.playerState, this.time.now);
+    const grounded = body.blocked.down;
+    if (grounded) this.airJumpsUsed = 0; // 着地したら空中ジャンプの回数をリセット
+
+    // しゃがみ: 地上で↓キー押しっぱなしの間だけ。当たり判定を低くし、移動速度を落とす
+    this.crouching = grounded && this.cursors.down.isDown && !this.guarding;
+    this.applyCrouchVisual(this.crouching);
+
+    const speed = MOVE_SPEED * buffSpeedMultiplier(this.playerState, this.time.now) * (this.crouching ? 0.35 : 1);
     let vx = 0;
-    if (this.cursors.left.isDown) {
+    if (this.guarding) {
+      // ガード中は構えに集中するため移動不可
+    } else if (this.cursors.left.isDown) {
       vx = -speed;
       this.playerState = { ...this.playerState, facing: -1 as Facing };
       this.player.setFlipX(true);
@@ -958,8 +989,18 @@ export class GameScene extends Phaser.Scene {
     }
     body.setVelocityX(vx);
 
-    if (this.cursors.up.isDown && body.blocked.down) {
+    if (this.cursors.up.isDown && grounded) {
       body.setVelocityY(JUMP_VELOCITY);
+    } else if (
+      Phaser.Input.Keyboard.JustDown(this.cursors.up) &&
+      !grounded &&
+      this.airJumpsUsed < 1 &&
+      isBuffActive(this.playerState, "doubleJump", this.time.now)
+    ) {
+      // バフ「空中二段ジャンプ」中のみ、空中でもう一度だけジャンプできる
+      body.setVelocityY(JUMP_VELOCITY * 0.85);
+      this.airJumpsUsed += 1;
+      this.spawnDoubleJumpFx();
     }
 
     // コマンド入力: ↓/前/後 のトークンをバッファに積む
@@ -973,6 +1014,36 @@ export class GameScene extends Phaser.Scene {
     }
     if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
       this.pushCommand(facing === -1 ? "forward" : "back", now);
+    }
+  }
+
+  /** しゃがみ状態が切り替わった時だけ当たり判定・見た目のサイズを更新する */
+  private applyCrouchVisual(crouching: boolean): void {
+    if (crouching === this.wasCrouching) return;
+    this.wasCrouching = crouching;
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    if (crouching) {
+      body.setSize(18, 20).setOffset(6, 20);
+      this.player.setScale(1, 0.68);
+    } else {
+      body.setSize(18, 32).setOffset(6, 8);
+      this.player.setScale(1, 1);
+    }
+  }
+
+  private spawnDoubleJumpFx(): void {
+    const burst = this.add.circle(this.player.x, this.player.y + 14, 4, 0x7fd1ff, 0.8);
+    this.tweens.add({ targets: burst, scale: 3, alpha: 0, duration: 300, onComplete: () => burst.destroy() });
+  }
+
+  /** ガードの構え状態を更新する。攻撃・移動より先に呼び、他の処理から `this.guarding` を参照できるようにする */
+  private handleGuard(): void {
+    this.guarding = this.guardKey.isDown && !this.crouching;
+    this.guardIcon.setVisible(this.guarding);
+    if (this.guarding) {
+      const facing = this.playerState.facing;
+      this.guardIcon.setPosition(this.player.x + facing * 16, this.player.y - 6);
+      this.guardIcon.setScale(facing === -1 ? -1 : 1, 1);
     }
   }
 
@@ -1009,6 +1080,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleAttack(time: number): void {
+    if (this.guarding) return; // ガード中は攻撃できない
     if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
       this.pushCommand("attack", time);
       this.tryTriggerSpecial(time);
@@ -1016,22 +1088,17 @@ export class GameScene extends Phaser.Scene {
       const next = startAttack(this.playerState, time);
       if (next) {
         this.playerState = next;
-        if (currentWeapon(this.playerState).projectile) {
+        const weapon = currentWeapon(this.playerState);
+        if (weapon.projectile) {
           this.spawnProjectile();
+        } else {
+          this.spawnAttackFx(weapon);
         }
       }
     }
 
     const weapon = currentWeapon(this.playerState);
     const attacking = isAttacking(this.playerState, time);
-    this.swordSlash.setPosition(
-      this.player.x + this.playerState.facing * weapon.range * 0.5,
-      this.player.y - 4,
-    );
-    this.swordSlash.setDisplaySize(weapon.range, 14);
-    this.swordSlash.setFillStyle(0xffffff, attacking && !weapon.projectile ? 0.4 : 0);
-    this.swordSlash.setScale(this.playerState.facing === -1 ? -1 : 1, 1);
-
     if (!attacking || weapon.projectile) return;
     for (const enemy of this.enemies) {
       if (!enemy.state.alive) continue;
@@ -1039,6 +1106,44 @@ export class GameScene extends Phaser.Scene {
       if (!inAttackRange(this.player.x, this.playerState.facing, enemy.sprite.x, weapon.range)) continue;
       this.applyHit(enemy, weapon.damage, time, true);
     }
+  }
+
+  /**
+   * 攻撃の発生を分かりやすくするための一回限りの斬撃エフェクト。
+   * 以前は薄い半透明の矩形を毎フレーム表示/非表示するだけで視認性が低かったため、
+   * 武器種の色を帯びた弧を勢いよく広げてフェードさせる方式に変更した。
+   * 当たり判定自体は `inAttackRange` による距離判定のままで変更していない。
+   */
+  private spawnAttackFx(weapon: WeaponDef): void {
+    const kindColor: Record<WeaponKind, number> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
+    const color = kindColor[weapon.kind];
+    const facing = this.playerState.facing;
+    const radius = weapon.range * 0.7;
+    const g = this.add.graphics({ x: this.player.x + facing * 14, y: this.player.y - 4 });
+    g.setDepth(6);
+    g.lineStyle(5, color, 0.95);
+    g.beginPath();
+    g.arc(0, 0, radius, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
+    g.strokePath();
+    g.lineStyle(2, 0xffffff, 0.9);
+    g.beginPath();
+    g.arc(0, 0, radius, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
+    g.strokePath();
+    g.setScale(facing === -1 ? -0.5 : 0.5, 1);
+    g.setAlpha(0.95);
+    this.tweens.add({
+      targets: g,
+      alpha: 0,
+      scaleX: facing === -1 ? -1.15 : 1.15,
+      duration: Math.max(120, weapon.attackWindowMs),
+      ease: "Cubic.easeOut",
+      onComplete: () => g.destroy(),
+    });
+
+    // プレイヤー自身にも一瞬の白フラッシュを入れ、攻撃の手応えを出す（scale/positionは変更しないので
+    // しゃがみ演出やArcade物理のvelocity制御と競合しない）
+    this.player.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+    this.time.delayedCall(50, () => this.player.clearTint());
   }
 
   /** ↓→X（奥義） / ↓→↓→X（秘奥義）のコマンド成立を判定して発動する */
@@ -1172,6 +1277,18 @@ export class GameScene extends Phaser.Scene {
     if (!enemy.state.alive) return;
     const now = this.time.now;
     if (isInvulnerable(this.playerState, now)) return;
+
+    if (this.guarding && this.isFacingTarget(enemy.sprite.x)) {
+      // ガードで正面からの接触ダメージを防ぐ。無敵時間は付与しないので連続ガードは可能
+      if (now - this.lastGuardBlockAt > 150) {
+        this.lastGuardBlockAt = now;
+        this.playGuardBlockFx();
+      }
+      const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
+      body.setVelocityX(-this.playerState.facing * 140);
+      return;
+    }
+
     this.playerState = damagePlayer(this.playerState, ENEMY_TOUCH_DAMAGE, now);
     this.cameras.main.shake(120, 0.006);
     this.tweens.add({
@@ -1181,6 +1298,17 @@ export class GameScene extends Phaser.Scene {
       yoyo: true,
       repeat: 4,
     });
+  }
+
+  /** プレイヤーが対象の方向を向いているか（ガードが前方からの攻撃のみ防ぐための判定） */
+  private isFacingTarget(targetX: number): boolean {
+    return (targetX - this.player.x) * this.playerState.facing >= -4;
+  }
+
+  private playGuardBlockFx(): void {
+    this.cameras.main.flash(80, 255, 209, 102);
+    const spark = this.add.circle(this.player.x + this.playerState.facing * 16, this.player.y - 6, 10, 0xffd166, 0.6);
+    this.tweens.add({ targets: spark, scale: 1.8, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
   }
 
   private onEnemyKilled(_enemy: EnemySprite): void {

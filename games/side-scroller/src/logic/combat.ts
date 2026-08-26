@@ -134,7 +134,7 @@ export interface PlayerState {
   comboStreak: number; // 無被弾で継続している連撃数。被弾で0に戻る
   armorCharges: number; // 防具の残り耐久。被弾時、HPより先にここが減る
   /** アイテム/ステージバフによる一時強化。値はその効果が切れる時刻 */
-  buffs: { power?: number; haste?: number };
+  buffs: { power?: number; haste?: number; doubleJump?: number };
   regenUntil: number; // この時刻までHP自動回復が有効
   lastRegenTickAt: number; // 直近の自動回復ティック時刻
 }
@@ -286,7 +286,7 @@ export function healPlayer(player: PlayerState, amount: number): PlayerState {
 
 // ---- 一時バフ（アイテム/ステージ側から提示されるバフの両方が使う共通の仕組み） ----
 
-export type BuffKind = "power" | "haste";
+export type BuffKind = "power" | "haste" | "doubleJump";
 
 export const ITEM_BUFF_DURATION_MS = 8000;
 export const STAGE_BUFF_DURATION_MS = 12000;
