@@ -86,6 +86,8 @@ export class IdleScene extends Phaser.Scene {
     id: string;
     button: RoundedRect;
     label: Phaser.GameObjects.Text;
+    rateLabel: Phaser.GameObjects.Text;
+    costLabel: Phaser.GameObjects.Text;
   }[] = [];
 
   private welcomeGained = 0;
@@ -358,9 +360,17 @@ export class IdleScene extends Phaser.Scene {
       gem.lineStyle(1.5, 0xffffff, 0.4);
       gem.strokeCircle(0, 0, 12);
 
+      // アイコンを主役にして情報量を絞る: 名前(+所持数)を1行、生産量を小さく補足、コストは
+      // 右側に「値札」として分離する（スプレッドシート的な1行詰め込みを避け、ショップの商品行らしくする）
       const label = this.add
-        .text(400, y - 16, "", { fontSize: "14px", color: "#a7b4c2" })
+        .text(400, y - 15, "", { ...TYPE.body, color: THEME.textPrimary })
         .setOrigin(0, 0);
+      const rateLabel = this.add
+        .text(400, y + 3, "", { ...TYPE.small, color: THEME.textMuted })
+        .setOrigin(0, 0);
+      const costLabel = this.add
+        .text(740, y, "", { ...TYPE.body, color: THEME.textPrimary, align: "right" })
+        .setOrigin(1, 0.5);
       button.on("pointerdown", () => {
         const next = buyGenerator(this.state, g.id);
         if (next) {
@@ -370,7 +380,7 @@ export class IdleScene extends Phaser.Scene {
           this.spawnFloatingText(560, y - 30, `${generatorName(this.lang, g.id)} +1`, "#ffd166");
         }
       });
-      this.rows.push({ id: g.id, button, label });
+      this.rows.push({ id: g.id, button, label, rateLabel, costLabel });
     });
   }
 
@@ -621,12 +631,11 @@ export class IdleScene extends Phaser.Scene {
       const count = this.state.counts[row.id] ?? 0;
       const cost = generatorCost(def, count);
       const affordable = this.state.potions >= cost;
-      row.label.setText(
-        `${generatorName(this.lang, def.id)}  ×${count}\n` +
-          `${t(this.lang, "cost")}: ${formatNumber(cost)}   +${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`,
-      );
+      row.label.setText(`${generatorName(this.lang, def.id)}  ×${count}`);
+      row.rateLabel.setText(`+${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`);
+      row.costLabel.setText(formatNumber(cost));
       row.button.setFillStyle(affordable ? 0xcdf3e3 : 0xeaf5ff);
-      row.label.setColor(affordable ? "#1f8a63" : "#a7b4c2");
+      row.costLabel.setColor(affordable ? "#1f8a63" : "#a7b4c2");
     }
   }
 }

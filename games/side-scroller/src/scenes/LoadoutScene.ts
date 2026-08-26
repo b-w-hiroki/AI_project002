@@ -16,13 +16,15 @@ import {
   type LoadoutSaveData,
 } from "../logic/loadout";
 import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
-import { ELEVATION, THEME, drawPanel, makeButton } from "../ui/theme";
+import { ELEVATION, THEME, drawPanel, drawWeaponKindIcon, makeButton } from "../ui/theme";
 
 const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
   melee: "近距離",
   mid: "中距離",
   ranged: "遠距離",
 };
+
+const KIND_ACCENT: Readonly<Record<WeaponKind, number>> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
 
 const RARITY_COLOR: Readonly<Record<string, string>> = {
   N: "#6a7a95",
@@ -31,6 +33,19 @@ const RARITY_COLOR: Readonly<Record<string, string>> = {
   SSR: "#8a4fd1",
   UR: "#c98a12",
 };
+
+const RARITY_COLOR_INT: Readonly<Record<string, number>> = {
+  N: 0x9ba9bd,
+  R: 0x4ecca3,
+  SR: 0x7fd1ff,
+  SSR: 0xb98af0,
+  UR: 0xffcc66,
+};
+
+/** ソシャゲ的な★演出。SR以上だけ付ける */
+const RARITY_STARS: Readonly<Record<string, string>> = { SR: "★", SSR: "★★", UR: "★★★" };
+
+const INVENTORY_GRID = { cols: 3, cardW: 140, cardH: 56, gapX: 10, gapY: 8, startX: 20, startY: 230, maxRows: 3 };
 
 /**
  * アウトゲームのロードアウト画面。
@@ -50,6 +65,7 @@ export class LoadoutScene extends Phaser.Scene {
   private armorTexts: { id: string; label: string; text: Phaser.GameObjects.Text }[] = [];
   private rarityBar!: Phaser.GameObjects.Graphics;
   private slotGlows: Partial<Record<WeaponKind, Phaser.GameObjects.Graphics>> = {};
+  private inventoryDetailText!: Phaser.GameObjects.Text;
 
   constructor() {
     super("LoadoutScene");
@@ -109,11 +125,10 @@ export class LoadoutScene extends Phaser.Scene {
 
   private buildSlotPanel(): void {
     const kinds: WeaponKind[] = ["melee", "mid", "ranged"];
-    const kindAccent: Record<WeaponKind, number> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
     kinds.forEach((kind, i) => {
       const x = 140 + i * 180;
       const y = 130;
-      drawPanel(this, x, y, 160, 90, { radius: 12, borderColor: kindAccent[kind], borderAlpha: 0.45 });
+      drawPanel(this, x, y, 160, 90, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
       this.add
         .text(x, y - 34, KIND_LABEL[kind], { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
         .setOrigin(0.5);
@@ -124,7 +139,7 @@ export class LoadoutScene extends Phaser.Scene {
 
       // 未設定スロットに気付きやすいよう、パネルの外周をゆっくりパルスさせるグローを重ねる
       const glow = this.add.graphics({ x, y });
-      glow.lineStyle(3, kindAccent[kind], 1);
+      glow.lineStyle(3, KIND_ACCENT[kind], 1);
       glow.strokeRoundedRect(-84, -49, 168, 98, 14);
       this.slotGlows[kind] = glow;
       this.tweens.add({
@@ -147,6 +162,8 @@ export class LoadoutScene extends Phaser.Scene {
     this.add.text(20, 195, "🗡️ 所持武器（タップして選択）", { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
     // 所持武器のレアリティ内訳を積み上げバーで可視化する（実データはrefresh()で反映）
     this.rarityBar = this.add.graphics();
+    // 選択中の武器の詳細ステータスをここにまとめて表示する（カード自体は名前とレアリティのみのスッキリ表示にする）
+    this.inventoryDetailText = this.add.text(20, 458, "", { fontSize: "11px", color: "#4a5a72" });
   }
 
   /** 所持武器のレアリティ別内訳を積み上げバーとして描画する */
@@ -327,34 +344,91 @@ export class LoadoutScene extends Phaser.Scene {
       this.slotGlows[kind]?.setVisible(false);
     }
 
+    this.renderInventoryGrid();
+  }
+
+  /**
+   * 所持武器一覧をカード型グリッドで描画する。以前はステータスを1行にすべて詰め込んだ
+   * テキストリスト（スプレッドシート的で「ゲームらしさ」に欠ける）だったため、
+   * アイコン＋名前＋レアリティだけのカードに絞り、詳細ステータスは選択時に
+   * `inventoryDetailText` へまとめて表示する方式にした。アイコンは本物の武器素材に
+   * 差し替える前提のプレースホルダーとして `drawWeaponKindIcon` で描画している。
+   */
+  private renderInventoryGrid(): void {
     this.inventoryTexts.forEach((t) => t.destroy());
     this.inventoryTexts = [];
-    this.data_.inventory.forEach((instance, i) => {
+    const { cols, cardW, cardH, gapX, gapY, startX, startY, maxRows } = INVENTORY_GRID;
+    const visible = this.data_.inventory.slice(0, cols * maxRows);
+
+    visible.forEach((instance, i) => {
       const template = findTemplate(instance.templateId);
-      const stats = effectiveStats(instance);
       const selected = instance.id === this.selectedInstanceId;
-      // SR以上はソシャゲ的な★演出で高レアリティを一目で分かるようにする
-      const rarityStars: Readonly<Record<string, string>> = { SR: "★", SSR: "★★", UR: "★★★" };
-      const star = rarityStars[instance.rarity] ?? "";
-      const label =
-        `${selected ? "▶ " : "  "}${template?.name ?? "?"} [${instance.rarity}]${star ? ` ${star}` : ""} ` +
-        `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
-        `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`;
-      const y = 234 + i * 20;
-      const text = this.add.text(20, y, label, { fontSize: "12px", color: selected ? "#1f8a63" : "#4a5a72" });
-      const zone = makeTappable(this, 250, y + 6, 440, 18, () => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (cardW + gapX) + cardW / 2;
+      const y = startY + row * (cardH + gapY) + cardH / 2;
+      const rarityColor = RARITY_COLOR_INT[instance.rarity] ?? 0x9ba9bd;
+
+      const card = drawPanel(this, x, y, cardW, cardH, {
+        radius: 10,
+        fillColor: selected ? 0xfff3d6 : ELEVATION.card,
+        borderColor: rarityColor,
+        borderWidth: selected ? 2.5 : 1.5,
+        borderAlpha: selected ? 1 : 0.7,
+        shadow: false,
+      });
+      const icon = template
+        ? drawWeaponKindIcon(this, x - cardW / 2 + 22, y, template.kind, KIND_ACCENT[template.kind], 26)
+        : null;
+      const star = RARITY_STARS[instance.rarity] ?? "";
+      const nameText = this.add
+        .text(x - cardW / 2 + 42, y - 14, template?.name ?? "?", {
+          fontSize: "12px",
+          color: THEME.textPrimary,
+          fontStyle: "600",
+        })
+        .setOrigin(0, 0.5);
+      const rarityText = this.add
+        .text(x - cardW / 2 + 42, y + 8, `[${instance.rarity}]${star ? ` ${star}` : ""}`, {
+          fontSize: "11px",
+          color: RARITY_COLOR[instance.rarity] ?? "#8a97a8",
+          fontStyle: "600",
+        })
+        .setOrigin(0, 0.5);
+      const zone = makeTappable(this, x, y, cardW, cardH, () => {
         this.selectedInstanceId = instance.id;
         this.refresh();
       });
-      this.inventoryTexts.push(text, zone);
+      this.inventoryTexts.push(card, nameText, rarityText, zone);
+      if (icon) this.inventoryTexts.push(icon);
     });
 
+    const overflow = this.data_.inventory.length - visible.length;
+    if (overflow > 0) {
+      const text = this.add.text(20, startY + maxRows * (cardH + gapY) - gapY + 4, `他 ${overflow} 件`, {
+        fontSize: "11px",
+        color: "#8a97a8",
+      });
+      this.inventoryTexts.push(text);
+    }
+
     if (this.data_.inventory.length === 0) {
-      const text = this.add.text(20, 234, "（所持武器なし。宝箱か鍛治で入手してください）", {
+      const text = this.add.text(20, startY, "（所持武器なし。宝箱か鍛治で入手してください）", {
         fontSize: "12px",
         color: "#62628a",
       });
       this.inventoryTexts.push(text);
+    }
+
+    const selected = this.data_.inventory.find((w) => w.id === this.selectedInstanceId);
+    if (selected) {
+      const stats = effectiveStats(selected);
+      this.inventoryDetailText.setText(
+        `距離${stats.range.toFixed(0)} 力${stats.power.toFixed(1)} 速${stats.swingSpeedMs.toFixed(0)}ms ` +
+          `範囲${stats.hitWidth.toFixed(0)} 重${stats.weight.toFixed(1)} コンボ${stats.comboHits}`,
+      );
+    } else {
+      this.inventoryDetailText.setText("武器を選択すると詳細ステータスがここに表示されます");
     }
   }
 }
