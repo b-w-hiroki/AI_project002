@@ -185,6 +185,45 @@ export function makeButton(
   };
 }
 
+/**
+ * 武器種別（近距離/中距離/遠距離）のシルエットアイコンをGraphicsで描画する。
+ * 後から本物のアイコン素材に差し替える前提のプレースホルダーとして、テキストの武器種名より
+ * 一目でゲームらしく見えるようにする。(x, y) はアイコン中心。
+ */
+export function drawWeaponKindIcon(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  kind: "melee" | "mid" | "ranged",
+  color: number,
+  size = 28,
+): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  g.fillStyle(color, 1);
+  g.lineStyle(1.5, 0xffffff, 0.7);
+  if (kind === "melee") {
+    // 剣: 柄+刀身
+    g.fillRect(-size * 0.06, -size * 0.4, size * 0.12, size * 0.68);
+    g.strokeRect(-size * 0.06, -size * 0.4, size * 0.12, size * 0.68);
+    g.fillRect(-size * 0.22, size * 0.2, size * 0.44, size * 0.08);
+    g.fillCircle(0, size * 0.36, size * 0.07);
+  } else if (kind === "mid") {
+    // 槍: 柄+穂先の三角
+    g.fillRect(-size * 0.05, -size * 0.4, size * 0.1, size * 0.8);
+    g.strokeRect(-size * 0.05, -size * 0.4, size * 0.1, size * 0.8);
+    g.fillTriangle(0, -size * 0.46, -size * 0.16, -size * 0.2, size * 0.16, -size * 0.2);
+  } else {
+    // 弓: 弧+弦
+    g.lineStyle(2.5, color, 1);
+    g.beginPath();
+    g.arc(size * 0.1, 0, size * 0.42, Phaser.Math.DegToRad(110), Phaser.Math.DegToRad(250));
+    g.strokePath();
+    g.lineStyle(1.5, 0xffffff, 0.8);
+    g.strokeLineShape(new Phaser.Geom.Line(size * 0.1, -size * 0.4, size * 0.1, size * 0.4));
+  }
+  return g;
+}
+
 /** color1 と color2 を amount(0-1) で線形補間する */
 function blend(color1: number, color2: number, amount: number): number {
   const c1 = Phaser.Display.Color.IntegerToColor(color1);
