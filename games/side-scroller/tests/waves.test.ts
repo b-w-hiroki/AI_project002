@@ -1,34 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { enemiesInWave, enemySpecForWave, pickupsForWave } from "../src/logic/waves";
+import { isBossWave, isSwarmWave, pickupsForWave, rollWaveComposition } from "../src/logic/waves";
 
-describe("enemiesInWave", () => {
-  it("序盤は3体から始まり、ウェーブが進むほど増える", () => {
-    expect(enemiesInWave(1)).toBe(3);
-    expect(enemiesInWave(3)).toBe(4);
-    expect(enemiesInWave(5)).toBe(5);
+/** テストを決定的にするための疑似乱数（呼び出しごとに0, 0.1, 0.2... と巡回する） */
+function sequentialRng(values: number[]): () => number {
+  let i = 0;
+  return () => {
+    const v = values[i % values.length]!;
+    i += 1;
+    return v;
+  };
+}
+
+describe("isBossWave / isSwarmWave", () => {
+  it("5の倍数ウェーブはボス", () => {
+    expect(isBossWave(5)).toBe(true);
+    expect(isBossWave(10)).toBe(true);
+    expect(isBossWave(4)).toBe(false);
   });
 
-  it("上限を超えて増え続けない", () => {
-    expect(enemiesInWave(100)).toBe(10);
+  it("7の倍数ウェーブは大量発生（ボスと重ならない）", () => {
+    expect(isSwarmWave(7)).toBe(true);
+    expect(isSwarmWave(14)).toBe(true);
+  });
+
+  it("ボスと大量発生が同時に成立するウェーブ(35)はボス優先", () => {
+    expect(isBossWave(35)).toBe(true);
+    expect(isSwarmWave(35)).toBe(false);
   });
 });
 
-describe("enemySpecForWave", () => {
-  it("序盤は体力2・防御0", () => {
-    expect(enemySpecForWave(1)).toEqual({ health: 2, defense: 0 });
+describe("rollWaveComposition", () => {
+  it("ボスウェーブは敵1体・タンク型", () => {
+    const comp = rollWaveComposition(5, sequentialRng([0]));
+    expect(comp.kind).toBe("boss");
+    expect(comp.enemies).toHaveLength(1);
+    expect(comp.enemies[0]!.type).toBe("tank");
   });
 
-  it("ウェーブが進むと体力が増える", () => {
-    expect(enemySpecForWave(4).health).toBeGreaterThan(enemySpecForWave(1).health);
+  it("大量発生ウェーブは通常より多くの敏捷型が出る", () => {
+    const comp = rollWaveComposition(7, sequentialRng([0]));
+    expect(comp.kind).toBe("swarm");
+    expect(comp.enemies.length).toBeGreaterThan(3);
+    expect(comp.enemies.every((e) => e.type === "agile")).toBe(true);
   });
 
-  it("ウェーブ4以降で防御力が付き始める", () => {
-    expect(enemySpecForWave(3).defense).toBe(0);
-    expect(enemySpecForWave(4).defense).toBeGreaterThan(0);
+  it("通常ウェーブはウェーブ番号なりの敵数（±1）になる", () => {
+    const comp = rollWaveComposition(1, sequentialRng([0.5]));
+    expect(comp.kind).toBe("normal");
+    expect(comp.enemies.length).toBeGreaterThanOrEqual(2);
+    expect(comp.enemies.length).toBeLessThanOrEqual(4);
   });
 
-  it("防御力の上限を超えない", () => {
-    expect(enemySpecForWave(1000).defense).toBeLessThanOrEqual(5);
+  it("序盤（ウェーブ3未満）は通常タイプのみ", () => {
+    const comp = rollWaveComposition(2, sequentialRng([0.99]));
+    expect(comp.enemies.every((e) => e.type === "normal")).toBe(true);
+  });
+
+  it("同じrngシードなら再現できる", () => {
+    const a = rollWaveComposition(10, sequentialRng([0.3, 0.6, 0.9]));
+    const b = rollWaveComposition(10, sequentialRng([0.3, 0.6, 0.9]));
+    expect(a).toEqual(b);
   });
 });
 
