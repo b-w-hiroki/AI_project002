@@ -93,7 +93,7 @@ import {
 } from "../ui/touch";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
-import { enemiesInWave, enemySpecForWave, pickupsForWave } from "../logic/waves";
+import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
 
 const GROUND_Y = 520;
 /** ウェーブ式サバイバル用の固定サイズアリーナ幅。固定ゴールへ向かうステージ制から変更した */
@@ -118,7 +118,16 @@ interface EnemySprite {
   patrolMinX: number;
   patrolMaxX: number;
   dir: 1 | -1;
+  type: EnemyType;
+  speedMul: number;
 }
+
+/** 敵タイプごとの色ティント。本物の専用スプライトに差し替える前提のプレースホルダー */
+const ENEMY_TYPE_TINT: Readonly<Record<EnemyType, number>> = {
+  normal: 0xffffff,
+  agile: 0x7fd1ff,
+  tank: 0x8a4fd1,
+};
 
 interface Projectile {
   sprite: Phaser.Physics.Arcade.Sprite;
@@ -470,20 +479,24 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon.setVisible(false);
   }
 
-  /** 1体の敵をウェーブ番号に応じた強さでスポーンする */
-  private spawnEnemy(wave: number, x: number, index: number): void {
-    const spec = enemySpecForWave(wave);
+  /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
+  private spawnEnemy(wave: number, spec: EnemySpawnSpec, x: number, index: number): void {
     const sprite = this.physics.add.sprite(x, GROUND_Y - 30, "goblin");
     sprite.setCollideWorldBounds(true);
     sprite.setSize(18, 30).setOffset(6, 10);
+    sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
+    if (spec.type === "tank") sprite.setScale(1.4); // ボス/タンク型は一目で分かるよう一回り大きくする
     this.physics.add.collider(sprite, this.platforms);
 
+    const patrolRadius = 80 * spec.speedMul;
     const enemy: EnemySprite = {
       state: newEnemy(`w${wave}-${index}`, spec.health, spec.defense),
       sprite,
-      patrolMinX: Math.max(40, x - 80),
-      patrolMaxX: Math.min(ARENA_WIDTH - 40, x + 80),
+      patrolMinX: Math.max(40, x - patrolRadius),
+      patrolMaxX: Math.min(ARENA_WIDTH - 40, x + patrolRadius),
       dir: 1,
+      type: spec.type,
+      speedMul: spec.speedMul,
     };
     this.enemies.push(enemy);
 
@@ -493,19 +506,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * ウェーブを開始する。敵をウェーブ番号に応じた数・強さでランダムな位置にスポーンし、
-   * ピックアップも合わせて配置する。全滅させると次のウェーブが始まる（onEnemyKilled参照）。
+   * ウェーブを開始する。`rollWaveComposition` で決まった敵編成（数・タイプ・強さにランダムな幅がある）
+   * をアリーナ内のランダムな位置にスポーンし、ピックアップも合わせて配置する。
+   * 全滅させると次のウェーブが始まる（onEnemyKilled参照）。
    */
   private spawnWave(wave: number): void {
-    const count = enemiesInWave(wave);
-    this.waveEnemiesAlive = count;
+    const composition = rollWaveComposition(wave);
+    this.waveEnemiesAlive = composition.enemies.length;
     this.waveActive = true;
-    for (let i = 0; i < count; i++) {
-      const x = Phaser.Math.Between(200, ARENA_WIDTH - 100);
-      this.spawnEnemy(wave, x, i);
-    }
+    composition.enemies.forEach((spec, i) => {
+      const x =
+        composition.kind === "boss"
+          ? Math.round(ARENA_WIDTH * 0.7) // ボスは分かりやすく奥にどっしり配置
+          : Phaser.Math.Between(200, ARENA_WIDTH - 100);
+      this.spawnEnemy(wave, spec, x, i);
+    });
     this.spawnWavePickups(wave);
-    this.spawnFloatingText(this.player.x, this.player.y - 70, `WAVE ${wave}`, "#8a4fd1");
+    this.announceWave(wave, composition.kind);
+  }
+
+  private announceWave(wave: number, kind: WaveKind): void {
+    const suffix = kind === "boss" ? " - BOSS!" : kind === "swarm" ? " - 大量発生!" : "";
+    const color = kind === "boss" ? "#e0447a" : kind === "swarm" ? "#c98a12" : "#8a4fd1";
+    this.spawnFloatingText(this.player.x, this.player.y - 70, `WAVE ${wave}${suffix}`, color);
   }
 
   /** 召喚媒体/防具/アイテム/ステージバフのピックアップをアリーナ内のランダムな位置に配置する */
@@ -665,6 +688,8 @@ export class GameScene extends Phaser.Scene {
           "",
           "敵を全滅させるとウェーブクリア。少し休んだら次のウェーブが始まります",
           "ウェーブが進むほど敵の数・体力・防御力が上がっていきます。どこまで生き残れるか挑戦！",
+          "水色=敏捷型（速いが打たれ弱い）　紫色=タンク型（遅いが硬い）",
+          "5ウェーブごとにボス、7ウェーブごとに大量発生ウェーブが出現します",
           "R : ゲームオーバー後にリトライ",
         ].join("\n"),
         { fontSize: "15px", color: "#3a4a5a", align: "center", lineSpacing: 8 },
@@ -1255,7 +1280,7 @@ export class GameScene extends Phaser.Scene {
       const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
       if (enemy.sprite.x <= enemy.patrolMinX) enemy.dir = 1;
       if (enemy.sprite.x >= enemy.patrolMaxX) enemy.dir = -1;
-      body.setVelocityX(enemy.dir * 60);
+      body.setVelocityX(enemy.dir * 60 * enemy.speedMul);
       enemy.sprite.setFlipX(enemy.dir < 0);
     }
   }
@@ -1285,7 +1310,8 @@ export class GameScene extends Phaser.Scene {
   private onEnemyHit(enemy: EnemySprite): void {
     enemy.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.time.delayedCall(80, () => {
-      enemy.sprite.clearTint();
+      // clearTint ではなく敵タイプの常設ティントに戻す（タイプ別の色分けを保つため）
+      enemy.sprite.setTint(ENEMY_TYPE_TINT[enemy.type]);
       enemy.sprite.setTintMode(Phaser.TintModes.MULTIPLY);
     });
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;

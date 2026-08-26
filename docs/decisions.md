@@ -209,6 +209,23 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - ポーション工房: 転生カードに「累計醸造数 / 転生解放ライン(PRESTIGE_UNLOCK)」の進捗バーを追加。既に転生解放済みの場合はバーを非表示にする（`gained > 0`で判定）。
 - ポーション工房: 画面下部の空白（ゾーンパネル下端y≈585〜602〜キャンバス下端760）を`drawPanel`によるフッターパネルとして活用し、これまで数値化されていなかった生涯統計（`lifetimeBrewed`・実績解除数/10・`prestigeCount`・`analytics.totalPlaytimeSec`）を1行で表示。既存のExport/Importボタンはフッター内に統合し、見た目上も機能的にも「設定・データ管理エリア」としてまとめた。
 - 剣戟の森: LoadoutSceneの武器一覧見出し直下に、所持武器のレアリティ内訳（N/R/SR/SSR/UR）を`RARITY_COLOR`で色分けした積み上げ横棒グラフとして表示（`renderRarityBar`）。武器を新規入手するたびに`refresh()`から再計算する。データが空の場合は暗いトラックのみ表示。
+
+## 2026-08-26: ポーション工房「街」システム／剣戟の森 ウェーブ生成ランダム化
+
+ユーザーから「ポーションのほうは無限性がありつつもステージ感を持たせたいな。何かが切り替わる感じにしよう。例えばポーションの売り先とか街とか／ウェーブはランダム生成で規模とバリエーションをもたせようかな」との要望を受けた。詳細はAskUserQuestionで確認: 街の切り替え条件は「転生と連動」、ウェーブ側は「敵の数・ステータスに幅」「敏捷型/タンク型など敵のタイプを追加」「数ウェーブに1回ボス/大量発生ウェーブ」の3つ全てを選択。
+
+### ポーション工房: 転生連動の「街」
+- `src/logic/towns.ts`新設。`TOWNS`に8件の街（名前/説明/アクセントカラー）を用意し、`townForPrestige(prestigeCount)`が`index = prestigeCount % TOWNS.length`、`cycle = floor(prestigeCount / TOWNS.length)`で現在の街を返す。無限に転生できる放置ゲームの性質を保ったまま、有限の街リストで「ステージが切り替わる感覚」を出すため、一巡後は名前に「（N周目）」を付けて区別しつつ継続させる設計にした。
+- `IdleScene`にヘッダー街名テキストと、街のアクセントカラーを使った淡いグロー（Graphics）を追加。`refreshUI()`は毎フレーム呼ばれるため、`lastTownIndex`（`cycle*1000+index`のキー）で前回と同じ街なら再描画をスキップするガードを入れた。
+- **実装中に発見・修正したバグ**: 当初`buildBackground()`内で`refreshTownGlow()`を先出しで1回呼んでいたが、`buildBackground()`は`buildHeader()`より前に実行されるため、その時点では`townText`がまだ生成されておらず、かつガードの`lastTownIndex`だけが先に確定してしまい、後で`refreshUI()`から呼ばれた本来の初期描画がスキップされて街名テキストが永久に空欄になる不具合があった。`buildBackground()`側の先出し呼び出しを削除し、`refreshUI()`（`buildHeader()`より後に実行される）からの呼び出しのみに一本化して解消。
+- Vitest 4件追加（境界値: 転生0回目/1〜2回目/ちょうど一巡/5周目+3）。
+
+### 剣戟の森: ウェーブ生成のランダム化・敵タイプ・ボス/大量発生ウェーブ
+- `waves.ts`を`enemiesInWave`/`enemySpecForWave`という決定的な数式ベースのAPIから、`rollWaveComposition(wave, rng)`という乱数注入型のAPIに全面書き換え。既存の`rollStageBuffOptions`（`loadout.ts`）と同じ「`rng: () => number = Math.random`をデフォルト引数に取り、テストでは決定的な疑似乱数を注入する」パターンを踏襲し、Phaser非依存のまま単体テスト可能にした。
+- 敵数・体力は基本式（ウェーブ番号ベース）に対し`jitter()`で±1のブレを持たせた。敵タイプは`normal`/`agile`/`tank`の3種を確率抽選（ウェーブ3未満は`normal`のみ）し、タイプごとに体力倍率・防御加算・移動速度倍率を変える（`ENEMY_TYPE_MODIFIERS`）ことでステータスと敵構成の両面にバリエーションを持たせた。
+- ボスウェーブ（5の倍数）は単体の高耐久`tank`型、大量発生ウェーブ（7の倍数）は`agile`型多数、という2種の特殊ウェーブを追加。両者の周期が重なるウェーブ（35など）は`isSwarmWave`が`isBossWave`を先にチェックしてボスを優先する設計にし、衝突を明示的に解決した。
+- GameScene側は敵スプライトに`ENEMY_TYPE_TINT`（水色=敏捷型/紫=タンク型、タンクはスケールも1.4倍）で視覚的な型判別を追加。**実装中に発見・修正したバグ**: 既存のヒットフラッシュ演出が80ms後に`clearTint()`で白フラッシュを解除していたが、これは敵タイプの常設ティントも一緒に消してしまう副作用があった（被弾のたびに敏捷/タンクの色が消えて無色に戻る）。`clearTint()`をやめ`setTint(ENEMY_TYPE_TINT[enemy.type])`で本来のタイプ別ティントに戻す形に修正。
+- Vitest 9件（旧`enemiesInWave`/`enemySpecForWave`向けテストから全面差し替え）。両プロジェクトで`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`実行、Playwrightでプレイスルーとポーション工房の転生シミュレーション（`prestigeCount`を書き換えたセーブを読み込ませて街が切り替わることを確認）を実施。
 - レイアウト調整: 進捗バー追加に伴い転生カード内のテキスト位置を上に詰め、フッターパネル追加に伴いExport/Importボタンをy=730→715へ移動。剣戟の森はレアリティバー追加により武器一覧の見出し・行開始位置を14px分下にずらし、隣接要素との重なりが再発しないよう座標を明示的に計算した。
 - Vitest（potion-workshop 66件、side-scroller 119件）は見た目の変更のみで対象外。両プロジェクトで`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`実行済み、全て成功。Playwrightで宝箱を複数回開いた状態のスクリーンショットを取得し、レアリティバーが実データを反映して描画されることを目視確認済み。
 

@@ -34,6 +34,7 @@ import {
   saveAnalytics,
 } from "../logic/analytics";
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
+import { townForPrestige } from "../logic/towns";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -80,6 +81,9 @@ export class IdleScene extends Phaser.Scene {
   private prestigeGlowTween?: Phaser.Tweens.Tween;
   private prestigeWasAffordable = false;
   private footerStatsText!: Phaser.GameObjects.Text;
+  private townGlow!: Phaser.GameObjects.Graphics;
+  private townText!: Phaser.GameObjects.Text;
+  private lastTownIndex = -1;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect }[] = [];
   private rows: {
@@ -153,6 +157,10 @@ export class IdleScene extends Phaser.Scene {
     glow.fillStyle(0xffffff, 0.35);
     glow.fillCircle(160, 230, 220);
 
+    // 転生と連動した「街」のアクセントカラーを淡く重ねる。実際の描画は refreshUI() 経由の
+    // refreshTownGlow() が行う（townText 等ヘッダー要素の生成が buildBackground より後のため）
+    this.townGlow = this.add.graphics();
+
     for (let i = 0; i < 14; i++) {
       const x = Phaser.Math.Between(20, 780);
       const y = Phaser.Math.Between(140, 700);
@@ -200,6 +208,10 @@ export class IdleScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.rateText = this.add
       .text(400, 88, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5);
+    // 転生と連動して切り替わる「現在の街」の表示
+    this.townText = this.add
+      .text(400, 105, "", { ...TYPE.small, color: THEME.textMuted, fontStyle: "600" })
       .setOrigin(0.5);
     this.essenceText = this.add
       .text(16, 14, "", { ...TYPE.body, color: "#8a4fd1" })
@@ -422,6 +434,22 @@ export class IdleScene extends Phaser.Scene {
     );
   }
 
+  /**
+   * 転生回数から現在の街を求め、表示とアクセントカラーを更新する。
+   * 街が変わった時だけ再描画するよう `lastTownIndex`（周回を跨ぐと同じindexに戻るため
+   * cycleも合わせて比較する）でガードし、無駄な再描画を避ける。
+   */
+  private refreshTownGlow(): void {
+    const town = townForPrestige(this.state.prestigeCount);
+    const key = town.cycle * 1000 + town.index;
+    if (key === this.lastTownIndex) return;
+    this.lastTownIndex = key;
+    this.townGlow.clear();
+    this.townGlow.fillStyle(town.accent, 0.12);
+    this.townGlow.fillCircle(160, 230, 220);
+    this.townText?.setText(`🏘 ${town.name}`);
+  }
+
   // ---- 小さな汎用ボタン ----
   private refreshCallbacks: (() => void)[] = [];
   private registerRefresh(fn: () => void): void {
@@ -553,6 +581,7 @@ export class IdleScene extends Phaser.Scene {
 
   private refreshUI(deltaSec = 0): void {
     this.refreshFooterStats();
+    this.refreshTownGlow();
     const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
     this.potionText.setText(`${formatNumber(displayedPotions)} ${t(this.lang, "potions")}`);
     this.rateText.setText(
