@@ -31,6 +31,7 @@ jobs:
           cache-dependency-path: |
             games/potion-workshop/package-lock.json
             games/side-scroller/package-lock.json
+            games/color-match/package-lock.json
 
       # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
@@ -56,6 +57,18 @@ jobs:
       - run: npm run build
         working-directory: games/side-scroller
 
+      # カラーマッチ（/color-match/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/color-match
+      - run: npm run lint
+        working-directory: games/color-match
+      - run: npm run typecheck
+        working-directory: games/color-match
+      - run: npm test
+        working-directory: games/color-match
+      - run: npm run build
+        working-directory: games/color-match
+
       # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
           mkdir -p dist
@@ -64,6 +77,8 @@ jobs:
           cp -r games/potion-workshop/dist/. dist/potion-workshop/
           mkdir -p dist/side-scroller
           cp -r games/side-scroller/dist/. dist/side-scroller/
+          mkdir -p dist/color-match
+          cp -r games/color-match/dist/. dist/color-match/
 
       - uses: actions/configure-pages@v5
         with:
