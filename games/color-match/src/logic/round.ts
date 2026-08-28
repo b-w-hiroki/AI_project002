@@ -96,6 +96,23 @@ export function scoreRound(result: RoundResult): number {
   return Math.round(40 + speedBonus * 0.6);
 }
 
+/** この時間内に正解し続けると「ターボモード」の連続判定として数える */
+export const TURBO_FAST_MS = 1000;
+/** 連続数がこの値に達すると画面上でターボモードに突入したと表示する */
+export const TURBO_ENTRY_STREAK = 5;
+
+/**
+ * 連続ターボ正解数に応じた1回あたりの獲得ポイント。
+ * ユーザー指定の段階表: 1〜5回=1pt、6〜10回=2pt、11〜20回=3pt、21〜50回=4pt、51回〜=5pt。
+ */
+export function pointsForStreak(streak: number): number {
+  if (streak <= 5) return 1;
+  if (streak <= 10) return 2;
+  if (streak <= 20) return 3;
+  if (streak <= 50) return 4;
+  return 5;
+}
+
 export interface SessionSummary {
   accuracy: number;
   avgReactionMs: number;

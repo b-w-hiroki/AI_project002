@@ -3,13 +3,16 @@ import {
   COLORS,
   Round,
   RoundResult,
+  TURBO_ENTRY_STREAK,
+  TURBO_FAST_MS,
   generateRound,
   hexForColorId,
   nameForColorId,
+  pointsForStreak,
   summarizeSession,
   timeLimitMsForLevel,
 } from "../logic/round";
-import { loadBestScore, saveBestScore } from "../logic/progress";
+import { loadBestScore, loadBestTurbo, saveBestScore, saveBestTurbo } from "../logic/progress";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
 const ROUNDS_PER_SESSION = 12;
@@ -17,9 +20,10 @@ const FEEDBACK_DELAY_MS = 320;
 const CARD_W = 150;
 const CARD_H = 96;
 const CARD_HOME_X = 400;
-const CARD_HOME_Y = 190;
+const CARD_HOME_Y = 205;
 const BOX_W = 118;
 const BOX_H = 70;
+const TURBO_COLOR = 0xff7a3d;
 
 interface TargetBoxView {
   colorId: string;
@@ -40,6 +44,8 @@ export class GameScene extends Phaser.Scene {
   private accepting = false;
   private timeLimitMs = 0;
   private timeRemainingMs = 0;
+  private turboStreak = 0;
+  private turboPoints = 0;
 
   private promptCard!: Phaser.GameObjects.Container;
   private promptBg!: Phaser.GameObjects.Graphics;
@@ -49,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private timerBarBg!: Phaser.GameObjects.Graphics;
   private timerBarFill!: Phaser.GameObjects.Graphics;
+  private turboText!: Phaser.GameObjects.Text;
   private targetBoxes: TargetBoxView[] = [];
 
   private titleGroup!: Phaser.GameObjects.Container;
@@ -92,12 +99,15 @@ export class GameScene extends Phaser.Scene {
       .text(
         400,
         250,
-        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠までカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。",
+        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠までカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、獲得ポイントが加速します。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
     const best = this.add
-      .text(400, 360, `ベストスコア: ${loadBestScore()}`, { ...TYPE.small, color: THEME.textMuted })
+      .text(400, 368, `ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`, {
+        ...TYPE.small,
+        color: THEME.textMuted,
+      })
       .setOrigin(0.5);
 
     const startBtn = makeButton(this, 400, 420, 180, 48, "スタート", () => this.startSession(), {
@@ -127,6 +137,11 @@ export class GameScene extends Phaser.Scene {
       .text(400, 112, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
+    this.turboText = this.add
+      .text(400, 134, "", { ...TYPE.body, color: hexToCss(TURBO_COLOR), fontStyle: "800" })
+      .setOrigin(0.5)
+      .setVisible(false);
+
     this.promptBg = this.add.graphics();
     this.promptText = this.add.text(0, 0, "", { ...TYPE.numeric }).setOrigin(0.5);
     this.promptCard = this.add.container(CARD_HOME_X, CARD_HOME_Y, [this.promptBg, this.promptText]);
@@ -141,6 +156,7 @@ export class GameScene extends Phaser.Scene {
       this.timerBarBg,
       this.timerBarFill,
       this.timerText,
+      this.turboText,
       this.promptCard,
     ]);
 
@@ -217,9 +233,13 @@ export class GameScene extends Phaser.Scene {
       },
     );
 
-    this.promptCard.on("dragend", (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+    this.promptCard.on("dragend", () => {
       if (!this.accepting) return;
-      const dropped = this.targetBoxes.find((box) => box.bounds.contains(dragX, dragY));
+      // Phaser の dragend イベントは dragX/dragY を渡さない（常に0）ため、
+      // drag イベントで随時更新しているカードの現在位置を使う
+      const dropX = this.promptCard.x;
+      const dropY = this.promptCard.y;
+      const dropped = this.targetBoxes.find((box) => box.bounds.contains(dropX, dropY));
       this.clearHoverHighlight();
       this.promptCard.setAlpha(1);
       if (dropped) {
@@ -280,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     this.playGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
-    bestText.setText(`ベストスコア: ${loadBestScore()}`);
+    bestText.setText(`ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`);
   }
 
   private startSession(): void {
@@ -288,6 +308,9 @@ export class GameScene extends Phaser.Scene {
     this.level = 0;
     this.roundIndex = 0;
     this.results = [];
+    this.turboStreak = 0;
+    this.turboPoints = 0;
+    this.turboText.setVisible(false);
     this.titleGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     this.playGroup.setVisible(true);
@@ -358,7 +381,48 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    this.applyTurboResult(correct && !timedOut && reactionMs < TURBO_FAST_MS);
+
     this.time.delayedCall(FEEDBACK_DELAY_MS, () => this.nextRound());
+  }
+
+  /** 1秒以内の正解が続く限りターボ連続数を伸ばし、段階表に応じたポイントを加算する */
+  private applyTurboResult(fastCorrect: boolean): void {
+    if (!fastCorrect) {
+      if (this.turboStreak >= TURBO_ENTRY_STREAK) {
+        this.turboText.setVisible(false);
+      }
+      this.turboStreak = 0;
+      return;
+    }
+
+    this.turboStreak += 1;
+    const points = pointsForStreak(this.turboStreak);
+    this.turboPoints += points;
+    this.spawnPointsPopup(`+${points}pt`);
+
+    if (this.turboStreak >= TURBO_ENTRY_STREAK) {
+      this.turboText.setText(`🔥 ターボモード ×${this.turboStreak}`).setVisible(true);
+      this.tweens.add({ targets: this.turboText, scale: 1.25, duration: 100, yoyo: true });
+    }
+  }
+
+  private spawnPointsPopup(label: string): void {
+    const popup = this.add
+      .text(CARD_HOME_X, CARD_HOME_Y - CARD_H / 2 - 8, label, {
+        ...TYPE.h2,
+        color: hexToCss(TURBO_COLOR),
+      })
+      .setOrigin(0.5);
+    this.playGroup.add(popup);
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 30,
+      alpha: 0,
+      duration: 500,
+      ease: "Cubic.easeOut",
+      onComplete: () => popup.destroy(),
+    });
   }
 
   private endSession(): void {
@@ -367,7 +431,9 @@ export class GameScene extends Phaser.Scene {
 
     const summary = summarizeSession(this.results);
     saveBestScore(summary.score);
+    saveBestTurbo(this.turboPoints);
     const best = loadBestScore();
+    const bestTurbo = loadBestTurbo();
 
     const heading = this.resultGroup.getByName("heading") as Phaser.GameObjects.Text;
     const stats = this.resultGroup.getByName("stats") as Phaser.GameObjects.Text;
@@ -375,9 +441,9 @@ export class GameScene extends Phaser.Scene {
 
     heading.setText(`スコア ${summary.score}`);
     stats.setText(
-      `正答率: ${Math.round(summary.accuracy * 100)}%  平均反応: ${Math.round(summary.avgReactionMs)}ms`,
+      `正答率: ${Math.round(summary.accuracy * 100)}%  平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
     );
-    bestLine.setText(`ベストスコア: ${best}`);
+    bestLine.setText(`ベストスコア: ${best}  ベストターボ: ${bestTurbo}pt`);
 
     this.resultGroup.setVisible(true);
   }

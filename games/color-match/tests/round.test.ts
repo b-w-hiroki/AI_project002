@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   generateRound,
+  pointsForStreak,
   scoreRound,
   summarizeSession,
   timeLimitMsForLevel,
@@ -54,6 +55,21 @@ describe("scoreRound", () => {
     const fast = scoreRound({ correct: true, timedOut: false, reactionMs: 300 });
     const slow = scoreRound({ correct: true, timedOut: false, reactionMs: 2000 });
     expect(fast).toBeGreaterThan(slow);
+  });
+});
+
+describe("pointsForStreak", () => {
+  it("段階表の境界通りにポイントが増える", () => {
+    expect(pointsForStreak(1)).toBe(1);
+    expect(pointsForStreak(5)).toBe(1);
+    expect(pointsForStreak(6)).toBe(2);
+    expect(pointsForStreak(10)).toBe(2);
+    expect(pointsForStreak(11)).toBe(3);
+    expect(pointsForStreak(20)).toBe(3);
+    expect(pointsForStreak(21)).toBe(4);
+    expect(pointsForStreak(50)).toBe(4);
+    expect(pointsForStreak(51)).toBe(5);
+    expect(pointsForStreak(200)).toBe(5);
   });
 });
 
