@@ -13,6 +13,7 @@ import {
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
 const TOTAL_STAGES = 12;
 
@@ -52,6 +53,7 @@ export class GameScene extends Phaser.Scene {
     this.buildReportScreen();
     this.buildFinalScreen();
     this.showTitle();
+    if (isTouchDevice(this)) buildOrientationWarning(this);
   }
 
   // ---------- タイトル ----------

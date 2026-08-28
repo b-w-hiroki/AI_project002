@@ -16,6 +16,7 @@ import {
 import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha";
 import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
 const ROUND_TIME_SEC = 60;
 const BEAT_COOLDOWN_MS = 380;
@@ -67,6 +68,7 @@ export class GameScene extends Phaser.Scene {
     this.buildResultScreen();
     this.buildGachaScreen();
     this.showTitle();
+    if (isTouchDevice(this)) buildOrientationWarning(this);
 
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => this.handleKeydown(e));
   }
