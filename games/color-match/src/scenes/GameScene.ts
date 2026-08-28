@@ -1,23 +1,31 @@
 import Phaser from "phaser";
 import {
-  CandidateCard,
+  COLORS,
   Round,
   RoundResult,
   generateRound,
   hexForColorId,
   nameForColorId,
   summarizeSession,
+  timeLimitMsForLevel,
 } from "../logic/round";
 import { loadBestScore, saveBestScore } from "../logic/progress";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
 const ROUNDS_PER_SESSION = 12;
-const FEEDBACK_DELAY_MS = 260;
+const FEEDBACK_DELAY_MS = 320;
+const CARD_W = 150;
+const CARD_H = 96;
+const CARD_HOME_X = 400;
+const CARD_HOME_Y = 190;
+const BOX_W = 118;
+const BOX_H = 70;
 
-interface ChoiceCardView {
+interface TargetBoxView {
+  colorId: string;
   container: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Graphics;
-  card: CandidateCard;
+  bounds: Phaser.Geom.Rectangle;
 }
 
 type Phase = "title" | "playing" | "result";
@@ -30,12 +38,18 @@ export class GameScene extends Phaser.Scene {
   private currentRound: Round | null = null;
   private roundStartedAt = 0;
   private accepting = false;
+  private timeLimitMs = 0;
+  private timeRemainingMs = 0;
 
   private promptCard!: Phaser.GameObjects.Container;
+  private promptBg!: Phaser.GameObjects.Graphics;
   private promptText!: Phaser.GameObjects.Text;
   private judgeModeText!: Phaser.GameObjects.Text;
   private progressText!: Phaser.GameObjects.Text;
-  private choiceViews: ChoiceCardView[] = [];
+  private timerText!: Phaser.GameObjects.Text;
+  private timerBarBg!: Phaser.GameObjects.Graphics;
+  private timerBarFill!: Phaser.GameObjects.Graphics;
+  private targetBoxes: TargetBoxView[] = [];
 
   private titleGroup!: Phaser.GameObjects.Container;
   private resultGroup!: Phaser.GameObjects.Container;
@@ -55,26 +69,38 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown", (e: KeyboardEvent) => this.handleKeydown(e));
   }
 
+  update(_time: number, delta: number): void {
+    if (this.phase !== "playing" || !this.accepting) return;
+    this.timeRemainingMs -= delta;
+    if (this.timeRemainingMs <= 0) {
+      this.timeRemainingMs = 0;
+      this.updateTimerVisual();
+      this.finishRound(null);
+      return;
+    }
+    this.updateTimerVisual();
+  }
+
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 560, 380, { depth: 0 });
+    const panel = drawPanel(this, 400, 300, 580, 400, { depth: 0 });
 
     const title = this.add
-      .text(400, 150, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(400, 140, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const rules = this.add
       .text(
         400,
-        260,
-        "毎回「内容」か「色」どちらかで判定します。\n指示に合うカードをすばやく選んでください。\n意味と色があえて食い違うカードが混じります。",
+        250,
+        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠までカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
     const best = this.add
-      .text(400, 340, `ベストスコア: ${loadBestScore()}`, { ...TYPE.small, color: THEME.textMuted })
+      .text(400, 360, `ベストスコア: ${loadBestScore()}`, { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 400, 400, 180, 48, "スタート", () => this.startSession(), {
+    const startBtn = makeButton(this, 400, 420, 180, 48, "スタート", () => this.startSession(), {
       fontSize: "16px",
     });
 
@@ -86,18 +112,141 @@ export class GameScene extends Phaser.Scene {
     this.playGroup = this.add.container(0, 0);
 
     this.progressText = this.add
-      .text(400, 40, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(400, 30, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
     this.judgeModeText = this.add
-      .text(400, 90, "", { ...TYPE.h2, color: THEME.textPrimary })
+      .text(400, 62, "", { ...TYPE.h2, color: THEME.textPrimary })
       .setOrigin(0.5);
 
-    const promptPanel = drawPanel(this, 400, 180, 220, 90, { depth: 0 });
-    this.promptText = this.add.text(400, 180, "", { ...TYPE.numeric }).setOrigin(0.5);
-    this.promptCard = this.add.container(0, 0, [promptPanel, this.promptText]);
+    this.timerBarBg = this.add.graphics();
+    this.timerBarBg.fillStyle(THEME.panelBorder, 0.4);
+    this.timerBarBg.fillRoundedRect(300, 90, 200, 8, 4);
+    this.timerBarFill = this.add.graphics();
+    this.timerText = this.add
+      .text(400, 112, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5);
 
-    this.playGroup.add([this.progressText, this.judgeModeText, this.promptCard]);
+    this.promptBg = this.add.graphics();
+    this.promptText = this.add.text(0, 0, "", { ...TYPE.numeric }).setOrigin(0.5);
+    this.promptCard = this.add.container(CARD_HOME_X, CARD_HOME_Y, [this.promptBg, this.promptText]);
+    this.promptCard.setSize(CARD_W, CARD_H);
+    this.drawPromptBg(THEME.panelBorder);
+
+    this.buildTargetBoxes();
+
+    this.playGroup.add([
+      this.progressText,
+      this.judgeModeText,
+      this.timerBarBg,
+      this.timerBarFill,
+      this.timerText,
+      this.promptCard,
+    ]);
+
+    this.setupDrag();
+  }
+
+  private buildTargetBoxes(): void {
+    const cols = 3;
+    const gapX = 20;
+    const gapY = 18;
+    const totalW = cols * BOX_W + (cols - 1) * gapX;
+    const startX = 400 - totalW / 2 + BOX_W / 2;
+    const startY = 380;
+
+    COLORS.forEach((color, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (BOX_W + gapX);
+      const y = startY + row * (BOX_H + gapY);
+
+      const bg = this.add.graphics();
+      this.drawTargetBox(bg, color.hex, false);
+
+      const label = this.add
+        .text(0, 0, color.name, { ...TYPE.body, fontStyle: "700" })
+        .setOrigin(0.5)
+        .setColor(hexToCss(color.hex));
+
+      const container = this.add.container(x, y, [bg, label]).setSize(BOX_W, BOX_H);
+      this.playGroup.add(container);
+
+      this.targetBoxes.push({
+        colorId: color.id,
+        container,
+        bg,
+        bounds: new Phaser.Geom.Rectangle(x - BOX_W / 2, y - BOX_H / 2, BOX_W, BOX_H),
+      });
+    });
+  }
+
+  private drawTargetBox(g: Phaser.GameObjects.Graphics, colorHex: number, highlight: boolean): void {
+    g.clear();
+    g.fillStyle(colorHex, highlight ? 0.28 : 0.12);
+    g.fillRoundedRect(-BOX_W / 2, -BOX_H / 2, BOX_W, BOX_H, 12);
+    g.lineStyle(highlight ? 3 : 2, colorHex, highlight ? 1 : 0.6);
+    g.strokeRoundedRect(-BOX_W / 2, -BOX_H / 2, BOX_W, BOX_H, 12);
+  }
+
+  private drawPromptBg(borderColor: number | string): void {
+    this.promptBg.clear();
+    this.promptBg.fillStyle(THEME.panelFill, 0.98);
+    this.promptBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
+    this.promptBg.lineStyle(2.5, typeof borderColor === "number" ? borderColor : THEME.panelBorder, 0.9);
+    this.promptBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
+  }
+
+  private setupDrag(): void {
+    this.promptCard.setInteractive({ useHandCursor: true, draggable: true });
+    this.input.setDraggable(this.promptCard);
+
+    this.promptCard.on("dragstart", () => {
+      if (!this.accepting) return;
+      this.promptCard.setDepth(10);
+      // ドラッグ中は半透明にして、下に隠れる枠のホバー表示が見えるようにする
+      this.promptCard.setAlpha(0.7);
+    });
+
+    this.promptCard.on(
+      "drag",
+      (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+        if (!this.accepting) return;
+        this.promptCard.setPosition(dragX, dragY);
+        this.updateHoverHighlight(dragX, dragY);
+      },
+    );
+
+    this.promptCard.on("dragend", (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      if (!this.accepting) return;
+      const dropped = this.targetBoxes.find((box) => box.bounds.contains(dragX, dragY));
+      this.clearHoverHighlight();
+      this.promptCard.setAlpha(1);
+      if (dropped) {
+        this.finishRound(dropped.colorId);
+      } else {
+        this.tweens.add({
+          targets: this.promptCard,
+          x: CARD_HOME_X,
+          y: CARD_HOME_Y,
+          duration: 180,
+          ease: "Back.easeOut",
+        });
+      }
+    });
+  }
+
+  private updateHoverHighlight(x: number, y: number): void {
+    for (const box of this.targetBoxes) {
+      const hovering = box.bounds.contains(x, y);
+      this.drawTargetBox(box.bg, hexForColorId(box.colorId), hovering);
+    }
+  }
+
+  private clearHoverHighlight(): void {
+    for (const box of this.targetBoxes) {
+      this.drawTargetBox(box.bg, hexForColorId(box.colorId), false);
+    }
   }
 
   private buildResultScreen(): void {
@@ -150,93 +299,64 @@ export class GameScene extends Phaser.Scene {
       this.endSession();
       return;
     }
-    this.clearChoiceViews();
-    const round = generateRound(this.level);
+    const round = generateRound();
     this.currentRound = round;
+    this.timeLimitMs = timeLimitMsForLevel(this.level);
+    this.timeRemainingMs = this.timeLimitMs;
     this.level += 1;
     this.roundIndex += 1;
     this.accepting = true;
 
     this.progressText.setText(`ラウンド ${this.roundIndex} / ${ROUNDS_PER_SESSION}`);
     this.judgeModeText.setText(
-      round.judgeMode === "content" ? "文字の「内容」に合うカードを選べ" : "文字の「色」に合うカードを選べ",
+      round.judgeMode === "content" ? "文字の「内容」に合う枠へドラッグ" : "文字の「色」に合う枠へドラッグ",
     );
     this.promptText.setText(nameForColorId(round.promptWord)).setColor(hexToCss(hexForColorId(round.promptInk)));
+    this.drawPromptBg(THEME.panelBorder);
+    this.promptCard.setPosition(CARD_HOME_X, CARD_HOME_Y).setScale(1).setDepth(1).setAlpha(1);
+    this.clearHoverHighlight();
+    this.updateTimerVisual();
 
-    this.renderChoices(round.choices);
     this.roundStartedAt = performance.now();
   }
 
-  private renderChoices(choices: CandidateCard[]): void {
-    const count = choices.length;
-    const cols = count <= 4 ? count : Math.ceil(count / 2);
-    const cardW = 120;
-    const cardH = 80;
-    const gapX = 24;
-    const gapY = 20;
-    const totalW = cols * cardW + (cols - 1) * gapX;
-    const startX = 400 - totalW / 2 + cardW / 2;
-    const startY = 340;
-
-    choices.forEach((card, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + col * (cardW + gapX);
-      const y = startY + row * (cardH + gapY);
-
-      const bg = this.add.graphics();
-      bg.fillStyle(THEME.panelFill, 0.95);
-      bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
-      bg.lineStyle(2, THEME.panelBorder, 0.9);
-      bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
-
-      const label = this.add
-        .text(0, 0, nameForColorId(card.word), { ...TYPE.body, fontStyle: "700" })
-        .setOrigin(0.5)
-        .setColor(hexToCss(hexForColorId(card.ink)));
-
-      const container = this.add.container(x, y, [bg, label]).setSize(cardW, cardH);
-      container.setInteractive({ useHandCursor: true });
-      container.on("pointerdown", () => this.submitAnswer(i, container, bg));
-      this.playGroup.add(container);
-
-      this.choiceViews.push({ container, bg, card });
-    });
-  }
-
-  private clearChoiceViews(): void {
-    for (const view of this.choiceViews) view.container.destroy();
-    this.choiceViews = [];
+  private updateTimerVisual(): void {
+    const ratio = this.timeLimitMs > 0 ? Phaser.Math.Clamp(this.timeRemainingMs / this.timeLimitMs, 0, 1) : 0;
+    this.timerBarFill.clear();
+    const color = ratio < 0.25 ? 0xd1495b : ratio < 0.5 ? 0xd6a71a : 0x3fae6a;
+    this.timerBarFill.fillStyle(color, 0.9);
+    this.timerBarFill.fillRoundedRect(300, 90, 200 * ratio, 8, 4);
+    this.timerText.setText(`残り ${(this.timeRemainingMs / 1000).toFixed(1)}秒`);
   }
 
   private handleKeydown(e: KeyboardEvent): void {
     if (this.phase === "result" && (e.key === "r" || e.key === "R")) {
       this.startSession();
-      return;
-    }
-    if (this.phase !== "playing" || !this.accepting) return;
-    const n = Number(e.key);
-    if (Number.isInteger(n) && n >= 1 && n <= this.choiceViews.length) {
-      const view = this.choiceViews[n - 1]!;
-      this.submitAnswer(n - 1, view.container, view.bg);
     }
   }
 
-  private submitAnswer(index: number, container: Phaser.GameObjects.Container, bg: Phaser.GameObjects.Graphics): void {
+  /** colorId が null ならタイムアウト扱い */
+  private finishRound(colorId: string | null): void {
     if (!this.accepting || !this.currentRound) return;
     this.accepting = false;
     const reactionMs = performance.now() - this.roundStartedAt;
-    const correct = index === this.currentRound.correctIndex;
-    this.results.push({ correct, reactionMs });
+    const timedOut = colorId === null;
+    const correct = !timedOut && colorId === this.currentRound.correctColorId;
+    this.results.push({ correct, timedOut, reactionMs: timedOut ? this.timeLimitMs : reactionMs });
 
-    const cardW = 120;
-    const cardH = 80;
-    bg.clear();
-    bg.fillStyle(correct ? 0x3fae6a : 0xd1495b, 0.25);
-    bg.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
-    bg.lineStyle(3, correct ? 0x3fae6a : 0xd1495b, 1);
-    bg.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 12);
-    this.tweens.add({ targets: container, scale: 1.06, duration: 100, yoyo: true });
+    const feedbackColor = correct ? 0x3fae6a : 0xd1495b;
+    this.drawPromptBg(feedbackColor);
+    if (correct) {
+      this.tweens.add({ targets: this.promptCard, scale: 1.15, duration: 120, yoyo: true });
+    } else {
+      this.cameras.main.shake(120, 0.006);
+      this.tweens.add({
+        targets: this.promptCard,
+        x: CARD_HOME_X,
+        y: CARD_HOME_Y,
+        duration: 120,
+      });
+    }
 
     this.time.delayedCall(FEEDBACK_DELAY_MS, () => this.nextRound());
   }
@@ -244,7 +364,6 @@ export class GameScene extends Phaser.Scene {
   private endSession(): void {
     this.phase = "result";
     this.playGroup.setVisible(false);
-    this.clearChoiceViews();
 
     const summary = summarizeSession(this.results);
     saveBestScore(summary.score);
