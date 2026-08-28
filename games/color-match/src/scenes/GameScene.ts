@@ -5,6 +5,9 @@ import {
   RoundResult,
   TURBO_ENTRY_STREAK,
   TURBO_FAST_MS,
+  WRITING_MODES,
+  WRITING_MODE_LABEL,
+  WritingMode,
   generateRound,
   hexForColorId,
   nameForColorId,
@@ -12,7 +15,14 @@ import {
   summarizeSession,
   timeLimitMsForLevel,
 } from "../logic/round";
-import { loadBestScore, loadBestTurbo, saveBestScore, saveBestTurbo } from "../logic/progress";
+import {
+  loadBestScore,
+  loadBestTurbo,
+  loadWritingMode,
+  saveBestScore,
+  saveBestTurbo,
+  saveWritingMode,
+} from "../logic/progress";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
 const ROUNDS_PER_SESSION = 12;
@@ -21,15 +31,23 @@ const CARD_W = 150;
 const CARD_H = 96;
 const CARD_HOME_X = 400;
 const CARD_HOME_Y = 205;
-const BOX_W = 118;
-const BOX_H = 70;
+const BOX_W = 128;
+const BOX_H = 76;
+const SWATCH_SIZE = 22;
 const TURBO_COLOR = 0xff7a3d;
 
 interface TargetBoxView {
   colorId: string;
   container: Phaser.GameObjects.Container;
   bg: Phaser.GameObjects.Graphics;
+  label: Phaser.GameObjects.Text;
   bounds: Phaser.Geom.Rectangle;
+}
+
+interface ModeButtonView {
+  mode: WritingMode;
+  bg: Phaser.GameObjects.Graphics;
+  container: Phaser.GameObjects.Container;
 }
 
 type Phase = "title" | "playing" | "result";
@@ -46,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   private timeRemainingMs = 0;
   private turboStreak = 0;
   private turboPoints = 0;
+  private writingMode: WritingMode = "hiragana";
 
   private promptCard!: Phaser.GameObjects.Container;
   private promptBg!: Phaser.GameObjects.Graphics;
@@ -57,6 +76,7 @@ export class GameScene extends Phaser.Scene {
   private timerBarFill!: Phaser.GameObjects.Graphics;
   private turboText!: Phaser.GameObjects.Text;
   private targetBoxes: TargetBoxView[] = [];
+  private modeButtons: ModeButtonView[] = [];
 
   private titleGroup!: Phaser.GameObjects.Container;
   private resultGroup!: Phaser.GameObjects.Container;
@@ -68,6 +88,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0xfdf6e3);
+    this.writingMode = loadWritingMode();
     this.buildTitleScreen();
     this.buildPlayScreen();
     this.buildResultScreen();
@@ -90,32 +111,83 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 580, 400, { depth: 0 });
+    const panel = drawPanel(this, 400, 310, 600, 460, { depth: 0 });
 
     const title = this.add
-      .text(400, 140, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(400, 122, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const rules = this.add
       .text(
         400,
-        250,
+        218,
         "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠までカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、獲得ポイントが加速します。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
+
+    const modeLabel = this.add
+      .text(400, 316, "出題の表記", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5);
+    this.titleGroup.add([panel, title, rules, modeLabel]);
+    this.buildWritingModeSelector();
+
     const best = this.add
-      .text(400, 368, `ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`, {
+      .text(400, 390, `ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`, {
         ...TYPE.small,
         color: THEME.textMuted,
       })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 400, 420, 180, 48, "スタート", () => this.startSession(), {
+    const startBtn = makeButton(this, 400, 450, 180, 48, "スタート", () => this.startSession(), {
       fontSize: "16px",
     });
 
-    this.titleGroup.add([panel, title, rules, best, startBtn.container]);
+    this.titleGroup.add([best, startBtn.container]);
     this.titleGroup.setData("bestText", best);
+  }
+
+  private buildWritingModeSelector(): void {
+    const buttonW = 92;
+    const buttonH = 32;
+    const gap = 10;
+    const totalW = WRITING_MODES.length * buttonW + (WRITING_MODES.length - 1) * gap;
+    const startX = 400 - totalW / 2 + buttonW / 2;
+    const y = 350;
+
+    WRITING_MODES.forEach((mode, i) => {
+      const x = startX + i * (buttonW + gap);
+      const bg = this.add.graphics();
+      const label = this.add
+        .text(0, 0, WRITING_MODE_LABEL[mode], { ...TYPE.small, fontStyle: "700" })
+        .setOrigin(0.5);
+      const container = this.add.container(x, y, [bg, label]).setSize(buttonW, buttonH);
+      container.setInteractive({ useHandCursor: true });
+      container.on("pointerdown", () => this.setWritingMode(mode));
+      this.titleGroup.add(container);
+      this.modeButtons.push({ mode, bg, container });
+    });
+
+    this.refreshWritingModeButtons();
+  }
+
+  private setWritingMode(mode: WritingMode): void {
+    this.writingMode = mode;
+    saveWritingMode(mode);
+    this.refreshWritingModeButtons();
+    this.refreshTargetBoxLabels();
+  }
+
+  private refreshWritingModeButtons(): void {
+    const buttonW = 92;
+    const buttonH = 32;
+    for (const view of this.modeButtons) {
+      const selected = view.mode === this.writingMode;
+      view.bg.clear();
+      view.bg.fillStyle(selected ? TURBO_COLOR : THEME.panelFill, selected ? 0.18 : 0.95);
+      view.bg.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
+      view.bg.lineStyle(selected ? 2.5 : 1.5, selected ? TURBO_COLOR : THEME.panelBorder, selected ? 1 : 0.7);
+      view.bg.strokeRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
+    }
   }
 
   private buildPlayScreen(): void {
@@ -180,21 +252,39 @@ export class GameScene extends Phaser.Scene {
       const bg = this.add.graphics();
       this.drawTargetBox(bg, color.hex, false);
 
+      // 淡い背景色だけに頼らず、実際の色を塗った不透明なスウォッチで誤認を防ぐ
+      const swatchX = -BOX_W / 2 + 22;
+      const swatch = this.add.graphics();
+      swatch.fillStyle(color.hex, 1);
+      swatch.fillRoundedRect(swatchX - SWATCH_SIZE / 2, -SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE, 5);
+      swatch.lineStyle(1.5, 0xffffff, 0.9);
+      swatch.strokeRoundedRect(swatchX - SWATCH_SIZE / 2, -SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE, 5);
+
       const label = this.add
-        .text(0, 0, color.name, { ...TYPE.body, fontStyle: "700" })
-        .setOrigin(0.5)
+        .text(swatchX + SWATCH_SIZE / 2 + 10, 0, nameForColorId(color.id, this.writingMode), {
+          ...TYPE.body,
+          fontStyle: "700",
+        })
+        .setOrigin(0, 0.5)
         .setColor(hexToCss(color.hex));
 
-      const container = this.add.container(x, y, [bg, label]).setSize(BOX_W, BOX_H);
+      const container = this.add.container(x, y, [bg, swatch, label]).setSize(BOX_W, BOX_H);
       this.playGroup.add(container);
 
       this.targetBoxes.push({
         colorId: color.id,
         container,
         bg,
+        label,
         bounds: new Phaser.Geom.Rectangle(x - BOX_W / 2, y - BOX_H / 2, BOX_W, BOX_H),
       });
     });
+  }
+
+  private refreshTargetBoxLabels(): void {
+    for (const view of this.targetBoxes) {
+      view.label.setText(nameForColorId(view.colorId, this.writingMode));
+    }
   }
 
   private drawTargetBox(g: Phaser.GameObjects.Graphics, colorHex: number, highlight: boolean): void {
@@ -334,7 +424,11 @@ export class GameScene extends Phaser.Scene {
     this.judgeModeText.setText(
       round.judgeMode === "content" ? "文字の「内容」に合う枠へドラッグ" : "文字の「色」に合う枠へドラッグ",
     );
-    this.promptText.setText(nameForColorId(round.promptWord)).setColor(hexToCss(hexForColorId(round.promptInk)));
+    const word = nameForColorId(round.promptWord, this.writingMode);
+    this.promptText
+      .setText(word)
+      .setFontSize(promptFontSizeFor(word))
+      .setColor(hexToCss(hexForColorId(round.promptInk)));
     this.drawPromptBg(THEME.panelBorder);
     this.promptCard.setPosition(CARD_HOME_X, CARD_HOME_Y).setScale(1).setDepth(1).setAlpha(1);
     this.clearHoverHighlight();
@@ -451,4 +545,11 @@ export class GameScene extends Phaser.Scene {
 
 function hexToCss(hex: number): string {
   return `#${hex.toString(16).padStart(6, "0")}`;
+}
+
+/** 英語表記など長い文字列でもカードからはみ出さないよう文字数に応じて縮小する */
+function promptFontSizeFor(text: string): number {
+  if (text.length <= 4) return 40;
+  if (text.length === 5) return 34;
+  return 28;
 }

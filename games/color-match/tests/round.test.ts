@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   generateRound,
+  nameForColorId,
   pointsForStreak,
   scoreRound,
   summarizeSession,
@@ -55,6 +56,16 @@ describe("scoreRound", () => {
     const fast = scoreRound({ correct: true, timedOut: false, reactionMs: 300 });
     const slow = scoreRound({ correct: true, timedOut: false, reactionMs: 2000 });
     expect(fast).toBeGreaterThan(slow);
+  });
+});
+
+describe("nameForColorId", () => {
+  it("表記モードごとに正しい名前を返す（デフォルトはひらがな）", () => {
+    expect(nameForColorId("red")).toBe("あか");
+    expect(nameForColorId("red", "hiragana")).toBe("あか");
+    expect(nameForColorId("red", "katakana")).toBe("アカ");
+    expect(nameForColorId("red", "kanji")).toBe("赤");
+    expect(nameForColorId("red", "english")).toBe("RED");
   });
 });
 
