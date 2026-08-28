@@ -31,9 +31,8 @@ const CARD_W = 150;
 const CARD_H = 96;
 const CARD_HOME_X = 400;
 const CARD_HOME_Y = 205;
-const BOX_W = 128;
-const BOX_H = 76;
-const SWATCH_SIZE = 22;
+const BOX_W = 120;
+const BOX_H = 70;
 const TURBO_COLOR = 0xff7a3d;
 
 interface TargetBoxView {
@@ -47,6 +46,7 @@ interface TargetBoxView {
 interface ModeButtonView {
   mode: WritingMode;
   bg: Phaser.GameObjects.Graphics;
+  label: Phaser.GameObjects.Text;
   container: Phaser.GameObjects.Container;
 }
 
@@ -158,13 +158,13 @@ export class GameScene extends Phaser.Scene {
       const x = startX + i * (buttonW + gap);
       const bg = this.add.graphics();
       const label = this.add
-        .text(0, 0, WRITING_MODE_LABEL[mode], { ...TYPE.small, fontStyle: "700" })
+        .text(0, 0, WRITING_MODE_LABEL[mode], { ...TYPE.small, fontStyle: "700", color: THEME.textPrimary })
         .setOrigin(0.5);
       const container = this.add.container(x, y, [bg, label]).setSize(buttonW, buttonH);
       container.setInteractive({ useHandCursor: true });
       container.on("pointerdown", () => this.setWritingMode(mode));
       this.titleGroup.add(container);
-      this.modeButtons.push({ mode, bg, container });
+      this.modeButtons.push({ mode, bg, label, container });
     });
 
     this.refreshWritingModeButtons();
@@ -183,10 +183,11 @@ export class GameScene extends Phaser.Scene {
     for (const view of this.modeButtons) {
       const selected = view.mode === this.writingMode;
       view.bg.clear();
-      view.bg.fillStyle(selected ? TURBO_COLOR : THEME.panelFill, selected ? 0.18 : 0.95);
+      view.bg.fillStyle(selected ? TURBO_COLOR : THEME.panelFill, selected ? 1 : 0.95);
       view.bg.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
       view.bg.lineStyle(selected ? 2.5 : 1.5, selected ? TURBO_COLOR : THEME.panelBorder, selected ? 1 : 0.7);
       view.bg.strokeRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
+      view.label.setColor(selected ? "#ffffff" : THEME.textPrimary);
     }
   }
 
@@ -252,23 +253,15 @@ export class GameScene extends Phaser.Scene {
       const bg = this.add.graphics();
       this.drawTargetBox(bg, color.hex, false);
 
-      // 淡い背景色だけに頼らず、実際の色を塗った不透明なスウォッチで誤認を防ぐ
-      const swatchX = -BOX_W / 2 + 22;
-      const swatch = this.add.graphics();
-      swatch.fillStyle(color.hex, 1);
-      swatch.fillRoundedRect(swatchX - SWATCH_SIZE / 2, -SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE, 5);
-      swatch.lineStyle(1.5, 0xffffff, 0.9);
-      swatch.strokeRoundedRect(swatchX - SWATCH_SIZE / 2, -SWATCH_SIZE / 2, SWATCH_SIZE, SWATCH_SIZE, 5);
-
       const label = this.add
-        .text(swatchX + SWATCH_SIZE / 2 + 10, 0, nameForColorId(color.id, this.writingMode), {
+        .text(0, 0, nameForColorId(color.id, this.writingMode), {
           ...TYPE.body,
           fontStyle: "700",
         })
-        .setOrigin(0, 0.5)
+        .setOrigin(0.5)
         .setColor(hexToCss(color.hex));
 
-      const container = this.add.container(x, y, [bg, swatch, label]).setSize(BOX_W, BOX_H);
+      const container = this.add.container(x, y, [bg, label]).setSize(BOX_W, BOX_H);
       this.playGroup.add(container);
 
       this.targetBoxes.push({
