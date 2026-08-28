@@ -1,8 +1,10 @@
 /**
  * カラーマッチのラウンド生成・採点ロジック（Phaser非依存の純粋関数）。
- * ストループ効果（文字の意味と文字色が矛盾する）を下敷きに、「内容」判定と「色」判定を
- * ラウンドごとに切り替えて出題する。選択肢は正解と同じ属性を持つカードを1枚だけ含み、
- * 他の選択肢はわざと逆の属性（意味は合うが色は違う、など）を混ぜて引っかけにする。
+ * 2011年に作られていた旧試作品（ドラッグ&ドロップでカードを色の枠に仕分ける、
+ * カウントダウンタイマー付きのタイムアタック）をベースに、ストループ効果
+ * （文字の意味と文字色が矛盾する）を使った「内容」判定・「色」判定の複合判定を
+ * 組み合わせた。プロンプトカードの文字内容とインク色をラウンドごとに指示された
+ * 属性で見分け、制限時間内に正しい色の枠へドラッグする。
  */
 
 export interface ColorDef {
@@ -22,21 +24,14 @@ export const COLORS: readonly ColorDef[] = [
 
 export type JudgeMode = "content" | "color";
 
-export interface CandidateCard {
-  /** カードに書かれた文字の内容（色の名前） */
-  word: string;
-  /** カードに書かれた文字のインク色 */
-  ink: string;
-}
-
 export interface Round {
   /** 出題プロンプトの文字内容 */
   promptWord: string;
   /** 出題プロンプトのインク色 */
   promptInk: string;
   judgeMode: JudgeMode;
-  choices: CandidateCard[];
-  correctIndex: number;
+  /** 正解の枠（COLORSのid） */
+  correctColorId: string;
 }
 
 function colorById(id: string): ColorDef {
@@ -51,73 +46,32 @@ function pick<T>(arr: readonly T[], rng: () => number): T {
   return item;
 }
 
-function shuffle<T>(arr: T[], rng: () => number): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    const tmp = a[i]!;
-    a[i] = a[j]!;
-    a[j] = tmp!;
-  }
-  return a;
-}
-
-/** レベルに応じた選択肢の枚数。序盤は少なく、進むほど選択肢が増えて難化する */
-export function choiceCountForLevel(level: number): number {
-  return Math.min(3 + Math.floor(level / 3), 6);
-}
-
 /**
  * ラウンドを生成する。`rng` を差し替え可能にしているのはテストで決定的に検証するため。
- * 選択肢の中で「正解の属性」を持つのは必ず1枚のみになるよう構築する。
+ * 内容とインク色が同じ（矛盾しない）ラウンドも一定確率で混ぜ、
+ * 「常に矛盾する」ことを学習して即答されるのを防ぐ。
  */
-export function generateRound(level: number, rng: () => number = Math.random): Round {
+export function generateRound(rng: () => number = Math.random): Round {
   const promptWordColor = pick(COLORS, rng);
-  const promptInkColor = pick(COLORS, rng);
+  const promptInkColor = rng() < 0.25 ? promptWordColor : pick(COLORS, rng);
   const judgeMode: JudgeMode = rng() < 0.5 ? "content" : "color";
-  const target = judgeMode === "content" ? promptWordColor.id : promptInkColor.id;
-  const count = choiceCountForLevel(level);
-
-  const others = COLORS.filter((c) => c.id !== target);
-  const distractorIds = shuffle(others, rng)
-    .slice(0, count - 1)
-    .map((c) => c.id);
-
-  const choices: CandidateCard[] = [];
-  // 正解カード: 判定対象の属性だけを正解色にし、もう片方の属性はわざと別色にして紛らわしくする
-  const otherAttrForCorrect = pick(
-    others,
-    rng,
-  ).id;
-  if (judgeMode === "content") {
-    choices.push({ word: target, ink: otherAttrForCorrect });
-  } else {
-    choices.push({ word: otherAttrForCorrect, ink: target });
-  }
-
-  for (const distractorId of distractorIds) {
-    // ダミーは判定対象の属性が正解色と一致しないようにしつつ、逆属性を正解色にして引っかけを作る
-    const decoyOtherAttr = rng() < 0.5 ? target : pick(others, rng).id;
-    if (judgeMode === "content") {
-      choices.push({ word: distractorId, ink: decoyOtherAttr });
-    } else {
-      choices.push({ word: decoyOtherAttr, ink: distractorId });
-    }
-  }
-
-  const shuffledChoices = shuffle(
-    choices.map((c, i) => ({ c, i })),
-    rng,
-  );
-  const correctIndex = shuffledChoices.findIndex((entry) => entry.i === 0);
+  const correctColorId = judgeMode === "content" ? promptWordColor.id : promptInkColor.id;
 
   return {
     promptWord: promptWordColor.id,
     promptInk: promptInkColor.id,
     judgeMode,
-    choices: shuffledChoices.map((entry) => entry.c),
-    correctIndex,
+    correctColorId,
   };
+}
+
+const BASE_TIME_LIMIT_MS = 4200;
+const MIN_TIME_LIMIT_MS = 1800;
+const TIME_LIMIT_STEP_MS = 150;
+
+/** レベルが上がるほど制限時間が短くなる（タイムアタック的な難化） */
+export function timeLimitMsForLevel(level: number): number {
+  return Math.max(MIN_TIME_LIMIT_MS, BASE_TIME_LIMIT_MS - level * TIME_LIMIT_STEP_MS);
 }
 
 export function hexForColorId(id: string): number {
@@ -130,6 +84,8 @@ export function nameForColorId(id: string): string {
 
 export interface RoundResult {
   correct: boolean;
+  /** タイムアウトで未回答のまま終わったラウンド */
+  timedOut: boolean;
   reactionMs: number;
 }
 
