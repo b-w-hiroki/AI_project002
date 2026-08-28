@@ -25,14 +25,17 @@ import {
 } from "../logic/progress";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
+/** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
+const CX = 225;
+
 const ROUNDS_PER_SESSION = 12;
 const FEEDBACK_DELAY_MS = 320;
-const CARD_W = 150;
-const CARD_H = 96;
-const CARD_HOME_X = 400;
-const CARD_HOME_Y = 205;
-const BOX_W = 120;
-const BOX_H = 70;
+const CARD_W = 160;
+const CARD_H = 100;
+const CARD_HOME_X = CX;
+const CARD_HOME_Y = 260;
+const BOX_W = 160;
+const BOX_H = 80;
 const TURBO_COLOR = 0xff7a3d;
 
 interface TargetBoxView {
@@ -111,34 +114,35 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 310, 600, 460, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
 
     const title = this.add
-      .text(400, 122, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const rules = this.add
       .text(
-        400,
-        218,
-        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠までカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、獲得ポイントが加速します。",
+        CX,
+        260,
+        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠まで\nカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const modeLabel = this.add
-      .text(400, 316, "出題の表記", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 430, "出題の表記", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.titleGroup.add([panel, title, rules, modeLabel]);
     this.buildWritingModeSelector();
 
     const best = this.add
-      .text(400, 390, `ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`, {
+      .text(CX, 580, `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`, {
         ...TYPE.small,
         color: THEME.textMuted,
+        align: "center",
       })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 400, 450, 180, 48, "スタート", () => this.startSession(), {
+    const startBtn = makeButton(this, CX, 670, 260, 52, "スタート", () => this.startSession(), {
       fontSize: "16px",
     });
 
@@ -147,15 +151,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildWritingModeSelector(): void {
-    const buttonW = 92;
-    const buttonH = 32;
-    const gap = 10;
-    const totalW = WRITING_MODES.length * buttonW + (WRITING_MODES.length - 1) * gap;
-    const startX = 400 - totalW / 2 + buttonW / 2;
-    const y = 350;
+    const buttonW = 150;
+    const buttonH = 40;
+    const gapX = 20;
+    const gapY = 12;
+    const cols = 2;
+    const totalW = cols * buttonW + (cols - 1) * gapX;
+    const startX = CX - totalW / 2 + buttonW / 2;
+    const startY = 470;
 
     WRITING_MODES.forEach((mode, i) => {
-      const x = startX + i * (buttonW + gap);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (buttonW + gapX);
+      const y = startY + row * (buttonH + gapY);
+
       const bg = this.add.graphics();
       const label = this.add
         .text(0, 0, WRITING_MODE_LABEL[mode], { ...TYPE.small, fontStyle: "700", color: THEME.textPrimary })
@@ -178,8 +188,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshWritingModeButtons(): void {
-    const buttonW = 92;
-    const buttonH = 32;
+    const buttonW = 150;
+    const buttonH = 40;
     for (const view of this.modeButtons) {
       const selected = view.mode === this.writingMode;
       view.bg.clear();
@@ -195,23 +205,23 @@ export class GameScene extends Phaser.Scene {
     this.playGroup = this.add.container(0, 0);
 
     this.progressText = this.add
-      .text(400, 30, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 40, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
     this.judgeModeText = this.add
-      .text(400, 62, "", { ...TYPE.h2, color: THEME.textPrimary })
+      .text(CX, 80, "", { ...TYPE.h2, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5);
 
     this.timerBarBg = this.add.graphics();
     this.timerBarBg.fillStyle(THEME.panelBorder, 0.4);
-    this.timerBarBg.fillRoundedRect(300, 90, 200, 8, 4);
+    this.timerBarBg.fillRoundedRect(CX - 130, 130, 260, 8, 4);
     this.timerBarFill = this.add.graphics();
     this.timerText = this.add
-      .text(400, 112, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 155, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
     this.turboText = this.add
-      .text(400, 134, "", { ...TYPE.body, color: hexToCss(TURBO_COLOR), fontStyle: "800" })
+      .text(CX, 185, "", { ...TYPE.body, color: hexToCss(TURBO_COLOR), fontStyle: "800" })
       .setOrigin(0.5)
       .setVisible(false);
 
@@ -237,12 +247,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildTargetBoxes(): void {
-    const cols = 3;
+    const cols = 2;
     const gapX = 20;
-    const gapY = 18;
+    const gapY = 16;
     const totalW = cols * BOX_W + (cols - 1) * gapX;
-    const startX = 400 - totalW / 2 + BOX_W / 2;
-    const startY = 380;
+    const startX = CX - totalW / 2 + BOX_W / 2;
+    const startY = 430;
 
     COLORS.forEach((color, i) => {
       const col = i % cols;
@@ -354,22 +364,22 @@ export class GameScene extends Phaser.Scene {
 
   private buildResultScreen(): void {
     this.resultGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 480, 340, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 380, 460, { depth: 0 });
 
     const heading = this.add
-      .text(400, 170, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5)
       .setName("heading");
     const stats = this.add
-      .text(400, 260, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 350, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("stats");
     const bestLine = this.add
-      .text(400, 320, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 430, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("bestLine");
 
-    const retryBtn = makeButton(this, 400, 400, 200, 48, "もう一度あそぶ (R)", () => this.startSession(), {
+    const retryBtn = makeButton(this, CX, 510, 280, 52, "もう一度あそぶ (R)", () => this.startSession(), {
       fontSize: "15px",
     });
 
@@ -383,7 +393,7 @@ export class GameScene extends Phaser.Scene {
     this.playGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
-    bestText.setText(`ベストスコア: ${loadBestScore()}  ベストターボ: ${loadBestTurbo()}pt`);
+    bestText.setText(`ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`);
   }
 
   private startSession(): void {
@@ -415,7 +425,7 @@ export class GameScene extends Phaser.Scene {
 
     this.progressText.setText(`ラウンド ${this.roundIndex} / ${ROUNDS_PER_SESSION}`);
     this.judgeModeText.setText(
-      round.judgeMode === "content" ? "文字の「内容」に合う枠へドラッグ" : "文字の「色」に合う枠へドラッグ",
+      round.judgeMode === "content" ? "文字の「内容」に合う枠へ\nドラッグ" : "文字の「色」に合う枠へ\nドラッグ",
     );
     const word = nameForColorId(round.promptWord, this.writingMode);
     this.promptText
@@ -435,7 +445,7 @@ export class GameScene extends Phaser.Scene {
     this.timerBarFill.clear();
     const color = ratio < 0.25 ? 0xd1495b : ratio < 0.5 ? 0xd6a71a : 0x3fae6a;
     this.timerBarFill.fillStyle(color, 0.9);
-    this.timerBarFill.fillRoundedRect(300, 90, 200 * ratio, 8, 4);
+    this.timerBarFill.fillRoundedRect(CX - 130, 130, 260 * ratio, 8, 4);
     this.timerText.setText(`残り ${(this.timeRemainingMs / 1000).toFixed(1)}秒`);
   }
 
@@ -528,9 +538,9 @@ export class GameScene extends Phaser.Scene {
 
     heading.setText(`スコア ${summary.score}`);
     stats.setText(
-      `正答率: ${Math.round(summary.accuracy * 100)}%  平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
+      `正答率: ${Math.round(summary.accuracy * 100)}%\n平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
     );
-    bestLine.setText(`ベストスコア: ${best}  ベストターボ: ${bestTurbo}pt`);
+    bestLine.setText(`ベストスコア: ${best}\nベストターボ: ${bestTurbo}pt`);
 
     this.resultGroup.setVisible(true);
   }

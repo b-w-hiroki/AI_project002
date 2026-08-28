@@ -13,9 +13,10 @@ import {
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
-import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
 const TOTAL_STAGES = 12;
+/** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
+const CX = 225;
 
 type Phase = "title" | "karma" | "battle" | "report" | "final";
 
@@ -53,32 +54,31 @@ export class GameScene extends Phaser.Scene {
     this.buildReportScreen();
     this.buildFinalScreen();
     this.showTitle();
-    if (isTouchDevice(this)) buildOrientationWarning(this);
   }
 
   // ---------- タイトル ----------
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 600, 420, { depth: 0 });
+    const panel = drawPanel(this, CX, 380, 400, 600, { depth: 0 });
 
     const title = this.add
-      .text(400, 130, "カルマクエスト", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, "カルマクエスト", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const rules = this.add
       .text(
-        400,
-        230,
-        "勇者を育て、討伐に送り出し、神様に戦果を報告する。\n派閥の要望に応えるとカルマが傾き、勇者の力が変化する。\n報告は良い場面だけを選ぶのがコツ、悪い場面まで報告すると評価が下がる。\n12回の討伐（3年分）を乗り越えて、最強の勇者伝説を作ろう！",
+        CX,
+        280,
+        "勇者を育て、討伐に送り出し、\n神様に戦果を報告する。\n\n派閥の要望に応えると\nカルマが傾き、勇者の力が変化する。\n\n報告は良い場面だけを選ぶのがコツ、\n悪い場面まで報告すると評価が下がる。\n\n12回の討伐（3年分）を乗り越えて、\n最強の勇者伝説を作ろう！",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const best = this.add
-      .text(400, 350, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 480, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 400, 420, 200, 48, "旅を始める", () => this.startRun(), {
+    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => this.startRun(), {
       fontSize: "16px",
     });
 
@@ -94,7 +94,7 @@ export class GameScene extends Phaser.Scene {
     this.reportGroup.setVisible(false);
     this.finalGroup.setVisible(false);
     const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
-    bestText.setText(`最高到達: ${loadBestStage()}回目  累計評価: ${loadTotalEvaluation()}`);
+    bestText.setText(`最高到達: ${loadBestStage()}回目\n累計評価: ${loadTotalEvaluation()}`);
   }
 
   private startRun(): void {
@@ -119,25 +119,30 @@ export class GameScene extends Phaser.Scene {
 
   private buildKarmaScreen(): void {
     this.karmaGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 600, 340, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 480, { depth: 0 });
 
     const progress = this.add
-      .text(400, 150, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 210, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("progress");
     const factionLabel = this.add
-      .text(400, 190, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 260, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
       .setOrigin(0.5)
       .setName("factionLabel");
     const requestText = this.add
-      .text(400, 240, "", { ...TYPE.body, color: THEME.textPrimary, align: "center", wordWrap: { width: 480 } })
+      .text(CX, 340, "", {
+        ...TYPE.body,
+        color: THEME.textPrimary,
+        align: "center",
+        wordWrap: { width: 340, useAdvancedWrap: true },
+      })
       .setOrigin(0.5)
       .setName("requestText");
 
-    const acceptBtn = makeButton(this, 300, 330, 200, 48, "力を貸す", () => this.onKarmaChoice(true), {
-      fontSize: "15px",
+    const acceptBtn = makeButton(this, CX, 500, 320, 52, "力を貸す", () => this.onKarmaChoice(true), {
+      fontSize: "16px",
     });
-    const declineBtn = makeButton(this, 500, 330, 200, 48, "断る", () => this.onKarmaChoice(false), {
+    const declineBtn = makeButton(this, CX, 570, 320, 48, "断る", () => this.onKarmaChoice(false), {
       fontSize: "15px",
     });
 
@@ -171,18 +176,18 @@ export class GameScene extends Phaser.Scene {
 
   private buildBattleScreen(): void {
     this.battleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 600, 340, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 400, { depth: 0 });
 
     const heading = this.add
-      .text(400, 190, "討伐へ出発！", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 300, "討伐へ出発！", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5)
       .setName("battleHeading");
     const statsText = this.add
-      .text(400, 250, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 400, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("battleStats");
     const resultText = this.add
-      .text(400, 310, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 470, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
       .setOrigin(0.5)
       .setName("battleResult");
 
@@ -201,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     const resultText = this.battleGroup.getByName("battleResult") as Phaser.GameObjects.Text;
 
     heading.setText("討伐中…");
-    statsText.setText(`ATK ${stats.atk}  DEF ${stats.def}  HP ${stats.hp}  MAGIC ${stats.magic}`);
+    statsText.setText(`ATK ${stats.atk}  DEF ${stats.def}\nHP ${stats.hp}  MAGIC ${stats.magic}`);
     resultText.setText("");
 
     this.time.delayedCall(600, () => {
@@ -217,19 +222,20 @@ export class GameScene extends Phaser.Scene {
 
   private buildReportScreen(): void {
     this.reportGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 600, 400, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
 
     const heading = this.add
-      .text(400, 130, "神様への報告", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, "神様への報告", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
-      .text(400, 165, "良い場面だけを選んで報告しよう（悪い場面は評価を下げる）", {
+      .text(CX, 155, "良い場面だけを選んで報告しよう\n（悪い場面は評価を下げる）", {
         ...TYPE.small,
         color: THEME.textMuted,
+        align: "center",
       })
       .setOrigin(0.5);
 
-    const submitBtn = makeButton(this, 400, 450, 220, 48, "報告する", () => this.onSubmitReport(), {
+    const submitBtn = makeButton(this, CX, 680, 260, 52, "報告する", () => this.onSubmitReport(), {
       fontSize: "16px",
     });
 
@@ -244,16 +250,20 @@ export class GameScene extends Phaser.Scene {
     this.clearHighlightRows();
 
     const highlights = rollHighlights(result);
-    const rowH = 46;
-    const startY = 210;
+    const rowH = 56;
+    const startY = 250;
     highlights.forEach((highlight, i) => {
-      const y = startY + i * (rowH + 8);
+      const y = startY + i * (rowH + 12);
       const bg = this.add.graphics();
       const label = this.add
-        .text(0, 0, highlight.label, { ...TYPE.body, color: THEME.textPrimary })
-        .setOrigin(0, 0.5)
-        .setPosition(-260, 0);
-      const container = this.add.container(400, y, [bg, label]).setSize(560, rowH);
+        .text(0, 0, highlight.label, {
+          ...TYPE.body,
+          color: THEME.textPrimary,
+          align: "center",
+          wordWrap: { width: 320, useAdvancedWrap: true },
+        })
+        .setOrigin(0.5);
+      const container = this.add.container(CX, y, [bg, label]).setSize(360, rowH);
       container.setInteractive({ useHandCursor: true });
 
       const row: HighlightRow = { highlight, container, bg, selected: false };
@@ -269,8 +279,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawHighlightRow(row: HighlightRow): void {
-    const w = 560;
-    const h = 46;
+    const w = 360;
+    const h = 56;
     row.bg.clear();
     row.bg.fillStyle(row.selected ? THEME.accent : THEME.panelFill, row.selected ? 0.3 : 0.6);
     row.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8);
@@ -296,21 +306,21 @@ export class GameScene extends Phaser.Scene {
 
   private buildFinalScreen(): void {
     this.finalGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 380, 460, { depth: 0 });
 
     const heading = this.add
-      .text(400, 220, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5)
       .setName("finalHeading");
     const stats = this.add
-      .text(400, 270, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 350, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("finalStats");
 
-    const retryBtn = makeButton(this, 400, 350, 200, 48, "もう一度旅に出る", () => this.startRun(), {
+    const retryBtn = makeButton(this, CX, 470, 300, 52, "もう一度旅に出る", () => this.startRun(), {
       fontSize: "15px",
     });
-    const titleBtn = makeButton(this, 400, 410, 200, 44, "タイトルへ戻る", () => this.showTitle(), {
+    const titleBtn = makeButton(this, CX, 540, 300, 46, "タイトルへ戻る", () => this.showTitle(), {
       fontSize: "14px",
     });
 
