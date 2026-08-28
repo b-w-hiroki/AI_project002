@@ -33,6 +33,7 @@ jobs:
             games/side-scroller/package-lock.json
             games/color-match/package-lock.json
             games/fist-legend/package-lock.json
+            games/karma-quest/package-lock.json
 
       # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
@@ -82,6 +83,18 @@ jobs:
       - run: npm run build
         working-directory: games/fist-legend
 
+      # カルマクエスト（/karma-quest/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/karma-quest
+      - run: npm run lint
+        working-directory: games/karma-quest
+      - run: npm run typecheck
+        working-directory: games/karma-quest
+      - run: npm test
+        working-directory: games/karma-quest
+      - run: npm run build
+        working-directory: games/karma-quest
+
       # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
           mkdir -p dist
@@ -94,6 +107,8 @@ jobs:
           cp -r games/color-match/dist/. dist/color-match/
           mkdir -p dist/fist-legend
           cp -r games/fist-legend/dist/. dist/fist-legend/
+          mkdir -p dist/karma-quest
+          cp -r games/karma-quest/dist/. dist/karma-quest/
 
       - uses: actions/configure-pages@v5
         with:

@@ -12,5 +12,6 @@ AIフル活用でゲーム開発
 | ⚔️ 剣戟の森 | 剣で敵を倒す横スクロールアクション | https://b-w-hiroki.github.io/AI_project002/side-scroller/ | `games/side-scroller/` |
 | 🎴 カラーマッチ | 文字の内容・色とカードを素早く一致させる認知力・反応速度ゲーム | https://b-w-hiroki.github.io/AI_project002/color-match/ | `games/color-match/` |
 | 👊 覇拳伝 | 拳・蹴・気の3ボタンとじゃんけん相性、奥義ゲージで戦う格闘バトル | https://b-w-hiroki.github.io/AI_project002/fist-legend/ | `games/fist-legend/` |
+| 🗡️ カルマクエスト | カルマ育成×討伐×神様への報告のサイクルで進める育成RPG | https://b-w-hiroki.github.io/AI_project002/karma-quest/ | `games/karma-quest/` |
 
 各ゲームは独立した Phaser + TypeScript + Vite プロジェクト。開発ルールは `CLAUDE.md` を参照。
