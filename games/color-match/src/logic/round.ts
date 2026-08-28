@@ -7,19 +7,55 @@
  * 属性で見分け、制限時間内に正しい色の枠へドラッグする。
  */
 
+/** 出題文字の表記モード。ひらがな以外は読解負荷を上げるための難易度バリエーション */
+export type WritingMode = "hiragana" | "katakana" | "kanji" | "english";
+
+export const WRITING_MODES: readonly WritingMode[] = ["hiragana", "katakana", "kanji", "english"] as const;
+
+export const WRITING_MODE_LABEL: Readonly<Record<WritingMode, string>> = {
+  hiragana: "ひらがな",
+  katakana: "カタカナ",
+  kanji: "漢字",
+  english: "English",
+};
+
 export interface ColorDef {
   id: string;
-  name: string;
+  names: Readonly<Record<WritingMode, string>>;
   hex: number;
 }
 
 export const COLORS: readonly ColorDef[] = [
-  { id: "red", name: "あか", hex: 0xe0447a },
-  { id: "blue", name: "あお", hex: 0x2f8fd1 },
-  { id: "green", name: "みどり", hex: 0x1f8a63 },
-  { id: "yellow", name: "きいろ", hex: 0xd6a71a },
-  { id: "purple", name: "むらさき", hex: 0x8a4fd1 },
-  { id: "orange", name: "だいだい", hex: 0xd97a2b },
+  {
+    id: "red",
+    names: { hiragana: "あか", katakana: "アカ", kanji: "赤", english: "RED" },
+    hex: 0xe0447a,
+  },
+  {
+    id: "blue",
+    names: { hiragana: "あお", katakana: "アオ", kanji: "青", english: "BLUE" },
+    hex: 0x2f8fd1,
+  },
+  {
+    id: "green",
+    names: { hiragana: "みどり", katakana: "ミドリ", kanji: "緑", english: "GREEN" },
+    hex: 0x1f8a63,
+  },
+  {
+    id: "yellow",
+    names: { hiragana: "きいろ", katakana: "キイロ", kanji: "黄", english: "YELLOW" },
+    hex: 0xd6a71a,
+  },
+  {
+    id: "purple",
+    names: { hiragana: "むらさき", katakana: "ムラサキ", kanji: "紫", english: "PURPLE" },
+    hex: 0x8a4fd1,
+  },
+  {
+    id: "orange",
+    names: { hiragana: "だいだい", katakana: "ダイダイ", kanji: "橙", english: "ORANGE" },
+    hex: 0xd97a2b,
+  },
 ] as const;
 
 export type JudgeMode = "content" | "color";
@@ -78,8 +114,8 @@ export function hexForColorId(id: string): number {
   return colorById(id).hex;
 }
 
-export function nameForColorId(id: string): string {
-  return colorById(id).name;
+export function nameForColorId(id: string, mode: WritingMode = "hiragana"): string {
+  return colorById(id).names[mode];
 }
 
 export interface RoundResult {
@@ -94,6 +130,23 @@ export function scoreRound(result: RoundResult): number {
   if (!result.correct) return 0;
   const speedBonus = Math.max(0, 100 - result.reactionMs / 20);
   return Math.round(40 + speedBonus * 0.6);
+}
+
+/** この時間内に正解し続けると「ターボモード」の連続判定として数える */
+export const TURBO_FAST_MS = 1000;
+/** 連続数がこの値に達すると画面上でターボモードに突入したと表示する */
+export const TURBO_ENTRY_STREAK = 5;
+
+/**
+ * 連続ターボ正解数に応じた1回あたりの獲得ポイント。
+ * ユーザー指定の段階表: 1〜5回=1pt、6〜10回=2pt、11〜20回=3pt、21〜50回=4pt、51回〜=5pt。
+ */
+export function pointsForStreak(streak: number): number {
+  if (streak <= 5) return 1;
+  if (streak <= 10) return 2;
+  if (streak <= 20) return 3;
+  if (streak <= 50) return 4;
+  return 5;
 }
 
 export interface SessionSummary {
