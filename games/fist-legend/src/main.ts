@@ -4,9 +4,9 @@ import { GameScene } from "./scenes/GameScene";
 new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game",
-  width: 450,
-  height: 800,
-  backgroundColor: "#fdf6e3",
+  width: 800,
+  height: 600,
+  backgroundColor: "#1a1410",
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

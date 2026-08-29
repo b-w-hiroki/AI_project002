@@ -32,6 +32,9 @@ jobs:
             games/potion-workshop/package-lock.json
             games/side-scroller/package-lock.json
             games/color-match/package-lock.json
+            games/fist-legend/package-lock.json
+            games/karma-quest/package-lock.json
+            games/sangoku-tap/package-lock.json
 
       # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
@@ -69,6 +72,42 @@ jobs:
       - run: npm run build
         working-directory: games/color-match
 
+      # 覇拳伝（/fist-legend/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/fist-legend
+      - run: npm run lint
+        working-directory: games/fist-legend
+      - run: npm run typecheck
+        working-directory: games/fist-legend
+      - run: npm test
+        working-directory: games/fist-legend
+      - run: npm run build
+        working-directory: games/fist-legend
+
+      # カルマクエスト（/karma-quest/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/karma-quest
+      - run: npm run lint
+        working-directory: games/karma-quest
+      - run: npm run typecheck
+        working-directory: games/karma-quest
+      - run: npm test
+        working-directory: games/karma-quest
+      - run: npm run build
+        working-directory: games/karma-quest
+
+      # 三国ポチポチ（/sangoku-tap/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/sangoku-tap
+      - run: npm run lint
+        working-directory: games/sangoku-tap
+      - run: npm run typecheck
+        working-directory: games/sangoku-tap
+      - run: npm test
+        working-directory: games/sangoku-tap
+      - run: npm run build
+        working-directory: games/sangoku-tap
+
       # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
           mkdir -p dist
@@ -79,6 +118,12 @@ jobs:
           cp -r games/side-scroller/dist/. dist/side-scroller/
           mkdir -p dist/color-match
           cp -r games/color-match/dist/. dist/color-match/
+          mkdir -p dist/fist-legend
+          cp -r games/fist-legend/dist/. dist/fist-legend/
+          mkdir -p dist/karma-quest
+          cp -r games/karma-quest/dist/. dist/karma-quest/
+          mkdir -p dist/sangoku-tap
+          cp -r games/sangoku-tap/dist/. dist/sangoku-tap/
 
       - uses: actions/configure-pages@v5
         with:
