@@ -1,10 +1,13 @@
-/** ゲーム内通貨・最高進撃距離・所持装備の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
+/** ゲーム内通貨・最高進撃距離・所持装備・所持武将・装着状態の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
 
 import { EquipRarity } from "./breeding";
+import { EquippedMap, OwnedGenerals, emptyEquipped, emptyRoster } from "./roster";
 
 const CURRENCY_KEY = "sangoku_tap_currency_v1";
 const BEST_DISTANCE_KEY = "sangoku_tap_best_distance_v1";
 const EQUIPMENT_INVENTORY_KEY = "sangoku_tap_equipment_inventory_v1";
+const OWNED_GENERALS_KEY = "sangoku_tap_owned_generals_v1";
+const EQUIPPED_MAP_KEY = "sangoku_tap_equipped_map_v1";
 
 function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
@@ -67,4 +70,44 @@ export function addEquipment(rarity: EquipRarity): EquipmentInventory {
   inventory[rarity] += 1;
   localStorage.setItem(EQUIPMENT_INVENTORY_KEY, JSON.stringify(inventory));
   return inventory;
+}
+
+/** 装備を1個消費する。所持数が無ければ何もせずfalseを返す */
+export function spendEquipment(rarity: EquipRarity): boolean {
+  const inventory = loadEquipmentInventory();
+  if (inventory[rarity] <= 0) return false;
+  inventory[rarity] -= 1;
+  localStorage.setItem(EQUIPMENT_INVENTORY_KEY, JSON.stringify(inventory));
+  return true;
+}
+
+export function loadOwnedGenerals(): OwnedGenerals {
+  const raw = localStorage.getItem(OWNED_GENERALS_KEY);
+  if (!raw) return emptyRoster();
+  try {
+    return JSON.parse(raw) as OwnedGenerals;
+  } catch {
+    return emptyRoster();
+  }
+}
+
+export function saveOwnedGeneral(generalId: string): OwnedGenerals {
+  const roster = loadOwnedGenerals();
+  const next = { ...roster, [generalId]: (roster[generalId] ?? 0) + 1 };
+  localStorage.setItem(OWNED_GENERALS_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function loadEquippedMap(): EquippedMap {
+  const raw = localStorage.getItem(EQUIPPED_MAP_KEY);
+  if (!raw) return emptyEquipped();
+  try {
+    return JSON.parse(raw) as EquippedMap;
+  } catch {
+    return emptyEquipped();
+  }
+}
+
+export function saveEquippedMap(equipped: EquippedMap): void {
+  localStorage.setItem(EQUIPPED_MAP_KEY, JSON.stringify(equipped));
 }

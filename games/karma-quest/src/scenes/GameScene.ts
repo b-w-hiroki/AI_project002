@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { BattleResult, autoBattle } from "../logic/battle";
+import { Encounter, applyEncounterChoice, rollEncounter, rollEncounterOccurs } from "../logic/encounter";
 import {
   FACTION_LABEL,
   KarmaRequest,
@@ -21,7 +22,7 @@ const BATTLE_CHEER_WINDOW_MS = 1800;
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
 
-type Phase = "title" | "karma" | "battle" | "report" | "final";
+type Phase = "title" | "karma" | "encounter" | "battle" | "report" | "final";
 
 interface HighlightRow {
   highlight: Highlight;
@@ -36,6 +37,8 @@ export class GameScene extends Phaser.Scene {
   private karma: KarmaState = initialKarma();
   private runEvaluation = 0;
   private currentRequest: KarmaRequest | null = null;
+  private currentEncounter: Encounter | null = null;
+  private encounterBonus = 0;
   private currentBattleResult: BattleResult | null = null;
   private cheerCount = 0;
   private highlightRows: HighlightRow[] = [];
@@ -45,6 +48,7 @@ export class GameScene extends Phaser.Scene {
 
   private titleGroup!: Phaser.GameObjects.Container;
   private karmaGroup!: Phaser.GameObjects.Container;
+  private encounterGroup!: Phaser.GameObjects.Container;
   private battleGroup!: Phaser.GameObjects.Container;
   private reportGroup!: Phaser.GameObjects.Container;
   private finalGroup!: Phaser.GameObjects.Container;
@@ -57,6 +61,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x14201c);
     this.buildTitleScreen();
     this.buildKarmaScreen();
+    this.buildEncounterScreen();
     this.buildBattleScreen();
     this.buildReportScreen();
     this.buildFinalScreen();
@@ -114,6 +119,7 @@ export class GameScene extends Phaser.Scene {
     this.phase = "title";
     this.titleGroup.setVisible(true);
     this.karmaGroup.setVisible(false);
+    this.encounterGroup.setVisible(false);
     this.battleGroup.setVisible(false);
     this.reportGroup.setVisible(false);
     this.finalGroup.setVisible(false);
@@ -176,6 +182,7 @@ export class GameScene extends Phaser.Scene {
 
   private showKarmaPhase(): void {
     this.phase = "karma";
+    this.encounterGroup.setVisible(false);
     this.battleGroup.setVisible(false);
     this.reportGroup.setVisible(false);
     this.karmaGroup.setVisible(true);
@@ -194,6 +201,68 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "karma" || !this.currentRequest) return;
     this.playSound(accepted ? sfx.karmaUp : sfx.karmaDown);
     this.karma = applyKarmaChoice(this.karma, this.currentRequest, accepted);
+
+    this.encounterBonus = 0;
+    if (rollEncounterOccurs()) {
+      this.showEncounterPhase();
+    } else {
+      this.showBattlePhase();
+    }
+  }
+
+  // ---------- 遭遇イベント ----------
+
+  private buildEncounterScreen(): void {
+    this.encounterGroup = this.add.container(0, 0);
+    const panel = drawPanel(this, CX, 400, 400, 420, { depth: 0 });
+
+    const heading = this.add
+      .text(CX, 260, "道中の出来事", { ...TYPE.h1, color: THEME.textPrimary })
+      .setOrigin(0.5);
+    const encounterText = this.add
+      .text(CX, 320, "", {
+        ...TYPE.body,
+        color: THEME.textPrimary,
+        align: "center",
+        wordWrap: { width: 340, useAdvancedWrap: true },
+      })
+      .setOrigin(0.5)
+      .setName("encounterText");
+
+    const choiceABtn = makeButton(this, CX, 460, 320, 52, "", () => this.onEncounterChoice("A"), {
+      fontSize: "16px",
+    });
+    const choiceBBtn = makeButton(this, CX, 530, 320, 48, "", () => this.onEncounterChoice("B"), {
+      fontSize: "15px",
+    });
+
+    this.encounterGroup.add([panel, heading, encounterText, choiceABtn.container, choiceBBtn.container]);
+    this.encounterGroup.setData("choiceABtn", choiceABtn);
+    this.encounterGroup.setData("choiceBBtn", choiceBBtn);
+    this.encounterGroup.setVisible(false);
+  }
+
+  private showEncounterPhase(): void {
+    this.phase = "encounter";
+    this.karmaGroup.setVisible(false);
+    this.encounterGroup.setVisible(true);
+
+    this.currentEncounter = rollEncounter();
+    const encounterText = this.encounterGroup.getByName("encounterText") as Phaser.GameObjects.Text;
+    encounterText.setText(this.currentEncounter.text);
+
+    const choiceABtn = this.encounterGroup.getData("choiceABtn") as ReturnType<typeof makeButton>;
+    const choiceBBtn = this.encounterGroup.getData("choiceBBtn") as ReturnType<typeof makeButton>;
+    choiceABtn.setLabel(this.currentEncounter.choiceA.label);
+    choiceBBtn.setLabel(this.currentEncounter.choiceB.label);
+  }
+
+  private onEncounterChoice(slot: "A" | "B"): void {
+    if (this.phase !== "encounter" || !this.currentEncounter) return;
+    const choice = slot === "A" ? this.currentEncounter.choiceA : this.currentEncounter.choiceB;
+    this.playSound(sfx.buttonTap);
+    this.karma = applyEncounterChoice(this.karma, choice);
+    this.encounterBonus = choice.powerBonus;
     this.showBattlePhase();
   }
 
@@ -232,6 +301,7 @@ export class GameScene extends Phaser.Scene {
   private showBattlePhase(): void {
     this.phase = "battle";
     this.karmaGroup.setVisible(false);
+    this.encounterGroup.setVisible(false);
     this.battleGroup.setVisible(true);
 
     const stats = deriveStats(this.karma);
@@ -251,7 +321,7 @@ export class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(BATTLE_CHEER_WINDOW_MS, () => {
       cheerBtn.setEnabled(false);
-      const result = autoBattle(stats, this.stage, Math.random, this.cheerCount);
+      const result = autoBattle(stats, this.stage, Math.random, this.cheerCount, this.encounterBonus);
       this.currentBattleResult = result;
       this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
       heading.setText(result.win ? "魔物を討伐した！" : "退却を余儀なくされた…");

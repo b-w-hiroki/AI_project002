@@ -8,12 +8,14 @@ import {
   MOVE_LABEL,
   OUGI_GAUGE_MAX,
   applyBeat,
+  applyHiddenCommand,
   applyPlayerOugi,
   battleOutcome,
   initialBattleState,
   pickCpuMove,
 } from "../logic/battle";
 import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha";
+import { HIDDEN_COMMAND, MoveEvent, matchesSequence, pushMoveEvent } from "../logic/commandInput";
 import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
 import { sfx } from "../platform/audio";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
@@ -43,6 +45,7 @@ export class GameScene extends Phaser.Scene {
   private timeRemainingSec = ROUND_TIME_SEC;
   private accepting = false;
   private lastOutcome: BattleOutcome | null = null;
+  private moveBuffer: MoveEvent[] = [];
 
   private titleGroup!: Phaser.GameObjects.Container;
   private battleGroup!: Phaser.GameObjects.Container;
@@ -104,7 +107,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         400,
         220,
-        "拳・蹴・気の3ボタンで応酬する格闘バトル。\n拳は気に、気は蹴に、蹴は拳に有利。\n攻撃を当てるほど奥義ゲージが溜まり、\n満タンで必殺の「奥義」を放てる。\n60秒以内にHPを多く残した方が勝利！",
+        "拳・蹴・気の3ボタンで応酬する格闘バトル。\n拳は気に、気は蹴に、蹴は拳に有利。\n攻撃を当てるほど奥義ゲージが溜まり、\n満タンで必殺の「奥義」を放てる。\n拳→拳→拳→気の順で隠しコマンド技も。\n60秒以内にHPを多く残した方が勝利！",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -250,6 +253,7 @@ export class GameScene extends Phaser.Scene {
     this.resultGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
     this.battleGroup.setVisible(true);
+    this.moveBuffer = [];
     this.refreshBattleVisual();
   }
 
@@ -273,6 +277,35 @@ export class GameScene extends Phaser.Scene {
     if (result.enemyDamageDealt > 0) {
       this.spawnDamageText(this.playerSprite.x, this.playerSprite.y - 70, result.enemyDamageDealt, "#6ac9ff");
     }
+    this.refreshBattleVisual();
+
+    this.moveBuffer = pushMoveEvent(this.moveBuffer, move, this.time.now);
+    if (matchesSequence(this.moveBuffer, HIDDEN_COMMAND)) {
+      this.moveBuffer = [];
+      this.triggerHiddenCommand();
+      return;
+    }
+
+    const outcome = battleOutcome(this.battle, false);
+    if (outcome) {
+      this.time.delayedCall(400, () => this.finishBattle(false));
+      return;
+    }
+
+    this.time.delayedCall(BEAT_COOLDOWN_MS, () => {
+      this.accepting = true;
+    });
+  }
+
+  /** 隠しコマンド技（拳→拳→拳→気）。企画書にあった固定コマンドでの技発動を再現 */
+  private triggerHiddenCommand(): void {
+    const before = this.battle.enemyHp;
+    this.battle = applyHiddenCommand(this.battle);
+    const dealt = before - this.battle.enemyHp;
+    this.playSound(sfx.ougi);
+    this.showClash("advantage", "punch", "ki", "隠しコマンド発動！");
+    this.flashHit(this.enemySprite, dealt);
+    if (dealt > 0) this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, dealt, "#ffc94a");
     this.refreshBattleVisual();
 
     const outcome = battleOutcome(this.battle, false);
@@ -307,6 +340,9 @@ export class GameScene extends Phaser.Scene {
       `${MOVE_LABEL[playerMove]} vs ${MOVE_LABEL[enemyMove]} ー ${
         clash === "advantage" ? "有利！" : clash === "disadvantage" ? "不利…" : "相殺！"
       }`;
+    // 同一フレーム内でshowClashが2回呼ばれる場合（通常技の直後に隠しコマンドが発動する等）、
+    // 古いtweenが残ったまま新しいtweenを積むと表示が崩れることがあるため、先に停止させる
+    this.tweens.killTweensOf(this.clashText);
     this.clashText.setText(text).setAlpha(1);
     this.tweens.add({ targets: this.clashText, alpha: 0, delay: 500, duration: 300 });
   }
