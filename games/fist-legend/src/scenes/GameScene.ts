@@ -267,6 +267,12 @@ export class GameScene extends Phaser.Scene {
     this.showClash(result.clash, move, enemyMove);
     this.flashHit(this.enemySprite, result.playerDamageDealt);
     this.flashHit(this.playerSprite, result.enemyDamageDealt);
+    if (result.playerDamageDealt > 0) {
+      this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, result.playerDamageDealt, "#ff8a6a");
+    }
+    if (result.enemyDamageDealt > 0) {
+      this.spawnDamageText(this.playerSprite.x, this.playerSprite.y - 70, result.enemyDamageDealt, "#6ac9ff");
+    }
     this.refreshBattleVisual();
 
     const outcome = battleOutcome(this.battle, false);
@@ -286,6 +292,7 @@ export class GameScene extends Phaser.Scene {
     this.playSound(sfx.ougi);
     this.showClash("advantage", "punch", "punch", "奥義炸裂！");
     this.flashHit(this.enemySprite, 1);
+    this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, 32, "#ffc94a");
     this.refreshBattleVisual();
 
     const outcome = battleOutcome(this.battle, false);
@@ -307,6 +314,26 @@ export class GameScene extends Phaser.Scene {
   private flashHit(sprite: Phaser.GameObjects.Graphics, damage: number): void {
     if (damage <= 0) return;
     this.tweens.add({ targets: sprite, x: sprite.x + (sprite === this.playerSprite ? -8 : 8), duration: 60, yoyo: true });
+  }
+
+  private spawnDamageText(x: number, y: number, damage: number, color: string): void {
+    const obj = this.add
+      .text(x + Phaser.Math.Between(-14, 14), y, `-${damage}`, {
+        fontSize: "20px",
+        color,
+        fontStyle: "800",
+        stroke: "#1a1410",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 40,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => obj.destroy(),
+    });
   }
 
   private refreshBattleVisual(): void {
@@ -439,10 +466,12 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(GACHA_COST);
     const item: GachaItem = drawGacha();
-    this.playSound(item.rarity === "SSR" || item.rarity === "SR" ? sfx.gachaRare : sfx.gachaDraw);
+    const isRare = item.rarity === "SSR" || item.rarity === "SR";
+    this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText(`【${item.rarity}】${item.name}`).setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
-    this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
+    this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
     this.refreshGachaBalance();
   }
 

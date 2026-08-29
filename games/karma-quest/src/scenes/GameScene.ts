@@ -325,7 +325,22 @@ export class GameScene extends Phaser.Scene {
     const evaluation = evaluateReport(selected);
     this.runEvaluation += evaluation;
     addTotalEvaluation(evaluation);
-    this.nextStage();
+    this.spawnFloatingText(CX, 630, `評価 +${evaluation}`, hexToCss(THEME.accent));
+    this.time.delayedCall(500, () => this.nextStage());
+  }
+
+  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    const obj = this.add
+      .text(x, y, text, { fontSize: "20px", color, fontStyle: "800", stroke: "#14201c", strokeThickness: 4 })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 40,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => obj.destroy(),
+    });
   }
 
   // ---------- 最終結果 ----------

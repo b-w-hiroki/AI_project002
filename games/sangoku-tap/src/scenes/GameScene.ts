@@ -123,6 +123,20 @@ export class GameScene extends Phaser.Scene {
     if (this.soundOn) fn();
   }
 
+  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    const obj = this.add
+      .text(x, y, text, { fontSize: "20px", color, fontStyle: "800", stroke: "#2a1a14", strokeThickness: 4 })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 40,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => obj.destroy(),
+    });
+  }
+
   private showTitle(): void {
     this.phase = "title";
     this.titleGroup.setVisible(true);
@@ -195,6 +209,8 @@ export class GameScene extends Phaser.Scene {
     const event: QuestEvent = resolveQuestTap(this.distance, troopLevel);
     if (event.reward > 0) addCurrency(event.reward);
     saveBestDistance(this.distance);
+
+    if (event.reward > 0) this.spawnFloatingText(CX, 370, `+${event.reward}`, hexToCss(THEME.accent));
 
     if (event.type === "encounter") this.playSound(sfx.encounter);
     else if (event.type === "treasure") this.playSound(sfx.treasure);
@@ -269,11 +285,13 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(GACHA_COST);
     const general: General = drawGeneral();
-    this.playSound(general.rarity === "SSR" || general.rarity === "SR" ? sfx.gachaRare : sfx.gachaDraw);
+    const isRare = general.rarity === "SSR" || general.rarity === "SR";
+    this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     resultText
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
-    this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
+    this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
     this.refreshGachaBalance();
   }
 
