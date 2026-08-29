@@ -212,7 +212,7 @@ export class GameScene extends Phaser.Scene {
     if (event.reward > 0) addCurrency(event.reward);
     saveBestDistance(this.distance);
 
-    if (event.reward > 0) this.spawnFloatingText(CX, 370, `+${event.reward}`, hexToCss(THEME.accent));
+    if (event.reward > 0) this.spawnFloatingText(CX, 400, `+${event.reward}`, hexToCss(THEME.accent));
 
     if (event.type === "encounter") this.playSound(sfx.encounter);
     else if (event.type === "treasure") this.playSound(sfx.treasure);
