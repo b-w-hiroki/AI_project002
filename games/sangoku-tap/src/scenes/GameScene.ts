@@ -3,8 +3,10 @@ import { EquipRarity, breedEquipment, breedRateTable, BREED_COST } from "../logi
 import { General, GACHA_COST, canAffordGacha, drawGeneral } from "../logic/general";
 import {
   addCurrency,
+  addEquipment,
   loadBestDistance,
   loadCurrency,
+  loadEquipmentInventory,
   saveBestDistance,
   spendCurrency,
 } from "../logic/progress";
@@ -330,9 +332,13 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 500, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("breedBalance");
+    const inventoryText = this.add
+      .text(CX, 530, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5)
+      .setName("breedInventory");
 
-    const breedBtn = makeButton(this, CX, 570, 260, 52, "合成する", () => this.onBreed(), { fontSize: "16px" });
-    const backBtn = makeButton(this, CX, 640, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
+    const breedBtn = makeButton(this, CX, 590, 260, 52, "合成する", () => this.onBreed(), { fontSize: "16px" });
+    const backBtn = makeButton(this, CX, 655, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
       fontSize: "14px",
     });
 
@@ -345,6 +351,7 @@ export class GameScene extends Phaser.Scene {
       rateText,
       resultText,
       balanceText,
+      inventoryText,
       breedBtn.container,
       backBtn.container,
     ]);
@@ -403,11 +410,18 @@ export class GameScene extends Phaser.Scene {
     resultText.setText("");
     this.refreshBreedRatePreview();
     this.refreshBreedBalance();
+    this.refreshBreedInventory();
   }
 
   private refreshBreedBalance(): void {
     const balanceText = this.breedingGroup.getByName("breedBalance") as Phaser.GameObjects.Text;
     balanceText.setText(`所持コイン: ${loadCurrency()}`);
+  }
+
+  private refreshBreedInventory(): void {
+    const inventoryText = this.breedingGroup.getByName("breedInventory") as Phaser.GameObjects.Text;
+    const inv = loadEquipmentInventory();
+    inventoryText.setText(`所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`);
   }
 
   private onBreed(): void {
@@ -419,10 +433,12 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(BREED_COST);
     const rarity = breedEquipment(this.breedA, this.breedB);
+    addEquipment(rarity);
     this.playSound(sfx.breed);
     resultText.setText(`【${rarity}】装備を入手！`).setColor(hexToCss(RARITY_COLOR[rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
     this.refreshBreedBalance();
+    this.refreshBreedInventory();
   }
 }
 
