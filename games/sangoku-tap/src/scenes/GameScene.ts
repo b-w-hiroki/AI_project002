@@ -3,16 +3,20 @@ import { EquipRarity, breedEquipment, breedRateTable, BREED_COST } from "../logi
 import { General, GACHA_COST, canAffordGacha, drawGeneral } from "../logic/general";
 import {
   addCurrency,
+  addEquipment,
   loadBestDistance,
   loadCurrency,
+  loadEquipmentInventory,
   saveBestDistance,
   spendCurrency,
 } from "../logic/progress";
 import { QuestEvent, resolveQuestTap } from "../logic/quest";
-import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { sfx } from "../platform/audio";
+import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
+const SOUND_PREF_KEY = "sangoku_tap_sound_v1";
 
 const RARITY_COLOR: Readonly<Record<string, number>> = {
   SSR: 0xffc94a,
@@ -41,6 +45,9 @@ export class GameScene extends Phaser.Scene {
   private breedB: EquipRarity = "Common";
   private breedButtonsA: Partial<Record<EquipRarity, ReturnType<typeof makeButton>>> = {};
   private breedButtonsB: Partial<Record<EquipRarity, ReturnType<typeof makeButton>>> = {};
+
+  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundIcon!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("GameScene");
@@ -77,18 +84,59 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 400, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5);
 
-    const questBtn = makeButton(this, CX, 470, 280, 52, "進撃へ出発", () => this.showQuest(), {
+    const questBtn = makeButton(this, CX, 470, 280, 52, "進撃へ出発", () => { this.playSound(sfx.tap); this.showQuest(); }, {
       fontSize: "16px",
     });
-    const gachaBtn = makeButton(this, CX, 540, 280, 48, "武将ガチャ", () => this.showGacha(), {
+    const gachaBtn = makeButton(this, CX, 540, 280, 48, "武将ガチャ", () => { this.playSound(sfx.tap); this.showGacha(); }, {
       fontSize: "15px",
     });
-    const breedBtn = makeButton(this, CX, 600, 280, 48, "装備合成", () => this.showBreeding(), {
+    const breedBtn = makeButton(this, CX, 600, 280, 48, "装備合成", () => { this.playSound(sfx.tap); this.showBreeding(); }, {
       fontSize: "15px",
     });
 
-    this.titleGroup.add([panel, title, rules, best, questBtn.container, gachaBtn.container, breedBtn.container]);
+    this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
+    const soundHit = this.add
+      .rectangle(390, 65, 40, 40, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        this.soundOn = !this.soundOn;
+        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+        this.soundIcon.destroy();
+        this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
+        this.titleGroup.add(this.soundIcon);
+        this.playSound(sfx.tap);
+      });
+
+    this.titleGroup.add([
+      panel,
+      title,
+      rules,
+      best,
+      questBtn.container,
+      gachaBtn.container,
+      breedBtn.container,
+      this.soundIcon,
+      soundHit,
+    ]);
     this.titleGroup.setData("bestText", best);
+  }
+
+  private playSound(fn: () => void): void {
+    if (this.soundOn) fn();
+  }
+
+  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    const obj = this.add
+      .text(x, y, text, { fontSize: "20px", color, fontStyle: "800", stroke: "#2a1a14", strokeThickness: 4 })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 40,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => obj.destroy(),
+    });
   }
 
   private showTitle(): void {
@@ -164,6 +212,12 @@ export class GameScene extends Phaser.Scene {
     if (event.reward > 0) addCurrency(event.reward);
     saveBestDistance(this.distance);
 
+    if (event.reward > 0) this.spawnFloatingText(CX, 370, `+${event.reward}`, hexToCss(THEME.accent));
+
+    if (event.type === "encounter") this.playSound(sfx.encounter);
+    else if (event.type === "treasure") this.playSound(sfx.treasure);
+    else this.playSound(event.won ? sfx.battleWin : sfx.battleLose);
+
     const eventText = this.questGroup.getByName("eventText") as Phaser.GameObjects.Text;
     const rewardText = this.questGroup.getByName("rewardText") as Phaser.GameObjects.Text;
     eventText.setText(event.message);
@@ -233,10 +287,13 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(GACHA_COST);
     const general: General = drawGeneral();
+    const isRare = general.rarity === "SSR" || general.rarity === "SR";
+    this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     resultText
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
-    this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
+    this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
     this.refreshGachaBalance();
   }
 
@@ -275,9 +332,13 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 500, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("breedBalance");
+    const inventoryText = this.add
+      .text(CX, 530, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5)
+      .setName("breedInventory");
 
-    const breedBtn = makeButton(this, CX, 570, 260, 52, "合成する", () => this.onBreed(), { fontSize: "16px" });
-    const backBtn = makeButton(this, CX, 640, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
+    const breedBtn = makeButton(this, CX, 590, 260, 52, "合成する", () => this.onBreed(), { fontSize: "16px" });
+    const backBtn = makeButton(this, CX, 655, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
       fontSize: "14px",
     });
 
@@ -290,6 +351,7 @@ export class GameScene extends Phaser.Scene {
       rateText,
       resultText,
       balanceText,
+      inventoryText,
       breedBtn.container,
       backBtn.container,
     ]);
@@ -348,11 +410,18 @@ export class GameScene extends Phaser.Scene {
     resultText.setText("");
     this.refreshBreedRatePreview();
     this.refreshBreedBalance();
+    this.refreshBreedInventory();
   }
 
   private refreshBreedBalance(): void {
     const balanceText = this.breedingGroup.getByName("breedBalance") as Phaser.GameObjects.Text;
     balanceText.setText(`所持コイン: ${loadCurrency()}`);
+  }
+
+  private refreshBreedInventory(): void {
+    const inventoryText = this.breedingGroup.getByName("breedInventory") as Phaser.GameObjects.Text;
+    const inv = loadEquipmentInventory();
+    inventoryText.setText(`所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`);
   }
 
   private onBreed(): void {
@@ -364,9 +433,12 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(BREED_COST);
     const rarity = breedEquipment(this.breedA, this.breedB);
+    addEquipment(rarity);
+    this.playSound(sfx.breed);
     resultText.setText(`【${rarity}】装備を入手！`).setColor(hexToCss(RARITY_COLOR[rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
     this.refreshBreedBalance();
+    this.refreshBreedInventory();
   }
 }
 

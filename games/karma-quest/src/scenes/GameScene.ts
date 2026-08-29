@@ -12,9 +12,12 @@ import {
 } from "../logic/karma";
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
-import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { sfx } from "../platform/audio";
+import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
+const SOUND_PREF_KEY = "karma_quest_sound_v1";
 const TOTAL_STAGES = 12;
+const BATTLE_CHEER_WINDOW_MS = 1800;
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
 
@@ -34,7 +37,11 @@ export class GameScene extends Phaser.Scene {
   private runEvaluation = 0;
   private currentRequest: KarmaRequest | null = null;
   private currentBattleResult: BattleResult | null = null;
+  private cheerCount = 0;
   private highlightRows: HighlightRow[] = [];
+
+  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundIcon!: Phaser.GameObjects.Graphics;
 
   private titleGroup!: Phaser.GameObjects.Container;
   private karmaGroup!: Phaser.GameObjects.Container;
@@ -78,12 +85,29 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 480, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => this.startRun(), {
+    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => { this.playSound(sfx.buttonTap); this.startRun(); }, {
       fontSize: "16px",
     });
 
-    this.titleGroup.add([panel, title, rules, best, startBtn.container]);
+    this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+    const soundHit = this.add
+      .rectangle(395, 100, 40, 40, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        this.soundOn = !this.soundOn;
+        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+        this.soundIcon.destroy();
+        this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+        this.titleGroup.add(this.soundIcon);
+        this.playSound(sfx.buttonTap);
+      });
+
+    this.titleGroup.add([panel, title, rules, best, startBtn.container, this.soundIcon, soundHit]);
     this.titleGroup.setData("bestText", best);
+  }
+
+  private playSound(fn: () => void): void {
+    if (this.soundOn) fn();
   }
 
   private showTitle(): void {
@@ -168,6 +192,7 @@ export class GameScene extends Phaser.Scene {
 
   private onKarmaChoice(accepted: boolean): void {
     if (this.phase !== "karma" || !this.currentRequest) return;
+    this.playSound(accepted ? sfx.karmaUp : sfx.karmaDown);
     this.karma = applyKarmaChoice(this.karma, this.currentRequest, accepted);
     this.showBattlePhase();
   }
@@ -191,7 +216,16 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("battleResult");
 
-    this.battleGroup.add([panel, heading, statsText, resultText]);
+    const cheerCountText = this.add
+      .text(CX, 520, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5)
+      .setName("cheerCountText");
+    const cheerBtn = makeButton(this, CX, 560, 220, 48, "おうえん！", () => this.onCheerTap(), {
+      fontSize: "16px",
+    });
+
+    this.battleGroup.add([panel, heading, statsText, resultText, cheerCountText, cheerBtn.container]);
+    this.battleGroup.setData("cheerBtn", cheerBtn);
     this.battleGroup.setVisible(false);
   }
 
@@ -209,13 +243,30 @@ export class GameScene extends Phaser.Scene {
     statsText.setText(`ATK ${stats.atk}  DEF ${stats.def}\nHP ${stats.hp}  MAGIC ${stats.magic}`);
     resultText.setText("");
 
-    this.time.delayedCall(600, () => {
-      const result = autoBattle(stats, this.stage);
+    const cheerCountText = this.battleGroup.getByName("cheerCountText") as Phaser.GameObjects.Text;
+    const cheerBtn = this.battleGroup.getData("cheerBtn") as ReturnType<typeof makeButton>;
+    this.cheerCount = 0;
+    cheerCountText.setText("タップして応援しよう！（0回）");
+    cheerBtn.setEnabled(true);
+
+    this.time.delayedCall(BATTLE_CHEER_WINDOW_MS, () => {
+      cheerBtn.setEnabled(false);
+      const result = autoBattle(stats, this.stage, Math.random, this.cheerCount);
       this.currentBattleResult = result;
+      this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
       heading.setText(result.win ? "魔物を討伐した！" : "退却を余儀なくされた…");
       resultText.setText(`残りHP割合: ${Math.round(result.hpRatioRemaining * 100)}%`);
+      cheerCountText.setText(this.cheerCount > 0 ? `おうえん ${this.cheerCount}回！` : "");
       this.time.delayedCall(700, () => this.showReportPhase(result));
     });
+  }
+
+  private onCheerTap(): void {
+    if (this.phase !== "battle") return;
+    this.cheerCount += 1;
+    this.playSound(sfx.buttonTap);
+    const cheerCountText = this.battleGroup.getByName("cheerCountText") as Phaser.GameObjects.Text;
+    cheerCountText.setText(`タップして応援しよう！（${this.cheerCount}回）`);
   }
 
   // ---------- 報告 ----------
@@ -270,6 +321,7 @@ export class GameScene extends Phaser.Scene {
       this.drawHighlightRow(row);
       container.on("pointerdown", () => {
         row.selected = !row.selected;
+        this.playSound(sfx.buttonTap);
         this.drawHighlightRow(row);
       });
 
@@ -295,11 +347,27 @@ export class GameScene extends Phaser.Scene {
 
   private onSubmitReport(): void {
     if (this.phase !== "report") return;
+    this.playSound(sfx.reportSubmit);
     const selected = this.highlightRows.filter((r) => r.selected).map((r) => r.highlight);
     const evaluation = evaluateReport(selected);
     this.runEvaluation += evaluation;
     addTotalEvaluation(evaluation);
-    this.nextStage();
+    this.spawnFloatingText(CX, 630, `評価 +${evaluation}`, hexToCss(THEME.accent));
+    this.time.delayedCall(500, () => this.nextStage());
+  }
+
+  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+    const obj = this.add
+      .text(x, y, text, { fontSize: "20px", color, fontStyle: "800", stroke: "#14201c", strokeThickness: 4 })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: obj,
+      y: y - 40,
+      alpha: 0,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => obj.destroy(),
+    });
   }
 
   // ---------- 最終結果 ----------

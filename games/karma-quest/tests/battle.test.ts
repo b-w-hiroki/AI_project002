@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoBattle, heroPower, monsterPowerForStage } from "../src/logic/battle";
+import { autoBattle, cheerBonus, heroPower, monsterPowerForStage } from "../src/logic/battle";
 
 function sequentialRng(values: number[]): () => number {
   let i = 0;
@@ -52,5 +52,31 @@ describe("autoBattle", () => {
     const a = autoBattle(stats, 4, sequentialRng([0.3, 0.6]));
     const b = autoBattle(stats, 4, sequentialRng([0.3, 0.6]));
     expect(a).toEqual(b);
+  });
+
+  it("おうえん回数が多いほど勝率が上がる（ギリギリの戦況で有意に効く）", () => {
+    const stats = { atk: 12, def: 8, hp: 40, magic: 2 };
+    const withoutCheer = autoBattle(stats, 3, sequentialRng([0.55, 0.5]), 0);
+    const withCheer = autoBattle(stats, 3, sequentialRng([0.55, 0.5]), 10);
+    expect(withoutCheer.win).toBe(false);
+    expect(withCheer.win).toBe(true);
+  });
+});
+
+describe("cheerBonus", () => {
+  it("0回なら上乗せ0", () => {
+    expect(cheerBonus(0)).toBe(0);
+  });
+
+  it("回数が増えるほど上乗せも増える", () => {
+    expect(cheerBonus(5)).toBeGreaterThan(cheerBonus(1));
+  });
+
+  it("上限でクランプされる", () => {
+    expect(cheerBonus(1000)).toBe(cheerBonus(20));
+  });
+
+  it("負の回数は0として扱う", () => {
+    expect(cheerBonus(-5)).toBe(0);
   });
 });

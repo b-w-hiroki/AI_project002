@@ -142,6 +142,48 @@ export function makeButton(
   };
 }
 
+/**
+ * スピーカーアイコンをGraphicsで描画する。🔊/🔇絵文字はヘッドレスChromium環境で
+ * 潰れて表示されることが判明しているため、オリジナル描画に置き換える。
+ * onなら音波を、offなら✕を添えて状態を表す。(x, y) はアイコン中心。
+ */
+export function drawSpeakerIcon(scene: Phaser.Scene, x: number, y: number, on: boolean, size = 16): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  const color = on ? THEME.textPrimary : "#7a6a5a";
+  const c = Phaser.Display.Color.ValueToColor(color).color;
+  g.fillStyle(c, 1);
+  const bodyW = size * 0.28;
+  const bodyH = size * 0.4;
+  g.fillRect(-size / 2, -bodyH / 2, bodyW, bodyH);
+  g.fillTriangle(
+    -size / 2 + bodyW,
+    -bodyH / 2,
+    -size / 2 + bodyW,
+    bodyH / 2,
+    -size / 2 + bodyW + size * 0.32,
+    -size * 0.55,
+  );
+  g.fillTriangle(
+    -size / 2 + bodyW,
+    -bodyH / 2,
+    -size / 2 + bodyW,
+    bodyH / 2,
+    -size / 2 + bodyW + size * 0.32,
+    size * 0.55,
+  );
+  g.lineStyle(2, c, 1);
+  if (on) {
+    g.beginPath();
+    g.arc(-size / 2 + bodyW + size * 0.1, 0, size * 0.34, Phaser.Math.DegToRad(-40), Phaser.Math.DegToRad(40));
+    g.strokePath();
+  } else {
+    const cx = size * 0.22;
+    g.strokeLineShape(new Phaser.Geom.Line(cx - 5, -5, cx + 5, 5));
+    g.strokeLineShape(new Phaser.Geom.Line(cx - 5, 5, cx + 5, -5));
+  }
+  return g;
+}
+
 function blend(color1: number, color2: number, amount: number): number {
   const c1 = Phaser.Display.Color.IntegerToColor(color1);
   const c2 = Phaser.Display.Color.IntegerToColor(color2);

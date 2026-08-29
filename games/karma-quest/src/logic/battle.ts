@@ -21,15 +21,31 @@ export interface BattleResult {
   hpRatioRemaining: number;
 }
 
+/** おうえん1回あたりの勝率上乗せ量。上限を設けて連打が支配的にならないようにする */
+const CHEER_BONUS_PER_TAP = 0.015;
+const CHEER_BONUS_CAP = 0.15;
+
+/** おうえん回数から勝率への上乗せ量を算出する（純粋関数、Vitestで境界値を検証） */
+export function cheerBonus(cheerCount: number): number {
+  return Math.min(CHEER_BONUS_CAP, Math.max(0, cheerCount) * CHEER_BONUS_PER_TAP);
+}
+
 /**
  * オートバトルを解決する。勇者の力と魔物の力の比に応じて勝率を決め、
- * 勝敗と残りHP割合を返す。rng差し替え可能（テストで決定的に検証するため）。
+ * 勝敗と残りHP割合を返す。企画書にあった「応援して力を貸す」要素を、
+ * 討伐中にタップした回数（cheerCount）による勝率の微小な上乗せとして実装。
+ * rng差し替え可能（テストで決定的に検証するため）。
  */
-export function autoBattle(stats: HeroStats, stage: number, rng: () => number = Math.random): BattleResult {
+export function autoBattle(
+  stats: HeroStats,
+  stage: number,
+  rng: () => number = Math.random,
+  cheerCount = 0,
+): BattleResult {
   const power = heroPower(stats);
   const monsterPower = monsterPowerForStage(stage);
   const ratio = power / monsterPower;
-  const winProbability = Math.max(0.05, Math.min(0.95, ratio - 0.3));
+  const winProbability = Math.max(0.05, Math.min(0.95, ratio - 0.3 + cheerBonus(cheerCount)));
   const win = rng() < winProbability;
 
   const hpRatioRemaining = win
