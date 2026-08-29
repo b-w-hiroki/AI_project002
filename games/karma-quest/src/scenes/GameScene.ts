@@ -12,8 +12,10 @@ import {
 } from "../logic/karma";
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
-import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { sfx } from "../platform/audio";
+import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
+const SOUND_PREF_KEY = "karma_quest_sound_v1";
 const TOTAL_STAGES = 12;
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
@@ -35,6 +37,9 @@ export class GameScene extends Phaser.Scene {
   private currentRequest: KarmaRequest | null = null;
   private currentBattleResult: BattleResult | null = null;
   private highlightRows: HighlightRow[] = [];
+
+  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundIcon!: Phaser.GameObjects.Graphics;
 
   private titleGroup!: Phaser.GameObjects.Container;
   private karmaGroup!: Phaser.GameObjects.Container;
@@ -78,12 +83,29 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 480, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => this.startRun(), {
+    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => { this.playSound(sfx.buttonTap); this.startRun(); }, {
       fontSize: "16px",
     });
 
-    this.titleGroup.add([panel, title, rules, best, startBtn.container]);
+    this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+    const soundHit = this.add
+      .rectangle(395, 100, 40, 40, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        this.soundOn = !this.soundOn;
+        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+        this.soundIcon.destroy();
+        this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+        this.titleGroup.add(this.soundIcon);
+        this.playSound(sfx.buttonTap);
+      });
+
+    this.titleGroup.add([panel, title, rules, best, startBtn.container, this.soundIcon, soundHit]);
     this.titleGroup.setData("bestText", best);
+  }
+
+  private playSound(fn: () => void): void {
+    if (this.soundOn) fn();
   }
 
   private showTitle(): void {
@@ -168,6 +190,7 @@ export class GameScene extends Phaser.Scene {
 
   private onKarmaChoice(accepted: boolean): void {
     if (this.phase !== "karma" || !this.currentRequest) return;
+    this.playSound(accepted ? sfx.karmaUp : sfx.karmaDown);
     this.karma = applyKarmaChoice(this.karma, this.currentRequest, accepted);
     this.showBattlePhase();
   }
@@ -212,6 +235,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(600, () => {
       const result = autoBattle(stats, this.stage);
       this.currentBattleResult = result;
+      this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
       heading.setText(result.win ? "魔物を討伐した！" : "退却を余儀なくされた…");
       resultText.setText(`残りHP割合: ${Math.round(result.hpRatioRemaining * 100)}%`);
       this.time.delayedCall(700, () => this.showReportPhase(result));
@@ -270,6 +294,7 @@ export class GameScene extends Phaser.Scene {
       this.drawHighlightRow(row);
       container.on("pointerdown", () => {
         row.selected = !row.selected;
+        this.playSound(sfx.buttonTap);
         this.drawHighlightRow(row);
       });
 
@@ -295,6 +320,7 @@ export class GameScene extends Phaser.Scene {
 
   private onSubmitReport(): void {
     if (this.phase !== "report") return;
+    this.playSound(sfx.reportSubmit);
     const selected = this.highlightRows.filter((r) => r.selected).map((r) => r.highlight);
     const evaluation = evaluateReport(selected);
     this.runEvaluation += evaluation;

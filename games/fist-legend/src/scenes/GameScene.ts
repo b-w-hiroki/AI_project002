@@ -15,8 +15,11 @@ import {
 } from "../logic/battle";
 import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha";
 import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
-import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { sfx } from "../platform/audio";
+import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
+
+const SOUND_PREF_KEY = "fist_legend_sound_v1";
 
 const ROUND_TIME_SEC = 60;
 const BEAT_COOLDOWN_MS = 380;
@@ -56,6 +59,9 @@ export class GameScene extends Phaser.Scene {
 
   private playerSprite!: Phaser.GameObjects.Graphics;
   private enemySprite!: Phaser.GameObjects.Graphics;
+
+  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundIcon!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("GameScene");
@@ -107,15 +113,32 @@ export class GameScene extends Phaser.Scene {
       .text(400, 340, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 300, 410, 180, 48, "バトル開始", () => this.startBattle(), {
+    const startBtn = makeButton(this, 300, 410, 180, 48, "バトル開始", () => { this.playSound(sfx.buttonTap); this.startBattle(); }, {
       fontSize: "16px",
     });
-    const gachaBtn = makeButton(this, 500, 410, 180, 48, "ガチャ", () => this.openGacha(), {
+    const gachaBtn = makeButton(this, 500, 410, 180, 48, "ガチャ", () => { this.playSound(sfx.buttonTap); this.openGacha(); }, {
       fontSize: "16px",
     });
 
-    this.titleGroup.add([panel, title, rules, currency, startBtn.container, gachaBtn.container]);
+    this.soundIcon = drawSpeakerIcon(this, 660, 30, this.soundOn, 18);
+    const soundHit = this.add
+      .rectangle(660, 30, 40, 40, 0x000000, 0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        this.soundOn = !this.soundOn;
+        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+        this.soundIcon.destroy();
+        this.soundIcon = drawSpeakerIcon(this, 660, 30, this.soundOn, 18);
+        this.titleGroup.add(this.soundIcon);
+        this.playSound(sfx.buttonTap);
+      });
+
+    this.titleGroup.add([panel, title, rules, currency, startBtn.container, gachaBtn.container, this.soundIcon, soundHit]);
     this.titleGroup.setData("currencyText", currency);
+  }
+
+  private playSound(fn: () => void): void {
+    if (this.soundOn) fn();
   }
 
   private showTitle(): void {
@@ -238,6 +261,9 @@ export class GameScene extends Phaser.Scene {
     const result = applyBeat(this.battle, move, enemyMove);
     this.battle = result.state;
 
+    this.playSound(
+      result.clash === "advantage" ? sfx.hitAdvantage : result.clash === "disadvantage" ? sfx.hitDisadvantage : sfx.hitClash,
+    );
     this.showClash(result.clash, move, enemyMove);
     this.flashHit(this.enemySprite, result.playerDamageDealt);
     this.flashHit(this.playerSprite, result.enemyDamageDealt);
@@ -257,6 +283,7 @@ export class GameScene extends Phaser.Scene {
   private onPlayerOugi(): void {
     if (this.phase !== "battle" || this.battle.playerGauge < OUGI_GAUGE_MAX) return;
     this.battle = applyPlayerOugi(this.battle);
+    this.playSound(sfx.ougi);
     this.showClash("advantage", "punch", "punch", "奥義炸裂！");
     this.flashHit(this.enemySprite, 1);
     this.refreshBattleVisual();
@@ -314,8 +341,11 @@ export class GameScene extends Phaser.Scene {
     if (outcome === "playerWin") {
       reward = WIN_REWARD;
       incrementWinCount();
+      this.playSound(sfx.win);
     } else if (outcome === "draw") {
       reward = DRAW_REWARD;
+    } else {
+      this.playSound(sfx.lose);
     }
     const balance = addCurrency(reward);
 
@@ -409,6 +439,7 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(GACHA_COST);
     const item: GachaItem = drawGacha();
+    this.playSound(item.rarity === "SSR" || item.rarity === "SR" ? sfx.gachaRare : sfx.gachaDraw);
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText(`【${item.rarity}】${item.name}`).setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
