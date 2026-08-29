@@ -3,9 +3,11 @@ import {
   MAX_HP,
   OUGI_GAUGE_MAX,
   applyBeat,
+  applyHiddenCommand,
   applyPlayerOugi,
   battleOutcome,
   damageForClash,
+  hiddenCommandDamage,
   initialBattleState,
   multiplierForClash,
   nextGauge,
@@ -109,6 +111,26 @@ describe("applyPlayerOugi", () => {
     const result = applyPlayerOugi(state, sequentialRng([0.5]));
     expect(result.enemyHp).toBeLessThan(MAX_HP);
     expect(result.playerGauge).toBe(0);
+  });
+});
+
+describe("hiddenCommandDamage / applyHiddenCommand", () => {
+  it("最低1ダメージは保証される", () => {
+    expect(hiddenCommandDamage(sequentialRng([0]))).toBeGreaterThanOrEqual(1);
+  });
+
+  it("敵にダメージを与え、プレイヤー側の状態は変化しない", () => {
+    const state = initialBattleState();
+    const result = applyHiddenCommand(state, sequentialRng([0.5]));
+    expect(result.enemyHp).toBeLessThan(MAX_HP);
+    expect(result.playerHp).toBe(state.playerHp);
+    expect(result.playerGauge).toBe(state.playerGauge);
+  });
+
+  it("HPは0未満にならない", () => {
+    const state = { ...initialBattleState(), enemyHp: 5 };
+    const result = applyHiddenCommand(state, sequentialRng([0.99]));
+    expect(result.enemyHp).toBe(0);
   });
 });
 

@@ -123,6 +123,20 @@ export function applyPlayerOugi(state: BattleState, rng: () => number = Math.ran
   };
 }
 
+const HIDDEN_COMMAND_DAMAGE_BASE = 20;
+
+/** 隠しコマンド技のダメージ（多少の幅を持たせる） */
+export function hiddenCommandDamage(rng: () => number = Math.random): number {
+  const jitter = Math.floor(rng() * 5) - 2;
+  return Math.max(1, HIDDEN_COMMAND_DAMAGE_BASE + jitter);
+}
+
+/** 隠しコマンド技（拳→拳→拳→気）を発動する。ゲージ消費なしの固定ダメージ攻撃 */
+export function applyHiddenCommand(state: BattleState, rng: () => number = Math.random): BattleState {
+  const damage = hiddenCommandDamage(rng);
+  return { ...state, enemyHp: Math.max(0, state.enemyHp - damage) };
+}
+
 export type BattleOutcome = "playerWin" | "enemyWin" | "draw";
 
 /** HPが尽きた、またはタイムアップ時の勝敗判定。バトル継続中はnull */

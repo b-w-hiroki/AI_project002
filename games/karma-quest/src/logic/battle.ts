@@ -41,11 +41,13 @@ export function autoBattle(
   stage: number,
   rng: () => number = Math.random,
   cheerCount = 0,
+  /** 遭遇イベントの選択から生じる、この討伐限りの勝率への加減算（正負どちらもありうる） */
+  encounterBonus = 0,
 ): BattleResult {
   const power = heroPower(stats);
   const monsterPower = monsterPowerForStage(stage);
   const ratio = power / monsterPower;
-  const winProbability = Math.max(0.05, Math.min(0.95, ratio - 0.3 + cheerBonus(cheerCount)));
+  const winProbability = Math.max(0.05, Math.min(0.95, ratio - 0.3 + cheerBonus(cheerCount) + encounterBonus));
   const win = rng() < winProbability;
 
   const hpRatioRemaining = win

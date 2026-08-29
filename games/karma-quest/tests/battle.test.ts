@@ -63,6 +63,24 @@ describe("autoBattle", () => {
   });
 });
 
+describe("autoBattle encounterBonus", () => {
+  it("正のencounterBonusは勝率を押し上げる", () => {
+    const stats = { atk: 12, def: 8, hp: 40, magic: 2 };
+    const withoutBonus = autoBattle(stats, 3, sequentialRng([0.55, 0.5]), 0, 0);
+    const withBonus = autoBattle(stats, 3, sequentialRng([0.55, 0.5]), 0, 0.15);
+    expect(withoutBonus.win).toBe(false);
+    expect(withBonus.win).toBe(true);
+  });
+
+  it("負のencounterBonusは勝率を押し下げる", () => {
+    const stats = { atk: 12, def: 8, hp: 40, magic: 2 };
+    const withoutBonus = autoBattle(stats, 3, sequentialRng([0.45, 0.5]), 0, 0);
+    const withPenalty = autoBattle(stats, 3, sequentialRng([0.45, 0.5]), 0, -0.15);
+    expect(withoutBonus.win).toBe(true);
+    expect(withPenalty.win).toBe(false);
+  });
+});
+
 describe("cheerBonus", () => {
   it("0回なら上乗せ0", () => {
     expect(cheerBonus(0)).toBe(0);

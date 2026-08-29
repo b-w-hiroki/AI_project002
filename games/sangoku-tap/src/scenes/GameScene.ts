@@ -1,17 +1,23 @@
 import Phaser from "phaser";
 import { EquipRarity, breedEquipment, breedRateTable, BREED_COST } from "../logic/breeding";
-import { General, GACHA_COST, canAffordGacha, drawGeneral } from "../logic/general";
+import { General, GACHA_COST, GENERAL_POOL, canAffordGacha, drawGeneral } from "../logic/general";
 import {
   addCurrency,
   addEquipment,
   loadBestDistance,
   loadCurrency,
   loadEquipmentInventory,
+  loadEquippedMap,
+  loadOwnedGenerals,
   saveBestDistance,
+  saveEquippedMap,
+  saveOwnedGeneral,
   spendCurrency,
+  spendEquipment,
 } from "../logic/progress";
 import { QuestEvent, resolveQuestTap } from "../logic/quest";
 import { sfx } from "../platform/audio";
+import { EquippedMap, effectiveAtk, equipToGeneral, isOwned, unequipGeneral } from "../logic/roster";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -30,7 +36,12 @@ const RARITY_COLOR: Readonly<Record<string, number>> = {
 
 const RARITIES: readonly EquipRarity[] = ["Common", "Rare", "Epic"] as const;
 
-type Phase = "title" | "quest" | "gacha" | "breeding";
+type Phase = "title" | "quest" | "gacha" | "breeding" | "roster";
+
+interface RosterRow {
+  general: General;
+  container: Phaser.GameObjects.Container;
+}
 
 export class GameScene extends Phaser.Scene {
   private phase: Phase = "title";
@@ -40,6 +51,8 @@ export class GameScene extends Phaser.Scene {
   private questGroup!: Phaser.GameObjects.Container;
   private gachaGroup!: Phaser.GameObjects.Container;
   private breedingGroup!: Phaser.GameObjects.Container;
+  private rosterGroup!: Phaser.GameObjects.Container;
+  private rosterRows: RosterRow[] = [];
 
   private breedA: EquipRarity = "Common";
   private breedB: EquipRarity = "Common";
@@ -59,6 +72,7 @@ export class GameScene extends Phaser.Scene {
     this.buildQuestScreen();
     this.buildGachaScreen();
     this.buildBreedingScreen();
+    this.buildRosterScreen();
     this.showTitle();
   }
 
@@ -93,6 +107,9 @@ export class GameScene extends Phaser.Scene {
     const breedBtn = makeButton(this, CX, 600, 280, 48, "装備合成", () => { this.playSound(sfx.tap); this.showBreeding(); }, {
       fontSize: "15px",
     });
+    const rosterBtn = makeButton(this, CX, 660, 280, 48, "武将一覧・装備", () => { this.playSound(sfx.tap); this.showRoster(); }, {
+      fontSize: "15px",
+    });
 
     this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
     const soundHit = this.add
@@ -115,6 +132,7 @@ export class GameScene extends Phaser.Scene {
       questBtn.container,
       gachaBtn.container,
       breedBtn.container,
+      rosterBtn.container,
       this.soundIcon,
       soundHit,
     ]);
@@ -145,6 +163,7 @@ export class GameScene extends Phaser.Scene {
     this.questGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
     this.breedingGroup.setVisible(false);
+    this.rosterGroup.setVisible(false);
     const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
     bestText.setText(`所持コイン: ${loadCurrency()}\n最高進撃距離: ${loadBestDistance()}`);
   }
@@ -287,6 +306,7 @@ export class GameScene extends Phaser.Scene {
     }
     spendCurrency(GACHA_COST);
     const general: General = drawGeneral();
+    saveOwnedGeneral(general.id);
     const isRare = general.rarity === "SSR" || general.rarity === "SR";
     this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     resultText
@@ -439,6 +459,127 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
     this.refreshBreedBalance();
     this.refreshBreedInventory();
+  }
+
+  // ---------- 武将一覧・装備 ----------
+
+  private buildRosterScreen(): void {
+    this.rosterGroup = this.add.container(0, 0);
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
+
+    const heading = this.add
+      .text(CX, 90, "武将一覧・装備", { ...TYPE.h1, color: THEME.textPrimary })
+      .setOrigin(0.5);
+    const hint = this.add
+      .text(CX, 125, "タップで装備を切り替え（所持装備からなし→Common→Rare→Epicの順）", {
+        ...TYPE.small,
+        color: THEME.textMuted,
+        align: "center",
+        wordWrap: { width: 340, useAdvancedWrap: true },
+      })
+      .setOrigin(0.5);
+    const inventoryText = this.add
+      .text(CX, 160, "", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5)
+      .setName("rosterInventory");
+
+    const backBtn = makeButton(this, CX, 690, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
+      fontSize: "14px",
+    });
+
+    this.rosterGroup.add([panel, heading, hint, inventoryText, backBtn.container]);
+    this.rosterGroup.setVisible(false);
+  }
+
+  private showRoster(): void {
+    this.phase = "roster";
+    this.titleGroup.setVisible(false);
+    this.rosterGroup.setVisible(true);
+    this.refreshRoster();
+  }
+
+  private refreshRoster(): void {
+    const inventoryText = this.rosterGroup.getByName("rosterInventory") as Phaser.GameObjects.Text;
+    const inv = loadEquipmentInventory();
+    inventoryText.setText(`所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`);
+
+    for (const row of this.rosterRows) row.container.destroy();
+    this.rosterRows = [];
+
+    const owned = loadOwnedGenerals();
+    const equipped = loadEquippedMap();
+    const rowH = 52;
+    const rowGap = 6;
+    const startY = 195;
+
+    GENERAL_POOL.forEach((general, i) => {
+      const y = startY + i * (rowH + rowGap);
+      const has = isOwned(owned, general.id);
+      const bg = this.add.graphics();
+      bg.fillStyle(THEME.panelFill, has ? 0.7 : 0.35);
+      bg.fillRoundedRect(-180, -rowH / 2, 360, rowH, 8);
+      bg.lineStyle(1.5, THEME.panelBorder, has ? 0.7 : 0.3);
+      bg.strokeRoundedRect(-180, -rowH / 2, 360, rowH, 8);
+
+      const count = owned[general.id] ?? 0;
+      const nameText = this.add
+        .text(-165, -14, `【${general.rarity}】${general.name}`, {
+          ...TYPE.body,
+          color: has ? hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff) : THEME.textMuted,
+        })
+        .setOrigin(0, 0.5);
+      const statusText = this.add
+        .text(
+          -165,
+          14,
+          has
+            ? `所持×${count}  ATK ${effectiveAtk(general, equipped)}  装備:${equipped[general.id] ?? "なし"}`
+            : "未所持",
+          { ...TYPE.small, color: THEME.textMuted },
+        )
+        .setOrigin(0, 0.5);
+
+      const container = this.add.container(CX, y, [bg, nameText, statusText]).setSize(360, rowH);
+      if (has) {
+        container.setInteractive({ useHandCursor: true });
+        container.on("pointerdown", () => this.onCycleEquip(general));
+      }
+
+      this.rosterGroup.add(container);
+      this.rosterRows.push({ general, container });
+    });
+  }
+
+  /** なし→Common→Rare→Epic→なし…の順に切り替える。所持数0のレアリティは自動でスキップする */
+  private onCycleEquip(general: General): void {
+    const equipped = loadEquippedMap();
+    const current = equipped[general.id];
+
+    let updated: EquippedMap = equipped;
+    if (current) {
+      addEquipment(current);
+      updated = unequipGeneral(updated, general.id);
+    }
+
+    const inventory = loadEquipmentInventory();
+    const cycle: readonly (EquipRarity | undefined)[] = [undefined, "Common", "Rare", "Epic"];
+    const startIndex = (cycle.indexOf(current) + 1) % cycle.length;
+    let chosen: EquipRarity | undefined;
+    for (let step = 0; step < cycle.length; step++) {
+      const candidate = cycle[(startIndex + step) % cycle.length];
+      if (candidate === undefined || inventory[candidate] > 0) {
+        chosen = candidate;
+        break;
+      }
+    }
+
+    if (chosen) {
+      spendEquipment(chosen);
+      updated = equipToGeneral(updated, general.id, chosen);
+    }
+    saveEquippedMap(updated);
+    this.playSound(sfx.tap);
+    this.refreshRoster();
   }
 }
 
