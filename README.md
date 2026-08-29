@@ -13,5 +13,6 @@ AIフル活用でゲーム開発
 | 🎴 カラーマッチ | 文字の内容・色とカードを素早く一致させる認知力・反応速度ゲーム | https://b-w-hiroki.github.io/AI_project002/color-match/ | `games/color-match/` |
 | 👊 覇拳伝 | 拳・蹴・気の3ボタンとじゃんけん相性、奥義ゲージで戦う格闘バトル | https://b-w-hiroki.github.io/AI_project002/fist-legend/ | `games/fist-legend/` |
 | 🗡️ カルマクエスト | カルマ育成×討伐×神様への報告のサイクルで進める育成RPG | https://b-w-hiroki.github.io/AI_project002/karma-quest/ | `games/karma-quest/` |
+| 🐎 三国ポチポチ | タップ進撃×武将ガチャ×装備合成のポチポチ系タップRPG | https://b-w-hiroki.github.io/AI_project002/sangoku-tap/ | `games/sangoku-tap/` |
 
 各ゲームは独立した Phaser + TypeScript + Vite プロジェクト。開発ルールは `CLAUDE.md` を参照。

@@ -34,6 +34,7 @@ jobs:
             games/color-match/package-lock.json
             games/fist-legend/package-lock.json
             games/karma-quest/package-lock.json
+            games/sangoku-tap/package-lock.json
 
       # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
@@ -95,6 +96,18 @@ jobs:
       - run: npm run build
         working-directory: games/karma-quest
 
+      # 三国ポチポチ（/sangoku-tap/ サブパスで配信）
+      - run: npm ci
+        working-directory: games/sangoku-tap
+      - run: npm run lint
+        working-directory: games/sangoku-tap
+      - run: npm run typecheck
+        working-directory: games/sangoku-tap
+      - run: npm test
+        working-directory: games/sangoku-tap
+      - run: npm run build
+        working-directory: games/sangoku-tap
+
       # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
           mkdir -p dist
@@ -109,6 +122,8 @@ jobs:
           cp -r games/fist-legend/dist/. dist/fist-legend/
           mkdir -p dist/karma-quest
           cp -r games/karma-quest/dist/. dist/karma-quest/
+          mkdir -p dist/sangoku-tap
+          cp -r games/sangoku-tap/dist/. dist/sangoku-tap/
 
       - uses: actions/configure-pages@v5
         with:
