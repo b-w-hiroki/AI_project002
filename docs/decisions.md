@@ -427,3 +427,12 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - ポーション工房にのみ`src/platform/crazygames.ts`（SDKスクリプトの遅延読み込み、`window.CrazyGames`が無い環境では全メソッドがno-opになる薄いラッパー）が実装済みだったため、そのままの実装を残り5作（剣戟の森・カラーマッチ・覇拳伝・カルマクエスト・三国ポチポチ）にコピーして横展開した。ゲームごとに異なる実装を作らず、同一のラッパーを使い回すことで将来のSDKバージョンアップ等のメンテナンスを1箇所（実質は6箇所だが差分ゼロ）に抑えられる設計とした。
 - 統合方法は「`main.ts`で`initCrazyGames()`を起動時に1回呼ぶ」＋「各ゲームのメインシーンの`create()`冒頭で`cg.gameplayStart()`を呼ぶ」の最小構成にした。CrazyGamesの推奨としては`gameplayStop()`をメニュー/一時停止中に呼んで広告表示の妨げにならないようにする使い方もあるが、今回の6作はいずれもモーダル的な一時停止状態を持たないシンプルな画面遷移構成のため、`gameplayStart()`のみで十分と判断した（`happytime()`によるポジティブ演出の呼び出しは、今回はポーション工房のみ実装済みのまま据え置き、他5作への追加は`docs/TODO.md`に未着手として記載）。
 - 6作とも`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて成功。Playwrightで、SDKが存在しない環境（GitHub Pages相当）でも`window.CrazyGames`未定義時のno-op分岐が例外を出さず正常に起動することを確認した（`initCrazyGames()`のtry/catchと`cg`各メソッドのoptional chainingにより、既存の動作に一切影響がないことを実証）。
+
+## 2026-08-30（公開・収益化に向けて — submission.md拡張・OGP画像差し替え）
+
+- `docs/submission.md`をポーション工房単体の資料から全6作分に拡張。各ゲームの日本語/英語紹介文・カテゴリタグ・主要機能を追記し、CrazyGames/PLiCyの技術要件チェックリストは全作共通のものに統合した（ゲームごとに重複するチェックリストを書くと更新漏れが起きやすいため）。
+- OGP画像の差し替えに着手した際、これまで「Pillow等の画像ライブラリが無い環境」（2026-08-12の決定ログ参照）という前提でPythonのzlib/structによる単色プレースホルダー生成にとどめていたが、本セッションで`python3 -c "from PIL import Image"`が成功することを確認し、Pillowが利用可能になっていることが判明した（環境更新か、以前の調査が誤りだったかは不明）。これにより、各ゲームのアクセントカラーを使ったグラデーション＋タイトルテキストのOGP画像（1200×630）をその場で生成できるようになった。
+- OGP画像は`PIL.ImageDraw`でバンド状にグラデーションを塗り、右下に`GaussianBlur`をかけた円形グローを重ね、日本語タイトル（IPAGothicフォント、本セッション環境に存在を確認済み）と英語サブタイトルを配置する構成にした。単色よりも各ゲームの世界観（覇拳伝は赤系、カラーマッチは明るい黄系等）が伝わるサムネイルになった。生成スクリプトは一時的なローカルツールとして扱い、リポジトリにはコミットせず出力画像のみを残した（再生成が必要になった場合は同様のアプローチで作り直せば良いため）。
+- OGP画像の差し替え作業中に発見した実バグ: ポーション工房の`index.html`にあった既存の`og:image`/`twitter:image`が`content="/og-image.png"`という絶対パス指定だった。しかしこのゲームはGitHub Pagesの`/potion-workshop/`サブパスに配置されるため、この絶対パスは`https://b-w-hiroki.github.io/og-image.png`（存在しないURL）に解決されてしまい、SNSシェア時にサムネイルが正しく表示されないバグだった。Vite の`base: "./"`設定は`<script src>`等の認識済み属性のみを書き換え、`<meta>`タグの`content`属性は対象外のため見過ごされていたと考えられる。修正として、全6作とも`https://b-w-hiroki.github.io/AI_project002/<game>/og-image.png`という完全修飾URLに統一した（相対パスだとクローラーによって解決基準が曖昧になるため、OGP画像は絶対URLで指定するのが安全という一般的なプラクティスに従った）。あわせて`og:url`も全作に追加した。
+- OGP未整備だった5作（剣戟の森・カラーマッチ・覇拳伝・カルマクエスト・三国ポチポチ）の`index.html`にも、ポーション工房と同じ構成（`og:type`/`og:url`/`og:title`/`og:description`/`og:image`＋`twitter:card`等）でメタタグを新設し、既存の`<title>`・`description`の文言をそのまま流用した。
+- 6作とも`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて成功し、`dist/og-image.png`が各ゲームのビルド成果物に正しく含まれることを確認した。
