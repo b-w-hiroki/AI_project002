@@ -15,6 +15,7 @@ import {
   saveLoadout,
   type LoadoutSaveData,
 } from "../logic/loadout";
+import { cg } from "../platform/crazygames";
 import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
 import { ELEVATION, THEME, drawPanel, drawWeaponKindIcon, makeButton } from "../ui/theme";
 
@@ -72,6 +73,7 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.data_ = loadLoadout(window.localStorage);
     if (this.data_.currency === 0 && this.data_.inventory.length === 0) {
       // 初回プレイ時のみ、遊び始められるよう少額の通貨を配布

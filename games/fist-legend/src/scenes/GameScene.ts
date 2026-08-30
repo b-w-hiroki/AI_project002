@@ -18,6 +18,7 @@ import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha
 import { HIDDEN_COMMAND, MoveEvent, matchesSequence, pushMoveEvent } from "../logic/commandInput";
 import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
 import { sfx } from "../platform/audio";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
@@ -71,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x1a1410);
     this.buildTitleScreen();
     this.buildBattleScreen();

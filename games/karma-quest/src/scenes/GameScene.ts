@@ -14,6 +14,7 @@ import {
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
 import { sfx } from "../platform/audio";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 const SOUND_PREF_KEY = "karma_quest_sound_v1";
@@ -58,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x14201c);
     this.buildTitleScreen();
     this.buildKarmaScreen();

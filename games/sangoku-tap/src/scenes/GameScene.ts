@@ -18,6 +18,7 @@ import {
 import { QuestEvent, resolveQuestTap } from "../logic/quest";
 import { sfx } from "../platform/audio";
 import { EquippedMap, effectiveAtk, equipToGeneral, isOwned, unequipGeneral } from "../logic/roster";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -67,6 +68,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x2a1a14);
     this.buildTitleScreen();
     this.buildQuestScreen();

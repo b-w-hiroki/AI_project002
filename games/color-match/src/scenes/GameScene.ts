@@ -23,6 +23,7 @@ import {
   saveBestTurbo,
   saveWritingMode,
 } from "../logic/progress";
+import { cg } from "../platform/crazygames";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -90,6 +91,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0xfdf6e3);
     this.writingMode = loadWritingMode();
     this.buildTitleScreen();
