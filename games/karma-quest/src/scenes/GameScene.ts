@@ -326,6 +326,7 @@ export class GameScene extends Phaser.Scene {
       const result = autoBattle(stats, this.stage, Math.random, this.cheerCount, this.encounterBonus);
       this.currentBattleResult = result;
       this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
+      if (result.win) cg.happytime();
       heading.setText(result.win ? "魔物を討伐した！" : "退却を余儀なくされた…");
       resultText.setText(`残りHP割合: ${Math.round(result.hpRatioRemaining * 100)}%`);
       cheerCountText.setText(this.cheerCount > 0 ? `おうえん ${this.cheerCount}回！` : "");

@@ -352,6 +352,7 @@ export class IdleScene extends Phaser.Scene {
         saveAnalytics(this.analytics, localStorage);
         this.playSound(sfx.prestige);
         this.cameras.main.flash(600, 217, 167, 255);
+        cg.happytime();
       }
     });
   }
@@ -540,6 +541,7 @@ export class IdleScene extends Phaser.Scene {
     if (newly.length === 0) return;
     this.state = unlockAchievements(this.state, newly);
     this.playSound(sfx.achievement);
+    cg.happytime();
     for (const id of newly) {
       this.spawnFloatingText(
         400,

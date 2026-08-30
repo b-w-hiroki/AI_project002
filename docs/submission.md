@@ -199,12 +199,11 @@
 
 ## CrazyGames投稿の技術要件チェックリスト（全6作共通）
 
-- [x] `src/platform/crazygames.ts` で SDK 初期化・`gameplayStart` 呼び出し済み（全6作）
+- [x] `src/platform/crazygames.ts` で SDK 初期化・`gameplayStart`/`happytime` 呼び出し済み（全6作）
 - [x] 非独占（他ポータルにも同時公開可能）
+- [x] サムネイル画像（1200×630、各ゲームのアクセントカラーで生成）
 - [ ] `npm run build` の `dist/` を各ゲームごとにzip化してアップロード（投稿時に実施）
-- [ ] サムネイル画像（推奨 1200×630 以上）を用意 — 現状 `public/og-image.png` は単色プレースホルダーなので、投稿前に各ゲームに合わせた画像へ差し替え推奨
 - [ ] CrazyGames 開発者アカウント作成（人間の作業）
-- [ ] `happytime()` の呼び出し（現状ポーション工房のみ実装、他5作は未着手）
 
 ## PLiCy投稿の準備（全6作共通）
 

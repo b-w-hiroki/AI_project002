@@ -315,7 +315,10 @@ export class GameScene extends Phaser.Scene {
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
-    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
+    if (isRare) {
+      this.cameras.main.flash(200, 255, 220, 140);
+      cg.happytime();
+    }
     this.refreshGachaBalance();
   }
 

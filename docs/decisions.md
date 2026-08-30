@@ -436,3 +436,10 @@ Item（アイテム）: 消耗品。使用したら1回で消滅
 - OGP画像の差し替え作業中に発見した実バグ: ポーション工房の`index.html`にあった既存の`og:image`/`twitter:image`が`content="/og-image.png"`という絶対パス指定だった。しかしこのゲームはGitHub Pagesの`/potion-workshop/`サブパスに配置されるため、この絶対パスは`https://b-w-hiroki.github.io/og-image.png`（存在しないURL）に解決されてしまい、SNSシェア時にサムネイルが正しく表示されないバグだった。Vite の`base: "./"`設定は`<script src>`等の認識済み属性のみを書き換え、`<meta>`タグの`content`属性は対象外のため見過ごされていたと考えられる。修正として、全6作とも`https://b-w-hiroki.github.io/AI_project002/<game>/og-image.png`という完全修飾URLに統一した（相対パスだとクローラーによって解決基準が曖昧になるため、OGP画像は絶対URLで指定するのが安全という一般的なプラクティスに従った）。あわせて`og:url`も全作に追加した。
 - OGP未整備だった5作（剣戟の森・カラーマッチ・覇拳伝・カルマクエスト・三国ポチポチ）の`index.html`にも、ポーション工房と同じ構成（`og:type`/`og:url`/`og:title`/`og:description`/`og:image`＋`twitter:card`等）でメタタグを新設し、既存の`<title>`・`description`の文言をそのまま流用した。
 - 6作とも`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて成功し、`dist/og-image.png`が各ゲームのビルド成果物に正しく含まれることを確認した。
+
+## 2026-08-30（公開・収益化に向けて — happytime()を全6作に追加）
+
+- `cg.happytime()`（CrazyGamesポータル側でポジティブな瞬間の演出・広告最適化に使われるSDKコール）を確認したところ、`src/platform/crazygames.ts`にラッパー関数自体は用意されていたにもかかわらず、導入元だったポーション工房も含め全6作のどのゲームコードからも一度も呼ばれていなかったことが判明した。`docs/submission.md`のチェックリストには「呼び出し済み」と記載されていたが、実装当初のドキュメントが実態を反映していなかった記載漏れだったと考えられる。
+- 各ゲームの「一番気持ちいい瞬間」を1〜2箇所ずつ選んで`cg.happytime()`を追加した: ポーション工房（転生成功・実績解除）、剣戟の森（ウェーブクリア）、カラーマッチ（ターボモード突入）、覇拳伝（バトル勝利・SSR/SR武将排出）、カルマクエスト（討伐勝利）、三国ポチポチ（SSR/SR武将排出）。
+- カラーマッチのターボモードは「1秒以内の正解が続く限り毎回加点される」仕様のため、素朴に実装すると連続正解のたびに`happytime()`が連打されてしまう。SDKの意図（ポジティブな「瞬間」を伝える単発イベント）に反するため、`turboStreak === TURBO_ENTRY_STREAK`（突入した瞬間のみ）という条件を明示的に加えて1ラウンドにつき1回に抑えた。
+- 6作とも`npm run typecheck`/`npm run lint`/`npm test`/`npm run build`すべて成功。

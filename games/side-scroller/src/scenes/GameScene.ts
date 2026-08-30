@@ -91,6 +91,7 @@ import {
   isTouchDevice,
   makeTappable,
 } from "../ui/touch";
+import { cg } from "../platform/crazygames";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
 import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
@@ -1371,6 +1372,7 @@ export class GameScene extends Phaser.Scene {
       this.waveActive = false;
       this.spawnFloatingText(this.player.x, this.player.y - 60, `WAVE ${this.wave} CLEAR!`, "#1f8a63");
       this.cameras.main.flash(200, 127, 209, 255);
+      cg.happytime();
       this.time.delayedCall(WAVE_INTERMISSION_MS, () => {
         if (this.status !== "playing") return; // 死亡直後などは次ウェーブを出さない
         this.wave += 1;

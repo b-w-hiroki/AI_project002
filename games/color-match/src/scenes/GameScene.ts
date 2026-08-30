@@ -503,6 +503,7 @@ export class GameScene extends Phaser.Scene {
     if (this.turboStreak >= TURBO_ENTRY_STREAK) {
       this.turboText.setText(`🔥 ターボモード ×${this.turboStreak}`).setVisible(true);
       this.tweens.add({ targets: this.turboText, scale: 1.25, duration: 100, yoyo: true });
+      if (this.turboStreak === TURBO_ENTRY_STREAK) cg.happytime();
     }
   }
 
