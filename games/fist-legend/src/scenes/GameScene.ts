@@ -18,6 +18,7 @@ import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha
 import { HIDDEN_COMMAND, MoveEvent, matchesSequence, pushMoveEvent } from "../logic/commandInput";
 import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
 import { sfx } from "../platform/audio";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
@@ -71,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x1a1410);
     this.buildTitleScreen();
     this.buildBattleScreen();
@@ -405,6 +407,7 @@ export class GameScene extends Phaser.Scene {
       reward = WIN_REWARD;
       incrementWinCount();
       this.playSound(sfx.win);
+      cg.happytime();
     } else if (outcome === "draw") {
       reward = DRAW_REWARD;
     } else {
@@ -507,7 +510,10 @@ export class GameScene extends Phaser.Scene {
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText(`【${item.rarity}】${item.name}`).setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
-    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
+    if (isRare) {
+      this.cameras.main.flash(200, 255, 220, 140);
+      cg.happytime();
+    }
     this.refreshGachaBalance();
   }
 

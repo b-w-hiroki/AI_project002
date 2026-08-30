@@ -18,6 +18,7 @@ import {
 import { QuestEvent, resolveQuestTap } from "../logic/quest";
 import { sfx } from "../platform/audio";
 import { EquippedMap, effectiveAtk, equipToGeneral, isOwned, unequipGeneral } from "../logic/roster";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -67,6 +68,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x2a1a14);
     this.buildTitleScreen();
     this.buildQuestScreen();
@@ -313,7 +315,10 @@ export class GameScene extends Phaser.Scene {
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
-    if (isRare) this.cameras.main.flash(200, 255, 220, 140);
+    if (isRare) {
+      this.cameras.main.flash(200, 255, 220, 140);
+      cg.happytime();
+    }
     this.refreshGachaBalance();
   }
 

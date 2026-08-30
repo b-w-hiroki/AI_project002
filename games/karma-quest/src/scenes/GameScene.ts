@@ -14,6 +14,7 @@ import {
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../logic/progress";
 import { Highlight, evaluateReport, rollHighlights } from "../logic/report";
 import { sfx } from "../platform/audio";
+import { cg } from "../platform/crazygames";
 import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
 
 const SOUND_PREF_KEY = "karma_quest_sound_v1";
@@ -58,6 +59,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x14201c);
     this.buildTitleScreen();
     this.buildKarmaScreen();
@@ -324,6 +326,7 @@ export class GameScene extends Phaser.Scene {
       const result = autoBattle(stats, this.stage, Math.random, this.cheerCount, this.encounterBonus);
       this.currentBattleResult = result;
       this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
+      if (result.win) cg.happytime();
       heading.setText(result.win ? "魔物を討伐した！" : "退却を余儀なくされた…");
       resultText.setText(`残りHP割合: ${Math.round(result.hpRatioRemaining * 100)}%`);
       cheerCountText.setText(this.cheerCount > 0 ? `おうえん ${this.cheerCount}回！` : "");
