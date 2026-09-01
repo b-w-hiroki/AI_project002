@@ -102,6 +102,17 @@ export class IdleScene extends Phaser.Scene {
     super("idle");
   }
 
+  /**
+   * ChatGPT等で生成したイラスト素材を読み込む。画像が無い/読み込みに失敗しても
+   * 各所のGraphics描画フォールバックで従来通り動作する（`docs/art-assets.md`参照）。
+   */
+  preload(): void {
+    this.load.image("pw-bg-workshop", "images/pw-bg-workshop.png");
+    this.load.image("pw-hero-alchemist", "images/pw-hero-alchemist.png");
+    this.load.image("pw-cauldron-icon", "images/pw-cauldron-icon.png");
+    this.load.image("pw-dragon-icon", "images/pw-dragon-icon.png");
+  }
+
   create(): void {
     this.analytics = recordSessionStart(loadAnalytics(localStorage), Date.now());
     saveAnalytics(this.analytics, localStorage);
@@ -149,10 +160,18 @@ export class IdleScene extends Phaser.Scene {
   // ---- 画面構築 ----
 
   private buildBackground(): void {
-    // 淡い青空〜白のグラデーション。ソシャゲ調の明るいファンタジー基調にする
-    const g = this.add.graphics();
-    g.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 1);
-    g.fillRect(0, 0, 800, 760);
+    // イラスト背景（ChatGPT生成、docs/art-assets.md参照）があれば使い、無ければ
+    // 淡い青空〜白のグラデーション（ソシャゲ調の明るいファンタジー基調）にフォールバックする
+    if (this.textures.exists("pw-bg-workshop")) {
+      this.add.image(400, 380, "pw-bg-workshop").setDisplaySize(800, 760).setAlpha(0.9);
+      const tint = this.add.graphics();
+      tint.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 0.25);
+      tint.fillRect(0, 0, 800, 760);
+    } else {
+      const g = this.add.graphics();
+      g.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 1);
+      g.fillRect(0, 0, 800, 760);
+    }
     const glow = this.add.graphics();
     glow.fillStyle(0xffffff, 0.35);
     glow.fillCircle(160, 230, 220);
@@ -362,16 +381,22 @@ export class IdleScene extends Phaser.Scene {
       const y = 130 + i * 62;
       const button = makeRoundedRect(this, 560, y, 400, 52, 0xeaf5ff, { radius: 10, borderColor: 0x9ecbef });
 
-      // 設備ごとに色相をずらしたジェム風アイコンを表示し、一覧を一目で見分けやすくする（装飾）
-      const hue = (i / GENERATORS.length) * 0.8;
-      const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.65, 0.85).color;
-      const gem = this.add.graphics({ x: 382, y });
-      gem.fillStyle(gemColor, 1);
-      gem.fillCircle(0, 0, 12);
-      gem.fillStyle(0xffffff, 0.35);
-      gem.fillCircle(-4, -4, 4);
-      gem.lineStyle(1.5, 0xffffff, 0.4);
-      gem.strokeCircle(0, 0, 12);
+      // 設備ごとのアイコン: ChatGPT生成イラスト（cauldron/dragon）があればそれを使い、
+      // 無い設備は従来通り色相をずらしたジェム風アイコンで一目で見分けやすくする（装飾）
+      const iconKey = g.id === "cauldron" ? "pw-cauldron-icon" : g.id === "dragon" ? "pw-dragon-icon" : null;
+      if (iconKey && this.textures.exists(iconKey)) {
+        this.add.image(382, y, iconKey).setDisplaySize(30, 30);
+      } else {
+        const hue = (i / GENERATORS.length) * 0.8;
+        const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.65, 0.85).color;
+        const gem = this.add.graphics({ x: 382, y });
+        gem.fillStyle(gemColor, 1);
+        gem.fillCircle(0, 0, 12);
+        gem.fillStyle(0xffffff, 0.35);
+        gem.fillCircle(-4, -4, 4);
+        gem.lineStyle(1.5, 0xffffff, 0.4);
+        gem.strokeCircle(0, 0, 12);
+      }
 
       // アイコンを主役にして情報量を絞る: 名前(+所持数)を1行、生産量を小さく補足、コストは
       // 右側に「値札」として分離する（スプレッドシート的な1行詰め込みを避け、ショップの商品行らしくする）
@@ -478,11 +503,13 @@ export class IdleScene extends Phaser.Scene {
 
   // ---- モーダル ----
 
-  private showModal(bodyText: string, onClose?: () => void): void {
+  private showModal(bodyText: string, onClose?: () => void, iconKey?: string): void {
     const overlay = this.add.rectangle(400, 380, 800, 760, 0x3a5a78, 0.55).setInteractive();
     const panel = drawPanel(this, 400, 380, 560, 420, { radius: 20, fillColor: 0xffffff, shadow: false });
+    const hasIcon = !!iconKey && this.textures.exists(iconKey);
+    const icon = hasIcon ? this.add.image(400, 250, iconKey!).setDisplaySize(150, 150) : null;
     const text = this.add
-      .text(400, 340, bodyText, {
+      .text(400, hasIcon ? 400 : 340, bodyText, {
         fontSize: "14px",
         color: "#3a4a5a",
         align: "center",
@@ -492,6 +519,7 @@ export class IdleScene extends Phaser.Scene {
     const closeBtn = this.makeSmallButton(400, 550, 140, t(this.lang, "closeButton"), () => {
       overlay.destroy();
       panel.destroy();
+      icon?.destroy();
       text.destroy();
       closeBtn.rect.destroy();
       closeBtn.label.destroy();
@@ -502,6 +530,8 @@ export class IdleScene extends Phaser.Scene {
   private showWelcomeModal(gained: number): void {
     this.showModal(
       `${t(this.lang, "welcomeTitle")}\n\n${t(this.lang, "welcomeBack", { n: formatNumber(gained) })}`,
+      undefined,
+      "pw-hero-alchemist",
     );
   }
 
