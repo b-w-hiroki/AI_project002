@@ -129,6 +129,7 @@ export class IdleScene extends Phaser.Scene {
 
     this.buildBackground();
     this.buildZonePanels();
+    this.buildAlchemistMascot();
     this.buildHeader();
     this.buildBrewArea();
     this.buildGeneratorList();
@@ -163,9 +164,10 @@ export class IdleScene extends Phaser.Scene {
     // イラスト背景（ChatGPT生成、docs/art-assets.md参照）があれば使い、無ければ
     // 淡い青空〜白のグラデーション（ソシャゲ調の明るいファンタジー基調）にフォールバックする
     if (this.textures.exists("pw-bg-workshop")) {
-      this.add.image(400, 380, "pw-bg-workshop").setDisplaySize(800, 760).setAlpha(0.9);
+      this.add.image(400, 380, "pw-bg-workshop").setDisplaySize(800, 760);
+      // イラストの色味を活かすため、既存グラデーションはごく薄い一枚だけ重ねてUIとの馴染みだけ取る
       const tint = this.add.graphics();
-      tint.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 0.25);
+      tint.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 0.08);
       tint.fillRect(0, 0, 800, 760);
     } else {
       const g = this.add.graphics();
@@ -173,8 +175,8 @@ export class IdleScene extends Phaser.Scene {
       g.fillRect(0, 0, 800, 760);
     }
     const glow = this.add.graphics();
-    glow.fillStyle(0xffffff, 0.35);
-    glow.fillCircle(160, 230, 220);
+    glow.fillStyle(0xffffff, 0.28);
+    glow.fillCircle(160, 220, 200);
 
     // 転生と連動した「街」のアクセントカラーを淡く重ねる。実際の描画は refreshUI() 経由の
     // refreshTownGlow() が行う（townText 等ヘッダー要素の生成が buildBackground より後のため）
@@ -215,6 +217,17 @@ export class IdleScene extends Phaser.Scene {
       borderColor: THEME.panelBorder,
       borderAlpha: 0.5,
     });
+  }
+
+  /**
+   * 錬金術師キャラをブリューエリアの主役として、ゾーンパネルの上・ブリュー円の背後に配置する。
+   * zonePanelは不透明(fillAlpha 0.9)で背景を覆うため、buildBackground側に置くと
+   * ほぼ隠れてしまう——buildZonePanelsの後、ブリュー円を描くbuildBrewAreaより前に
+   * 呼ぶことで「パネルの上に乗り、ブリュー円の後ろに立つ」正しい重なり順になる
+   */
+  private buildAlchemistMascot(): void {
+    if (!this.textures.exists("pw-hero-alchemist")) return;
+    this.add.image(160, 205, "pw-hero-alchemist").setDisplaySize(210, 210);
   }
 
   private buildHeader(): void {
