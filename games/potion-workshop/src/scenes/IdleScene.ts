@@ -67,7 +67,7 @@ export class IdleScene extends Phaser.Scene {
   private potionText!: Phaser.GameObjects.Text;
   private rateText!: Phaser.GameObjects.Text;
   private essenceText!: Phaser.GameObjects.Text;
-  private brewText!: Phaser.GameObjects.Text;
+  private brewText: Phaser.GameObjects.Text | null = null;
   private langText!: Phaser.GameObjects.Text;
   private soundIcon!: Phaser.GameObjects.Graphics;
   private clickUpgradeText!: Phaser.GameObjects.Text;
@@ -129,9 +129,9 @@ export class IdleScene extends Phaser.Scene {
 
     this.buildBackground();
     this.buildZonePanels();
-    this.buildAlchemistMascot();
+    const mascot = this.buildAlchemistMascot();
     this.buildHeader();
-    this.buildBrewArea();
+    this.buildBrewArea(mascot);
     this.buildGeneratorList();
     this.buildSaveTools();
 
@@ -220,14 +220,15 @@ export class IdleScene extends Phaser.Scene {
   }
 
   /**
-   * 錬金術師キャラをブリューエリアの主役として、ゾーンパネルの上・ブリュー円の背後に配置する。
+   * 錬金術師キャラをブリューエリアの主役として、ゾーンパネルの上に配置する。
    * zonePanelは不透明(fillAlpha 0.9)で背景を覆うため、buildBackground側に置くと
-   * ほぼ隠れてしまう——buildZonePanelsの後、ブリュー円を描くbuildBrewAreaより前に
-   * 呼ぶことで「パネルの上に乗り、ブリュー円の後ろに立つ」正しい重なり順になる
+   * ほぼ隠れてしまう——buildZonePanelsの後に呼ぶことで「パネルの上に乗る」正しい
+   * 重なり順になる。実際のクリック円は buildBrewArea() が作るので、ここでは絵だけ用意する
+   * （画像が無い場合は buildBrewArea() 側が単色円のフォールバックボタンを描く）
    */
-  private buildAlchemistMascot(): void {
-    if (!this.textures.exists("pw-hero-alchemist")) return;
-    this.add.image(160, 205, "pw-hero-alchemist").setDisplaySize(210, 210);
+  private buildAlchemistMascot(): Phaser.GameObjects.Image | null {
+    if (!this.textures.exists("pw-hero-alchemist")) return null;
+    return this.add.image(160, 200, "pw-hero-alchemist").setDisplaySize(220, 220);
   }
 
   private buildHeader(): void {
@@ -267,24 +268,31 @@ export class IdleScene extends Phaser.Scene {
     this.langText = langButton.label;
   }
 
-  private buildBrewArea(): void {
-    // 柔らかいグロー＋二重リングで単色円より奥行きを出す
-    this.add.circle(160, 230, 78, 0x9d5cff, 0.18);
-    const ring = this.add.circle(160, 230, 70, 0x9d5cff, 0).setStrokeStyle(2, 0xd9a7ff, 0.6);
-    const brew = this.add
-      .circle(160, 230, 65, 0x9d5cff)
-      .setStrokeStyle(2, 0xffffff, 0.8)
-      .setInteractive({ useHandCursor: true });
-    this.brewText = this.add
-      .text(160, 230, "", { fontSize: "22px", color: "#ffffff", fontStyle: "700" })
-      .setOrigin(0.5);
-    brew.on("pointerdown", () => {
-      const gain = this.state.clickPower * essenceMultiplier(this.state);
-      this.state = click(this.state);
-      this.playSound(sfx.click);
-      this.tweens.add({ targets: [brew, ring], scale: 0.92, duration: 60, yoyo: true });
-      this.spawnFloatingText(160, 155, `+${formatNumber(gain)}`, "#1f8a63");
-    });
+  /**
+   * ブリュー操作: キャラ画像がある場合は「ボタンを押す」ではなく「錬金術師本人をタップする」
+   * 体験にする。ユーザーからの「ボタンやめてキャラタップにしたら？」というフィードバックを反映。
+   * 画像が無い環境（未組み込み/読み込み失敗）では、従来通りの単色円ボタンにフォールバックする。
+   */
+  private buildBrewArea(mascot: Phaser.GameObjects.Image | null): void {
+    if (!mascot) {
+      // フォールバック: 画像が無い場合は従来通りの単色円ボタン
+      const ring = this.add.circle(160, 230, 70, 0x9d5cff, 0).setStrokeStyle(2, 0xd9a7ff, 0.6);
+      const brew = this.add
+        .circle(160, 230, 65, 0x9d5cff)
+        .setStrokeStyle(2, 0xffffff, 0.8)
+        .setInteractive({ useHandCursor: true });
+      this.brewText = this.add
+        .text(160, 230, "", { fontSize: "22px", color: "#ffffff", fontStyle: "700" })
+        .setOrigin(0.5);
+      brew.on("pointerdown", () => this.onBrewTap([brew, ring]));
+    } else {
+      // 柔らかいグロー（背景の装飾のみ、ボタンの縁取りではない）
+      const glow = this.add.circle(160, 220, 95, 0x9d5cff, 0.15);
+      mascot.setInteractive({ useHandCursor: true });
+      // タップ可能であることが伝わるよう、常時ゆっくり上下に揺れるアイドルアニメーションを付与
+      this.tweens.add({ targets: mascot, y: mascot.y - 6, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      mascot.on("pointerdown", () => this.onBrewTap([mascot], glow));
+    }
 
     // 購入数セレクター（クリック強化に使う一括購入数）
     CLICK_UPGRADE_QUANTITIES.forEach((qty, i) => {
@@ -387,6 +395,17 @@ export class IdleScene extends Phaser.Scene {
         cg.happytime();
       }
     });
+  }
+
+  private onBrewTap(bounceTargets: Phaser.GameObjects.GameObject[], glow?: Phaser.GameObjects.Arc): void {
+    const gain = this.state.clickPower * essenceMultiplier(this.state);
+    this.state = click(this.state);
+    this.playSound(sfx.click);
+    this.tweens.add({ targets: bounceTargets, scale: 0.94, duration: 70, yoyo: true, ease: "Sine.easeOut" });
+    if (glow) {
+      this.tweens.add({ targets: glow, alpha: 0.35, duration: 70, yoyo: true });
+    }
+    this.spawnFloatingText(160, 130, `+${formatNumber(gain)}`, "#1f8a63");
   }
 
   private buildGeneratorList(): void {
@@ -617,7 +636,7 @@ export class IdleScene extends Phaser.Scene {
   private refreshStaticTexts(): void {
     this.titleText.setText(t(this.lang, "title"));
     this.titleIcon.setPosition(400 - this.titleText.width / 2 - 18, 26);
-    this.brewText.setText(t(this.lang, "brew"));
+    this.brewText?.setText(t(this.lang, "brew"));
     this.langText.setText(t(this.lang, "langButton"));
     this.soundIcon.destroy();
     this.soundIcon = drawSpeakerIcon(this, 700, 26, this.soundOn, 18);
