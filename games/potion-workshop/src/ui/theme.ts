@@ -297,6 +297,74 @@ export function drawSpeakerIcon(scene: Phaser.Scene, x: number, y: number, on: b
   return g;
 }
 
+/** 稲妻アイコン（クリック強化用）。絵文字⚡はフォント依存で崩れうるためGraphics描画にする */
+export function drawBoltIcon(scene: Phaser.Scene, x: number, y: number, size = 16, color = 0xc98a12): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  g.fillStyle(color, 1);
+  g.beginPath();
+  g.moveTo(size * 0.12, -size * 0.5);
+  g.lineTo(-size * 0.28, size * 0.08);
+  g.lineTo(size * 0.02, size * 0.08);
+  g.lineTo(-size * 0.12, size * 0.5);
+  g.lineTo(size * 0.32, -size * 0.12);
+  g.lineTo(size * 0.02, -size * 0.12);
+  g.closePath();
+  g.fillPath();
+  return g;
+}
+
+/** 砂時計アイコン（放置上限拡張用） */
+export function drawHourglassIcon(scene: Phaser.Scene, x: number, y: number, size = 16, color = 0x2f8fd1): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  const w = size * 0.42;
+  const h = size * 0.5;
+  g.fillStyle(color, 1);
+  g.fillTriangle(-w, -h, w, -h, 0, 0);
+  g.fillTriangle(-w, h, w, h, 0, 0);
+  g.lineStyle(Math.max(1.5, size * 0.1), color, 1);
+  g.strokeLineShape(new Phaser.Geom.Line(-w, -h, w, -h));
+  g.strokeLineShape(new Phaser.Geom.Line(-w, h, w, h));
+  return g;
+}
+
+/** 4方向にとがった星（キラキラ）アイコン（転生用） */
+export function drawSparkleIcon(scene: Phaser.Scene, x: number, y: number, size = 16, color = 0x8a4fd1): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics({ x, y });
+  g.fillStyle(color, 1);
+  const s = size * 0.5;
+  const inner = s * 0.28;
+  g.beginPath();
+  g.moveTo(0, -s);
+  g.lineTo(inner, -inner);
+  g.lineTo(s, 0);
+  g.lineTo(inner, inner);
+  g.lineTo(0, s);
+  g.lineTo(-inner, inner);
+  g.lineTo(-s, 0);
+  g.lineTo(-inner, -inner);
+  g.closePath();
+  g.fillPath();
+  return g;
+}
+
+/** アイコンバッジ: 淡い円の上にアイコンを重ねる。パネル左上に付けて用途を一目で伝える */
+export function drawIconBadge(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  color: number,
+  drawIcon: (scene: Phaser.Scene, x: number, y: number, size: number, color: number) => Phaser.GameObjects.Graphics,
+  size = 32,
+): Phaser.GameObjects.Container {
+  const bg = scene.add.graphics();
+  bg.fillStyle(color, 0.18);
+  bg.fillCircle(0, 0, size / 2);
+  bg.lineStyle(1.5, color, 0.5);
+  bg.strokeCircle(0, 0, size / 2);
+  const icon = drawIcon(scene, 0, 0, size * 0.5, color);
+  return scene.add.container(x, y, [bg, icon]);
+}
+
 /** テキストの値が変わった時だけ、軽くポップさせて変化に気付きやすくする */
 export function popOnChange(scene: Phaser.Scene, target: Phaser.GameObjects.Text, newText: string): void {
   if (target.text === newText) return;

@@ -44,9 +44,13 @@ import {
   SmoothedCounter,
   THEME,
   TYPE,
+  drawBoltIcon,
   drawFlaskIcon,
+  drawHourglassIcon,
+  drawIconBadge,
   drawPanel,
   drawProgressBar,
+  drawSparkleIcon,
   drawSpeakerIcon,
   makeRoundedRect,
   popOnChange,
@@ -323,8 +327,10 @@ export class IdleScene extends Phaser.Scene {
     // クリック強化（購入数セレクターに応じて一括購入）
     this.clickUpgradeButton = makeRoundedRect(this, 160, 375, 260, 56, 0xe4eef8, {
       radius: 12,
-      borderColor: 0x9ecbef,
+      borderColor: 0xc98a12,
+      borderAlpha: 0.55,
     });
+    drawIconBadge(this, 47, 353, 0xc98a12, drawBoltIcon, 28);
     this.clickUpgradeText = this.add
       .text(160, 375, "", { fontSize: "13px", color: "#3a4a5a", align: "center" })
       .setOrigin(0.5);
@@ -342,8 +348,10 @@ export class IdleScene extends Phaser.Scene {
     // 放置上限拡張（essence消費、複数ソース加算式で将来の課金/バフ等にも対応できる設計）
     this.offlineCapButton = makeRoundedRect(this, 160, 440, 260, 44, 0xe4eef8, {
       radius: 12,
-      borderColor: 0x9ecbef,
+      borderColor: 0x2f8fd1,
+      borderAlpha: 0.55,
     });
+    drawIconBadge(this, 47, 424, 0x2f8fd1, drawHourglassIcon, 26);
     this.offlineCapText = this.add
       .text(160, 440, "", { fontSize: "12px", color: "#3a4a5a", align: "center" })
       .setOrigin(0.5);
@@ -365,8 +373,10 @@ export class IdleScene extends Phaser.Scene {
 
     this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0xf3ecff, {
       radius: 14,
-      borderColor: 0xb98af0,
+      borderColor: 0x8a4fd1,
+      borderAlpha: 0.55,
     });
+    drawIconBadge(this, 47, 499, 0x8a4fd1, drawSparkleIcon, 30);
     this.prestigeText = this.add
       .text(160, 512, "", {
         fontSize: "12px",
