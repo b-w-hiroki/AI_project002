@@ -216,7 +216,10 @@ export function drawFlaskIcon(scene: Phaser.Scene, x: number, y: number, size = 
 }
 
 export interface ProgressBar {
+  /** 進捗(フィル)側のGraphics。表示/非表示の切替はこちらで行う */
   graphics: Phaser.GameObjects.Graphics;
+  /** 下地(トラック)側のGraphics。Containerへ移す等、2枚まとめて扱う時に使う */
+  track: Phaser.GameObjects.Graphics;
   /** ratio(0-1)で塗りつぶし量を更新する。ratio自体はサチュレーションしないので呼び出し側で0-1にクランプすること */
   setRatio: (ratio: number) => void;
 }
@@ -252,7 +255,7 @@ export function drawProgressBar(
   };
   paint(ratio);
 
-  return { graphics: fill, setRatio: paint };
+  return { graphics: fill, track, setRatio: paint };
 }
 
 /**
@@ -347,22 +350,190 @@ export function drawSparkleIcon(scene: Phaser.Scene, x: number, y: number, size 
   return g;
 }
 
-/** アイコンバッジ: 淡い円の上にアイコンを重ねる。パネル左上に付けて用途を一目で伝える */
-export function drawIconBadge(
+/**
+ * アクションカードの見た目モード。
+ * - idle:  購入不可（通常）。白系グラデーション + 淡いアクセント
+ * - ready: 購入可能。アクセント色に寄せたグラデーション + 外側にソフトグロー
+ * - hero:  特別状態（転生可能など）。アクセント色ベタ塗りの濃色カード + 白文字
+ * - muted: 上限到達など操作できない状態。灰色寄せ
+ */
+export type CardMood = "idle" | "ready" | "hero" | "muted";
+
+export interface ActionCard {
+  container: Phaser.GameObjects.Container;
+  title: Phaser.GameObjects.Text;
+  sub: Phaser.GameObjects.Text;
+  /** 右側のコストピル内テキスト。setCostで更新する */
+  costText: Phaser.GameObjects.Text;
+  /** カード内の左端(テキスト開始)と右端のローカルX。進捗バー等を追加配置する時の目安 */
+  contentLeft: number;
+  contentRight: number;
+  setMood: (mood: CardMood) => void;
+  /** nullでピルを隠す */
+  setCost: (text: string | null) => void;
+  /** タップ時の押し込み演出 */
+  press: () => void;
+}
+
+/**
+ * 「アイコン + 見出し + 説明 + 右側コストピル」で構成される操作カード。
+ * クリック強化 / 放置上限拡張 / 転生の3パネルを、単色枠+中央寄せテキストの単調な見た目から
+ * カード型UIへ刷新するために追加した。
+ *
+ * - 全要素をContainerに入れ、押下時のスケール演出・ホバー演出がカード全体に一括で掛かるようにする
+ * - テキストは左寄せ・固定X開始にし、日英切り替えで文字列長が変わってもピルやアイコンと
+ *   重ならないよう `contentLeft`〜`contentRight` の範囲に収める（呼び出し側でwordWrap幅に使う）
+ * - グラデーションは WebGL でのみ有効。Canvasレンダラーでは先頭色の単色塗りにフォールバックする
+ *   （Phaser標準挙動）ため、どちらでも成立する配色にしている
+ */
+export function makeActionCard(
   scene: Phaser.Scene,
   x: number,
   y: number,
-  color: number,
+  w: number,
+  h: number,
+  accent: number,
   drawIcon: (scene: Phaser.Scene, x: number, y: number, size: number, color: number) => Phaser.GameObjects.Graphics,
-  size = 32,
-): Phaser.GameObjects.Container {
+  options: { radius?: number } = {},
+): ActionCard {
+  const radius = options.radius ?? 14;
+  const iconR = Math.min(22, h * 0.34);
+  const iconX = -w / 2 + 12 + iconR;
+  const contentLeft = iconX + iconR + 12;
+  const contentRight = w / 2 - 12;
+  const pillH = 22;
+
   const bg = scene.add.graphics();
-  bg.fillStyle(color, 0.18);
-  bg.fillCircle(0, 0, size / 2);
-  bg.lineStyle(1.5, color, 0.5);
-  bg.strokeCircle(0, 0, size / 2);
-  const icon = drawIcon(scene, 0, 0, size * 0.5, color);
-  return scene.add.container(x, y, [bg, icon]);
+  const disc = scene.add.graphics();
+  const icon = drawIcon(scene, iconX, 0, iconR * 1.05, 0xffffff);
+  const title = scene.add
+    .text(contentLeft, -h * 0.18, "", { ...TYPE.body, fontStyle: "700", color: THEME.textPrimary })
+    .setOrigin(0, 0.5);
+  const sub = scene.add
+    .text(contentLeft, h * 0.16, "", { ...TYPE.small, color: THEME.textMuted })
+    .setOrigin(0, 0.5);
+  const pill = scene.add.graphics();
+  const costText = scene.add
+    .text(contentRight - 9, 0, "", { ...TYPE.small, fontStyle: "700" })
+    .setOrigin(1, 0.5);
+
+  const container = scene.add.container(x, y, [bg, disc, icon, title, sub, pill, costText]);
+  container.setSize(w, h);
+  container.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+  if (container.input) container.input.cursor = "pointer";
+
+  let mood: CardMood = "idle";
+  let hovering = false;
+  let cost: string | null = null;
+
+  const paint = () => {
+    const hero = mood === "hero";
+    const ready = mood === "ready";
+    const muted = mood === "muted";
+
+    // 本体
+    bg.clear();
+    // Canvasレンダラーではグラデーション非対応で先頭色(top)の単色になるため、topだけでも成立する色にする
+    const top = hero ? blend(accent, 0x000000, 0.08) : ready ? blend(accent, 0xffffff, 0.9) : 0xffffff;
+    const bottom = hero
+      ? blend(accent, 0x000000, 0.3)
+      : ready
+        ? blend(accent, 0xffffff, 0.76)
+        : muted
+          ? 0xeceff3
+          : 0xf3f6fa;
+    if (ready || hero) {
+      // 外側のソフトグロー
+      bg.lineStyle(6, accent, hero ? 0.28 : 0.16);
+      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+    }
+    bg.fillGradientStyle(top, top, bottom, bottom, 1);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+    // ガラス風ハイライト
+    bg.fillStyle(0xffffff, hero ? 0.14 : 0.5);
+    bg.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, Math.max(6, h * 0.3), radius * 0.8);
+    if (hovering) {
+      bg.fillStyle(0xffffff, hero ? 0.1 : 0.25);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+    }
+    // 左端のアクセントストライプ（ヒーロー時は白）
+    bg.fillStyle(hero ? 0xffffff : accent, muted ? 0.35 : hero ? 0.6 : 0.9);
+    bg.fillRoundedRect(-w / 2, -h / 2 + 8, 4, h - 16, 2);
+    bg.lineStyle(1.5, hero ? 0xffffff : ready ? accent : THEME.panelBorder, hero ? 0.55 : ready ? 0.9 : 0.8);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+
+    // アイコン円
+    disc.clear();
+    const discColor = muted ? 0xb0bcc8 : hero ? 0xffffff : accent;
+    disc.fillStyle(discColor, hero ? 0.22 : ready || muted ? 1 : 0.55);
+    disc.fillCircle(iconX, 0, iconR);
+    if (ready) {
+      disc.lineStyle(2, 0xffffff, 0.7);
+      disc.strokeCircle(iconX, 0, iconR - 1);
+    }
+
+    // 文字色
+    title.setColor(hero ? "#ffffff" : muted ? "#7a8794" : THEME.textPrimary);
+    sub.setColor(hero ? "#efe4ff" : THEME.textMuted);
+
+    // コストピル
+    pill.clear();
+    if (cost === null) {
+      costText.setVisible(false);
+      return;
+    }
+    costText.setVisible(true);
+    const pillW = costText.width + 18;
+    const pillX = contentRight - pillW;
+    if (hero) {
+      pill.fillStyle(0xffd76a, 1);
+      costText.setColor("#4a2d00");
+    } else if (ready) {
+      pill.fillStyle(accent, 1);
+      costText.setColor("#ffffff");
+    } else {
+      pill.fillStyle(0xffffff, 0.75);
+      pill.lineStyle(1, THEME.panelBorder, 0.9);
+      costText.setColor(muted ? "#9aa6b2" : "#6b7a8a");
+    }
+    pill.fillRoundedRect(pillX, -pillH / 2, pillW, pillH, pillH / 2);
+    if (!hero && !ready) pill.strokeRoundedRect(pillX, -pillH / 2, pillW, pillH, pillH / 2);
+  };
+
+  container.on("pointerover", () => {
+    hovering = true;
+    paint();
+  });
+  container.on("pointerout", () => {
+    hovering = false;
+    paint();
+  });
+  paint();
+
+  return {
+    container,
+    title,
+    sub,
+    costText,
+    contentLeft,
+    contentRight,
+    setMood: (m) => {
+      if (m === mood) return;
+      mood = m;
+      paint();
+    },
+    setCost: (text) => {
+      if (text === cost) return;
+      cost = text;
+      if (text !== null) costText.setText(text);
+      paint();
+    },
+    press: () => {
+      scene.tweens.killTweensOf(container);
+      container.setScale(1);
+      scene.tweens.add({ targets: container, scale: 0.96, duration: 70, yoyo: true, ease: "Sine.easeOut" });
+    },
+  };
 }
 
 /** テキストの値が変わった時だけ、軽くポップさせて変化に気付きやすくする */
