@@ -18,6 +18,8 @@ const MESSAGES = {
   essence: { ja: "✨ エッセンス", en: "✨ Essence" },
   essenceBonus: { ja: "生産 +{n}%", en: "Production +{n}%" },
   prestige: { ja: "転生する（+{n} ✨）", en: "Ascend (+{n} ✨)" },
+  prestigeTitle: { ja: "転生", en: "Ascension" },
+  prestigeReady: { ja: "リセットして✨を獲得", en: "Reset & gain ✨" },
   prestigeLocked: {
     ja: "累計{n}調合で転生解放",
     en: "Unlocks at {n} total brewed",

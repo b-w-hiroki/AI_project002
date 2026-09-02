@@ -44,14 +44,15 @@ import {
   SmoothedCounter,
   THEME,
   TYPE,
+  ActionCard,
   drawBoltIcon,
   drawFlaskIcon,
   drawHourglassIcon,
-  drawIconBadge,
   drawPanel,
   drawProgressBar,
   drawSparkleIcon,
   drawSpeakerIcon,
+  makeActionCard,
   makeRoundedRect,
   popOnChange,
 } from "../ui/theme";
@@ -74,12 +75,9 @@ export class IdleScene extends Phaser.Scene {
   private brewText: Phaser.GameObjects.Text | null = null;
   private langText!: Phaser.GameObjects.Text;
   private soundIcon!: Phaser.GameObjects.Graphics;
-  private clickUpgradeText!: Phaser.GameObjects.Text;
-  private clickUpgradeButton!: RoundedRect;
-  private offlineCapText!: Phaser.GameObjects.Text;
-  private offlineCapButton!: RoundedRect;
-  private prestigeButton!: RoundedRect;
-  private prestigeText!: Phaser.GameObjects.Text;
+  private clickCard!: ActionCard;
+  private offlineCard!: ActionCard;
+  private prestigeCard!: ActionCard;
   private prestigeProgress!: ProgressBar;
   private prestigeGlow!: Phaser.GameObjects.Graphics;
   private prestigeGlowTween?: Phaser.Tweens.Tween;
@@ -89,7 +87,7 @@ export class IdleScene extends Phaser.Scene {
   private townText!: Phaser.GameObjects.Text;
   private lastTownIndex = -1;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
-  private qtyButtons: { qty: number; rect: RoundedRect }[] = [];
+  private qtyButtons: { qty: number; rect: RoundedRect; label: Phaser.GameObjects.Text }[] = [];
   private rows: {
     id: string;
     button: RoundedRect;
@@ -298,101 +296,87 @@ export class IdleScene extends Phaser.Scene {
       mascot.on("pointerdown", () => this.onBrewTap([mascot], glow));
     }
 
-    // 購入数セレクター（クリック強化に使う一括購入数）
+    // 購入数セレクター（クリック強化に使う一括購入数）。選択中はクリック強化カードと同じ金色で統一する
+    const paintQty = () => {
+      for (const b of this.qtyButtons) {
+        const on = b.qty === this.buyQty;
+        b.rect.setFillStyle(on ? 0xc98a12 : 0xffffff, on ? 1 : 0.85);
+        b.label.setColor(on ? "#ffffff" : "#5a6a7a");
+      }
+    };
     CLICK_UPGRADE_QUANTITIES.forEach((qty, i) => {
       const bx = 40 + i * 60;
-      const rect = makeRoundedRect(this, bx, 322, 52, 26, qty === this.buyQty ? 0xd9c2ff : 0xe4eef8, {
-        radius: 8,
+      const rect = makeRoundedRect(this, bx, 322, 52, 24, 0xffffff, {
+        radius: 12,
         borderWidth: 1,
-        borderColor: 0x9ecbef,
+        borderColor: 0xc98a12,
+        borderAlpha: 0.5,
       });
       const label = this.add
-        .text(bx, 322, qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`, {
-          fontSize: "12px",
-          color: "#3a4a5a",
-        })
+        .text(bx, 322, "", { ...TYPE.small, fontStyle: "700", color: "#5a6a7a" })
         .setOrigin(0.5);
       rect.on("pointerdown", () => {
         this.buyQty = qty;
-        for (const b of this.qtyButtons) {
-          b.rect.setFillStyle(b.qty === this.buyQty ? 0xd9c2ff : 0xe4eef8);
-        }
+        paintQty();
       });
-      this.qtyButtons.push({ qty, rect });
+      this.qtyButtons.push({ qty, rect, label });
       this.registerRefresh(() =>
         label.setText(qty === Infinity ? t(this.lang, "buyQtyMax") : `x${qty}`),
       );
     });
+    paintQty();
 
     // クリック強化（購入数セレクターに応じて一括購入）
-    this.clickUpgradeButton = makeRoundedRect(this, 160, 375, 260, 56, 0xe4eef8, {
-      radius: 12,
-      borderColor: 0xc98a12,
-      borderAlpha: 0.55,
-    });
-    drawIconBadge(this, 47, 353, 0xc98a12, drawBoltIcon, 28);
-    this.clickUpgradeText = this.add
-      .text(160, 375, "", { fontSize: "13px", color: "#3a4a5a", align: "center" })
-      .setOrigin(0.5);
-    this.clickUpgradeButton.on("pointerdown", () => {
+    this.clickCard = makeActionCard(this, 160, 376, 260, 58, 0xc98a12, drawBoltIcon);
+    this.clickCard.container.on("pointerdown", () => {
       const before = this.state.clickPower;
       const next = buyClickUpgrades(this.state, this.buyQty);
       if (next) {
         const gained = next.clickPower - before;
         this.state = next;
         this.playSound(sfx.buy);
+        this.clickCard.press();
         this.spawnFloatingText(160, 345, `+${gained} ⚡`, "#c98a12");
       }
     });
 
     // 放置上限拡張（essence消費、複数ソース加算式で将来の課金/バフ等にも対応できる設計）
-    this.offlineCapButton = makeRoundedRect(this, 160, 440, 260, 44, 0xe4eef8, {
-      radius: 12,
-      borderColor: 0x2f8fd1,
-      borderAlpha: 0.55,
-    });
-    drawIconBadge(this, 47, 424, 0x2f8fd1, drawHourglassIcon, 26);
-    this.offlineCapText = this.add
-      .text(160, 440, "", { fontSize: "12px", color: "#3a4a5a", align: "center" })
-      .setOrigin(0.5);
-    this.offlineCapButton.on("pointerdown", () => {
+    this.offlineCard = makeActionCard(this, 160, 442, 260, 52, 0x2f8fd1, drawHourglassIcon);
+    this.offlineCard.container.on("pointerdown", () => {
       const next = buyOfflineExtension(this.state);
       if (next) {
         this.state = next;
         save(this.state, localStorage, Date.now());
         this.playSound(sfx.buy);
+        this.offlineCard.press();
         this.spawnFloatingText(160, 415, "+6h ⏳", "#2f8fd1");
       }
     });
 
-    // 転生: 解放中は背後にパルスするグロー（drawPanel/makeRoundedRectより先に追加し、必ずボタンの背後に描画する）
-    this.prestigeGlow = this.add.graphics({ x: 160, y: 525 });
+    // 転生: 解放中は背後にパルスするグロー（カードより先に追加し、必ずカードの背後に描画する）
+    this.prestigeGlow = this.add.graphics({ x: 160, y: 527 });
     this.prestigeGlow.fillStyle(0xd9a7ff, 1);
-    this.prestigeGlow.fillRoundedRect(-148, -50, 296, 100, 22);
+    this.prestigeGlow.fillRoundedRect(-142, -46, 284, 92, 24);
     this.prestigeGlow.setAlpha(0);
 
-    this.prestigeButton = makeRoundedRect(this, 160, 525, 260, 64, 0xf3ecff, {
-      radius: 14,
-      borderColor: 0x8a4fd1,
-      borderAlpha: 0.55,
-    });
-    drawIconBadge(this, 47, 499, 0x8a4fd1, drawSparkleIcon, 30);
-    this.prestigeText = this.add
-      .text(160, 512, "", {
-        fontSize: "12px",
-        color: "#8a4fd1",
-        align: "center",
-        wordWrap: { width: 240 },
-      })
-      .setOrigin(0.5);
-    // 転生解放（累計醸造数）までの進捗を可視化する。解放後は非表示にする
-    this.prestigeProgress = drawProgressBar(this, 160, 546, 220, 8, 0, {
-      trackColor: 0xece0fb,
-      fillColor: 0x9d5cff,
-    });
-    this.prestigeButton.on("pointerdown", () => {
+    this.prestigeCard = makeActionCard(this, 160, 527, 260, 70, 0x8a4fd1, drawSparkleIcon, { radius: 16 });
+    // 右側のコストピル（最大 "+999K ✨" 程度 ≒ 70px）と重ならない幅で折り返す
+    this.prestigeCard.sub.setWordWrapWidth(this.prestigeCard.contentRight - this.prestigeCard.contentLeft - 76);
+    // 転生解放（累計醸造数）までの進捗をカード下部に可視化する。解放後は非表示にする
+    {
+      const left = this.prestigeCard.contentLeft;
+      const width = this.prestigeCard.contentRight - left;
+      this.prestigeProgress = drawProgressBar(this, left + width / 2, 26, width, 6, 0, {
+        trackColor: 0xe6dcf6,
+        fillColor: 0x9d5cff,
+      });
+      // drawProgressBarはシーン直下に2枚のGraphicsを作るため、カードのContainerへ移してスケール演出に追従させる
+      this.prestigeCard.container.add([this.prestigeProgress.track, this.prestigeProgress.graphics]);
+    }
+    this.prestigeCard.container.on("pointerdown", () => {
       const gained = essenceOnPrestige(this.state);
       if (gained <= 0) return;
+      this.prestigeCard.press();
       if (!window.confirm(t(this.lang, "prestigeConfirm", { n: formatNumber(gained) }))) return;
       const next = prestige(this.state);
       if (next) {
@@ -676,32 +660,35 @@ export class IdleScene extends Phaser.Scene {
       this.buyQty === Infinity ? Math.max(affordableQty, 1) : this.buyQty;
     const clickCost = clickUpgradeCostForQuantity(this.state, displayQty);
     const clickAffordable = affordableQty >= 1;
-    this.clickUpgradeText.setText(
-      `${t(this.lang, "clickUpgrade")} (${this.state.clickPower})\n` +
-        `${t(this.lang, "clickUpgradeDesc", { n: displayQty.toString() })}\n` +
-        `${t(this.lang, "cost")}: ${formatNumber(clickCost)}`,
-    );
-    this.clickUpgradeButton.setFillStyle(clickAffordable ? 0xcdf3e3 : 0xe4eef8);
+    this.clickCard.title.setText(`${t(this.lang, "clickUpgrade")}  Lv.${this.state.clickPower}`);
+    this.clickCard.sub.setText(t(this.lang, "clickUpgradeDesc", { n: displayQty.toString() }));
+    this.clickCard.setCost(formatNumber(clickCost));
+    this.clickCard.setMood(clickAffordable ? "ready" : "idle");
 
     const capSec = offlineCapSec(this.state);
     const capHours = Math.round(capSec / 3600);
     const extCost = offlineExtensionCost(this.state);
     if (extCost === null) {
-      this.offlineCapText.setText(t(this.lang, "offlineCapMaxed", { h: capHours.toString() }));
-      this.offlineCapButton.setFillStyle(0xe4eef8);
+      this.offlineCard.title.setText(t(this.lang, "offlineCapLabel", { h: capHours.toString() }));
+      this.offlineCard.sub.setText(t(this.lang, "offlineCapMaxed", { h: capHours.toString() }));
+      this.offlineCard.setCost(t(this.lang, "buyQtyMax"));
+      this.offlineCard.setMood("muted");
     } else {
       const capAffordable = this.state.essence >= extCost;
-      this.offlineCapText.setText(
-        `${t(this.lang, "offlineCapLabel", { h: capHours.toString() })}\n${t(this.lang, "offlineCapButton")}: ${formatNumber(extCost)}✨`,
-      );
-      this.offlineCapButton.setFillStyle(capAffordable ? 0xcfe9ff : 0xe4eef8);
+      this.offlineCard.title.setText(t(this.lang, "offlineCapLabel", { h: capHours.toString() }));
+      this.offlineCard.sub.setText(t(this.lang, "offlineCapButton"));
+      this.offlineCard.setCost(`${formatNumber(extCost)} ✨`);
+      this.offlineCard.setMood(capAffordable ? "ready" : "idle");
     }
 
     const gained = essenceOnPrestige(this.state);
     if (gained > 0) {
-      this.prestigeText.setText(t(this.lang, "prestige", { n: formatNumber(gained) }));
-      this.prestigeButton.setFillStyle(0xd9c2ff);
+      this.prestigeCard.title.setText(t(this.lang, "prestigeTitle"));
+      this.prestigeCard.sub.setText(t(this.lang, "prestigeReady"));
+      this.prestigeCard.setCost(`+${formatNumber(gained)} ✨`);
+      this.prestigeCard.setMood("hero");
       this.prestigeProgress.graphics.setVisible(false);
+      this.prestigeProgress.track.setVisible(false);
       if (!this.prestigeWasAffordable) {
         // 転生可能になった瞬間だけパルス演出を開始する（毎フレーム呼ぶrefreshUIからtween.addを連打しないため）
         this.prestigeWasAffordable = true;
@@ -716,11 +703,12 @@ export class IdleScene extends Phaser.Scene {
         });
       }
     } else {
-      this.prestigeText.setText(
-        t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }),
-      );
-      this.prestigeButton.setFillStyle(0xf3ecff);
+      this.prestigeCard.title.setText(t(this.lang, "prestigeTitle"));
+      this.prestigeCard.sub.setText(t(this.lang, "prestigeLocked", { n: formatNumber(PRESTIGE_UNLOCK) }));
+      this.prestigeCard.setCost(`${Math.floor((this.state.totalBrewed / PRESTIGE_UNLOCK) * 100)}%`);
+      this.prestigeCard.setMood("idle");
       this.prestigeProgress.graphics.setVisible(true);
+      this.prestigeProgress.track.setVisible(true);
       this.prestigeProgress.setRatio(this.state.totalBrewed / PRESTIGE_UNLOCK);
       if (this.prestigeWasAffordable) {
         this.prestigeWasAffordable = false;
