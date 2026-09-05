@@ -37,6 +37,18 @@ const RARITY_COLOR: Readonly<Record<string, number>> = {
 
 const RARITIES: readonly EquipRarity[] = ["Common", "Rare", "Epic"] as const;
 
+/**
+ * 立ち絵アセット（docs/art-assets.md 参照）。武将id → テクスチャキー。
+ * 立ち絵が無い武将、または画像の読み込みに失敗した場合は Graphics/テキストのフォールバック表示になる。
+ */
+const GENERAL_ART: Readonly<Record<string, string>> = {
+  gen_hakuen: "st-general-hakuen",
+  gen_soujin: "st-general-soujin",
+};
+const BG_KEY = "st-bg-battlefield";
+/** 立ち絵の縦横比（384:512） */
+const ART_ASPECT = 384 / 512;
+
 type Phase = "title" | "quest" | "gacha" | "breeding" | "roster";
 
 interface RosterRow {
@@ -62,14 +74,23 @@ export class GameScene extends Phaser.Scene {
 
   private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
   private soundIcon!: Phaser.GameObjects.Graphics;
+  private bgOverlay?: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super("GameScene");
   }
 
+  preload(): void {
+    // 画像はすべて任意。404 でも Phaser は警告を出すだけでゲームは続行し、各利用箇所で
+    // textures.exists() を確認して Graphics 描画にフォールバックする
+    this.load.image(BG_KEY, "images/st-bg-battlefield.png");
+    for (const key of Object.values(GENERAL_ART)) this.load.image(key, `images/${key}.png`);
+  }
+
   create(): void {
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x2a1a14);
+    this.buildBackground();
     this.buildTitleScreen();
     this.buildQuestScreen();
     this.buildGachaScreen();
@@ -78,11 +99,31 @@ export class GameScene extends Phaser.Scene {
     this.showTitle();
   }
 
+  // ---------- 背景 ----------
+
+  /**
+   * 画面全体の背景。戦場イラストがあれば全画面（450×800）にカバー表示し、その上に
+   * 画面ごとに濃さを変える暗幕（bgOverlay）を重ねて文字の可読性を確保する。
+   * イラストが無い場合はカメラ背景色（既存挙動）のままにする。
+   */
+  private buildBackground(): void {
+    if (!this.textures.exists(BG_KEY)) return;
+    const src = this.textures.get(BG_KEY).getSourceImage();
+    const scale = Math.max(450 / src.width, 800 / src.height);
+    this.add.image(CX, 400, BG_KEY).setDisplaySize(src.width * scale, src.height * scale);
+    this.bgOverlay = this.add.rectangle(CX, 400, 450, 800, 0x1a0e0a, 0.55);
+  }
+
+  /** 画面ごとの暗幕の濃さ。進撃画面はイラストを見せ、それ以外は文字を優先して暗めにする */
+  private setBackgroundDim(alpha: number): void {
+    this.bgOverlay?.setFillStyle(0x1a0e0a, alpha);
+  }
+
   // ---------- タイトル ----------
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.72 : 0.95 });
 
     const title = this.add
       .text(CX, 110, "三国ポチポチ", { ...TYPE.h1, color: THEME.textPrimary })
@@ -161,6 +202,7 @@ export class GameScene extends Phaser.Scene {
 
   private showTitle(): void {
     this.phase = "title";
+    this.setBackgroundDim(0.55);
     this.titleGroup.setVisible(true);
     this.questGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
@@ -174,14 +216,15 @@ export class GameScene extends Phaser.Scene {
 
   private buildQuestScreen(): void {
     this.questGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
+    // 進撃画面は背景イラストを主役にするため、パネルは薄くしてイラストを透かす
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.35 : 0.95 });
 
     const currencyText = this.add
       .text(CX, 90, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("currencyText");
     const distanceText = this.add
-      .text(CX, 130, "", { ...TYPE.h2, color: THEME.textPrimary })
+      .text(CX, 130, "", { ...TYPE.h2, color: THEME.textPrimary, stroke: "#1a0e0a", strokeThickness: 3 })
       .setOrigin(0.5)
       .setName("distanceText");
 
@@ -190,12 +233,14 @@ export class GameScene extends Phaser.Scene {
         ...TYPE.body,
         color: THEME.textPrimary,
         align: "center",
+        stroke: "#1a0e0a",
+        strokeThickness: 3,
         wordWrap: { width: 340, useAdvancedWrap: true },
       })
       .setOrigin(0.5)
       .setName("eventText");
     const rewardText = this.add
-      .text(CX, 310, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 310, "", { ...TYPE.h2, color: hexToCss(THEME.accent), stroke: "#1a0e0a", strokeThickness: 3 })
       .setOrigin(0.5)
       .setName("rewardText");
 
@@ -214,6 +259,7 @@ export class GameScene extends Phaser.Scene {
 
   private showQuest(): void {
     this.phase = "quest";
+    this.setBackgroundDim(0.2);
     this.titleGroup.setVisible(false);
     this.questGroup.setVisible(true);
     this.distance = 0;
@@ -259,38 +305,95 @@ export class GameScene extends Phaser.Scene {
 
   private buildGachaScreen(): void {
     this.gachaGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 500, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 620, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
 
     const heading = this.add
-      .text(CX, 260, "武将ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 125, "武将ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(CX, 310, `1回 ${GACHA_COST} コイン`, { ...TYPE.body, color: THEME.textMuted })
+      .text(CX, 162, `1回 ${GACHA_COST} コイン`, { ...TYPE.body, color: THEME.textMuted })
       .setOrigin(0.5);
+
+    // 排出武将の立ち絵枠（立ち絵が無い武将はレアリティ色の枠＋名前だけを表示）
+    const artFrame = this.add.graphics().setName("gachaArtFrame");
+    const artSlot = this.add.container(CX, 320).setName("gachaArt");
+
     const resultText = this.add
-      .text(CX, 400, "", { ...TYPE.h2, color: THEME.textPrimary })
+      .text(CX, 470, "", { ...TYPE.h2, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5)
       .setName("gachaResult");
     const balanceText = this.add
-      .text(CX, 450, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 520, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("gachaBalance");
 
-    const drawBtn = makeButton(this, CX, 540, 260, 52, "引く", () => this.rollGacha(), { fontSize: "16px" });
-    const backBtn = makeButton(this, CX, 610, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
+    const drawBtn = makeButton(this, CX, 580, 260, 52, "引く", () => this.rollGacha(), { fontSize: "16px" });
+    const backBtn = makeButton(this, CX, 650, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
       fontSize: "14px",
     });
 
-    this.gachaGroup.add([panel, heading, costText, resultText, balanceText, drawBtn.container, backBtn.container]);
+    this.gachaGroup.add([
+      panel,
+      heading,
+      costText,
+      artFrame,
+      artSlot,
+      resultText,
+      balanceText,
+      drawBtn.container,
+      backBtn.container,
+    ]);
     this.gachaGroup.setVisible(false);
+    this.renderGachaArt(null);
+  }
+
+  /**
+   * ガチャ結果の立ち絵表示。general が null のときは空の枠だけ描く。
+   * 立ち絵テクスチャが無い場合はレアリティ色の枠内に名前の頭文字を大きく出すフォールバック。
+   */
+  private renderGachaArt(general: General | null): void {
+    const frameW = 180;
+    const frameH = frameW / ART_ASPECT; // 240
+    const cx = CX;
+    const cy = 320;
+    const frame = this.gachaGroup.getByName("gachaArtFrame") as Phaser.GameObjects.Graphics;
+    const slot = this.gachaGroup.getByName("gachaArt") as Phaser.GameObjects.Container;
+    slot.removeAll(true);
+
+    const color = general ? (RARITY_COLOR[general.rarity] ?? 0xffffff) : THEME.panelBorder;
+    frame.clear();
+    frame.fillStyle(0x1a0e0a, 0.6);
+    frame.fillRoundedRect(cx - frameW / 2, cy - frameH / 2, frameW, frameH, 12);
+    frame.lineStyle(general ? 3 : 1.5, color, general ? 0.95 : 0.5);
+    frame.strokeRoundedRect(cx - frameW / 2, cy - frameH / 2, frameW, frameH, 12);
+
+    if (!general) {
+      slot.add(this.add.text(0, 0, "？", { ...TYPE.h1, color: THEME.textMuted }).setOrigin(0.5).setAlpha(0.5));
+      return;
+    }
+    const artKey = GENERAL_ART[general.id];
+    if (artKey && this.textures.exists(artKey)) {
+      const pad = 8;
+      const img = this.add.image(0, 0, artKey).setDisplaySize(frameW - pad * 2, frameH - pad * 2);
+      slot.add(img);
+      return;
+    }
+    // フォールバック: 頭文字＋レアリティ
+    const initial = this.add
+      .text(0, -16, general.name.charAt(0), { ...TYPE.h1, fontSize: "64px", color: hexToCss(color) })
+      .setOrigin(0.5);
+    const rarity = this.add.text(0, 48, general.rarity, { ...TYPE.h2, color: hexToCss(color) }).setOrigin(0.5);
+    slot.add([initial, rarity]);
   }
 
   private showGacha(): void {
     this.phase = "gacha";
+    this.setBackgroundDim(0.6);
     this.titleGroup.setVisible(false);
     this.gachaGroup.setVisible(true);
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText("");
+    this.renderGachaArt(null);
     this.refreshGachaBalance();
   }
 
@@ -315,6 +418,10 @@ export class GameScene extends Phaser.Scene {
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
     this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    this.renderGachaArt(general);
+    const artSlot = this.gachaGroup.getByName("gachaArt") as Phaser.GameObjects.Container;
+    artSlot.setScale(0.6).setAlpha(0);
+    this.tweens.add({ targets: artSlot, scale: 1, alpha: 1, duration: isRare ? 320 : 180, ease: "Back.easeOut" });
     if (isRare) {
       this.cameras.main.flash(200, 255, 220, 140);
       cg.happytime();
@@ -326,7 +433,7 @@ export class GameScene extends Phaser.Scene {
 
   private buildBreedingScreen(): void {
     this.breedingGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 660, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 660, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
 
     const heading = this.add
       .text(CX, 110, "装備合成", { ...TYPE.h1, color: THEME.textPrimary })
@@ -429,6 +536,7 @@ export class GameScene extends Phaser.Scene {
 
   private showBreeding(): void {
     this.phase = "breeding";
+    this.setBackgroundDim(0.6);
     this.titleGroup.setVisible(false);
     this.breedingGroup.setVisible(true);
     const resultText = this.breedingGroup.getByName("breedResult") as Phaser.GameObjects.Text;
@@ -470,13 +578,13 @@ export class GameScene extends Phaser.Scene {
 
   private buildRosterScreen(): void {
     this.rosterGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
 
     const heading = this.add
       .text(CX, 90, "武将一覧・装備", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
-      .text(CX, 125, "タップで装備を切り替え（所持装備からなし→Common→Rare→Epicの順）", {
+      .text(CX, 125, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", {
         ...TYPE.small,
         color: THEME.textMuted,
         align: "center",
@@ -498,6 +606,7 @@ export class GameScene extends Phaser.Scene {
 
   private showRoster(): void {
     this.phase = "roster";
+    this.setBackgroundDim(0.6);
     this.titleGroup.setVisible(false);
     this.rosterGroup.setVisible(true);
     this.refreshRoster();
@@ -526,16 +635,29 @@ export class GameScene extends Phaser.Scene {
       bg.lineStyle(1.5, THEME.panelBorder, has ? 0.7 : 0.3);
       bg.strokeRoundedRect(-180, -rowH / 2, 360, rowH, 8);
 
+      // 立ち絵があれば行左端にポートレート表示（未所持はシルエット風に暗くする）
+      const portraitH = rowH - 8;
+      const portraitW = portraitH * ART_ASPECT;
+      const portraitX = -180 + 8 + portraitW / 2;
+      const rowChildren: Phaser.GameObjects.GameObject[] = [bg];
+      const artKey = GENERAL_ART[general.id];
+      if (artKey && this.textures.exists(artKey)) {
+        const portrait = this.add.image(portraitX, 0, artKey).setDisplaySize(portraitW, portraitH);
+        if (!has) portrait.setTint(0x222222).setAlpha(0.6);
+        rowChildren.push(portrait);
+      }
+      const textX = artKey && this.textures.exists(artKey) ? portraitX + portraitW / 2 + 8 : -165;
+
       const count = owned[general.id] ?? 0;
       const nameText = this.add
-        .text(-165, -14, `【${general.rarity}】${general.name}`, {
+        .text(textX, -14, `【${general.rarity}】${general.name}`, {
           ...TYPE.body,
           color: has ? hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff) : THEME.textMuted,
         })
         .setOrigin(0, 0.5);
       const statusText = this.add
         .text(
-          -165,
+          textX,
           14,
           has
             ? `所持×${count}  ATK ${effectiveAtk(general, equipped)}  装備:${equipped[general.id] ?? "なし"}`
@@ -544,7 +666,8 @@ export class GameScene extends Phaser.Scene {
         )
         .setOrigin(0, 0.5);
 
-      const container = this.add.container(CX, y, [bg, nameText, statusText]).setSize(360, rowH);
+      rowChildren.push(nameText, statusText);
+      const container = this.add.container(CX, y, rowChildren).setSize(360, rowH);
       if (has) {
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.onCycleEquip(general));
