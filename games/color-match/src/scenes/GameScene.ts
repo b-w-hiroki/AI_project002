@@ -38,6 +38,9 @@ const CARD_HOME_Y = 260;
 const BOX_W = 160;
 const BOX_H = 80;
 const TURBO_COLOR = 0xff7a3d;
+/** 画像アセットのキー（docs/art-assets.md の asset-id と一致させる） */
+const MASCOT_KEY = "cm-mascot";
+const TURBO_BADGE_KEY = "cm-turbo-badge";
 
 interface TargetBoxView {
   colorId: string;
@@ -79,6 +82,8 @@ export class GameScene extends Phaser.Scene {
   private timerBarBg!: Phaser.GameObjects.Graphics;
   private timerBarFill!: Phaser.GameObjects.Graphics;
   private turboText!: Phaser.GameObjects.Text;
+  /** ターボ中に HUD に出し続ける小バッジ。画像が無い場合は null（turboText のみで表現） */
+  private turboHudBadge: Phaser.GameObjects.Image | null = null;
   private targetBoxes: TargetBoxView[] = [];
   private modeButtons: ModeButtonView[] = [];
 
@@ -88,6 +93,12 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super("GameScene");
+  }
+
+  preload(): void {
+    // 画像はいずれも任意。読み込みに失敗しても textures.exists() で判定し、従来の Graphics/Text 表現にフォールバックする
+    this.load.image(MASCOT_KEY, `images/${MASCOT_KEY}.png`);
+    this.load.image(TURBO_BADGE_KEY, `images/${TURBO_BADGE_KEY}.png`);
   }
 
   create(): void {
@@ -118,8 +129,10 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup = this.add.container(0, 0);
     const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
 
+    // マスコット画像がある時はタイトル文字を右へ寄せ、左隣にマスコットを置く。無ければ従来の中央揃え
+    const hasMascot = this.textures.exists(MASCOT_KEY);
     const title = this.add
-      .text(CX, 110, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(hasMascot ? CX + 55 : CX, 110, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const rules = this.add
       .text(
@@ -134,6 +147,19 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 430, "出題の表記", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.titleGroup.add([panel, title, rules, modeLabel]);
+    if (hasMascot) {
+      // パネルより後に追加してパネルの上に描画する
+      const mascot = this.add.image(105, 118, MASCOT_KEY).setDisplaySize(120, 120);
+      this.titleGroup.add(mascot);
+      this.tweens.add({
+        targets: mascot,
+        y: mascot.y - 6,
+        duration: 1400,
+        ease: "Sine.easeInOut",
+        yoyo: true,
+        repeat: -1,
+      });
+    }
     this.buildWritingModeSelector();
 
     const best = this.add
@@ -226,6 +252,13 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 185, "", { ...TYPE.body, color: hexToCss(TURBO_COLOR), fontStyle: "800" })
       .setOrigin(0.5)
       .setVisible(false);
+    if (this.textures.exists(TURBO_BADGE_KEY)) {
+      // ターボ中の常時表示バッジ（テキストの左隣）。入力は受け取らない
+      this.turboHudBadge = this.add
+        .image(CX - 110, 185, TURBO_BADGE_KEY)
+        .setDisplaySize(36, 36)
+        .setVisible(false);
+    }
 
     this.promptBg = this.add.graphics();
     this.promptText = this.add.text(0, 0, "", { ...TYPE.numeric }).setOrigin(0.5);
@@ -244,6 +277,7 @@ export class GameScene extends Phaser.Scene {
       this.turboText,
       this.promptCard,
     ]);
+    if (this.turboHudBadge) this.playGroup.add(this.turboHudBadge);
 
     this.setupDrag();
   }
@@ -368,10 +402,13 @@ export class GameScene extends Phaser.Scene {
     this.resultGroup = this.add.container(0, 0);
     const panel = drawPanel(this, CX, 400, 380, 460, { depth: 0 });
 
+    // スコア見出しの右隣に小さなマスコット。画像が無ければ見出しは従来通り中央揃え
+    const hasMascot = this.textures.exists(MASCOT_KEY);
     const heading = this.add
-      .text(CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(hasMascot ? CX - 35 : CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5)
       .setName("heading");
+    const resultMascot = hasMascot ? this.add.image(CX + 120, 255, MASCOT_KEY).setDisplaySize(72, 72) : null;
     const stats = this.add
       .text(CX, 350, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
@@ -386,6 +423,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.resultGroup.add([panel, heading, stats, bestLine, retryBtn.container]);
+    if (resultMascot) this.resultGroup.add(resultMascot);
     this.resultGroup.setVisible(false);
   }
 
@@ -406,6 +444,7 @@ export class GameScene extends Phaser.Scene {
     this.turboStreak = 0;
     this.turboPoints = 0;
     this.turboText.setVisible(false);
+    this.turboHudBadge?.setVisible(false);
     this.titleGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     this.playGroup.setVisible(true);
@@ -490,6 +529,7 @@ export class GameScene extends Phaser.Scene {
     if (!fastCorrect) {
       if (this.turboStreak >= TURBO_ENTRY_STREAK) {
         this.turboText.setVisible(false);
+        this.turboHudBadge?.setVisible(false);
       }
       this.turboStreak = 0;
       return;
@@ -503,8 +543,43 @@ export class GameScene extends Phaser.Scene {
     if (this.turboStreak >= TURBO_ENTRY_STREAK) {
       this.turboText.setText(`🔥 ターボモード ×${this.turboStreak}`).setVisible(true);
       this.tweens.add({ targets: this.turboText, scale: 1.25, duration: 100, yoyo: true });
-      if (this.turboStreak === TURBO_ENTRY_STREAK) cg.happytime();
+      this.turboHudBadge?.setVisible(true);
+      if (this.turboStreak === TURBO_ENTRY_STREAK) {
+        cg.happytime();
+        this.spawnTurboBadge();
+      }
     }
+  }
+
+  /**
+   * ターボモード突入時の演出バッジ。ゲーム盤より後に生成するので最前面に描画される。
+   * 画像が無ければ何もしない（従来の turboText の演出はそのまま残る）。入力は受け取らない
+   */
+  private spawnTurboBadge(): void {
+    if (!this.textures.exists(TURBO_BADGE_KEY)) return;
+    const badge = this.add
+      .image(CX, 350, TURBO_BADGE_KEY)
+      .setDisplaySize(140, 140)
+      .setScale(0.2 * (140 / 256))
+      .setDepth(20);
+    this.playGroup.add(badge);
+    this.tweens.add({
+      targets: badge,
+      scale: 140 / 256,
+      duration: 250,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: badge,
+          alpha: 0,
+          y: badge.y - 20,
+          delay: 700,
+          duration: 300,
+          ease: "Cubic.easeIn",
+          onComplete: () => badge.destroy(),
+        });
+      },
+    });
   }
 
   private spawnPointsPopup(label: string): void {
