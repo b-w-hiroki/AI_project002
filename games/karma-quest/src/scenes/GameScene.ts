@@ -3,6 +3,8 @@ import { BattleResult, autoBattle } from "../logic/battle";
 import { Encounter, applyEncounterChoice, rollEncounter, rollEncounterOccurs } from "../logic/encounter";
 import {
   FACTION_LABEL,
+  FACTIONS,
+  Faction,
   KarmaRequest,
   KarmaState,
   applyKarmaChoice,
@@ -22,6 +24,19 @@ const TOTAL_STAGES = 12;
 const BATTLE_CHEER_WINDOW_MS = 1800;
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
+
+/**
+ * 画像アセットのキー（= asset-id、docs/art-assets.md 参照）。
+ * 画像が読み込めない場合は各利用箇所で `textures.exists` を確認し、
+ * 従来どおりの Graphics / テキストのみの表示にフォールバックする。
+ */
+const HERO_TEXTURE = "kq-hero-warrior";
+const FACTION_ICON_TEXTURE: Record<Faction, string> = {
+  warrior: "kq-faction-icon-warrior",
+  merchant: "kq-faction-icon-merchant",
+  outlaw: "kq-faction-icon-outlaw",
+  mage: "kq-faction-icon-mage",
+};
 
 type Phase = "title" | "karma" | "encounter" | "battle" | "report" | "final";
 
@@ -58,6 +73,13 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
   }
 
+  preload(): void {
+    this.load.image(HERO_TEXTURE, `images/${HERO_TEXTURE}.png`);
+    for (const faction of FACTIONS) {
+      this.load.image(FACTION_ICON_TEXTURE[faction], `images/${FACTION_ICON_TEXTURE[faction]}.png`);
+    }
+  }
+
   create(): void {
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x14201c);
@@ -74,25 +96,27 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 380, 400, 600, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 660, { depth: 0 });
 
     const title = this.add
       .text(CX, 110, "カルマクエスト", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
+    // 勇者イラスト（kq-hero-warrior）。タイトルと説明文の間に配置
+    const hero = this.addHero(CX, 225, 170);
     const rules = this.add
       .text(
         CX,
-        280,
+        420,
         "勇者を育て、討伐に送り出し、\n神様に戦果を報告する。\n\n派閥の要望に応えると\nカルマが傾き、勇者の力が変化する。\n\n報告は良い場面だけを選ぶのがコツ、\n悪い場面まで報告すると評価が下がる。\n\n12回の討伐（3年分）を乗り越えて、\n最強の勇者伝説を作ろう！",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const best = this.add
-      .text(CX, 480, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
+      .text(CX, 570, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, CX, 560, 260, 52, "旅を始める", () => { this.playSound(sfx.buttonTap); this.startRun(); }, {
+    const startBtn = makeButton(this, CX, 650, 260, 52, "旅を始める", () => { this.playSound(sfx.buttonTap); this.startRun(); }, {
       fontSize: "16px",
     });
 
@@ -109,8 +133,40 @@ export class GameScene extends Phaser.Scene {
         this.playSound(sfx.buttonTap);
       });
 
-    this.titleGroup.add([panel, title, rules, best, startBtn.container, this.soundIcon, soundHit]);
+    this.titleGroup.add([panel, title, hero, rules, best, startBtn.container, this.soundIcon, soundHit]);
     this.titleGroup.setData("bestText", best);
+  }
+
+  /**
+   * 勇者のイラストを (x, y) 中心に高さ h で配置する。画像が無い場合は
+   * 緑マント＋剣を模した簡易シルエットを Graphics で描く（フォールバック）。
+   */
+  private addHero(x: number, y: number, h: number): Phaser.GameObjects.GameObject {
+    if (this.textures.exists(HERO_TEXTURE)) {
+      const img = this.add.image(x, y, HERO_TEXTURE);
+      // 元画像は 384×512（3:4）。縦横比を保ったまま高さ基準で縮小
+      img.setDisplaySize(h * 0.75, h);
+      return img;
+    }
+    const g = this.add.graphics();
+    const w = h * 0.75;
+    g.fillStyle(0x2f8f5b, 1);
+    g.fillTriangle(x - w * 0.4, y + h * 0.45, x + w * 0.4, y + h * 0.45, x, y - h * 0.2);
+    g.fillStyle(0xf2d9b8, 1);
+    g.fillCircle(x, y - h * 0.3, h * 0.13);
+    g.lineStyle(3, THEME.accent, 1);
+    g.strokeLineShape(new Phaser.Geom.Line(x + w * 0.3, y + h * 0.2, x + w * 0.5, y - h * 0.35));
+    return g;
+  }
+
+  /**
+   * 派閥アイコンを (x, y) 中心に size px の正方形で配置する。
+   * 画像が無い場合は null を返し、呼び出し側は従来どおりテキストラベルのみで表示する。
+   */
+  private addFactionIcon(faction: Faction, x: number, y: number, size: number): Phaser.GameObjects.Image | null {
+    const key = FACTION_ICON_TEXTURE[faction];
+    if (!this.textures.exists(key)) return null;
+    return this.add.image(x, y, key).setDisplaySize(size, size);
   }
 
   private playSound(fn: () => void): void {
@@ -158,11 +214,11 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("progress");
     const factionLabel = this.add
-      .text(CX, 260, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 320, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
       .setOrigin(0.5)
       .setName("factionLabel");
     const requestText = this.add
-      .text(CX, 340, "", {
+      .text(CX, 385, "", {
         ...TYPE.body,
         color: THEME.textPrimary,
         align: "center",
@@ -179,6 +235,25 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.karmaGroup.add([panel, progress, factionLabel, requestText, acceptBtn.container, declineBtn.container]);
+
+    // 派閥アイコン（大）。全派閥分を生成しておき、表示時に該当のものだけ見せる。
+    // 画像が無い派閥は生成されず、従来どおりラベルのみの表示になる
+    for (const faction of FACTIONS) {
+      const icon = this.addFactionIcon(faction, CX, 262, 76);
+      if (icon) {
+        icon.setName(`icon_${faction}`).setVisible(false);
+        this.karmaGroup.add(icon);
+      }
+    }
+    // 「力を貸す」ボタン左端の小アイコン
+    for (const faction of FACTIONS) {
+      const icon = this.addFactionIcon(faction, -160 + 28, 0, 32);
+      if (icon) {
+        icon.setName(`btnIcon_${faction}`).setVisible(false);
+        acceptBtn.container.add(icon);
+      }
+    }
+    this.karmaGroup.setData("acceptBtn", acceptBtn);
     this.karmaGroup.setVisible(false);
   }
 
@@ -193,10 +268,17 @@ export class GameScene extends Phaser.Scene {
     const progress = this.karmaGroup.getByName("progress") as Phaser.GameObjects.Text;
     const factionLabel = this.karmaGroup.getByName("factionLabel") as Phaser.GameObjects.Text;
     const requestText = this.karmaGroup.getByName("requestText") as Phaser.GameObjects.Text;
+    const acceptBtn = this.karmaGroup.getData("acceptBtn") as ReturnType<typeof makeButton>;
 
     progress.setText(`${this.stage} / ${TOTAL_STAGES} 年目`);
     factionLabel.setText(`【${FACTION_LABEL[this.currentRequest.faction]}】`);
     requestText.setText(this.currentRequest.text);
+
+    for (const faction of FACTIONS) {
+      const active = faction === this.currentRequest.faction;
+      (this.karmaGroup.getByName(`icon_${faction}`) as Phaser.GameObjects.Image | null)?.setVisible(active);
+      (acceptBtn.container.getByName(`btnIcon_${faction}`) as Phaser.GameObjects.Image | null)?.setVisible(active);
+    }
   }
 
   private onKarmaChoice(accepted: boolean): void {
@@ -272,30 +354,32 @@ export class GameScene extends Phaser.Scene {
 
   private buildBattleScreen(): void {
     this.battleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 400, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 400, 460, { depth: 0 });
 
+    // 討伐に向かう勇者（kq-hero-warrior）
+    const hero = this.addHero(CX, 260, 130);
     const heading = this.add
-      .text(CX, 300, "討伐へ出発！", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
+      .text(CX, 350, "討伐へ出発！", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5)
       .setName("battleHeading");
     const statsText = this.add
-      .text(CX, 400, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 410, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("battleStats");
     const resultText = this.add
-      .text(CX, 470, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 465, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
       .setOrigin(0.5)
       .setName("battleResult");
 
     const cheerCountText = this.add
-      .text(CX, 520, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 510, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("cheerCountText");
     const cheerBtn = makeButton(this, CX, 560, 220, 48, "おうえん！", () => this.onCheerTap(), {
       fontSize: "16px",
     });
 
-    this.battleGroup.add([panel, heading, statsText, resultText, cheerCountText, cheerBtn.container]);
+    this.battleGroup.add([panel, hero, heading, statsText, resultText, cheerCountText, cheerBtn.container]);
     this.battleGroup.setData("cheerBtn", cheerBtn);
     this.battleGroup.setVisible(false);
   }
@@ -447,25 +531,33 @@ export class GameScene extends Phaser.Scene {
 
   private buildFinalScreen(): void {
     this.finalGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 380, 460, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 380, 500, { depth: 0 });
 
     const heading = this.add
-      .text(CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
+      .text(CX, 230, "", { ...TYPE.h1, color: THEME.textPrimary, align: "center" })
       .setOrigin(0.5)
       .setName("finalHeading");
     const stats = this.add
-      .text(CX, 350, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 385, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
       .setOrigin(0.5)
       .setName("finalStats");
 
-    const retryBtn = makeButton(this, CX, 470, 300, 52, "もう一度旅に出る", () => this.startRun(), {
+    const retryBtn = makeButton(this, CX, 490, 300, 52, "もう一度旅に出る", () => this.startRun(), {
       fontSize: "15px",
     });
-    const titleBtn = makeButton(this, CX, 540, 300, 46, "タイトルへ戻る", () => this.showTitle(), {
+    const titleBtn = makeButton(this, CX, 555, 300, 46, "タイトルへ戻る", () => this.showTitle(), {
       fontSize: "14px",
     });
 
     this.finalGroup.add([panel, heading, stats, retryBtn.container, titleBtn.container]);
+    // 最も応えた派閥のアイコン（見出しとステータスの間、64px）
+    for (const faction of FACTIONS) {
+      const icon = this.addFactionIcon(faction, CX, 305, 64);
+      if (icon) {
+        icon.setName(`icon_${faction}`).setVisible(false);
+        this.finalGroup.add(icon);
+      }
+    }
     this.finalGroup.setVisible(false);
   }
 
@@ -484,6 +576,9 @@ export class GameScene extends Phaser.Scene {
     stats.setText(
       `累計評価: ${this.runEvaluation}\n最も応えた派閥: ${FACTION_LABEL[faction]}\n通算評価: ${loadTotalEvaluation()}`,
     );
+    for (const f of FACTIONS) {
+      (this.finalGroup.getByName(`icon_${f}`) as Phaser.GameObjects.Image | null)?.setVisible(f === faction);
+    }
 
     this.finalGroup.setVisible(true);
   }

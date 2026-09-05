@@ -123,6 +123,30 @@ interface EnemySprite {
   speedMul: number;
 }
 
+/**
+ * 外部生成イラスト（docs/art-assets.md 参照）のテクスチャキー。
+ * 読み込めなかった場合は従来どおり Graphics で描いたプレースホルダーにフォールバックする。
+ */
+const ART_BG_KEY = "sf-bg-forest";
+const ART_HERO_KEY = "sf-hero-swordsman";
+const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
+/** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
+const HERO_ART_TEXTURE = "hero-art";
+const ENEMY_NORMAL_ART_TEXTURE = "goblin-art";
+/** HUD の描画深度（キャラ/攻撃演出より前面、オーバーレイ 100+ より背面） */
+const HUD_DEPTH = 20;
+/** 背景のパララックス係数（カメラより遅く流れる） */
+const BG_SCROLL_FACTOR = 0.4;
+
+/**
+ * プレイヤーの当たり判定（幅/高さはプレースホルダー時代と同一）。
+ * イラスト版はテクスチャが 36×54 で足元が画像下端に来るため、オフセットだけ変えて体の大きさは変えない。
+ */
+const PLAYER_BODY = { w: 18, h: 32, crouchH: 20 };
+const PLAYER_BODY_OFFSET = { fallback: { x: 6, y: 8 }, art: { x: 9, y: 20 } };
+const ENEMY_BODY = { w: 18, h: 30 };
+const ENEMY_BODY_OFFSET = { fallback: { x: 6, y: 10 }, art: { x: 11, y: 8 } };
+
 /** 敵タイプごとの色ティント。本物の専用スプライトに差し替える前提のプレースホルダー */
 const ENEMY_TYPE_TINT: Readonly<Record<EnemyType, number>> = {
   normal: 0xffffff,
@@ -252,6 +276,15 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  preload(): void {
+    // ChatGPT 等で生成したイラスト素材。台帳は docs/art-assets.md。
+    // 404 などで読み込めなくても Phaser はエラーで止まらないので、使用箇所で textures.exists() を確認して
+    // Graphics 描画のプレースホルダーにフォールバックする。
+    this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
+    this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
+    this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
+  }
+
   create(): void {
     this.playerState = newPlayer();
     this.status = "playing";
@@ -350,6 +383,9 @@ export class GameScene extends Phaser.Scene {
   private generateTextures(): void {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
+    // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
+    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, 36, 54);
+    this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, 40, 40);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -373,6 +409,21 @@ export class GameScene extends Phaser.Scene {
     this.drawPickupTexture("pickup_armor", 0x7fd1ff);
     this.drawPickupTexture("pickup_item", 0x7fffb0);
     this.drawPickupTexture("pickup_buff", 0xffd166);
+  }
+
+  /**
+   * 読み込んだイラストを w×h のキャンバステクスチャへ縮小コピーする。
+   * スプライトの scale を 1 に保てるので、しゃがみやヒット時の scale 演出・当たり判定サイズをそのまま流用できる。
+   * 元画像が無ければ何もしない（呼び出し側は textures.exists(destKey) で判定する）。
+   */
+  private buildArtTexture(srcKey: string, destKey: string, w: number, h: number): void {
+    if (this.textures.exists(destKey) || !this.textures.exists(srcKey)) return;
+    const src = this.textures.get(srcKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+    const canvas = this.textures.createCanvas(destKey, w, h);
+    if (!canvas) return;
+    canvas.context.imageSmoothingEnabled = true;
+    canvas.context.drawImage(src, 0, 0, w, h);
+    canvas.refresh();
   }
 
   /** 召喚媒体/防具/アイテムのピックアップ用テクスチャ（星型のシンプルな輝き） */
@@ -427,10 +478,17 @@ export class GameScene extends Phaser.Scene {
 
   /** 固定ゴールへ向かうステージ制から、ウェーブ式サバイバル用の固定サイズアリーナに変更した */
   private buildLevel(): void {
-    // 淡い青空グラデーション。ソシャゲ調の明るいファンタジー基調にする
-    const sky = this.add.graphics();
-    sky.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xe8f6ff, 0xe8f6ff, 1);
-    sky.fillRect(0, 0, ARENA_WIDTH, 600);
+    if (this.textures.exists(ART_BG_KEY)) {
+      // 森ステージのイラスト背景（1920×600）。カメラより遅く流してパララックスにする。
+      // 表示幅 = 800 + (ARENA_WIDTH - 800) * BG_SCROLL_FACTOR = 1120px < 1920px なので全域をカバーできる
+      this.add.image(0, 0, ART_BG_KEY).setOrigin(0, 0).setDisplaySize(1920, 600).setScrollFactor(BG_SCROLL_FACTOR).setDepth(-2);
+    } else {
+      // フォールバック: 淡い青空グラデーション。ソシャゲ調の明るいファンタジー基調にする
+      const sky = this.add.graphics();
+      sky.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xe8f6ff, 0xe8f6ff, 1);
+      sky.fillRect(0, 0, ARENA_WIDTH, 600);
+      sky.setDepth(-2);
+    }
 
     this.platforms = this.physics.add.staticGroup();
     for (let x = 0; x < ARENA_WIDTH; x += 64) {
@@ -462,9 +520,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildPlayer(): void {
-    this.player = this.physics.add.sprite(80, GROUND_Y - 40, "hero");
+    const useArt = this.textures.exists(HERO_ART_TEXTURE);
+    this.player = this.physics.add.sprite(80, GROUND_Y - 40, useArt ? HERO_ART_TEXTURE : "hero");
     this.player.setCollideWorldBounds(true);
-    this.player.setSize(18, 32).setOffset(6, 8);
+    this.player.setDepth(3);
+    const off = this.playerBodyOffset();
+    this.player.setSize(PLAYER_BODY.w, PLAYER_BODY.h).setOffset(off.x, off.y);
     this.physics.add.collider(this.player, this.platforms);
 
     // ガード中に表示する盾アイコン（ローカル原点基準で一度だけ描画し、以後は位置だけ更新する）
@@ -480,11 +541,20 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon.setVisible(false);
   }
 
+  /** 使用中のプレイヤーテクスチャに応じた当たり判定オフセット（判定サイズ自体はどちらも同じ） */
+  private playerBodyOffset(): { x: number; y: number } {
+    return this.player.texture.key === HERO_ART_TEXTURE ? PLAYER_BODY_OFFSET.art : PLAYER_BODY_OFFSET.fallback;
+  }
+
   /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
   private spawnEnemy(wave: number, spec: EnemySpawnSpec, x: number, index: number): void {
-    const sprite = this.physics.add.sprite(x, GROUND_Y - 30, "goblin");
+    // 通常敵のみイラスト版（ゴブリン）。agile/tank は色ティントで区別する従来のプレースホルダーのまま
+    const useArt = spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
+    const sprite = this.physics.add.sprite(x, GROUND_Y - 30, useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin");
     sprite.setCollideWorldBounds(true);
-    sprite.setSize(18, 30).setOffset(6, 10);
+    sprite.setDepth(2);
+    const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
+    sprite.setSize(ENEMY_BODY.w, ENEMY_BODY.h).setOffset(off.x, off.y);
     sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
     if (spec.type === "tank") sprite.setScale(1.4); // ボス/タンク型は一目で分かるよう一回り大きくする
     this.physics.add.collider(sprite, this.platforms);
@@ -569,6 +639,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildHud(): void {
+    // HUD はキャラ（depth 2〜3）や攻撃演出（〜6）より前面に出す。
+    // buildHud 内で生成したオブジェクトのうち depth 未指定のものをまとめて持ち上げる
+    const firstHudIndex = this.children.length;
+    this.buildHudObjects();
+    for (const child of this.children.list.slice(firstHudIndex)) {
+      const obj = child as Phaser.GameObjects.GameObject & { depth?: number; setDepth?: (d: number) => unknown };
+      if (obj.depth === 0 && obj.setDepth) obj.setDepth(HUD_DEPTH);
+    }
+  }
+
+  private buildHudObjects(): void {
     drawPanel(this, 150, 68, 284, 128, {
       radius: 14,
       fillColor: THEME.panelFill,
@@ -1068,11 +1149,13 @@ export class GameScene extends Phaser.Scene {
     if (crouching === this.wasCrouching) return;
     this.wasCrouching = crouching;
     const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const off = this.playerBodyOffset();
     if (crouching) {
-      body.setSize(18, 20).setOffset(6, 20);
+      // 足元の位置は変えず、判定の上辺だけ下げる
+      body.setSize(PLAYER_BODY.w, PLAYER_BODY.crouchH).setOffset(off.x, off.y + (PLAYER_BODY.h - PLAYER_BODY.crouchH));
       this.player.setScale(1, 0.68);
     } else {
-      body.setSize(18, 32).setOffset(6, 8);
+      body.setSize(PLAYER_BODY.w, PLAYER_BODY.h).setOffset(off.x, off.y);
       this.player.setScale(1, 1);
     }
   }
