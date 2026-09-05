@@ -40,6 +40,33 @@ const RARITY_COLOR: Readonly<Record<string, number>> = {
 
 type Phase = "title" | "battle" | "result";
 
+/**
+ * 画像アセットのキー（docs/art-assets.md の asset-id と一致させる）。
+ * 画像が読み込めない環境でも遊べるよう、各使用箇所で textures.exists() を確認し
+ * 従来の Graphics 描画にフォールバックする。
+ */
+const IMG = {
+  bgArena: "fl-bg-arena",
+  hero: "fl-hero-fighter",
+  enemy: "fl-enemy-fighter",
+  ryuga: "fl-gacha-char-ryuga",
+} as const;
+
+/** 立ち絵は 384×512（3:4）。バトル中の表示高さと、それに合わせた幅 */
+const FIGHTER_H = 250;
+const FIGHTER_W = (FIGHTER_H * 384) / 512;
+const FIGHTER_Y = 270;
+/** ガチャ竜牙立ち絵（SSR演出）の高さ */
+const RYUGA_H = 280;
+const RYUGA_W = (RYUGA_H * 384) / 512;
+
+/** ガチャの立ち絵を持つキャラID → 画像キー */
+const GACHA_CHAR_IMAGE: Readonly<Record<string, string>> = {
+  char_ryu: IMG.ryuga,
+};
+
+type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
+
 export class GameScene extends Phaser.Scene {
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
@@ -61,14 +88,48 @@ export class GameScene extends Phaser.Scene {
   private clashText!: Phaser.GameObjects.Text;
   private currencyText!: Phaser.GameObjects.Text;
 
-  private playerSprite!: Phaser.GameObjects.Graphics;
-  private enemySprite!: Phaser.GameObjects.Graphics;
+  private playerSprite!: FighterSprite;
+  private enemySprite!: FighterSprite;
+  private gachaCharImage: Phaser.GameObjects.Image | null = null;
+  private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
   private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
   private soundIcon!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("GameScene");
+  }
+
+  preload(): void {
+    // 画像はユーザーが外部生成した素材（docs/art-assets.md 参照）。存在しない場合は
+    // Phaser がエラーログを出すだけで進行は止まらず、各所の Graphics 描画にフォールバックする。
+    this.load.image(IMG.bgArena, "images/fl-bg-arena.png");
+    this.load.image(IMG.hero, "images/fl-hero-fighter.png");
+    this.load.image(IMG.enemy, "images/fl-enemy-fighter.png");
+    this.load.image(IMG.ryuga, "images/fl-gacha-char-ryuga.png");
+  }
+
+  /**
+   * 闘技場背景（1600×900）を 800×600 の画面にカバー配置する。横がはみ出す分はカメラ外で切れる。
+   * 画像が無ければ null（従来どおり単色背景のまま）。
+   */
+  private buildArenaBackground(): Phaser.GameObjects.Image | null {
+    if (!this.textures.exists(IMG.bgArena)) return null;
+    const scale = 600 / 900;
+    return this.add.image(400, 300, IMG.bgArena).setDisplaySize(1600 * scale, 600);
+  }
+
+  /**
+   * 半透明の暗幕（Graphics）。Phaser 4 の WebGL では、大きな Image の直後に Rectangle シェイプを
+   * 同一バッチで描くとそれ以降の描画が欠ける現象があったため、Rectangle ではなく Graphics を使う。
+   */
+  private shade(x: number, y: number, w: number, h: number, alpha: number): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics();
+    if (alpha > 0) {
+      g.fillStyle(0x0d0a07, alpha);
+      g.fillRect(x, y, w, h);
+    }
+    return g;
   }
 
   create(): void {
@@ -100,7 +161,10 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 600, 420, { depth: 0 });
+    const bg = this.buildArenaBackground();
+    // 背景の上に暗幕を敷いてルール説明を読みやすくする
+    const tint = this.shade(0, 0, 800, 600, bg ? 0.55 : 0);
+    const panel = drawPanel(this, 400, 300, 600, 420, { depth: 0, fillAlpha: bg ? 0.82 : 0.95 });
 
     const title = this.add
       .text(400, 130, "覇拳伝", { ...TYPE.h1, color: THEME.textPrimary })
@@ -138,7 +202,7 @@ export class GameScene extends Phaser.Scene {
         this.playSound(sfx.buttonTap);
       });
 
-    this.titleGroup.add([panel, title, rules, currency, startBtn.container, gachaBtn.container, this.soundIcon, soundHit]);
+    this.titleGroup.add([...(bg ? [bg] : []), tint, panel, title, rules, currency, startBtn.container, gachaBtn.container, this.soundIcon, soundHit]);
     this.titleGroup.setData("currencyText", currency);
   }
 
@@ -160,6 +224,11 @@ export class GameScene extends Phaser.Scene {
 
   private buildBattleScreen(): void {
     this.battleGroup = this.add.container(0, 0);
+
+    const bg = this.buildArenaBackground();
+    // 上部（HP/タイマー）と下部（ボタン列）に半透明の帯を敷き、背景の上でも文字を読みやすくする
+    const topShade = this.shade(0, 0, 800, 60, bg ? 0.4 : 0);
+    const bottomShade = this.shade(0, 388, 800, 212, bg ? 0.5 : 0);
 
     const playerHpBg = this.add.graphics();
     playerHpBg.fillStyle(0x000000, 0.5);
@@ -183,26 +252,19 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.clashText = this.add
-      .text(400, 130, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(400, 130, "", { ...TYPE.h1, color: THEME.textPrimary, stroke: "#1a1410", strokeThickness: 6 })
       .setOrigin(0.5)
       .setAlpha(0);
 
-    this.playerSprite = this.add.graphics();
-    this.playerSprite.fillStyle(0x3b7fd1, 1);
-    this.playerSprite.fillRoundedRect(-30, -55, 60, 110, 10);
-    this.playerSprite.setPosition(180, 300);
-
-    this.enemySprite = this.add.graphics();
-    this.enemySprite.fillStyle(0xd1493b, 1);
-    this.enemySprite.fillRoundedRect(-30, -55, 60, 110, 10);
-    this.enemySprite.setPosition(620, 300);
+    this.playerSprite = this.buildFighter(180, IMG.hero, 0x3b7fd1);
+    this.enemySprite = this.buildFighter(620, IMG.enemy, 0xd1493b);
 
     const ougiBg = this.add.graphics();
     ougiBg.fillStyle(0x000000, 0.5);
     ougiBg.fillRoundedRect(300, 420, 200, 14, 6);
     this.ougiFill = this.add.graphics();
     const ougiLabel = this.add
-      .text(400, 405, "奥義ゲージ", { ...TYPE.small, color: THEME.textMuted })
+      .text(400, 405, "奥義ゲージ", { ...TYPE.small, color: THEME.textPrimary, stroke: "#1a1410", strokeThickness: 3 })
       .setOrigin(0.5);
 
     const buttonY = 480;
@@ -226,6 +288,9 @@ export class GameScene extends Phaser.Scene {
     this.ougiBtn.setEnabled(false);
 
     this.battleGroup.add([
+      ...(bg ? [bg] : []),
+      topShade,
+      bottomShade,
       playerHpBg,
       this.playerHpFill,
       enemyHpBg,
@@ -244,6 +309,22 @@ export class GameScene extends Phaser.Scene {
       kiBtn.container,
       this.ougiBtn.container,
     ]);
+  }
+
+  /**
+   * ファイター立ち絵。画像があれば 3:4 比率のまま FIGHTER_H に収めて表示し、無ければ従来の
+   * 角丸長方形（Graphics）で代替する。ヒーロー画像は右向き、敵画像は左向きに描かれているため
+   * setFlipX は不要（向かい合う配置になる）。
+   */
+  private buildFighter(x: number, key: string, fallbackColor: number): FighterSprite {
+    if (this.textures.exists(key)) {
+      return this.add.image(x, FIGHTER_Y, key).setDisplaySize(FIGHTER_W, FIGHTER_H);
+    }
+    const g = this.add.graphics();
+    g.fillStyle(fallbackColor, 1);
+    g.fillRoundedRect(-30, -55, 60, 110, 10);
+    g.setPosition(x, 300);
+    return g;
   }
 
   private startBattle(): void {
@@ -349,7 +430,7 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: this.clashText, alpha: 0, delay: 500, duration: 300 });
   }
 
-  private flashHit(sprite: Phaser.GameObjects.Graphics, damage: number): void {
+  private flashHit(sprite: FighterSprite, damage: number): void {
     if (damage <= 0) return;
     this.tweens.add({ targets: sprite, x: sprite.x + (sprite === this.playerSprite ? -8 : 8), duration: 60, yoyo: true });
   }
@@ -456,29 +537,57 @@ export class GameScene extends Phaser.Scene {
 
   private buildGachaScreen(): void {
     this.gachaGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
+    const panel = drawPanel(this, 400, 300, 600, 360, { depth: 0 });
 
+    // 左側：キャラ立ち絵スロット（SSR キャラ排出時に画像を表示、それ以外は「？」）
+    const slotX = 215;
+    const slotY = 300;
+    const slot = this.add.graphics();
+    slot.fillStyle(0x1a1410, 0.8);
+    slot.fillRoundedRect(slotX - RYUGA_W / 2 - 8, slotY - RYUGA_H / 2 - 8, RYUGA_W + 16, RYUGA_H + 16, 12);
+    slot.lineStyle(1.5, THEME.panelBorder, 0.6);
+    slot.strokeRoundedRect(slotX - RYUGA_W / 2 - 8, slotY - RYUGA_H / 2 - 8, RYUGA_W + 16, RYUGA_H + 16, 12);
+    this.gachaCharPlaceholder = this.add
+      .text(slotX, slotY, "？", { ...TYPE.h1, fontSize: "64px", color: "#4a3d2c" })
+      .setOrigin(0.5);
+    this.gachaCharImage = this.textures.exists(IMG.ryuga)
+      ? this.add.image(slotX, slotY, IMG.ryuga).setDisplaySize(RYUGA_W, RYUGA_H).setVisible(false)
+      : null;
+
+    // 右側：見出し・結果・残高・ボタン
+    const tx = 500;
     const heading = this.add
-      .text(400, 180, "ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(tx, 175, "ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(400, 220, `1回 豪拳石 ${GACHA_COST}`, { ...TYPE.body, color: THEME.textMuted })
+      .text(tx, 215, `1回 豪拳石 ${GACHA_COST}`, { ...TYPE.body, color: THEME.textMuted })
       .setOrigin(0.5);
     const resultText = this.add
-      .text(400, 280, "", { ...TYPE.h2, color: THEME.textPrimary })
+      .text(tx, 280, "", { ...TYPE.h2, color: THEME.textPrimary })
       .setOrigin(0.5)
       .setName("gachaResult");
     const balanceText = this.add
-      .text(400, 320, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(tx, 320, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("gachaBalance");
 
-    const drawBtn = makeButton(this, 300, 400, 180, 48, "引く", () => this.rollGacha(), { fontSize: "16px" });
-    const backBtn = makeButton(this, 500, 400, 180, 48, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "16px",
+    const drawBtn = makeButton(this, tx, 385, 260, 46, "引く", () => this.rollGacha(), { fontSize: "16px" });
+    const backBtn = makeButton(this, tx, 437, 260, 40, "タイトルへ戻る", () => this.showTitle(), {
+      fontSize: "14px",
     });
 
-    this.gachaGroup.add([panel, heading, costText, resultText, balanceText, drawBtn.container, backBtn.container]);
+    this.gachaGroup.add([
+      panel,
+      slot,
+      this.gachaCharPlaceholder,
+      ...(this.gachaCharImage ? [this.gachaCharImage] : []),
+      heading,
+      costText,
+      resultText,
+      balanceText,
+      drawBtn.container,
+      backBtn.container,
+    ]);
     this.gachaGroup.setVisible(false);
   }
 
@@ -488,7 +597,30 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(true);
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText("");
+    this.showGachaCharImage(null);
     this.refreshGachaBalance();
+  }
+
+  /** 立ち絵スロットの表示切替。画像が無い（未読み込み／該当キャラ以外）なら「？」プレースホルダー */
+  private showGachaCharImage(item: GachaItem | null): void {
+    const key = item ? GACHA_CHAR_IMAGE[item.id] : undefined;
+    const show = !!key && this.gachaCharImage !== null && this.textures.exists(key);
+    this.gachaCharPlaceholder.setVisible(!show);
+    if (this.gachaCharImage) {
+      this.gachaCharImage.setVisible(show);
+      if (show) {
+        this.tweens.killTweensOf(this.gachaCharImage);
+        this.gachaCharImage.setScale(this.gachaCharImage.scale * 0.85).setAlpha(0);
+        this.tweens.add({
+          targets: this.gachaCharImage,
+          displayWidth: RYUGA_W,
+          displayHeight: RYUGA_H,
+          alpha: 1,
+          duration: 260,
+          ease: "Back.easeOut",
+        });
+      }
+    }
   }
 
   private refreshGachaBalance(): void {
@@ -509,6 +641,7 @@ export class GameScene extends Phaser.Scene {
     this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
     resultText.setText(`【${item.rarity}】${item.name}`).setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
+    this.showGachaCharImage(item);
     this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
     if (isRare) {
       this.cameras.main.flash(200, 255, 220, 140);
