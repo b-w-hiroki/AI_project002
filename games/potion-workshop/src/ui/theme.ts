@@ -542,3 +542,212 @@ export function popOnChange(scene: Phaser.Scene, target: Phaser.GameObjects.Text
   target.setText(newText);
   scene.tweens.add({ targets: target, scale: 1.15, duration: 90, yoyo: true, ease: "Sine.easeOut" });
 }
+
+/**
+ * 画面上部のヘッダー帯。背景イラストの上に置かれるタイトル・ポーション数の可読性を確保するため、
+ * 半透明の白いパネルと、下端の淡い影（複数段のアルファで疑似グラデーション）で背景から浮かせる。
+ * Canvasレンダラーでは `fillGradientStyle` が単色になるため、影は帯を重ねて描く。
+ */
+export function drawHeaderBand(scene: Phaser.Scene, width: number, height: number): Phaser.GameObjects.Graphics {
+  const g = scene.add.graphics();
+  // 下端の影（帯の外側へ段階的に薄くなる）
+  for (let i = 0; i < 6; i++) {
+    g.fillStyle(0x4b6a8f, 0.09 - i * 0.014);
+    g.fillRect(0, height + i * 2, width, 2);
+  }
+  g.fillStyle(0xffffff, 0.82);
+  g.fillRect(0, 0, width, height);
+  // 上部のガラス風ハイライト
+  g.fillStyle(0xffffff, 0.45);
+  g.fillRect(0, 0, width, Math.max(8, height * 0.35));
+  // 下端のアクセントライン
+  g.lineStyle(1.5, THEME.panelBorder, 0.7);
+  g.strokeLineShape(new Phaser.Geom.Line(0, height - 0.75, width, height - 0.75));
+  return g;
+}
+
+export interface GeneratorCard {
+  container: Phaser.GameObjects.Container;
+  name: Phaser.GameObjects.Text;
+  rate: Phaser.GameObjects.Text;
+  costText: Phaser.GameObjects.Text;
+  /** 購入可否で発光/ニュートラルを切り替える */
+  setReady: (ready: boolean) => void;
+  /** 所持数バッジ。0で非表示 */
+  setCount: (count: number) => void;
+  setCost: (text: string) => void;
+  /** 名前テキスト。ピルと重ならない幅に自動で縮める */
+  setName: (text: string) => void;
+  press: () => void;
+}
+
+/**
+ * 設備リストの1行ぶんのカード。`makeActionCard` と同じ言語（左: アイコン丸 / 中: 太字名+小さな
+ * 生産量 / 右: コストピル）で組み、左の操作カードと見た目のトーンを揃える。
+ *
+ * - アイコンは呼び出し側が生成する（イラスト画像 or ジェムGraphics）。Container内座標(iconX, 0)に
+ *   置かれるよう、生成後にこのヘルパーが位置を設定する
+ * - 所持数が1以上のときはアイコン丸の右下に「×N」バッジを出す
+ * - 名前は日英で長さが大きく変わるため、ピル最大幅を差し引いた幅に収まるよう自動でスケールする
+ */
+export function makeGeneratorCard(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  accent: number,
+  makeIcon: (scene: Phaser.Scene) => Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform,
+  options: { radius?: number; pillMaxWidth?: number } = {},
+): GeneratorCard {
+  const radius = options.radius ?? 12;
+  const pillMaxWidth = options.pillMaxWidth ?? 84;
+  const iconR = Math.min(20, h * 0.36);
+  const iconX = -w / 2 + 10 + iconR;
+  const contentLeft = iconX + iconR + 12;
+  const contentRight = w / 2 - 10;
+  const nameMaxWidth = contentRight - pillMaxWidth - 8 - contentLeft;
+  const pillH = 22;
+
+  const bg = scene.add.graphics();
+  const disc = scene.add.graphics();
+  const icon = makeIcon(scene);
+  icon.setPosition(iconX, 0);
+  const badgeBg = scene.add.graphics();
+  const badgeText = scene.add
+    .text(iconX + iconR - 2, iconR - 3, "", { ...TYPE.small, fontSize: "10px", fontStyle: "800", color: "#ffffff" })
+    .setOrigin(0.5);
+  const name = scene.add
+    .text(contentLeft, -h * 0.17, "", { ...TYPE.body, fontStyle: "700", color: THEME.textPrimary })
+    .setOrigin(0, 0.5);
+  const rate = scene.add
+    .text(contentLeft, h * 0.17, "", { ...TYPE.small, color: THEME.textMuted })
+    .setOrigin(0, 0.5);
+  const pill = scene.add.graphics();
+  const costText = scene.add
+    .text(contentRight - 9, 0, "", { ...TYPE.small, fontStyle: "700" })
+    .setOrigin(1, 0.5);
+
+  const container = scene.add.container(x, y, [bg, disc, icon, badgeBg, badgeText, name, rate, pill, costText]);
+  container.setSize(w, h);
+  container.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+  if (container.input) container.input.cursor = "pointer";
+
+  let ready = false;
+  let hovering = false;
+  let count = 0;
+  let cost = "";
+
+  const paintBadge = () => {
+    badgeBg.clear();
+    if (count <= 0) {
+      badgeText.setVisible(false);
+      return;
+    }
+    badgeText.setVisible(true);
+    const bw = Math.max(18, badgeText.width + 8);
+    const bh = 14;
+    const bx = badgeText.x - bw / 2;
+    const by = badgeText.y - bh / 2;
+    badgeBg.fillStyle(0xffffff, 1);
+    badgeBg.fillRoundedRect(bx - 1.5, by - 1.5, bw + 3, bh + 3, (bh + 3) / 2);
+    badgeBg.fillStyle(ready ? accent : 0x5b6f86, 1);
+    badgeBg.fillRoundedRect(bx, by, bw, bh, bh / 2);
+  };
+
+  const paint = () => {
+    bg.clear();
+    if (ready) {
+      bg.lineStyle(5, accent, 0.14);
+      bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+    }
+    const top = ready ? blend(accent, 0xffffff, 0.9) : 0xffffff;
+    const bottom = ready ? blend(accent, 0xffffff, 0.78) : 0xf1f6fb;
+    bg.fillGradientStyle(top, top, bottom, bottom, 1);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+    bg.fillStyle(0xffffff, 0.5);
+    bg.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, Math.max(6, h * 0.3), radius * 0.8);
+    if (hovering) {
+      bg.fillStyle(0xffffff, 0.3);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+    }
+    bg.fillStyle(accent, ready ? 0.9 : 0.45);
+    bg.fillRoundedRect(-w / 2, -h / 2 + 7, 4, h - 14, 2);
+    bg.lineStyle(1.5, ready ? accent : THEME.panelBorder, ready ? 0.9 : 0.75);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+
+    disc.clear();
+    disc.fillStyle(accent, ready ? 0.95 : 0.5);
+    disc.fillCircle(iconX, 0, iconR);
+    disc.fillStyle(0xffffff, 0.25);
+    disc.fillCircle(iconX - iconR * 0.25, -iconR * 0.3, iconR * 0.45);
+    if (ready) {
+      disc.lineStyle(2, 0xffffff, 0.7);
+      disc.strokeCircle(iconX, 0, iconR - 1);
+    }
+
+    name.setColor(ready ? THEME.textPrimary : "#5f6f82");
+    rate.setColor(ready ? "#4f7a68" : THEME.textMuted);
+
+    pill.clear();
+    const pillW = Math.min(pillMaxWidth, costText.width + 18);
+    const pillX = contentRight - pillW;
+    if (ready) {
+      pill.fillStyle(accent, 1);
+      costText.setColor("#ffffff");
+    } else {
+      pill.fillStyle(0xffffff, 0.75);
+      pill.lineStyle(1, THEME.panelBorder, 0.9);
+      costText.setColor("#8e9cab");
+    }
+    pill.fillRoundedRect(pillX, -pillH / 2, pillW, pillH, pillH / 2);
+    if (!ready) pill.strokeRoundedRect(pillX, -pillH / 2, pillW, pillH, pillH / 2);
+    paintBadge();
+  };
+
+  container.on("pointerover", () => {
+    hovering = true;
+    paint();
+  });
+  container.on("pointerout", () => {
+    hovering = false;
+    paint();
+  });
+  paint();
+
+  return {
+    container,
+    name,
+    rate,
+    costText,
+    setReady: (r) => {
+      if (r === ready) return;
+      ready = r;
+      paint();
+    },
+    setCount: (n) => {
+      if (n === count) return;
+      count = n;
+      badgeText.setText(`×${n}`);
+      paintBadge();
+    },
+    setCost: (text) => {
+      if (text === cost) return;
+      cost = text;
+      costText.setText(text);
+      // ピル幅が変わるのでピルだけ描き直す（paintは全体再描画だが軽量なのでそのまま使う）
+      paint();
+    },
+    setName: (text) => {
+      if (text === name.text) return;
+      name.setScale(1);
+      name.setText(text);
+      if (name.width > nameMaxWidth) name.setScale(nameMaxWidth / name.width);
+    },
+    press: () => {
+      scene.tweens.killTweensOf(container);
+      container.setScale(1);
+      scene.tweens.add({ targets: container, scale: 0.96, duration: 70, yoyo: true, ease: "Sine.easeOut" });
+    },
+  };
+}

@@ -45,17 +45,26 @@ import {
   THEME,
   TYPE,
   ActionCard,
+  GeneratorCard,
   drawBoltIcon,
   drawFlaskIcon,
+  drawHeaderBand,
   drawHourglassIcon,
   drawPanel,
   drawProgressBar,
   drawSparkleIcon,
   drawSpeakerIcon,
   makeActionCard,
+  makeGeneratorCard,
   makeRoundedRect,
   popOnChange,
 } from "../ui/theme";
+
+/** ヘッダー帯の高さ。右側ゾーンパネルはこの直下から始まる */
+const HEADER_H = 98;
+/** 設備リストの行ピッチ/カード高さ。8行がゾーンパネル内に収まるよう調整している */
+const GEN_ROW_PITCH = 60;
+const GEN_ROW_H = 54;
 
 const SAVE_INTERVAL_MS = 5_000;
 const SOUND_PREF_KEY = "ai_project002_sound_v1";
@@ -68,7 +77,8 @@ export class IdleScene extends Phaser.Scene {
   private soundOn = localStorage.getItem(SOUND_PREF_KEY) !== "off";
 
   private titleText!: Phaser.GameObjects.Text;
-  private titleIcon!: Phaser.GameObjects.Graphics;
+  /** ヒーロー数字（ポーション数）の左に添えるフラスコアイコン。数字幅に合わせて毎フレーム位置を追従させる */
+  private potionIcon!: Phaser.GameObjects.Graphics;
   private potionText!: Phaser.GameObjects.Text;
   private rateText!: Phaser.GameObjects.Text;
   private essenceText!: Phaser.GameObjects.Text;
@@ -88,13 +98,7 @@ export class IdleScene extends Phaser.Scene {
   private lastTownIndex = -1;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect; label: Phaser.GameObjects.Text }[] = [];
-  private rows: {
-    id: string;
-    button: RoundedRect;
-    label: Phaser.GameObjects.Text;
-    rateLabel: Phaser.GameObjects.Text;
-    costLabel: Phaser.GameObjects.Text;
-  }[] = [];
+  private rows: { id: string; card: GeneratorCard }[] = [];
 
   private welcomeGained = 0;
   private lastSave = 0;
@@ -130,6 +134,8 @@ export class IdleScene extends Phaser.Scene {
     this.potionCounter = new SmoothedCounter(this.state.potions);
 
     this.buildBackground();
+    // ヘッダー帯はマスコット/ゾーンパネルより背面に置く（半透明の帯でキャラの頭が霞まないように）
+    drawHeaderBand(this, 800, HEADER_H);
     this.buildZonePanels();
     const mascot = this.buildAlchemistMascot();
     this.buildHeader();
@@ -212,7 +218,10 @@ export class IdleScene extends Phaser.Scene {
       borderColor: THEME.panelBorder,
       borderAlpha: 0.5,
     });
-    drawPanel(this, 560, 348, 440, 508, {
+    // 設備リスト: ヘッダー帯直下(y=HEADER_H+6)から、8行×GEN_ROW_PITCH + 上下余白ぶんの高さ
+    const genPanelTop = HEADER_H + 6;
+    const genPanelH = GEN_ROW_PITCH * GENERATORS.length + 20;
+    drawPanel(this, 560, genPanelTop + genPanelH / 2, 440, genPanelH, {
       radius: 18,
       fillColor: ELEVATION.zone,
       fillAlpha: 0.9,
@@ -234,22 +243,24 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private buildHeader(): void {
+    // タイトルは帯の上段に小さめ・字間広めで置き、主役はポーション数（ヒーロー数字）に譲る
     this.titleText = this.add
-      .text(400, 26, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(400, 20, "", { ...TYPE.h1, fontSize: "20px", letterSpacing: 2, color: "#4d5f7a" })
       .setOrigin(0.5);
-    this.titleIcon = drawFlaskIcon(this, 400, 26, 22);
+    // ヒーロー数字: 大きめの等幅数字＋フラスコアイコン。アイコンは数字幅に応じて refreshUI() で追従する
     this.potionText = this.add
-      .text(400, 62, "", { ...TYPE.numeric, color: "#1f8a63" })
+      .text(400, 54, "", { ...TYPE.numeric, fontSize: "30px", color: "#1f8a63" })
       .setOrigin(0.5);
+    this.potionIcon = drawFlaskIcon(this, 400, 54, 24);
     this.rateText = this.add
-      .text(400, 88, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(400, 82, "", { ...TYPE.small, fontSize: "12px", fontStyle: "600", color: THEME.textMuted })
       .setOrigin(0.5);
-    // 転生と連動して切り替わる「現在の街」の表示
+    // 転生と連動して切り替わる「現在の街」の表示（右上ボタン群の下に右寄せ）
     this.townText = this.add
-      .text(400, 105, "", { ...TYPE.small, color: THEME.textMuted, fontStyle: "600" })
-      .setOrigin(0.5);
+      .text(788, 62, "", { ...TYPE.small, color: THEME.textMuted, fontStyle: "600" })
+      .setOrigin(1, 0.5);
     this.essenceText = this.add
-      .text(16, 14, "", { ...TYPE.body, color: "#8a4fd1" })
+      .text(16, 12, "", { ...TYPE.body, color: "#8a4fd1" })
       .setOrigin(0, 0);
 
     // 右上ボタン群: 実績 / サウンド / 言語
@@ -403,48 +414,42 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private buildGeneratorList(): void {
+    const firstY = HEADER_H + 6 + 10 + GEN_ROW_H / 2;
     GENERATORS.forEach((g, i) => {
-      const y = 130 + i * 62;
-      const button = makeRoundedRect(this, 560, y, 400, 52, 0xeaf5ff, { radius: 10, borderColor: 0x9ecbef });
+      const y = firstY + i * GEN_ROW_PITCH;
+      // 設備ごとに色相をずらしたアクセント色。アイコン丸・購入可能時の発光・所持数バッジに共通で使い、
+      // 8種の設備を一目で見分けやすくする
+      const hue = (i / GENERATORS.length) * 0.8;
+      const accent = Phaser.Display.Color.HSVToRGB(hue, 0.55, 0.78).color;
 
       // 設備ごとのアイコン: ChatGPT生成イラスト（cauldron/dragon）があればそれを使い、
-      // 無い設備は従来通り色相をずらしたジェム風アイコンで一目で見分けやすくする（装飾）
+      // 無い設備は従来通りジェム風アイコンにフォールバックする（座標はカード側が設定する）
       const iconKey = g.id === "cauldron" ? "pw-cauldron-icon" : g.id === "dragon" ? "pw-dragon-icon" : null;
-      if (iconKey && this.textures.exists(iconKey)) {
-        this.add.image(382, y, iconKey).setDisplaySize(30, 30);
-      } else {
-        const hue = (i / GENERATORS.length) * 0.8;
-        const gemColor = Phaser.Display.Color.HSVToRGB(hue, 0.65, 0.85).color;
-        const gem = this.add.graphics({ x: 382, y });
-        gem.fillStyle(gemColor, 1);
-        gem.fillCircle(0, 0, 12);
-        gem.fillStyle(0xffffff, 0.35);
-        gem.fillCircle(-4, -4, 4);
-        gem.lineStyle(1.5, 0xffffff, 0.4);
-        gem.strokeCircle(0, 0, 12);
-      }
+      const makeIcon = (scene: Phaser.Scene) => {
+        if (iconKey && scene.textures.exists(iconKey)) {
+          return scene.add.image(0, 0, iconKey).setDisplaySize(34, 34);
+        }
+        const gem = scene.add.graphics();
+        gem.fillStyle(0xffffff, 0.95);
+        gem.fillCircle(0, 0, 9);
+        gem.fillStyle(accent, 0.55);
+        gem.fillCircle(0, 0, 6);
+        gem.fillStyle(0xffffff, 0.8);
+        gem.fillCircle(-3, -3, 2.5);
+        return gem;
+      };
 
-      // アイコンを主役にして情報量を絞る: 名前(+所持数)を1行、生産量を小さく補足、コストは
-      // 右側に「値札」として分離する（スプレッドシート的な1行詰め込みを避け、ショップの商品行らしくする）
-      const label = this.add
-        .text(400, y - 15, "", { ...TYPE.body, color: THEME.textPrimary })
-        .setOrigin(0, 0);
-      const rateLabel = this.add
-        .text(400, y + 3, "", { ...TYPE.small, color: THEME.textMuted })
-        .setOrigin(0, 0);
-      const costLabel = this.add
-        .text(740, y, "", { ...TYPE.body, color: THEME.textPrimary, align: "right" })
-        .setOrigin(1, 0.5);
-      button.on("pointerdown", () => {
+      const card = makeGeneratorCard(this, 560, y, 410, GEN_ROW_H, accent, makeIcon);
+      card.container.on("pointerdown", () => {
         const next = buyGenerator(this.state, g.id);
         if (next) {
           this.state = next;
           this.playSound(sfx.buy);
-          this.tweens.add({ targets: [button, label], scaleX: 1.03, duration: 70, yoyo: true });
+          card.press();
           this.spawnFloatingText(560, y - 30, `${generatorName(this.lang, g.id)} +1`, "#ffd166");
         }
       });
-      this.rows.push({ id: g.id, button, label, rateLabel, costLabel });
+      this.rows.push({ id: g.id, card });
     });
   }
 
@@ -629,7 +634,6 @@ export class IdleScene extends Phaser.Scene {
   /** 言語・設定に依存する固定文言を更新 */
   private refreshStaticTexts(): void {
     this.titleText.setText(t(this.lang, "title"));
-    this.titleIcon.setPosition(400 - this.titleText.width / 2 - 18, 26);
     this.brewText?.setText(t(this.lang, "brew"));
     this.langText.setText(t(this.lang, "langButton"));
     this.soundIcon.destroy();
@@ -642,6 +646,7 @@ export class IdleScene extends Phaser.Scene {
     this.refreshTownGlow();
     const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
     this.potionText.setText(`${formatNumber(displayedPotions)} ${t(this.lang, "potions")}`);
+    this.potionIcon.setPosition(400 - this.potionText.width / 2 - 20, 54);
     this.rateText.setText(
       `${formatNumber(productionPerSec(this.state))} ${t(this.lang, "perSec")}`,
     );
@@ -717,16 +722,16 @@ export class IdleScene extends Phaser.Scene {
       }
     }
 
+    // 設備カードはオブジェクトを作り直さず、テキスト/mood の更新だけを行う（各setterは値が同じなら何もしない）
     for (const row of this.rows) {
       const def = GENERATORS.find((g) => g.id === row.id)!;
       const count = this.state.counts[row.id] ?? 0;
       const cost = generatorCost(def, count);
-      const affordable = this.state.potions >= cost;
-      row.label.setText(`${generatorName(this.lang, def.id)}  ×${count}`);
-      row.rateLabel.setText(`+${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`);
-      row.costLabel.setText(formatNumber(cost));
-      row.button.setFillStyle(affordable ? 0xcdf3e3 : 0xeaf5ff);
-      row.costLabel.setColor(affordable ? "#1f8a63" : "#a7b4c2");
+      row.card.setName(generatorName(this.lang, def.id));
+      row.card.setCount(count);
+      row.card.rate.setText(`+${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`);
+      row.card.setCost(formatNumber(cost));
+      row.card.setReady(this.state.potions >= cost);
     }
   }
 }
