@@ -143,7 +143,7 @@ describe("inAttackRange", () => {
     expect(inAttackRange(100, -1, 70)).toBe(true);
   });
   it("密着時に敵の中心がわずかに背後でも許容範囲内なら true", () => {
-    // dx = -10（許容 ATTACK_RANGE_BEHIND=12 以内）
+    // dx = -10（許容 ATTACK_RANGE_BEHIND=18 以内）
     expect(inAttackRange(100, 1, 90)).toBe(true);
   });
   it("完全に背後や射程外なら false", () => {

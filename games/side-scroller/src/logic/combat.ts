@@ -7,8 +7,8 @@
 export const PLAYER_MAX_HEALTH = 3;
 export const PLAYER_INVULNERABLE_MS = 1000; // 被弾後の無敵時間
 export const ATTACK_COOLDOWN_MS = 350;
-export const ATTACK_RANGE = 60; // プレイヤー中心から前方への攻撃判定距離
-export const ATTACK_RANGE_BEHIND = 12; // 密着時に敵が僅かに背後判定になっても取りこぼさないための許容量
+export const ATTACK_RANGE = 90; // プレイヤー中心から前方への攻撃判定距離（キャラ1.5倍化に合わせ 60→90）
+export const ATTACK_RANGE_BEHIND = 18; // 密着時に敵が僅かに背後判定になっても取りこぼさないための許容量
 export const ENEMY_TOUCH_DAMAGE = 1;
 export const SCORE_PER_KILL = 100;
 

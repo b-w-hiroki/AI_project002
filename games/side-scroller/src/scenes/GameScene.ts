@@ -101,9 +101,13 @@ const GROUND_Y = 520;
 const ARENA_WIDTH = 1600;
 const WAVE_INTERMISSION_MS = 2200;
 const MOVE_SPEED = 220;
-const JUMP_VELOCITY = -520;
+/**
+ * ジャンプ初速。-520 では足元の到達高さが 108px で、最も低い足場（y=420、上面 410）に 1.7px 届かなかったため
+ * キャラ拡大に合わせて -540（到達高さ 117px）に微調整した。重力は 1200 のまま。
+ */
+const JUMP_VELOCITY = -540;
 /** 攻撃判定の縦方向の許容差。異なる高さの足場にいる敵を誤って巻き込まないための上限 */
-const ATTACK_RANGE_Y = 44;
+const ATTACK_RANGE_Y = 66;
 const PROJECTILE_SPEED = 640;
 
 /** アイテムID → 使用キーの割当（1/2/3は武器切替に使っているため別キーにする） */
@@ -139,13 +143,31 @@ const HUD_DEPTH = 20;
 const BG_SCROLL_FACTOR = 0.4;
 
 /**
- * プレイヤーの当たり判定（幅/高さはプレースホルダー時代と同一）。
- * イラスト版はテクスチャが 36×54 で足元が画像下端に来るため、オフセットだけ変えて体の大きさは変えない。
+ * キャラクターの表示倍率。当初の 36×54(主人公)/40×40(ゴブリン) では緻密な背景に対して小さく見えたため
+ * 1.5 倍（54×81 / 60×60）に拡大した。テクスチャ・当たり判定・演出のオフセットはすべてこの倍率で揃えている。
+ * ジャンプ速度・重力は据え置き（足元基準の到達高さは体の大きさに依存しないため足場配置も変更不要）。
  */
-const PLAYER_BODY = { w: 18, h: 32, crouchH: 20 };
-const PLAYER_BODY_OFFSET = { fallback: { x: 6, y: 8 }, art: { x: 9, y: 20 } };
-const ENEMY_BODY = { w: 18, h: 30 };
-const ENEMY_BODY_OFFSET = { fallback: { x: 6, y: 10 }, art: { x: 11, y: 8 } };
+const CHAR_SCALE = 1.5;
+/** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
+const HUMANOID_BASE = { w: 30, h: 42 };
+const HERO_ART_SIZE = { w: 36 * CHAR_SCALE, h: 54 * CHAR_SCALE }; // 54×81
+const ENEMY_ART_SIZE = { w: 40 * CHAR_SCALE, h: 40 * CHAR_SCALE }; // 60×60
+
+/**
+ * プレイヤーの当たり判定（拡大前 18×32 / しゃがみ 20 を CHAR_SCALE 倍）。
+ * オフセットはテクスチャごとに「体を横中央、足元をテクスチャ下端の 2px 上」に置くよう算出する。
+ */
+const PLAYER_BODY = { w: 27, h: 48, crouchH: 30 };
+const ENEMY_BODY = { w: 27, h: 45 };
+const FEET_MARGIN = 2;
+/** しゃがみ時のスプライト縦スケール */
+const CROUCH_SCALE_Y = 0.68;
+function bodyOffsetFor(tex: { w: number; h: number }, body: { w: number; h: number }): { x: number; y: number } {
+  return { x: (tex.w - body.w) / 2, y: tex.h - FEET_MARGIN - body.h };
+}
+const HUMANOID_TEX = { w: HUMANOID_BASE.w * CHAR_SCALE, h: HUMANOID_BASE.h * CHAR_SCALE }; // 45×63
+const PLAYER_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, PLAYER_BODY), art: bodyOffsetFor(HERO_ART_SIZE, PLAYER_BODY) };
+const ENEMY_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, ENEMY_BODY), art: bodyOffsetFor(ENEMY_ART_SIZE, ENEMY_BODY) };
 
 /** 敵タイプごとの色ティント。本物の専用スプライトに差し替える前提のプレースホルダー */
 const ENEMY_TYPE_TINT: Readonly<Record<EnemyType, number>> = {
@@ -384,8 +406,8 @@ export class GameScene extends Phaser.Scene {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
-    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, 36, 54);
-    this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, 40, 40);
+    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
+    this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -437,40 +459,41 @@ export class GameScene extends Phaser.Scene {
     gfx.destroy();
   }
 
-  /** 頭+胴+腕(剣)からなる簡易ヒューマノイドのテクスチャを生成 */
+  /** 頭+胴+腕(剣)からなる簡易ヒューマノイドのテクスチャを生成（30×42 の元絵を CHAR_SCALE 倍で描く） */
   private drawHumanoidTexture(key: string, mainColor: number, shadeColor: number): void {
-    const w = 30;
-    const h = 42;
+    const k = CHAR_SCALE;
+    const w = HUMANOID_BASE.w * k;
+    const h = HUMANOID_BASE.h * k;
     const gfx = this.make.graphics({ x: 0, y: 0 }, false);
 
     // 影
     gfx.fillStyle(0x000000, 0.25);
-    gfx.fillEllipse(w / 2, h - 3, 20, 6);
+    gfx.fillEllipse(w / 2, h - 3 * k, 20 * k, 6 * k);
 
     // 胴体
     gfx.fillStyle(mainColor, 1);
-    gfx.fillRoundedRect(6, 16, 18, 22, 4);
+    gfx.fillRoundedRect(6 * k, 16 * k, 18 * k, 22 * k, 4 * k);
 
     // 頭
     gfx.fillStyle(0xffe0bd, 1);
-    gfx.fillCircle(w / 2, 10, 9);
+    gfx.fillCircle(w / 2, 10 * k, 9 * k);
 
     // 髪/兜（キャラの見分けをつけるための帯）
     gfx.fillStyle(shadeColor, 1);
-    gfx.fillRoundedRect(4, 12, 22, 6, 3);
+    gfx.fillRoundedRect(4 * k, 12 * k, 22 * k, 6 * k, 3 * k);
 
     // 目
     gfx.fillStyle(0x1a1a1a, 1);
-    gfx.fillCircle(w / 2 + 3, 10, 1.6);
+    gfx.fillCircle(w / 2 + 3 * k, 10 * k, 1.6 * k);
 
     // 腕（剣を握る側）
     gfx.fillStyle(shadeColor, 1);
-    gfx.fillRoundedRect(20, 20, 6, 14, 3);
+    gfx.fillRoundedRect(20 * k, 20 * k, 6 * k, 14 * k, 3 * k);
 
     // 脚
     gfx.fillStyle(shadeColor, 1);
-    gfx.fillRoundedRect(8, 36, 6, 6, 2);
-    gfx.fillRoundedRect(16, 36, 6, 6, 2);
+    gfx.fillRoundedRect(8 * k, 36 * k, 6 * k, 6 * k, 2 * k);
+    gfx.fillRoundedRect(16 * k, 36 * k, 6 * k, 6 * k, 2 * k);
 
     gfx.generateTexture(key, w, h);
     gfx.destroy();
@@ -497,8 +520,10 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y + 32, ARENA_WIDTH, 64, 0x8b6b47);
     this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y, ARENA_WIDTH, 4, 0x5cb85c);
 
+    // 地上からのジャンプ到達高さ（117px）で乗れるのは y=420（上面 410）の足場。
+    // y=340/360 の足場は隣の y=420 の足場から段差で登る。（260 の足場は元 y=400 で地上から届かなかったため 420 に下げた）
     const floatingPlatforms = [
-      { x: 260, y: 400 },
+      { x: 260, y: 420 },
       { x: 520, y: 340 },
       { x: 800, y: 420 },
       { x: 1080, y: 360 },
@@ -521,7 +546,7 @@ export class GameScene extends Phaser.Scene {
 
   private buildPlayer(): void {
     const useArt = this.textures.exists(HERO_ART_TEXTURE);
-    this.player = this.physics.add.sprite(80, GROUND_Y - 40, useArt ? HERO_ART_TEXTURE : "hero");
+    this.player = this.physics.add.sprite(80, GROUND_Y - 60, useArt ? HERO_ART_TEXTURE : "hero");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(3);
     const off = this.playerBodyOffset();
@@ -532,10 +557,10 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon = this.add.graphics();
     this.guardIcon.lineStyle(3, 0xffd166, 0.95);
     this.guardIcon.beginPath();
-    this.guardIcon.arc(0, 0, 16, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60));
+    this.guardIcon.arc(0, 0, 24, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60));
     this.guardIcon.strokePath();
     this.guardIcon.fillStyle(0xffd166, 0.18);
-    this.guardIcon.slice(0, 0, 16, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
+    this.guardIcon.slice(0, 0, 24, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
     this.guardIcon.fillPath();
     this.guardIcon.setDepth(5);
     this.guardIcon.setVisible(false);
@@ -550,7 +575,7 @@ export class GameScene extends Phaser.Scene {
   private spawnEnemy(wave: number, spec: EnemySpawnSpec, x: number, index: number): void {
     // 通常敵のみイラスト版（ゴブリン）。agile/tank は色ティントで区別する従来のプレースホルダーのまま
     const useArt = spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
-    const sprite = this.physics.add.sprite(x, GROUND_Y - 30, useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin");
+    const sprite = this.physics.add.sprite(x, GROUND_Y - 45, useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin");
     sprite.setCollideWorldBounds(true);
     sprite.setDepth(2);
     const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
@@ -599,7 +624,7 @@ export class GameScene extends Phaser.Scene {
   private announceWave(wave: number, kind: WaveKind): void {
     const suffix = kind === "boss" ? " - BOSS!" : kind === "swarm" ? " - 大量発生!" : "";
     const color = kind === "boss" ? "#e0447a" : kind === "swarm" ? "#c98a12" : "#8a4fd1";
-    this.spawnFloatingText(this.player.x, this.player.y - 70, `WAVE ${wave}${suffix}`, color);
+    this.spawnFloatingText(this.player.x, this.player.y - 105, `WAVE ${wave}${suffix}`, color);
   }
 
   /** 召喚媒体/防具/アイテム/ステージバフのピックアップをアリーナ内のランダムな位置に配置する */
@@ -899,20 +924,20 @@ export class GameScene extends Phaser.Scene {
   /** 空中に現れた武器をプレイヤーが受け取る演出 */
   private playCatchAnimation(kind: WeaponKind): void {
     const icon = this.add
-      .sprite(this.player.x, this.player.y - 140, "orb")
+      .sprite(this.player.x, this.player.y - 160, "orb")
       .setScale(1.8)
       .setTint(0xd9a7ff)
       .setDepth(50);
     this.tweens.add({
       targets: icon,
-      y: this.player.y - 10,
+      y: this.player.y - 15,
       duration: 260,
       ease: "Cubic.easeIn",
       onComplete: () => {
         icon.destroy();
         this.cameras.main.flash(150, 217, 167, 255);
         this.tweens.add({ targets: this.player, scale: 1.2, duration: 80, yoyo: true });
-        this.spawnFloatingText(this.player.x, this.player.y - 50, `${WEAPON_LABEL[kind]} 召喚！`, "#d9a7ff");
+        this.spawnFloatingText(this.player.x, this.player.y - 75, `${WEAPON_LABEL[kind]} 召喚！`, "#d9a7ff");
       },
     });
   }
@@ -929,7 +954,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (pickup.kind === "armor") {
       this.playerState = gainArmor(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 40, "🛡️ 防具+1", "#7fd1ff");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, "🛡️ 防具+1", "#7fd1ff");
       return;
     }
     if (pickup.kind === "stageBuff") {
@@ -940,7 +965,7 @@ export class GameScene extends Phaser.Scene {
     if (pickup.itemId) {
       this.items = { ...this.items, [pickup.itemId]: (this.items[pickup.itemId] ?? 0) + 1 };
       const name = findItemDef(pickup.itemId)?.name ?? pickup.itemId;
-      this.spawnFloatingText(this.player.x, this.player.y - 40, `📦 ${name}+1`, "#7fffb0");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `📦 ${name}+1`, "#7fffb0");
     }
   }
 
@@ -950,7 +975,7 @@ export class GameScene extends Phaser.Scene {
       if (!Phaser.Input.Keyboard.JustDown(key)) continue;
       const consumed = useItem(this.items, itemId);
       if (!consumed) {
-        this.spawnFloatingText(this.player.x, this.player.y - 40, "所持していない", "#ff6b8a");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, "所持していない", "#ff6b8a");
         continue;
       }
       this.items = consumed;
@@ -962,13 +987,13 @@ export class GameScene extends Phaser.Scene {
     const name = findItemDef(itemId)?.name ?? itemId;
     if (itemId === "potion") {
       this.playerState = healPlayer(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 40, `❤️ ${name}使用`, "#ff6b8a");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `❤️ ${name}使用`, "#ff6b8a");
       return;
     }
     const buffKind: BuffKind | null = itemId === "power_charm" ? "power" : itemId === "haste_charm" ? "haste" : null;
     if (buffKind) {
       this.playerState = applyBuff(this.playerState, buffKind, time, ITEM_BUFF_DURATION_MS);
-      this.spawnFloatingText(this.player.x, this.player.y - 40, `✨ ${name}使用`, "#ffd166");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `✨ ${name}使用`, "#ffd166");
     }
   }
 
@@ -1046,7 +1071,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.closeStageBuffOverlay();
     this.cameras.main.flash(150, 255, 209, 102);
-    this.spawnFloatingText(this.player.x, this.player.y - 50, `${option.label}！`, "#ffd166");
+    this.spawnFloatingText(this.player.x, this.player.y - 75, `${option.label}！`, "#ffd166");
   }
 
   update(time: number): void {
@@ -1148,20 +1173,37 @@ export class GameScene extends Phaser.Scene {
   private applyCrouchVisual(crouching: boolean): void {
     if (crouching === this.wasCrouching) return;
     this.wasCrouching = crouching;
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    const off = this.playerBodyOffset();
     if (crouching) {
-      // 足元の位置は変えず、判定の上辺だけ下げる
-      body.setSize(PLAYER_BODY.w, PLAYER_BODY.crouchH).setOffset(off.x, off.y + (PLAYER_BODY.h - PLAYER_BODY.crouchH));
-      this.player.setScale(1, 0.68);
+      this.layoutPlayerBody(PLAYER_BODY.crouchH, CROUCH_SCALE_Y);
     } else {
-      body.setSize(PLAYER_BODY.w, PLAYER_BODY.h).setOffset(off.x, off.y);
-      this.player.setScale(1, 1);
+      this.layoutPlayerBody(PLAYER_BODY.h, 1);
     }
   }
 
+  /**
+   * プレイヤーの縦スケールと当たり判定の高さを「足元の位置を固定したまま」切り替える。
+   * Arcade の Body は preUpdate でスプライトの scale を掛けて高さ・オフセットを再計算するため、
+   * setScale(1, 0.68) の後に素の数値で setSize/setOffset すると体が縮んで足が地面から浮き、
+   * blocked.down が外れてしゃがみが毎フレーム解除→再開を繰り返してしまう。
+   * ここではスケール後の実寸が bodyH・足元 = 元の足元位置になるよう逆算して設定する。
+   */
+  private layoutPlayerBody(bodyH: number, scaleY: number): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const off = this.playerBodyOffset();
+    const feetY = body.bottom;
+    const halfH = this.player.height / 2; // scale 前のテクスチャ半分の高さ
+    this.player.setScale(1, scaleY);
+    this.player.y = feetY + FEET_MARGIN - halfH * scaleY; // 絵の下端を足元の少し下に合わせる
+    const offY = halfH + (feetY - bodyH - this.player.y) / scaleY;
+    body.setSize(PLAYER_BODY.w, bodyH / scaleY).setOffset(off.x, offY);
+    body.updateFromGameObject();
+    // postUpdate は「フレーム開始時の位置との差分」をスプライトに足すため、ここで動かした分が二重に反映されないよう基準も更新する
+    body.prev.copy(body.position);
+    body.prevFrame.copy(body.position);
+  }
+
   private spawnDoubleJumpFx(): void {
-    const burst = this.add.circle(this.player.x, this.player.y + 14, 4, 0x7fd1ff, 0.8);
+    const burst = this.add.circle(this.player.x, this.player.y + 21, 4, 0x7fd1ff, 0.8);
     this.tweens.add({ targets: burst, scale: 3, alpha: 0, duration: 300, onComplete: () => burst.destroy() });
   }
 
@@ -1171,7 +1213,7 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon.setVisible(this.guarding);
     if (this.guarding) {
       const facing = this.playerState.facing;
-      this.guardIcon.setPosition(this.player.x + facing * 16, this.player.y - 6);
+      this.guardIcon.setPosition(this.player.x + facing * 24, this.player.y - 9);
       this.guardIcon.setScale(facing === -1 ? -1 : 1, 1);
     }
   }
@@ -1184,7 +1226,7 @@ export class GameScene extends Phaser.Scene {
     for (const { key, kind } of this.weaponKeys) {
       if (Phaser.Input.Keyboard.JustDown(key) && this.playerState.equippedWeapon !== kind) {
         this.playerState = switchWeapon(this.playerState, kind);
-        this.spawnFloatingText(this.player.x, this.player.y - 40, WEAPON_LABEL[kind], "#7fd1ff");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, WEAPON_LABEL[kind], "#7fd1ff");
       }
     }
   }
@@ -1248,7 +1290,7 @@ export class GameScene extends Phaser.Scene {
     const color = kindColor[weapon.kind];
     const facing = this.playerState.facing;
     const radius = weapon.range * 0.7;
-    const g = this.add.graphics({ x: this.player.x + facing * 14, y: this.player.y - 4 });
+    const g = this.add.graphics({ x: this.player.x + facing * 21, y: this.player.y - 6 });
     g.setDepth(6);
     g.lineStyle(5, color, 0.95);
     g.beginPath();
@@ -1299,7 +1341,7 @@ export class GameScene extends Phaser.Scene {
   private triggerBigAttackEffect(color: number, time: number, range: number, multiplier: number): void {
     this.cameras.main.flash(250, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
     this.cameras.main.shake(200, 0.01);
-    const burst = this.add.circle(this.player.x, this.player.y - 10, 10, color, 0.5);
+    const burst = this.add.circle(this.player.x, this.player.y - 15, 10, color, 0.5);
     this.tweens.add({
       targets: burst,
       radius: range,
@@ -1322,7 +1364,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 遠距離武器の飛翔体を発射する */
   private spawnProjectile(): void {
-    const sprite = this.physics.add.sprite(this.player.x, this.player.y - 6, "orb");
+    const sprite = this.physics.add.sprite(this.player.x, this.player.y - 9, "orb");
     (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     sprite.setVelocityX(PROJECTILE_SPEED * this.playerState.facing);
     const projectile: Projectile = {
@@ -1437,7 +1479,7 @@ export class GameScene extends Phaser.Scene {
 
   private playGuardBlockFx(): void {
     this.cameras.main.flash(80, 255, 209, 102);
-    const spark = this.add.circle(this.player.x + this.playerState.facing * 16, this.player.y - 6, 10, 0xffd166, 0.6);
+    const spark = this.add.circle(this.player.x + this.playerState.facing * 24, this.player.y - 9, 10, 0xffd166, 0.6);
     this.tweens.add({ targets: spark, scale: 1.8, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
   }
 
@@ -1446,14 +1488,14 @@ export class GameScene extends Phaser.Scene {
     const unlocked = this.playerState.hiougiUnlocked;
     this.playerState = checkHiougiUnlock(this.playerState);
     if (!unlocked && this.playerState.hiougiUnlocked) {
-      this.spawnFloatingText(this.player.x, this.player.y - 60, "秘奥義解放！", "#ffd166");
+      this.spawnFloatingText(this.player.x, this.player.y - 90, "秘奥義解放！", "#ffd166");
       this.cameras.main.flash(400, 255, 209, 102);
     }
 
     this.waveEnemiesAlive -= 1;
     if (this.waveEnemiesAlive <= 0 && this.waveActive) {
       this.waveActive = false;
-      this.spawnFloatingText(this.player.x, this.player.y - 60, `WAVE ${this.wave} CLEAR!`, "#1f8a63");
+      this.spawnFloatingText(this.player.x, this.player.y - 90, `WAVE ${this.wave} CLEAR!`, "#1f8a63");
       this.cameras.main.flash(200, 127, 209, 255);
       cg.happytime();
       this.time.delayedCall(WAVE_INTERMISSION_MS, () => {
