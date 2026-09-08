@@ -1,3 +1,4 @@
+import { ExpeditionScene } from "./scenes/ExpeditionScene";
 import Phaser from "phaser";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
@@ -12,5 +13,5 @@ new Phaser.Game({
   height: 800,
   backgroundColor: "#2a1a14",
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [GameScene],
+  scene: [GameScene, ExpeditionScene],
 });

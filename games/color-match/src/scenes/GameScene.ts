@@ -1,14 +1,19 @@
+import {
+  CHALLENGE_MS,
+  challengeRound,
+  nextSwitchAt,
+  accuracyFor,
+  type ChallengeResult,
+} from "../logic/challenge";
 import Phaser from "phaser";
 import {
   COLORS,
   Round,
-  RoundResult,
   TURBO_ENTRY_STREAK,
   TURBO_FAST_MS,
   WRITING_MODES,
   WRITING_MODE_LABEL,
   WritingMode,
-  generateRound,
   hexForColorId,
   nameForColorId,
   pointsForStreak,
@@ -29,7 +34,6 @@ import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
 
-const ROUNDS_PER_SESSION = 12;
 const FEEDBACK_DELAY_MS = 320;
 const CARD_W = 160;
 const CARD_H = 100;
@@ -63,7 +67,12 @@ export class GameScene extends Phaser.Scene {
   private phase: Phase = "title";
   private level = 0;
   private roundIndex = 0;
-  private results: RoundResult[] = [];
+  private results: ChallengeResult[] = [];
+  private sessionRemaining = CHALLENGE_MS;
+  private previousMode: "content" | "color" | null = null;
+  private switched = false;
+  private switchHint!: Phaser.GameObjects.Text;
+  private pendingRound?: Phaser.Time.TimerEvent;
   private currentRound: Round | null = null;
   private roundStartedAt = 0;
   private accepting = false;
@@ -110,11 +119,43 @@ export class GameScene extends Phaser.Scene {
     this.buildResultScreen();
     this.showTitle();
 
-    this.input.keyboard?.on("keydown", (e: KeyboardEvent) => this.handleKeydown(e));
+    this.input.keyboard?.on("keydown", (e: KeyboardEvent) =>
+      this.handleKeydown(e),
+    );
   }
 
   update(_time: number, delta: number): void {
-    if (this.phase !== "playing" || !this.accepting) return;
+    if (this.phase !== "playing") return;
+    this.sessionRemaining = Math.max(0, this.sessionRemaining - delta);
+    this.progressText.setText(
+      `60秒 CHALLENGE  ·  残り ${Math.ceil(this.sessionRemaining / 1000)}秒  ·  ${this.roundIndex}問`,
+    );
+    if (this.sessionRemaining <= 0) {
+      if (this.accepting && this.currentRound) {
+        this.results.push({
+          correct: false,
+          timedOut: true,
+          reactionMs: Math.min(
+            this.timeLimitMs,
+            performance.now() - this.roundStartedAt,
+          ),
+          mode: this.currentRound.judgeMode,
+          switched: this.switched,
+        });
+      }
+      this.accepting = false;
+      this.pendingRound?.remove(false);
+      this.endSession();
+      return;
+    }
+    const elapsed = CHALLENGE_MS - this.sessionRemaining;
+    const until = nextSwitchAt(elapsed) - elapsed;
+    this.switchHint.setText(
+      until <= 2000
+        ? "まもなく、次のカードから判定が切り替わります"
+        : "内容 → 色 → 切り替え。目の前の指示を見よう",
+    );
+    if (!this.accepting) return;
     this.timeRemainingMs -= delta;
     if (this.timeRemainingMs <= 0) {
       this.timeRemainingMs = 0;
@@ -132,13 +173,16 @@ export class GameScene extends Phaser.Scene {
     // マスコット画像がある時はタイトル文字を右へ寄せ、左隣にマスコットを置く。無ければ従来の中央揃え
     const hasMascot = this.textures.exists(MASCOT_KEY);
     const title = this.add
-      .text(hasMascot ? CX + 55 : CX, 110, "カラーマッチ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(hasMascot ? CX + 55 : CX, 110, "カラーマッチ", {
+        ...TYPE.h1,
+        color: THEME.textPrimary,
+      })
       .setOrigin(0.5);
     const rules = this.add
       .text(
         CX,
         260,
-        "毎回「内容」か「色」どちらかで判定します。\n指示に合う色の枠まで\nカードをドラッグしてください。\n意味と色があえて食い違うカードが混じります。\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
+        "60秒で、どこまで判断できる？\n内容 → 色 → 切り替えの順で挑戦。\n指示に合う色の枠まで\nカードをドラッグしてください。\n\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -149,7 +193,9 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.add([panel, title, rules, modeLabel]);
     if (hasMascot) {
       // パネルより後に追加してパネルの上に描画する
-      const mascot = this.add.image(105, 118, MASCOT_KEY).setDisplaySize(120, 120);
+      const mascot = this.add
+        .image(105, 118, MASCOT_KEY)
+        .setDisplaySize(120, 120);
       this.titleGroup.add(mascot);
       this.tweens.add({
         targets: mascot,
@@ -163,16 +209,30 @@ export class GameScene extends Phaser.Scene {
     this.buildWritingModeSelector();
 
     const best = this.add
-      .text(CX, 580, `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`, {
-        ...TYPE.small,
-        color: THEME.textMuted,
-        align: "center",
-      })
+      .text(
+        CX,
+        580,
+        `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`,
+        {
+          ...TYPE.small,
+          color: THEME.textMuted,
+          align: "center",
+        },
+      )
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, CX, 670, 260, 52, "スタート", () => this.startSession(), {
-      fontSize: "16px",
-    });
+    const startBtn = makeButton(
+      this,
+      CX,
+      670,
+      260,
+      52,
+      "スタート",
+      () => this.startSession(),
+      {
+        fontSize: "16px",
+      },
+    );
 
     this.titleGroup.add([best, startBtn.container]);
     this.titleGroup.setData("bestText", best);
@@ -196,9 +256,15 @@ export class GameScene extends Phaser.Scene {
 
       const bg = this.add.graphics();
       const label = this.add
-        .text(0, 0, WRITING_MODE_LABEL[mode], { ...TYPE.small, fontStyle: "700", color: THEME.textPrimary })
+        .text(0, 0, WRITING_MODE_LABEL[mode], {
+          ...TYPE.small,
+          fontStyle: "700",
+          color: THEME.textPrimary,
+        })
         .setOrigin(0.5);
-      const container = this.add.container(x, y, [bg, label]).setSize(buttonW, buttonH);
+      const container = this.add
+        .container(x, y, [bg, label])
+        .setSize(buttonW, buttonH);
       container.setInteractive({ useHandCursor: true });
       container.on("pointerdown", () => this.setWritingMode(mode));
       this.titleGroup.add(container);
@@ -221,10 +287,23 @@ export class GameScene extends Phaser.Scene {
     for (const view of this.modeButtons) {
       const selected = view.mode === this.writingMode;
       view.bg.clear();
-      view.bg.fillStyle(selected ? TURBO_COLOR : THEME.panelFill, selected ? 1 : 0.95);
+      view.bg.fillStyle(
+        selected ? TURBO_COLOR : THEME.panelFill,
+        selected ? 1 : 0.95,
+      );
       view.bg.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
-      view.bg.lineStyle(selected ? 2.5 : 1.5, selected ? TURBO_COLOR : THEME.panelBorder, selected ? 1 : 0.7);
-      view.bg.strokeRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, 8);
+      view.bg.lineStyle(
+        selected ? 2.5 : 1.5,
+        selected ? TURBO_COLOR : THEME.panelBorder,
+        selected ? 1 : 0.7,
+      );
+      view.bg.strokeRoundedRect(
+        -buttonW / 2,
+        -buttonH / 2,
+        buttonW,
+        buttonH,
+        8,
+      );
       view.label.setColor(selected ? "#ffffff" : THEME.textPrimary);
     }
   }
@@ -237,7 +316,11 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.judgeModeText = this.add
-      .text(CX, 80, "", { ...TYPE.h2, color: THEME.textPrimary, align: "center" })
+      .text(CX, 80, "", {
+        ...TYPE.h2,
+        color: THEME.textPrimary,
+        align: "center",
+      })
       .setOrigin(0.5);
 
     this.timerBarBg = this.add.graphics();
@@ -249,7 +332,11 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.turboText = this.add
-      .text(CX, 185, "", { ...TYPE.body, color: hexToCss(TURBO_COLOR), fontStyle: "800" })
+      .text(CX, 185, "", {
+        ...TYPE.body,
+        color: hexToCss(TURBO_COLOR),
+        fontStyle: "800",
+      })
       .setOrigin(0.5)
       .setVisible(false);
     if (this.textures.exists(TURBO_BADGE_KEY)) {
@@ -261,8 +348,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.promptBg = this.add.graphics();
-    this.promptText = this.add.text(0, 0, "", { ...TYPE.numeric }).setOrigin(0.5);
-    this.promptCard = this.add.container(CARD_HOME_X, CARD_HOME_Y, [this.promptBg, this.promptText]);
+    this.promptText = this.add
+      .text(0, 0, "", { ...TYPE.numeric })
+      .setOrigin(0.5);
+    this.promptCard = this.add.container(CARD_HOME_X, CARD_HOME_Y, [
+      this.promptBg,
+      this.promptText,
+    ]);
     this.promptCard.setSize(CARD_W, CARD_H);
     this.drawPromptBg(THEME.panelBorder);
 
@@ -279,6 +371,15 @@ export class GameScene extends Phaser.Scene {
     ]);
     if (this.turboHudBadge) this.playGroup.add(this.turboHudBadge);
 
+    this.switchHint = this.add
+      .text(CX, 735, "", {
+        fontSize: "13px",
+        color: "#675c4b",
+        align: "center",
+        wordWrap: { width: 380, useAdvancedWrap: true },
+      })
+      .setOrigin(0.5);
+    this.playGroup.add(this.switchHint);
     this.setupDrag();
   }
 
@@ -307,7 +408,9 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setColor(hexToCss(color.hex));
 
-      const container = this.add.container(x, y, [bg, label]).setSize(BOX_W, BOX_H);
+      const container = this.add
+        .container(x, y, [bg, label])
+        .setSize(BOX_W, BOX_H);
       this.playGroup.add(container);
 
       this.targetBoxes.push({
@@ -315,7 +418,12 @@ export class GameScene extends Phaser.Scene {
         container,
         bg,
         label,
-        bounds: new Phaser.Geom.Rectangle(x - BOX_W / 2, y - BOX_H / 2, BOX_W, BOX_H),
+        bounds: new Phaser.Geom.Rectangle(
+          x - BOX_W / 2,
+          y - BOX_H / 2,
+          BOX_W,
+          BOX_H,
+        ),
       });
     });
   }
@@ -326,7 +434,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private drawTargetBox(g: Phaser.GameObjects.Graphics, colorHex: number, highlight: boolean): void {
+  private drawTargetBox(
+    g: Phaser.GameObjects.Graphics,
+    colorHex: number,
+    highlight: boolean,
+  ): void {
     g.clear();
     g.fillStyle(colorHex, highlight ? 0.28 : 0.12);
     g.fillRoundedRect(-BOX_W / 2, -BOX_H / 2, BOX_W, BOX_H, 12);
@@ -338,8 +450,18 @@ export class GameScene extends Phaser.Scene {
     this.promptBg.clear();
     this.promptBg.fillStyle(THEME.panelFill, 0.98);
     this.promptBg.fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
-    this.promptBg.lineStyle(2.5, typeof borderColor === "number" ? borderColor : THEME.panelBorder, 0.9);
-    this.promptBg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 16);
+    this.promptBg.lineStyle(
+      2.5,
+      typeof borderColor === "number" ? borderColor : THEME.panelBorder,
+      0.9,
+    );
+    this.promptBg.strokeRoundedRect(
+      -CARD_W / 2,
+      -CARD_H / 2,
+      CARD_W,
+      CARD_H,
+      16,
+    );
   }
 
   private setupDrag(): void {
@@ -368,7 +490,9 @@ export class GameScene extends Phaser.Scene {
       // drag イベントで随時更新しているカードの現在位置を使う
       const dropX = this.promptCard.x;
       const dropY = this.promptCard.y;
-      const dropped = this.targetBoxes.find((box) => box.bounds.contains(dropX, dropY));
+      const dropped = this.targetBoxes.find((box) =>
+        box.bounds.contains(dropX, dropY),
+      );
       this.clearHoverHighlight();
       this.promptCard.setAlpha(1);
       if (dropped) {
@@ -405,22 +529,44 @@ export class GameScene extends Phaser.Scene {
     // スコア見出しの右隣に小さなマスコット。画像が無ければ見出しは従来通り中央揃え
     const hasMascot = this.textures.exists(MASCOT_KEY);
     const heading = this.add
-      .text(hasMascot ? CX - 35 : CX, 260, "", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(hasMascot ? CX - 35 : CX, 260, "", {
+        ...TYPE.h1,
+        color: THEME.textPrimary,
+      })
       .setOrigin(0.5)
       .setName("heading");
-    const resultMascot = hasMascot ? this.add.image(CX + 120, 255, MASCOT_KEY).setDisplaySize(72, 72) : null;
+    const resultMascot = hasMascot
+      ? this.add.image(CX + 120, 255, MASCOT_KEY).setDisplaySize(72, 72)
+      : null;
     const stats = this.add
-      .text(CX, 350, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 350, "", {
+        ...TYPE.body,
+        color: THEME.textMuted,
+        align: "center",
+      })
       .setOrigin(0.5)
       .setName("stats");
     const bestLine = this.add
-      .text(CX, 430, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
+      .text(CX, 430, "", {
+        ...TYPE.small,
+        color: THEME.textMuted,
+        align: "center",
+      })
       .setOrigin(0.5)
       .setName("bestLine");
 
-    const retryBtn = makeButton(this, CX, 510, 280, 52, "もう一度あそぶ (R)", () => this.startSession(), {
-      fontSize: "15px",
-    });
+    const retryBtn = makeButton(
+      this,
+      CX,
+      510,
+      280,
+      52,
+      "もう一度あそぶ (R)",
+      () => this.startSession(),
+      {
+        fontSize: "15px",
+      },
+    );
 
     this.resultGroup.add([panel, heading, stats, bestLine, retryBtn.container]);
     if (resultMascot) this.resultGroup.add(resultMascot);
@@ -432,11 +578,18 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.setVisible(true);
     this.playGroup.setVisible(false);
     this.resultGroup.setVisible(false);
-    const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
-    bestText.setText(`ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`);
+    const bestText = this.titleGroup.getData(
+      "bestText",
+    ) as Phaser.GameObjects.Text;
+    bestText.setText(
+      `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`,
+    );
   }
 
   private startSession(): void {
+    this.pendingRound?.remove(false);
+    this.sessionRemaining = CHALLENGE_MS;
+    this.previousMode = null;
     this.phase = "playing";
     this.level = 0;
     this.roundIndex = 0;
@@ -452,11 +605,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private nextRound(): void {
-    if (this.roundIndex >= ROUNDS_PER_SESSION) {
+    if (this.phase !== "playing") return;
+    if (this.sessionRemaining <= 0) {
       this.endSession();
       return;
     }
-    const round = generateRound();
+    const round = challengeRound(CHALLENGE_MS - this.sessionRemaining);
+    this.switched =
+      this.previousMode !== null && this.previousMode !== round.judgeMode;
+    this.previousMode = round.judgeMode;
     this.currentRound = round;
     this.timeLimitMs = timeLimitMsForLevel(this.level);
     this.timeRemainingMs = this.timeLimitMs;
@@ -464,9 +621,11 @@ export class GameScene extends Phaser.Scene {
     this.roundIndex += 1;
     this.accepting = true;
 
-    this.progressText.setText(`ラウンド ${this.roundIndex} / ${ROUNDS_PER_SESSION}`);
+    this.progressText.setText(`60秒 CHALLENGE · ${this.roundIndex}問`);
     this.judgeModeText.setText(
-      round.judgeMode === "content" ? "文字の「内容」に合う枠へ\nドラッグ" : "文字の「色」に合う枠へ\nドラッグ",
+      round.judgeMode === "content"
+        ? "文字の「内容」に合う枠へ\nドラッグ"
+        : "文字の「色」に合う枠へ\nドラッグ",
     );
     const word = nameForColorId(round.promptWord, this.writingMode);
     this.promptText
@@ -474,7 +633,11 @@ export class GameScene extends Phaser.Scene {
       .setFontSize(promptFontSizeFor(word))
       .setColor(hexToCss(hexForColorId(round.promptInk)));
     this.drawPromptBg(THEME.panelBorder);
-    this.promptCard.setPosition(CARD_HOME_X, CARD_HOME_Y).setScale(1).setDepth(1).setAlpha(1);
+    this.promptCard
+      .setPosition(CARD_HOME_X, CARD_HOME_Y)
+      .setScale(1)
+      .setDepth(1)
+      .setAlpha(1);
     this.clearHoverHighlight();
     this.updateTimerVisual();
 
@@ -482,12 +645,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateTimerVisual(): void {
-    const ratio = this.timeLimitMs > 0 ? Phaser.Math.Clamp(this.timeRemainingMs / this.timeLimitMs, 0, 1) : 0;
+    const ratio =
+      this.timeLimitMs > 0
+        ? Phaser.Math.Clamp(this.timeRemainingMs / this.timeLimitMs, 0, 1)
+        : 0;
     this.timerBarFill.clear();
     const color = ratio < 0.25 ? 0xd1495b : ratio < 0.5 ? 0xd6a71a : 0x3fae6a;
     this.timerBarFill.fillStyle(color, 0.9);
     this.timerBarFill.fillRoundedRect(CX - 130, 130, 260 * ratio, 8, 4);
-    this.timerText.setText(`残り ${(this.timeRemainingMs / 1000).toFixed(1)}秒`);
+    this.timerText.setText(
+      `残り ${(this.timeRemainingMs / 1000).toFixed(1)}秒`,
+    );
   }
 
   private handleKeydown(e: KeyboardEvent): void {
@@ -503,12 +671,23 @@ export class GameScene extends Phaser.Scene {
     const reactionMs = performance.now() - this.roundStartedAt;
     const timedOut = colorId === null;
     const correct = !timedOut && colorId === this.currentRound.correctColorId;
-    this.results.push({ correct, timedOut, reactionMs: timedOut ? this.timeLimitMs : reactionMs });
+    this.results.push({
+      correct,
+      timedOut,
+      reactionMs: timedOut ? this.timeLimitMs : reactionMs,
+      mode: this.currentRound.judgeMode,
+      switched: this.switched,
+    });
 
     const feedbackColor = correct ? 0x3fae6a : 0xd1495b;
     this.drawPromptBg(feedbackColor);
     if (correct) {
-      this.tweens.add({ targets: this.promptCard, scale: 1.15, duration: 120, yoyo: true });
+      this.tweens.add({
+        targets: this.promptCard,
+        scale: 1.15,
+        duration: 120,
+        yoyo: true,
+      });
     } else {
       this.cameras.main.shake(120, 0.006);
       this.tweens.add({
@@ -521,7 +700,9 @@ export class GameScene extends Phaser.Scene {
 
     this.applyTurboResult(correct && !timedOut && reactionMs < TURBO_FAST_MS);
 
-    this.time.delayedCall(FEEDBACK_DELAY_MS, () => this.nextRound());
+    this.pendingRound = this.time.delayedCall(FEEDBACK_DELAY_MS, () =>
+      this.nextRound(),
+    );
   }
 
   /** 1秒以内の正解が続く限りターボ連続数を伸ばし、段階表に応じたポイントを加算する */
@@ -541,8 +722,15 @@ export class GameScene extends Phaser.Scene {
     this.spawnPointsPopup(`+${points}pt`);
 
     if (this.turboStreak >= TURBO_ENTRY_STREAK) {
-      this.turboText.setText(`🔥 ターボモード ×${this.turboStreak}`).setVisible(true);
-      this.tweens.add({ targets: this.turboText, scale: 1.25, duration: 100, yoyo: true });
+      this.turboText
+        .setText(`🔥 ターボモード ×${this.turboStreak}`)
+        .setVisible(true);
+      this.tweens.add({
+        targets: this.turboText,
+        scale: 1.25,
+        duration: 100,
+        yoyo: true,
+      });
       this.turboHudBadge?.setVisible(true);
       if (this.turboStreak === TURBO_ENTRY_STREAK) {
         cg.happytime();
@@ -558,14 +746,14 @@ export class GameScene extends Phaser.Scene {
   private spawnTurboBadge(): void {
     if (!this.textures.exists(TURBO_BADGE_KEY)) return;
     const badge = this.add
-      .image(CX, 350, TURBO_BADGE_KEY)
-      .setDisplaySize(140, 140)
-      .setScale(0.2 * (140 / 256))
+      .image(CX + 158, 270, TURBO_BADGE_KEY)
+      .setDisplaySize(64, 64)
+      .setScale(0.2 * (64 / 256))
       .setDepth(20);
     this.playGroup.add(badge);
     this.tweens.add({
       targets: badge,
-      scale: 140 / 256,
+      scale: 64 / 256,
       duration: 250,
       ease: "Back.easeOut",
       onComplete: () => {
@@ -601,6 +789,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endSession(): void {
+    if (this.phase !== "playing") return;
+    this.accepting = false;
+    this.pendingRound?.remove(false);
     this.phase = "result";
     this.playGroup.setVisible(false);
 
@@ -610,15 +801,25 @@ export class GameScene extends Phaser.Scene {
     const best = loadBestScore();
     const bestTurbo = loadBestTurbo();
 
-    const heading = this.resultGroup.getByName("heading") as Phaser.GameObjects.Text;
-    const stats = this.resultGroup.getByName("stats") as Phaser.GameObjects.Text;
-    const bestLine = this.resultGroup.getByName("bestLine") as Phaser.GameObjects.Text;
+    const heading = this.resultGroup.getByName(
+      "heading",
+    ) as Phaser.GameObjects.Text;
+    const stats = this.resultGroup.getByName(
+      "stats",
+    ) as Phaser.GameObjects.Text;
+    const bestLine = this.resultGroup.getByName(
+      "bestLine",
+    ) as Phaser.GameObjects.Text;
 
     heading.setText(`スコア ${summary.score}`);
     stats.setText(
       `正答率: ${Math.round(summary.accuracy * 100)}%\n平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
     );
-    bestLine.setText(`ベストスコア: ${best}\nベストターボ: ${bestTurbo}pt`);
+    bestLine
+      .setPosition(CX, 432)
+      .setText(
+        `内容 ${accuracyFor(this.results, "content")} ／ 色 ${accuracyFor(this.results, "color")}\n切替直後 ${accuracyFor(this.results, "switch")}\n60秒ベスト ${best} · ターボ ${bestTurbo}pt`,
+      );
 
     this.resultGroup.setVisible(true);
   }

@@ -1,3 +1,4 @@
+import { styleMultiplier, bossPhase, type CombatStyle } from "../logic/style";
 import Phaser from "phaser";
 import {
   BuffKind,
@@ -125,6 +126,10 @@ interface EnemySprite {
   dir: 1 | -1;
   type: EnemyType;
   speedMul: number;
+  boss: boolean;
+  bornAt: number;
+  bossDir: 1 | -1;
+  lastBossPhase: string;
 }
 
 /**
@@ -145,7 +150,7 @@ const BG_SCROLL_FACTOR = 0.4;
 /**
  * キャラクターの表示倍率。当初の 36×54(主人公)/40×40(ゴブリン) では緻密な背景に対して小さく見えたため
  * 1.5 倍（54×81 / 60×60）に拡大した。テクスチャ・当たり判定・演出のオフセットはすべてこの倍率で揃えている。
- * ジャンプ速度・重力は据え置き（足元基準の到達高さは体の大きさに依存しないため足場配置も変更不要）。
+ * ジャンプ初速と最下段の足場も合わせて調整し、重力は1200を維持する。
  */
 const CHAR_SCALE = 1.5;
 /** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
@@ -205,6 +210,11 @@ const WEAPON_LABEL: Record<WeaponKind, string> = {
 
 /** 剣戟の森 — 横スクロールアクションのメインシーン */
 export class GameScene extends Phaser.Scene {
+  private combatStyle: CombatStyle = "chain";
+  private styleChoosing = false;
+  private lastStyleHit = -Infinity;
+  private styleText!: Phaser.GameObjects.Text;
+  private bossTell!: Phaser.GameObjects.Graphics;
   private playerState: PlayerState = newPlayer();
   private status: GameStatus = "playing";
 
@@ -324,12 +334,22 @@ export class GameScene extends Phaser.Scene {
     this.bestWave = loadBestWave(window.localStorage as unknown as KVStore);
 
     for (const kind of ["melee", "mid", "ranged"] as const) {
-      const stats = baseEquipmentStats(kind, this.baseEquipmentLevels[kind] ?? 0);
-      this.playerState = setCustomWeapon(this.playerState, kind, toWeaponDef(stats, kind));
+      const stats = baseEquipmentStats(
+        kind,
+        this.baseEquipmentLevels[kind] ?? 0,
+      );
+      this.playerState = setCustomWeapon(
+        this.playerState,
+        kind,
+        toWeaponDef(stats, kind),
+      );
     }
     const armorTemplate = findArmorTemplate(this.selectedArmorId);
     if (armorTemplate.maxDurability > 0) {
-      this.playerState = gainArmor(this.playerState, armorTemplate.maxDurability);
+      this.playerState = gainArmor(
+        this.playerState,
+        armorTemplate.maxDurability,
+      );
     }
 
     this.physics.world.setBounds(0, 0, ARENA_WIDTH, 600);
@@ -346,13 +366,36 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
+    this.bossTell = this.add.graphics().setDepth(3);
+    this.styleText = this.add
+      .text(400, 115, "", {
+        fontSize: "15px",
+        color: "#443129",
+        backgroundColor: "#fff0cc",
+        padding: { x: 12, y: 5 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(HUD_DEPTH);
+    this.lastStyleHit = -Infinity;
+    this.chooseCombatStyle();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.attackKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-    this.skillKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.C);
-    this.guardKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
-    this.tipsKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    this.restartKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.attackKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.X,
+    );
+    this.skillKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.C,
+    );
+    this.guardKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SHIFT,
+    );
+    this.tipsKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ENTER,
+    );
+    this.restartKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.R,
+    );
     this.weaponKeys = WEAPON_KEY_BINDINGS.map(({ code, kind }) => ({
       key: this.input.keyboard!.addKey(code),
       kind,
@@ -572,10 +615,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
-  private spawnEnemy(wave: number, spec: EnemySpawnSpec, x: number, index: number): void {
+  private spawnEnemy(
+    wave: number,
+    spec: EnemySpawnSpec,
+    x: number,
+    index: number,
+  ): void {
     // 通常敵のみイラスト版（ゴブリン）。agile/tank は色ティントで区別する従来のプレースホルダーのまま
-    const useArt = spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
-    const sprite = this.physics.add.sprite(x, GROUND_Y - 45, useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin");
+    const useArt =
+      spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
+    const sprite = this.physics.add.sprite(
+      x,
+      GROUND_Y - 45,
+      useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin",
+    );
     sprite.setCollideWorldBounds(true);
     sprite.setDepth(2);
     const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
@@ -593,12 +646,18 @@ export class GameScene extends Phaser.Scene {
       dir: 1,
       type: spec.type,
       speedMul: spec.speedMul,
+      boss: wave % 5 === 0,
+      bornAt: this.time.now,
+      bossDir: 1,
+      lastBossPhase: "",
     };
     this.enemies.push(enemy);
 
     // すり抜けず物理的にぶつかるようにする（overlap のみだと敵の体を通り抜けてしまい、
     // 剣の間合いに留まれず「当たらない」と感じる原因になっていた）
-    this.physics.add.collider(this.player, sprite, () => this.onPlayerTouchEnemy(enemy));
+    this.physics.add.collider(this.player, sprite, () =>
+      this.onPlayerTouchEnemy(enemy),
+    );
   }
 
   /**
@@ -669,7 +728,10 @@ export class GameScene extends Phaser.Scene {
     const firstHudIndex = this.children.length;
     this.buildHudObjects();
     for (const child of this.children.list.slice(firstHudIndex)) {
-      const obj = child as Phaser.GameObjects.GameObject & { depth?: number; setDepth?: (d: number) => unknown };
+      const obj = child as Phaser.GameObjects.GameObject & {
+        depth?: number;
+        setDepth?: (d: number) => unknown;
+      };
       if (obj.depth === 0 && obj.setDepth) obj.setDepth(HUD_DEPTH);
     }
   }
@@ -1075,6 +1137,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number): void {
+    if (this.styleChoosing) return;
     if (Phaser.Input.Keyboard.JustDown(this.tipsKey)) {
       this.toggleTips();
     }
@@ -1395,6 +1458,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateEnemies(): void {
+    this.bossTell.clear();
+    this.styleText.setText(
+      this.combatStyle === "chain"
+        ? `連撃の型 · 連続命中 ${this.playerState.comboStreak}`
+        : `居合の型 · ${this.time.now - this.lastStyleHit >= 1200 ? "一撃の準備ができた" : "間合いを取ろう"}`,
+    );
     for (const enemy of this.enemies) {
       if (!enemy.state.alive) {
         if (enemy.sprite.active) {
@@ -1406,7 +1475,35 @@ export class GameScene extends Phaser.Scene {
       const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
       if (enemy.sprite.x <= enemy.patrolMinX) enemy.dir = 1;
       if (enemy.sprite.x >= enemy.patrolMaxX) enemy.dir = -1;
-      body.setVelocityX(enemy.dir * 60 * enemy.speedMul);
+      if (enemy.boss) {
+        const phase = bossPhase(this.time.now - enemy.bornAt);
+        if (phase === "tell") {
+          if (enemy.lastBossPhase !== "tell")
+            enemy.bossDir = this.player.x < enemy.sprite.x ? -1 : 1;
+          body.setVelocityX(0);
+          this.bossTell
+            .lineStyle(4, 0xd65e46, 0.8)
+            .lineBetween(
+              enemy.sprite.x,
+              GROUND_Y - 5,
+              enemy.sprite.x + enemy.bossDir * 220,
+              GROUND_Y - 5,
+            );
+          this.bossTell
+            .fillStyle(0xf5b96d, 0.8)
+            .fillTriangle(
+              enemy.sprite.x,
+              enemy.sprite.y - 65,
+              enemy.sprite.x - 7,
+              enemy.sprite.y - 78,
+              enemy.sprite.x + 7,
+              enemy.sprite.y - 78,
+            );
+        } else if (phase === "charge") body.setVelocityX(enemy.bossDir * 330);
+        else body.setVelocityX(0);
+        enemy.dir = enemy.bossDir;
+        enemy.lastBossPhase = phase;
+      } else body.setVelocityX(enemy.dir * 60 * enemy.speedMul);
       enemy.sprite.setFlipX(enemy.dir < 0);
     }
   }
@@ -1415,13 +1512,30 @@ export class GameScene extends Phaser.Scene {
    * ダメージを適用し、命中していれば演出・撃破処理・ゲージ加算まで行う。
    * 無被弾スーパーコンボの倍率をかけたダメージを敵に通し、敵側の防御力減衰は damageEnemy が担う。
    */
-  private applyHit(enemy: EnemySprite, damage: number, time: number, grantsGauge: boolean): void {
+  private applyHit(
+    enemy: EnemySprite,
+    damage: number,
+    time: number,
+    grantsGauge: boolean,
+  ): void {
     const wasAlive = enemy.state.alive;
     const prevHealth = enemy.state.health;
-    const multiplier = superComboMultiplier(this.playerState.comboStreak) * buffDamageMultiplier(this.playerState, time);
-    enemy.state = damageEnemy(enemy.state, Math.round(damage * multiplier), time);
+    const multiplier =
+      superComboMultiplier(this.playerState.comboStreak) *
+      buffDamageMultiplier(this.playerState, time) *
+      styleMultiplier(
+        this.combatStyle,
+        this.playerState.comboStreak,
+        time - this.lastStyleHit,
+      );
+    enemy.state = damageEnemy(
+      enemy.state,
+      Math.round(damage * multiplier),
+      time,
+    );
     if (enemy.state.health === prevHealth) return; // デバウンスで実際には未ヒット
 
+    this.lastStyleHit = time;
     this.playerState = gainComboStreak(this.playerState, 1);
     this.onEnemyHit(enemy);
     if (grantsGauge) {
@@ -1442,7 +1556,13 @@ export class GameScene extends Phaser.Scene {
     });
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityX(this.playerState.facing * 180);
-    this.tweens.add({ targets: enemy.sprite, scale: 1.15, duration: 60, yoyo: true });
+    this.tweens.add({
+      targets: enemy.sprite,
+      scaleX: "*=1.15",
+      scaleY: "*=1.15",
+      duration: 60,
+      yoyo: true,
+    });
   }
 
   private onPlayerTouchEnemy(enemy: EnemySprite): void {
@@ -1583,4 +1703,65 @@ export class GameScene extends Phaser.Scene {
         .join(" "),
     );
   }
+
+  private chooseCombatStyle(): void {
+    this.styleChoosing = true;
+    this.physics.pause();
+    const group = this.add.container(0, 0).setScrollFactor(0).setDepth(250);
+    const shade = this.add
+      .rectangle(400, 300, 800, 600, 0x102025, 0.8)
+      .setInteractive();
+    const title = this.add
+      .text(400, 170, "今回の剣を、どう振るう？", {
+        fontSize: "28px",
+        color: "#fff0cc",
+      })
+      .setOrigin(0.5);
+    group.add([shade, title]);
+    (["chain", "draw"] as const).forEach((style, i) => {
+      const x = 235 + i * 330;
+      const panel = drawPanel(this, x, 320, 300, 190, {
+        fillColor: i === 0 ? 0x234d55 : 0x503743,
+        borderColor: 0xe1bf78,
+        fillAlpha: 1,
+      });
+      const label = this.add
+        .text(
+          x,
+          292,
+          style === "chain"
+            ? "連撃の型\n連続命中で最大 +60%"
+            : "居合の型\n1.2秒間、命中なしで次撃 +90%",
+          {
+            fontSize: "18px",
+            color: "#fff0d5",
+            align: "center",
+            lineSpacing: 18,
+            wordWrap: { width: 268, useAdvancedWrap: true },
+          },
+        )
+        .setOrigin(0.5);
+      const tip = this.add
+        .text(
+          x,
+          380,
+          style === "chain"
+            ? "攻めをつないで、押し切る"
+            : "間合いを取り、一撃を通す",
+          { fontSize: "14px", color: "#e7d4b3" },
+        )
+        .setOrigin(0.5);
+      const hit = this.add
+        .zone(x, 320, 300, 190)
+        .setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", () => {
+        this.combatStyle = style;
+        this.styleChoosing = false;
+        group.destroy(true);
+        this.physics.resume();
+      });
+      group.add([panel, label, tip, hit]);
+    });
+  }
+
 }

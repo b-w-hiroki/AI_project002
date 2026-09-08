@@ -47,9 +47,15 @@ export function multiplierForClash(result: ClashResult): number {
 }
 
 /** ダメージに±2の幅を持たせる。rng差し替え可能（テストで決定的に検証するため） */
-export function damageForClash(result: ClashResult, rng: () => number = Math.random): number {
+export function damageForClash(
+  result: ClashResult,
+  rng: () => number = Math.random,
+): number {
   const jitter = Math.floor(rng() * 5) - 2;
-  return Math.max(1, Math.round(BASE_DAMAGE * multiplierForClash(result)) + jitter);
+  return Math.max(
+    1,
+    Math.round(BASE_DAMAGE * multiplierForClash(result)) + jitter,
+  );
 }
 
 export const OUGI_GAUGE_MAX = 100;
@@ -91,9 +97,19 @@ export interface BeatResult {
 }
 
 /** 1ビート分の通常攻撃応酬を解決する */
-export function applyBeat(state: BattleState, playerMove: MoveType, enemyMove: MoveType, rng: () => number = Math.random): BeatResult {
+export function applyBeat(
+  state: BattleState,
+  playerMove: MoveType,
+  enemyMove: MoveType,
+  rng: () => number = Math.random,
+): BeatResult {
   const clash = resolveClash(playerMove, enemyMove);
-  const enemyClash: ClashResult = clash === "advantage" ? "disadvantage" : clash === "disadvantage" ? "advantage" : "clash";
+  const enemyClash: ClashResult =
+    clash === "advantage"
+      ? "disadvantage"
+      : clash === "disadvantage"
+        ? "advantage"
+        : "clash";
 
   const playerDamageDealt = damageForClash(clash, rng);
   const enemyDamageDealt = damageForClash(enemyClash, rng);
@@ -101,8 +117,16 @@ export function applyBeat(state: BattleState, playerMove: MoveType, enemyMove: M
   const enemyHp = Math.max(0, state.enemyHp - playerDamageDealt);
   const playerHp = Math.max(0, state.playerHp - enemyDamageDealt);
 
-  const playerGauge = nextGauge(nextGauge(state.playerGauge, true), false);
-  const enemyGauge = nextGauge(nextGauge(state.enemyGauge, true), false);
+  const playerGauge = Math.min(
+    OUGI_GAUGE_MAX,
+    state.playerGauge +
+      (clash === "advantage" ? 32 : clash === "clash" ? 14 : 8),
+  );
+  const enemyGauge = Math.min(
+    OUGI_GAUGE_MAX,
+    state.enemyGauge +
+      (clash === "disadvantage" ? 32 : clash === "clash" ? 14 : 8),
+  );
 
   return {
     state: { playerHp, enemyHp, playerGauge, enemyGauge },
@@ -113,7 +137,10 @@ export function applyBeat(state: BattleState, playerMove: MoveType, enemyMove: M
 }
 
 /** プレイヤーが奥義を放つ（ゲージが満タンでなければ何もしない） */
-export function applyPlayerOugi(state: BattleState, rng: () => number = Math.random): BattleState {
+export function applyPlayerOugi(
+  state: BattleState,
+  rng: () => number = Math.random,
+): BattleState {
   if (state.playerGauge < OUGI_GAUGE_MAX) return state;
   const damage = ougiDamage(rng);
   return {
@@ -132,7 +159,10 @@ export function hiddenCommandDamage(rng: () => number = Math.random): number {
 }
 
 /** 隠しコマンド技（拳→拳→拳→気）を発動する。ゲージ消費なしの固定ダメージ攻撃 */
-export function applyHiddenCommand(state: BattleState, rng: () => number = Math.random): BattleState {
+export function applyHiddenCommand(
+  state: BattleState,
+  rng: () => number = Math.random,
+): BattleState {
   const damage = hiddenCommandDamage(rng);
   return { ...state, enemyHp: Math.max(0, state.enemyHp - damage) };
 }
@@ -140,7 +170,10 @@ export function applyHiddenCommand(state: BattleState, rng: () => number = Math.
 export type BattleOutcome = "playerWin" | "enemyWin" | "draw";
 
 /** HPが尽きた、またはタイムアップ時の勝敗判定。バトル継続中はnull */
-export function battleOutcome(state: BattleState, timeUp: boolean): BattleOutcome | null {
+export function battleOutcome(
+  state: BattleState,
+  timeUp: boolean,
+): BattleOutcome | null {
   if (state.playerHp <= 0 && state.enemyHp <= 0) return "draw";
   if (state.enemyHp <= 0) return "playerWin";
   if (state.playerHp <= 0) return "enemyWin";

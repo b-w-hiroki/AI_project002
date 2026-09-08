@@ -2,8 +2,8 @@
 
 import { WRITING_MODES, WritingMode } from "./round";
 
-const BEST_SCORE_KEY = "color_match_best_score_v1";
-const BEST_TURBO_KEY = "color_match_best_turbo_v1";
+const BEST_SCORE_KEY = "color_match_60s_best_score_v1";
+const BEST_TURBO_KEY = "color_match_60s_best_turbo_v1";
 const WRITING_MODE_KEY = "color_match_writing_mode_v1";
 
 function loadNumber(key: string): number {
@@ -37,7 +37,9 @@ export function saveBestTurbo(points: number): void {
 
 export function loadWritingMode(): WritingMode {
   const raw = localStorage.getItem(WRITING_MODE_KEY);
-  return (WRITING_MODES as readonly string[]).includes(raw ?? "") ? (raw as WritingMode) : "hiragana";
+  return (WRITING_MODES as readonly string[]).includes(raw ?? "")
+    ? (raw as WritingMode)
+    : "hiragana";
 }
 
 export function saveWritingMode(mode: WritingMode): void {
