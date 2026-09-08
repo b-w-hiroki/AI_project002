@@ -1,3 +1,4 @@
+import { demandMultiplier } from "./contracts";
 /**
  * 放置ゲームの経済ロジック（Phaser 非依存の純粋関数）。
  * テーマ: ポーション工房 — クリックで調合、設備を買って自動生産。
@@ -12,17 +13,67 @@ export interface GeneratorDef {
 }
 
 export const GENERATORS: readonly GeneratorDef[] = [
-  { id: "apprentice", name: "見習い錬金術師", baseCost: 15, costGrowth: 1.15, baseRate: 0.5 },
-  { id: "cauldron", name: "自動大釜", baseCost: 100, costGrowth: 1.15, baseRate: 4 },
-  { id: "garden", name: "薬草園", baseCost: 1_100, costGrowth: 1.14, baseRate: 25 },
-  { id: "golem", name: "調合ゴーレム", baseCost: 12_000, costGrowth: 1.13, baseRate: 140 },
-  { id: "portal", name: "異界ポータル", baseCost: 130_000, costGrowth: 1.12, baseRate: 800 },
-  { id: "observatory", name: "星読みの塔", baseCost: 1_400_000, costGrowth: 1.12, baseRate: 4_400 },
-  { id: "dragon", name: "契約の竜", baseCost: 20_000_000, costGrowth: 1.11, baseRate: 26_000 },
-  { id: "worldTree", name: "世界樹の雫", baseCost: 330_000_000, costGrowth: 1.11, baseRate: 170_000 },
+  {
+    id: "apprentice",
+    name: "見習い錬金術師",
+    baseCost: 15,
+    costGrowth: 1.15,
+    baseRate: 0.5,
+  },
+  {
+    id: "cauldron",
+    name: "自動大釜",
+    baseCost: 100,
+    costGrowth: 1.15,
+    baseRate: 4,
+  },
+  {
+    id: "garden",
+    name: "薬草園",
+    baseCost: 1_100,
+    costGrowth: 1.14,
+    baseRate: 25,
+  },
+  {
+    id: "golem",
+    name: "調合ゴーレム",
+    baseCost: 12_000,
+    costGrowth: 1.13,
+    baseRate: 140,
+  },
+  {
+    id: "portal",
+    name: "異界ポータル",
+    baseCost: 130_000,
+    costGrowth: 1.12,
+    baseRate: 800,
+  },
+  {
+    id: "observatory",
+    name: "星読みの塔",
+    baseCost: 1_400_000,
+    costGrowth: 1.12,
+    baseRate: 4_400,
+  },
+  {
+    id: "dragon",
+    name: "契約の竜",
+    baseCost: 20_000_000,
+    costGrowth: 1.11,
+    baseRate: 26_000,
+  },
+  {
+    id: "worldTree",
+    name: "世界樹の雫",
+    baseCost: 330_000_000,
+    costGrowth: 1.11,
+    baseRate: 170_000,
+  },
 ] as const;
 
 export interface GameState {
+  reputation: number;
+  completedContracts: number[];
   potions: number; // 通貨
   totalBrewed: number; // 今周回の累計（転生で獲得エッセンスの元）
   clickPower: number;
@@ -38,6 +89,8 @@ export interface GameState {
 
 export function newGame(): GameState {
   return {
+    reputation: 0,
+    completedContracts: [],
     potions: 0,
     totalBrewed: 0,
     clickPower: 1,
@@ -95,10 +148,14 @@ export function generatorCost(def: GeneratorDef, count: number): number {
 /** 毎秒の総生産量（エッセンス倍率込み） */
 export function productionPerSec(state: GameState): number {
   const base = GENERATORS.reduce(
-    (sum, g) => sum + g.baseRate * (state.counts[g.id] ?? 0),
+    (sum, g) =>
+      sum +
+      g.baseRate *
+        (state.counts[g.id] ?? 0) *
+        demandMultiplier(state.prestigeCount, g.id),
     0,
   );
-  return base * essenceMultiplier(state);
+  return base * essenceMultiplier(state) * (1 + state.reputation * 0.1);
 }
 
 /** dt 秒ぶん時間を進める */
@@ -131,20 +188,33 @@ export const CLICK_UPGRADE_BASE_COST = 50;
 export const CLICK_UPGRADE_GROWTH = 1.6;
 
 /** 選択可能な一括購入数。Infinity は「最大まで購入」を表す */
-export const CLICK_UPGRADE_QUANTITIES: readonly number[] = [1, 5, 10, 100, Infinity];
+export const CLICK_UPGRADE_QUANTITIES: readonly number[] = [
+  1,
+  5,
+  10,
+  100,
+  Infinity,
+];
 
 /** 次の1回ぶんのクリック強化のコスト（clickPower は 1 始まりなので level = clickPower - 1） */
 export function clickUpgradeCost(state: GameState): number {
   const level = state.clickPower - 1;
-  return Math.ceil(CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, level));
+  return Math.ceil(
+    CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, level),
+  );
 }
 
 /** level 目から qty 回ぶんのクリック強化を買った場合の合計コスト */
-export function clickUpgradeCostForQuantity(state: GameState, qty: number): number {
+export function clickUpgradeCostForQuantity(
+  state: GameState,
+  qty: number,
+): number {
   const startLevel = state.clickPower - 1;
   let total = 0;
   for (let i = 0; i < qty; i++) {
-    total += Math.ceil(CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, startLevel + i));
+    total += Math.ceil(
+      CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, startLevel + i),
+    );
   }
   return total;
 }
@@ -156,7 +226,10 @@ export function maxAffordableClickUpgrades(state: GameState): number {
   let count = 0;
   const SAFETY_CAP = 100_000;
   while (count < SAFETY_CAP) {
-    const cost = Math.ceil(CLICK_UPGRADE_BASE_COST * Math.pow(CLICK_UPGRADE_GROWTH, startLevel + count));
+    const cost = Math.ceil(
+      CLICK_UPGRADE_BASE_COST *
+        Math.pow(CLICK_UPGRADE_GROWTH, startLevel + count),
+    );
     if (spent + cost > state.potions) break;
     spent += cost;
     count += 1;
@@ -168,12 +241,19 @@ export function maxAffordableClickUpgrades(state: GameState): number {
  * クリックパワーを一括で強化する。qty に Infinity を渡すと買えるだけ買う。
  * 1回も買えなければ null。qty より少ない回数しか買えない場合は買える分だけ購入する。
  */
-export function buyClickUpgrades(state: GameState, qty: number): GameState | null {
+export function buyClickUpgrades(
+  state: GameState,
+  qty: number,
+): GameState | null {
   const affordable = maxAffordableClickUpgrades(state);
   const actualQty = Math.min(qty, affordable);
   if (actualQty <= 0) return null;
   const cost = clickUpgradeCostForQuantity(state, actualQty);
-  return { ...state, potions: state.potions - cost, clickPower: state.clickPower + actualQty };
+  return {
+    ...state,
+    potions: state.potions - cost,
+    clickPower: state.clickPower + actualQty,
+  };
 }
 
 /** クリックパワーを+1する。買えなければ null（buyClickUpgrades(state, 1) の別名） */
@@ -208,17 +288,34 @@ export const OFFLINE_CAP_MAX_SEC = 72 * 60 * 60;
  * 性質の異なる拡張手段を後から自由に追加できる（お互いに干渉しない）。
  */
 export function offlineCapSec(state: GameState): number {
-  const bonus = Object.values(state.offlineCapBonuses).reduce((sum, v) => sum + v, 0);
-  return Math.min(OFFLINE_CAP_MAX_SEC, OFFLINE_CAP_BASE_SEC + Math.max(0, bonus));
+  const bonus = Object.values(state.offlineCapBonuses).reduce(
+    (sum, v) => sum + v,
+    0,
+  );
+  return Math.min(
+    OFFLINE_CAP_MAX_SEC,
+    OFFLINE_CAP_BASE_SEC + Math.max(0, bonus),
+  );
 }
 
 /** 特定ソースのオフライン上限ボーナスを絶対値で設定する（同じソースの再設定は上書き＝二重加算しない） */
-export function setOfflineCapBonus(state: GameState, sourceId: string, bonusSec: number): GameState {
-  return { ...state, offlineCapBonuses: { ...state.offlineCapBonuses, [sourceId]: bonusSec } };
+export function setOfflineCapBonus(
+  state: GameState,
+  sourceId: string,
+  bonusSec: number,
+): GameState {
+  return {
+    ...state,
+    offlineCapBonuses: { ...state.offlineCapBonuses, [sourceId]: bonusSec },
+  };
 }
 
 /** 特定ソースのオフライン上限ボーナスに加算する（バフの重ね掛けなど、加算的なソース向け） */
-export function addOfflineCapBonus(state: GameState, sourceId: string, deltaSec: number): GameState {
+export function addOfflineCapBonus(
+  state: GameState,
+  sourceId: string,
+  deltaSec: number,
+): GameState {
   const current = state.offlineCapBonuses[sourceId] ?? 0;
   return setOfflineCapBonus(state, sourceId, current + deltaSec);
 }
@@ -235,7 +332,9 @@ export const OFFLINE_EXT_GROWTH = 1.8;
 /** 次のオフライン拡張レベルのコスト（essence）。上限到達済みなら null */
 export function offlineExtensionCost(state: GameState): number | null {
   if (state.offlineExtLevel >= OFFLINE_EXT_MAX_LEVEL) return null;
-  return Math.ceil(OFFLINE_EXT_BASE_COST * Math.pow(OFFLINE_EXT_GROWTH, state.offlineExtLevel));
+  return Math.ceil(
+    OFFLINE_EXT_BASE_COST * Math.pow(OFFLINE_EXT_GROWTH, state.offlineExtLevel),
+  );
 }
 
 /** オフライン上限をレベル1ぶん購入で拡張する（essence消費）。買えない/上限到達済みなら null */
@@ -243,8 +342,16 @@ export function buyOfflineExtension(state: GameState): GameState | null {
   const cost = offlineExtensionCost(state);
   if (cost === null || state.essence < cost) return null;
   const nextLevel = state.offlineExtLevel + 1;
-  const next = { ...state, essence: state.essence - cost, offlineExtLevel: nextLevel };
-  return setOfflineCapBonus(next, OFFLINE_EXT_SOURCE_ID, nextLevel * OFFLINE_EXT_HOURS_PER_LEVEL * 60 * 60);
+  const next = {
+    ...state,
+    essence: state.essence - cost,
+    offlineExtLevel: nextLevel,
+  };
+  return setOfflineCapBonus(
+    next,
+    OFFLINE_EXT_SOURCE_ID,
+    nextLevel * OFFLINE_EXT_HOURS_PER_LEVEL * 60 * 60,
+  );
 }
 
 /** 離席時間ぶんの進行を適用し、得た量も返す */
@@ -261,7 +368,9 @@ export function applyOfflineProgress(
 /** 大きい数の表示（1.5K, 2.3M …） */
 export function formatNumber(n: number): string {
   if (n < 1000) {
-    return Number.isInteger(n) ? n.toString() : (Math.floor(n * 10) / 10).toString();
+    return Number.isInteger(n)
+      ? n.toString()
+      : (Math.floor(n * 10) / 10).toString();
   }
   const units = ["K", "M", "B", "T", "Qa", "Qi"];
   let value = n;

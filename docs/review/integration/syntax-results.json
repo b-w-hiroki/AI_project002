@@ -1,0 +1,5 @@
+{
+  "method": "Node.js stripTypeScriptTypes transform parsing only; not typecheck, lint, tests, build or browser QA",
+  "checked": 99,
+  "errors": []
+}

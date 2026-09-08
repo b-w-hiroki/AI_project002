@@ -1,3 +1,9 @@
+import {
+  OPPONENTS,
+  MOVE_TELL,
+  plannedMove,
+  type Opponent,
+} from "../logic/opponent";
 import Phaser from "phaser";
 import {
   BattleOutcome,
@@ -12,14 +18,35 @@ import {
   applyPlayerOugi,
   battleOutcome,
   initialBattleState,
-  pickCpuMove,
 } from "../logic/battle";
-import { GachaItem, canAffordGacha, drawGacha, GACHA_COST } from "../logic/gacha";
-import { HIDDEN_COMMAND, MoveEvent, matchesSequence, pushMoveEvent } from "../logic/commandInput";
-import { addCurrency, incrementWinCount, loadCurrency, loadWinCount, spendCurrency } from "../logic/progress";
+import {
+  GachaItem,
+  canAffordGacha,
+  drawGacha,
+  GACHA_COST,
+} from "../logic/gacha";
+import {
+  HIDDEN_COMMAND,
+  MoveEvent,
+  matchesSequence,
+  pushMoveEvent,
+} from "../logic/commandInput";
+import {
+  addCurrency,
+  incrementWinCount,
+  loadCurrency,
+  loadWinCount,
+  spendCurrency,
+} from "../logic/progress";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
-import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
+import {
+  drawPanel,
+  drawSpeakerIcon,
+  makeButton,
+  THEME,
+  TYPE,
+} from "../ui/theme";
 import { buildOrientationWarning, isTouchDevice } from "../ui/touch";
 
 const SOUND_PREF_KEY = "fist_legend_sound_v1";
@@ -53,7 +80,7 @@ const IMG = {
 } as const;
 
 /** 立ち絵は 384×512（3:4）。バトル中の表示高さと、それに合わせた幅 */
-const FIGHTER_H = 250;
+const FIGHTER_H = 290;
 const FIGHTER_W = (FIGHTER_H * 384) / 512;
 const FIGHTER_Y = 270;
 /** ガチャ竜牙立ち絵（SSR演出）の高さ */
@@ -68,6 +95,12 @@ const GACHA_CHAR_IMAGE: Readonly<Record<string, string>> = {
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
 
 export class GameScene extends Phaser.Scene {
+  private opponent: Opponent = "rush";
+  private beat = 0;
+  private nextEnemyMove: MoveType = "punch";
+  private tell!: Phaser.GameObjects.Text;
+  private opponentHint!: Phaser.GameObjects.Text;
+  private selectionButtons: ReturnType<typeof makeButton>[] = [];
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
   private timeRemainingSec = ROUND_TIME_SEC;
@@ -93,7 +126,10 @@ export class GameScene extends Phaser.Scene {
   private gachaCharImage: Phaser.GameObjects.Image | null = null;
   private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
-  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundOn =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem(SOUND_PREF_KEY) !== "off"
+      : true;
   private soundIcon!: Phaser.GameObjects.Graphics;
 
   constructor() {
@@ -116,14 +152,22 @@ export class GameScene extends Phaser.Scene {
   private buildArenaBackground(): Phaser.GameObjects.Image | null {
     if (!this.textures.exists(IMG.bgArena)) return null;
     const scale = 600 / 900;
-    return this.add.image(400, 300, IMG.bgArena).setDisplaySize(1600 * scale, 600);
+    return this.add
+      .image(400, 300, IMG.bgArena)
+      .setDisplaySize(1600 * scale, 600);
   }
 
   /**
    * 半透明の暗幕（Graphics）。Phaser 4 の WebGL では、大きな Image の直後に Rectangle シェイプを
    * 同一バッチで描くとそれ以降の描画が欠ける現象があったため、Rectangle ではなく Graphics を使う。
    */
-  private shade(x: number, y: number, w: number, h: number, alpha: number): Phaser.GameObjects.Graphics {
+  private shade(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    alpha: number,
+  ): Phaser.GameObjects.Graphics {
     const g = this.add.graphics();
     if (alpha > 0) {
       g.fillStyle(0x0d0a07, alpha);
@@ -137,12 +181,24 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x1a1410);
     this.buildTitleScreen();
     this.buildBattleScreen();
+    this.tell = this.add
+      .text(400, 98, "", {
+        fontSize: "19px",
+        color: "#ffe3ae",
+        stroke: "#201518",
+        strokeThickness: 5,
+        align: "center",
+      })
+      .setOrigin(0.5);
+    this.battleGroup.add(this.tell);
     this.buildResultScreen();
     this.buildGachaScreen();
     this.showTitle();
     if (isTouchDevice(this)) buildOrientationWarning(this);
 
-    this.input.keyboard?.on("keydown", (e: KeyboardEvent) => this.handleKeydown(e));
+    this.input.keyboard?.on("keydown", (e: KeyboardEvent) =>
+      this.handleKeydown(e),
+    );
   }
 
   update(_time: number, delta: number): void {
@@ -164,7 +220,10 @@ export class GameScene extends Phaser.Scene {
     const bg = this.buildArenaBackground();
     // 背景の上に暗幕を敷いてルール説明を読みやすくする
     const tint = this.shade(0, 0, 800, 600, bg ? 0.55 : 0);
-    const panel = drawPanel(this, 400, 300, 600, 420, { depth: 0, fillAlpha: bg ? 0.82 : 0.95 });
+    const panel = drawPanel(this, 400, 300, 600, 420, {
+      depth: 0,
+      fillAlpha: bg ? 0.82 : 0.95,
+    });
 
     const title = this.add
       .text(400, 130, "覇拳伝", { ...TYPE.h1, color: THEME.textPrimary })
@@ -173,7 +232,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         400,
         220,
-        "拳・蹴・気の3ボタンで応酬する格闘バトル。\n拳は気に、気は蹴に、蹴は拳に有利。\n攻撃を当てるほど奥義ゲージが溜まり、\n満タンで必殺の「奥義」を放てる。\n拳→拳→拳→気の順で隠しコマンド技も。\n60秒以内にHPを多く残した方が勝利！",
+        "拳・蹴・気の3ボタンで応酬する格闘バトル。\n拳は気に、気は蹴に、蹴は拳に有利。\n相手の構えを読み、有利で奥義を溜めよう。\n満タンで必殺の「奥義」を放てる。\n拳→拳→拳→気の順で隠しコマンド技も。\n60秒以内にHPを多く残した方が勝利！",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -182,12 +241,36 @@ export class GameScene extends Phaser.Scene {
       .text(400, 340, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
-    const startBtn = makeButton(this, 300, 410, 180, 48, "バトル開始", () => { this.playSound(sfx.buttonTap); this.startBattle(); }, {
-      fontSize: "16px",
-    });
-    const gachaBtn = makeButton(this, 500, 410, 180, 48, "ガチャ", () => { this.playSound(sfx.buttonTap); this.openGacha(); }, {
-      fontSize: "16px",
-    });
+    const startBtn = makeButton(
+      this,
+      300,
+      410,
+      180,
+      48,
+      "バトル開始",
+      () => {
+        this.playSound(sfx.buttonTap);
+        this.startBattle();
+      },
+      {
+        fontSize: "16px",
+      },
+    );
+    const gachaBtn = makeButton(
+      this,
+      500,
+      410,
+      180,
+      48,
+      "ガチャ",
+      () => {
+        this.playSound(sfx.buttonTap);
+        this.openGacha();
+      },
+      {
+        fontSize: "16px",
+      },
+    );
 
     this.soundIcon = drawSpeakerIcon(this, 660, 30, this.soundOn, 18);
     const soundHit = this.add
@@ -202,8 +285,47 @@ export class GameScene extends Phaser.Scene {
         this.playSound(sfx.buttonTap);
       });
 
-    this.titleGroup.add([...(bg ? [bg] : []), tint, panel, title, rules, currency, startBtn.container, gachaBtn.container, this.soundIcon, soundHit]);
+    this.titleGroup.add([
+      ...(bg ? [bg] : []),
+      tint,
+      panel,
+      title,
+      rules,
+      currency,
+      startBtn.container,
+      gachaBtn.container,
+      this.soundIcon,
+      soundHit,
+    ]);
     this.titleGroup.setData("currencyText", currency);
+    this.opponentHint = this.add
+      .text(400, 564, OPPONENTS[0]!.hint, {
+        fontSize: "15px",
+        color: "#f6d8a0",
+      })
+      .setOrigin(0.5);
+    this.titleGroup.add(this.opponentHint);
+    OPPONENTS.forEach((enemy, i) => {
+      const button = makeButton(
+        this,
+        195 + i * 205,
+        515,
+        190,
+        44,
+        enemy.name,
+        () => {
+          this.opponent = enemy.id;
+          this.opponentHint.setText(enemy.hint);
+          this.selectionButtons.forEach((b, j) =>
+            b.container.setAlpha(i === j ? 1 : 0.55),
+          );
+        },
+        { fontSize: "15px" },
+      );
+      button.container.setAlpha(i === 0 ? 1 : 0.55);
+      this.selectionButtons.push(button);
+      this.titleGroup.add(button.container);
+    });
   }
 
   private playSound(fn: () => void): void {
@@ -216,8 +338,12 @@ export class GameScene extends Phaser.Scene {
     this.battleGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
-    const currencyText = this.titleGroup.getData("currencyText") as Phaser.GameObjects.Text;
-    currencyText.setText(`所持: 豪拳石 ${loadCurrency()}  勝利数: ${loadWinCount()}`);
+    const currencyText = this.titleGroup.getData(
+      "currencyText",
+    ) as Phaser.GameObjects.Text;
+    currencyText.setText(
+      `所持: 豪拳石 ${loadCurrency()}  勝利数: ${loadWinCount()}`,
+    );
   }
 
   // ---------- バトル ----------
@@ -252,7 +378,12 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.clashText = this.add
-      .text(400, 130, "", { ...TYPE.h1, color: THEME.textPrimary, stroke: "#1a1410", strokeThickness: 6 })
+      .text(400, 130, "", {
+        ...TYPE.h1,
+        color: THEME.textPrimary,
+        stroke: "#1a1410",
+        strokeThickness: 6,
+      })
       .setOrigin(0.5)
       .setAlpha(0);
 
@@ -264,27 +395,68 @@ export class GameScene extends Phaser.Scene {
     ougiBg.fillRoundedRect(300, 420, 200, 14, 6);
     this.ougiFill = this.add.graphics();
     const ougiLabel = this.add
-      .text(400, 405, "奥義ゲージ", { ...TYPE.small, color: THEME.textPrimary, stroke: "#1a1410", strokeThickness: 3 })
+      .text(400, 405, "奥義ゲージ", {
+        ...TYPE.small,
+        color: THEME.textPrimary,
+        stroke: "#1a1410",
+        strokeThickness: 3,
+      })
       .setOrigin(0.5);
 
     const buttonY = 480;
-    const punchBtn = makeButton(this, 240, buttonY, 100, 56, "拳", () => this.onPlayerMove("punch"), {
-      fontSize: "22px",
-      fillColor: 0x5a2c1c,
-    });
-    const kickBtn = makeButton(this, 400, buttonY, 100, 56, "蹴", () => this.onPlayerMove("kick"), {
-      fontSize: "22px",
-      fillColor: 0x2c5a2c,
-    });
-    const kiBtn = makeButton(this, 560, buttonY, 100, 56, "気", () => this.onPlayerMove("ki"), {
-      fontSize: "22px",
-      fillColor: 0x2c3f5a,
-    });
+    const punchBtn = makeButton(
+      this,
+      240,
+      buttonY,
+      100,
+      56,
+      "拳",
+      () => this.onPlayerMove("punch"),
+      {
+        fontSize: "22px",
+        fillColor: 0x5a2c1c,
+      },
+    );
+    const kickBtn = makeButton(
+      this,
+      400,
+      buttonY,
+      100,
+      56,
+      "蹴",
+      () => this.onPlayerMove("kick"),
+      {
+        fontSize: "22px",
+        fillColor: 0x2c5a2c,
+      },
+    );
+    const kiBtn = makeButton(
+      this,
+      560,
+      buttonY,
+      100,
+      56,
+      "気",
+      () => this.onPlayerMove("ki"),
+      {
+        fontSize: "22px",
+        fillColor: 0x2c3f5a,
+      },
+    );
 
-    this.ougiBtn = makeButton(this, 400, 545, 220, 44, "奥義発動！", () => this.onPlayerOugi(), {
-      fontSize: "16px",
-      fillColor: 0x7a5210,
-    });
+    this.ougiBtn = makeButton(
+      this,
+      400,
+      545,
+      220,
+      44,
+      "奥義発動！",
+      () => this.onPlayerOugi(),
+      {
+        fontSize: "16px",
+        fillColor: 0x7a5210,
+      },
+    );
     this.ougiBtn.setEnabled(false);
 
     this.battleGroup.add([
@@ -316,9 +488,15 @@ export class GameScene extends Phaser.Scene {
    * 角丸長方形（Graphics）で代替する。ヒーロー画像は右向き、敵画像は左向きに描かれているため
    * setFlipX は不要（向かい合う配置になる）。
    */
-  private buildFighter(x: number, key: string, fallbackColor: number): FighterSprite {
+  private buildFighter(
+    x: number,
+    key: string,
+    fallbackColor: number,
+  ): FighterSprite {
     if (this.textures.exists(key)) {
-      return this.add.image(x, FIGHTER_Y, key).setDisplaySize(FIGHTER_W, FIGHTER_H);
+      return this.add
+        .image(x, FIGHTER_Y, key)
+        .setDisplaySize(FIGHTER_W, FIGHTER_H);
     }
     const g = this.add.graphics();
     g.fillStyle(fallbackColor, 1);
@@ -328,6 +506,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startBattle(): void {
+    this.beat = 0;
+    this.nextEnemyMove = plannedMove(this.opponent, 0, null);
     this.phase = "battle";
     this.battle = initialBattleState();
     this.timeRemainingSec = ROUND_TIME_SEC;
@@ -337,6 +517,7 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(false);
     this.battleGroup.setVisible(true);
     this.moveBuffer = [];
+    this.refreshTell();
     this.refreshBattleVisual();
   }
 
@@ -344,21 +525,37 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "battle" || !this.accepting) return;
     this.accepting = false;
 
-    const enemyMove = pickCpuMove();
+    const enemyMove = this.nextEnemyMove;
+    this.beat += 1;
+    this.nextEnemyMove = plannedMove(this.opponent, this.beat, move);
     const result = applyBeat(this.battle, move, enemyMove);
     this.battle = result.state;
 
     this.playSound(
-      result.clash === "advantage" ? sfx.hitAdvantage : result.clash === "disadvantage" ? sfx.hitDisadvantage : sfx.hitClash,
+      result.clash === "advantage"
+        ? sfx.hitAdvantage
+        : result.clash === "disadvantage"
+          ? sfx.hitDisadvantage
+          : sfx.hitClash,
     );
     this.showClash(result.clash, move, enemyMove);
     this.flashHit(this.enemySprite, result.playerDamageDealt);
     this.flashHit(this.playerSprite, result.enemyDamageDealt);
     if (result.playerDamageDealt > 0) {
-      this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, result.playerDamageDealt, "#ff8a6a");
+      this.spawnDamageText(
+        this.enemySprite.x,
+        this.enemySprite.y - 70,
+        result.playerDamageDealt,
+        "#ff8a6a",
+      );
     }
     if (result.enemyDamageDealt > 0) {
-      this.spawnDamageText(this.playerSprite.x, this.playerSprite.y - 70, result.enemyDamageDealt, "#6ac9ff");
+      this.spawnDamageText(
+        this.playerSprite.x,
+        this.playerSprite.y - 70,
+        result.enemyDamageDealt,
+        "#6ac9ff",
+      );
     }
     this.refreshBattleVisual();
 
@@ -376,6 +573,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(BEAT_COOLDOWN_MS, () => {
+      if (this.phase !== "battle") return;
+      this.refreshTell();
       this.accepting = true;
     });
   }
@@ -388,7 +587,13 @@ export class GameScene extends Phaser.Scene {
     this.playSound(sfx.ougi);
     this.showClash("advantage", "punch", "ki", "隠しコマンド発動！");
     this.flashHit(this.enemySprite, dealt);
-    if (dealt > 0) this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, dealt, "#ffc94a");
+    if (dealt > 0)
+      this.spawnDamageText(
+        this.enemySprite.x,
+        this.enemySprite.y - 70,
+        dealt,
+        "#ffc94a",
+      );
     this.refreshBattleVisual();
 
     const outcome = battleOutcome(this.battle, false);
@@ -398,17 +603,34 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(BEAT_COOLDOWN_MS, () => {
+      if (this.phase !== "battle") return;
+      this.refreshTell();
       this.accepting = true;
     });
   }
 
   private onPlayerOugi(): void {
-    if (this.phase !== "battle" || this.battle.playerGauge < OUGI_GAUGE_MAX) return;
+    if (
+      this.phase !== "battle" ||
+      !this.accepting ||
+      this.battle.playerGauge < OUGI_GAUGE_MAX
+    )
+      return;
+    this.accepting = false;
+    this.time.delayedCall(BEAT_COOLDOWN_MS, () => {
+      if (this.phase === "battle") this.accepting = true;
+    });
+    this.cameras.main.flash(110, 255, 207, 130);
     this.battle = applyPlayerOugi(this.battle);
     this.playSound(sfx.ougi);
     this.showClash("advantage", "punch", "punch", "奥義炸裂！");
     this.flashHit(this.enemySprite, 1);
-    this.spawnDamageText(this.enemySprite.x, this.enemySprite.y - 70, 32, "#ffc94a");
+    this.spawnDamageText(
+      this.enemySprite.x,
+      this.enemySprite.y - 70,
+      32,
+      "#ffc94a",
+    );
     this.refreshBattleVisual();
 
     const outcome = battleOutcome(this.battle, false);
@@ -417,25 +639,78 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private showClash(clash: ClashResult, playerMove: MoveType, enemyMove: MoveType, overrideText?: string): void {
+  private showClash(
+    clash: ClashResult,
+    playerMove: MoveType,
+    enemyMove: MoveType,
+    overrideText?: string,
+  ): void {
     const text =
       overrideText ??
       `${MOVE_LABEL[playerMove]} vs ${MOVE_LABEL[enemyMove]} ー ${
-        clash === "advantage" ? "有利！" : clash === "disadvantage" ? "不利…" : "相殺！"
+        clash === "advantage"
+          ? "有利！"
+          : clash === "disadvantage"
+            ? "不利…"
+            : "相殺！"
       }`;
     // 同一フレーム内でshowClashが2回呼ばれる場合（通常技の直後に隠しコマンドが発動する等）、
     // 古いtweenが残ったまま新しいtweenを積むと表示が崩れることがあるため、先に停止させる
     this.tweens.killTweensOf(this.clashText);
     this.clashText.setText(text).setAlpha(1);
-    this.tweens.add({ targets: this.clashText, alpha: 0, delay: 500, duration: 300 });
+    this.tweens.add({
+      targets: this.clashText,
+      alpha: 0,
+      delay: 500,
+      duration: 300,
+    });
+  }
+
+  private refreshTell(): void {
+    const enemy = OPPONENTS.find((o) => o.id === this.opponent)!;
+    this.tell.setText(`${enemy.name}  ／  ${MOVE_TELL[this.nextEnemyMove]}
+拳 > 気 > 蹴 > 拳`);
+    this.tweens.killTweensOf(this.enemySprite);
+    this.enemySprite.setX(620);
+    this.tweens.add({
+      targets: this.enemySprite,
+      x: 610,
+      duration: 500,
+      yoyo: true,
+    });
   }
 
   private flashHit(sprite: FighterSprite, damage: number): void {
     if (damage <= 0) return;
-    this.tweens.add({ targets: sprite, x: sprite.x + (sprite === this.playerSprite ? -8 : 8), duration: 60, yoyo: true });
+    this.tweens.killTweensOf(sprite);
+    sprite.setX(sprite === this.playerSprite ? 180 : 620);
+    this.tweens.add({
+      targets: sprite,
+      x: sprite.x + (sprite === this.playerSprite ? -16 : 16),
+      duration: 80,
+      yoyo: true,
+    });
+    const spark = this.add.graphics({ x: sprite.x, y: sprite.y });
+    spark
+      .lineStyle(3, 0xffd083)
+      .lineBetween(-25, -25, 25, 25)
+      .lineBetween(-25, 25, 25, -25);
+    this.battleGroup.add(spark);
+    this.tweens.add({
+      targets: spark,
+      alpha: 0,
+      scale: 1.8,
+      duration: 180,
+      onComplete: () => spark.destroy(),
+    });
   }
 
-  private spawnDamageText(x: number, y: number, damage: number, color: string): void {
+  private spawnDamageText(
+    x: number,
+    y: number,
+    damage: number,
+    color: string,
+  ): void {
     const obj = this.add
       .text(x + Phaser.Math.Between(-14, 14), y, `-${damage}`, {
         fontSize: "20px",
@@ -464,9 +739,19 @@ export class GameScene extends Phaser.Scene {
 
     this.enemyHpFill.clear();
     this.enemyHpFill.fillStyle(enemyRatio < 0.3 ? 0xd1493b : 0x4ade80, 1);
-    this.enemyHpFill.fillRoundedRect(460 + 300 * (1 - enemyRatio), 30, 300 * enemyRatio, 18, 6);
+    this.enemyHpFill.fillRoundedRect(
+      460 + 300 * (1 - enemyRatio),
+      30,
+      300 * enemyRatio,
+      18,
+      6,
+    );
 
-    const gaugeRatio = Phaser.Math.Clamp(this.battle.playerGauge / OUGI_GAUGE_MAX, 0, 1);
+    const gaugeRatio = Phaser.Math.Clamp(
+      this.battle.playerGauge / OUGI_GAUGE_MAX,
+      0,
+      1,
+    );
     this.ougiFill.clear();
     this.ougiFill.fillStyle(0xffc94a, 1);
     this.ougiFill.fillRoundedRect(300, 420, 200 * gaugeRatio, 14, 6);
@@ -478,6 +763,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private finishBattle(timeUp: boolean): void {
+    if (this.phase !== "battle") return;
     this.phase = "result";
     this.accepting = false;
     const outcome = battleOutcome(this.battle, timeUp) ?? "draw";
@@ -497,10 +783,19 @@ export class GameScene extends Phaser.Scene {
     const balance = addCurrency(reward);
 
     this.battleGroup.setVisible(false);
-    const heading = this.resultGroup.getByName("heading") as Phaser.GameObjects.Text;
-    const stats = this.resultGroup.getByName("stats") as Phaser.GameObjects.Text;
+    const heading = this.resultGroup.getByName(
+      "heading",
+    ) as Phaser.GameObjects.Text;
+    const stats = this.resultGroup.getByName(
+      "stats",
+    ) as Phaser.GameObjects.Text;
 
-    const outcomeLabel = outcome === "playerWin" ? "勝利！" : outcome === "enemyWin" ? "敗北…" : "引き分け";
+    const outcomeLabel =
+      outcome === "playerWin"
+        ? "勝利！"
+        : outcome === "enemyWin"
+          ? "敗北…"
+          : "引き分け";
     heading.setText(outcomeLabel);
     stats.setText(`獲得: 豪拳石 +${reward}（所持: ${balance}）`);
 
@@ -522,14 +817,38 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("stats");
 
-    const retryBtn = makeButton(this, 400, 360, 200, 48, "もう一度あそぶ (R)", () => this.startBattle(), {
-      fontSize: "15px",
-    });
-    const titleBtn = makeButton(this, 400, 420, 200, 44, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const retryBtn = makeButton(
+      this,
+      400,
+      360,
+      200,
+      48,
+      "もう一度あそぶ (R)",
+      () => this.startBattle(),
+      {
+        fontSize: "15px",
+      },
+    );
+    const titleBtn = makeButton(
+      this,
+      400,
+      420,
+      200,
+      44,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
-    this.resultGroup.add([panel, heading, stats, retryBtn.container, titleBtn.container]);
+    this.resultGroup.add([
+      panel,
+      heading,
+      stats,
+      retryBtn.container,
+      titleBtn.container,
+    ]);
     this.resultGroup.setVisible(false);
   }
 
@@ -544,14 +863,33 @@ export class GameScene extends Phaser.Scene {
     const slotY = 300;
     const slot = this.add.graphics();
     slot.fillStyle(0x1a1410, 0.8);
-    slot.fillRoundedRect(slotX - RYUGA_W / 2 - 8, slotY - RYUGA_H / 2 - 8, RYUGA_W + 16, RYUGA_H + 16, 12);
+    slot.fillRoundedRect(
+      slotX - RYUGA_W / 2 - 8,
+      slotY - RYUGA_H / 2 - 8,
+      RYUGA_W + 16,
+      RYUGA_H + 16,
+      12,
+    );
     slot.lineStyle(1.5, THEME.panelBorder, 0.6);
-    slot.strokeRoundedRect(slotX - RYUGA_W / 2 - 8, slotY - RYUGA_H / 2 - 8, RYUGA_W + 16, RYUGA_H + 16, 12);
+    slot.strokeRoundedRect(
+      slotX - RYUGA_W / 2 - 8,
+      slotY - RYUGA_H / 2 - 8,
+      RYUGA_W + 16,
+      RYUGA_H + 16,
+      12,
+    );
     this.gachaCharPlaceholder = this.add
-      .text(slotX, slotY, "？", { ...TYPE.h1, fontSize: "64px", color: "#4a3d2c" })
+      .text(slotX, slotY, "？", {
+        ...TYPE.h1,
+        fontSize: "64px",
+        color: "#4a3d2c",
+      })
       .setOrigin(0.5);
     this.gachaCharImage = this.textures.exists(IMG.ryuga)
-      ? this.add.image(slotX, slotY, IMG.ryuga).setDisplaySize(RYUGA_W, RYUGA_H).setVisible(false)
+      ? this.add
+          .image(slotX, slotY, IMG.ryuga)
+          .setDisplaySize(RYUGA_W, RYUGA_H)
+          .setVisible(false)
       : null;
 
     // 右側：見出し・結果・残高・ボタン
@@ -560,7 +898,10 @@ export class GameScene extends Phaser.Scene {
       .text(tx, 175, "ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(tx, 215, `1回 豪拳石 ${GACHA_COST}`, { ...TYPE.body, color: THEME.textMuted })
+      .text(tx, 215, `1回 豪拳石 ${GACHA_COST}`, {
+        ...TYPE.body,
+        color: THEME.textMuted,
+      })
       .setOrigin(0.5);
     const resultText = this.add
       .text(tx, 280, "", { ...TYPE.h2, color: THEME.textPrimary })
@@ -571,10 +912,28 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("gachaBalance");
 
-    const drawBtn = makeButton(this, tx, 385, 260, 46, "引く", () => this.rollGacha(), { fontSize: "16px" });
-    const backBtn = makeButton(this, tx, 437, 260, 40, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const drawBtn = makeButton(
+      this,
+      tx,
+      385,
+      260,
+      46,
+      "引く",
+      () => this.rollGacha(),
+      { fontSize: "16px" },
+    );
+    const backBtn = makeButton(
+      this,
+      tx,
+      437,
+      260,
+      40,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
     this.gachaGroup.add([
       panel,
@@ -595,7 +954,9 @@ export class GameScene extends Phaser.Scene {
     this.phase = "title";
     this.titleGroup.setVisible(false);
     this.gachaGroup.setVisible(true);
-    const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
+    const resultText = this.gachaGroup.getByName(
+      "gachaResult",
+    ) as Phaser.GameObjects.Text;
     resultText.setText("");
     this.showGachaCharImage(null);
     this.refreshGachaBalance();
@@ -604,13 +965,16 @@ export class GameScene extends Phaser.Scene {
   /** 立ち絵スロットの表示切替。画像が無い（未読み込み／該当キャラ以外）なら「？」プレースホルダー */
   private showGachaCharImage(item: GachaItem | null): void {
     const key = item ? GACHA_CHAR_IMAGE[item.id] : undefined;
-    const show = !!key && this.gachaCharImage !== null && this.textures.exists(key);
+    const show =
+      !!key && this.gachaCharImage !== null && this.textures.exists(key);
     this.gachaCharPlaceholder.setVisible(!show);
     if (this.gachaCharImage) {
       this.gachaCharImage.setVisible(show);
       if (show) {
         this.tweens.killTweensOf(this.gachaCharImage);
-        this.gachaCharImage.setScale(this.gachaCharImage.scale * 0.85).setAlpha(0);
+        this.gachaCharImage
+          .setScale(this.gachaCharImage.scale * 0.85)
+          .setAlpha(0);
         this.tweens.add({
           targets: this.gachaCharImage,
           displayWidth: RYUGA_W,
@@ -624,14 +988,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshGachaBalance(): void {
-    const balanceText = this.gachaGroup.getByName("gachaBalance") as Phaser.GameObjects.Text;
+    const balanceText = this.gachaGroup.getByName(
+      "gachaBalance",
+    ) as Phaser.GameObjects.Text;
     balanceText.setText(`所持: 豪拳石 ${loadCurrency()}`);
   }
 
   private rollGacha(): void {
     const balance = loadCurrency();
     if (!canAffordGacha(balance)) {
-      const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
+      const resultText = this.gachaGroup.getByName(
+        "gachaResult",
+      ) as Phaser.GameObjects.Text;
       resultText.setText("豪拳石が足りません…").setColor(THEME.textMuted);
       return;
     }
@@ -639,10 +1007,19 @@ export class GameScene extends Phaser.Scene {
     const item: GachaItem = drawGacha();
     const isRare = item.rarity === "SSR" || item.rarity === "SR";
     this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
-    const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
-    resultText.setText(`【${item.rarity}】${item.name}`).setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
+    const resultText = this.gachaGroup.getByName(
+      "gachaResult",
+    ) as Phaser.GameObjects.Text;
+    resultText
+      .setText(`【${item.rarity}】${item.name}`)
+      .setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
     this.showGachaCharImage(item);
-    this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    this.tweens.add({
+      targets: resultText,
+      scale: isRare ? 1.4 : 1.2,
+      duration: isRare ? 180 : 120,
+      yoyo: true,
+    });
     if (isRare) {
       this.cameras.main.flash(200, 255, 220, 140);
       cg.happytime();

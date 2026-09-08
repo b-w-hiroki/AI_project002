@@ -1,6 +1,17 @@
 import Phaser from "phaser";
-import { EquipRarity, breedEquipment, breedRateTable, BREED_COST } from "../logic/breeding";
-import { General, GACHA_COST, GENERAL_POOL, canAffordGacha, drawGeneral } from "../logic/general";
+import {
+  EquipRarity,
+  breedEquipment,
+  breedRateTable,
+  BREED_COST,
+} from "../logic/breeding";
+import {
+  General,
+  GACHA_COST,
+  GENERAL_POOL,
+  canAffordGacha,
+  drawGeneral,
+} from "../logic/general";
 import {
   addCurrency,
   addEquipment,
@@ -17,9 +28,21 @@ import {
 } from "../logic/progress";
 import { QuestEvent, resolveQuestTap } from "../logic/quest";
 import { sfx } from "../platform/audio";
-import { EquippedMap, effectiveAtk, equipToGeneral, isOwned, unequipGeneral } from "../logic/roster";
+import {
+  EquippedMap,
+  effectiveAtk,
+  equipToGeneral,
+  isOwned,
+  unequipGeneral,
+} from "../logic/roster";
 import { cg } from "../platform/crazygames";
-import { drawPanel, drawSpeakerIcon, makeButton, THEME, TYPE } from "../ui/theme";
+import {
+  drawPanel,
+  drawSpeakerIcon,
+  makeButton,
+  THEME,
+  TYPE,
+} from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
@@ -44,6 +67,8 @@ const RARITIES: readonly EquipRarity[] = ["Common", "Rare", "Epic"] as const;
 const GENERAL_ART: Readonly<Record<string, string>> = {
   gen_hakuen: "st-general-hakuen",
   gen_soujin: "st-general-soujin",
+  gen_kohei: "st-general-kohei",
+  gen_ashigaru: "st-general-ashigaru",
 };
 const BG_KEY = "st-bg-battlefield";
 /** 立ち絵の縦横比（384:512） */
@@ -69,10 +94,17 @@ export class GameScene extends Phaser.Scene {
 
   private breedA: EquipRarity = "Common";
   private breedB: EquipRarity = "Common";
-  private breedButtonsA: Partial<Record<EquipRarity, ReturnType<typeof makeButton>>> = {};
-  private breedButtonsB: Partial<Record<EquipRarity, ReturnType<typeof makeButton>>> = {};
+  private breedButtonsA: Partial<
+    Record<EquipRarity, ReturnType<typeof makeButton>>
+  > = {};
+  private breedButtonsB: Partial<
+    Record<EquipRarity, ReturnType<typeof makeButton>>
+  > = {};
 
-  private soundOn = typeof localStorage !== "undefined" ? localStorage.getItem(SOUND_PREF_KEY) !== "off" : true;
+  private soundOn =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem(SOUND_PREF_KEY) !== "off"
+      : true;
   private soundIcon!: Phaser.GameObjects.Graphics;
   private bgOverlay?: Phaser.GameObjects.Rectangle;
 
@@ -84,7 +116,8 @@ export class GameScene extends Phaser.Scene {
     // 画像はすべて任意。404 でも Phaser は警告を出すだけでゲームは続行し、各利用箇所で
     // textures.exists() を確認して Graphics 描画にフォールバックする
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
-    for (const key of Object.values(GENERAL_ART)) this.load.image(key, `images/${key}.png`);
+    for (const key of Object.values(GENERAL_ART))
+      this.load.image(key, `images/${key}.png`);
   }
 
   create(): void {
@@ -110,7 +143,9 @@ export class GameScene extends Phaser.Scene {
     if (!this.textures.exists(BG_KEY)) return;
     const src = this.textures.get(BG_KEY).getSourceImage();
     const scale = Math.max(450 / src.width, 800 / src.height);
-    this.add.image(CX, 400, BG_KEY).setDisplaySize(src.width * scale, src.height * scale);
+    this.add
+      .image(CX, 400, BG_KEY)
+      .setDisplaySize(src.width * scale, src.height * scale);
     this.bgOverlay = this.add.rectangle(CX, 400, 450, 800, 0x1a0e0a, 0.55);
   }
 
@@ -123,7 +158,10 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.72 : 0.95 });
+    const panel = drawPanel(this, CX, 400, 400, 700, {
+      depth: 0,
+      fillAlpha: this.textures.exists(BG_KEY) ? 0.72 : 0.95,
+    });
 
     const title = this.add
       .text(CX, 110, "三国ポチポチ", { ...TYPE.h1, color: THEME.textPrimary })
@@ -132,27 +170,79 @@ export class GameScene extends Phaser.Scene {
       .text(
         CX,
         250,
-        "タップして部隊を進撃させよう。\n宝箱・出会い・小競り合いが\nランダムに発生する。\n\n貯めたコインで武将ガチャや\n装備合成（ブリーディング）も楽しめる。",
+        "3人の仲間と、三地域の踏破を目指す。\n街道を進むか、財宝の山道へ挑むか。\n兵力を見て、続行と帰還を選ぼう。\n\n3地点ごとの功績で部隊を鍛錬。\n関門を越えて、次の地域を開放しよう。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const best = this.add
-      .text(CX, 400, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
+      .text(CX, 400, "", {
+        ...TYPE.small,
+        color: THEME.textMuted,
+        align: "center",
+      })
       .setOrigin(0.5);
 
-    const questBtn = makeButton(this, CX, 470, 280, 52, "進撃へ出発", () => { this.playSound(sfx.tap); this.showQuest(); }, {
-      fontSize: "16px",
-    });
-    const gachaBtn = makeButton(this, CX, 540, 280, 48, "武将ガチャ", () => { this.playSound(sfx.tap); this.showGacha(); }, {
-      fontSize: "15px",
-    });
-    const breedBtn = makeButton(this, CX, 600, 280, 48, "装備合成", () => { this.playSound(sfx.tap); this.showBreeding(); }, {
-      fontSize: "15px",
-    });
-    const rosterBtn = makeButton(this, CX, 660, 280, 48, "武将一覧・装備", () => { this.playSound(sfx.tap); this.showRoster(); }, {
-      fontSize: "15px",
-    });
+    const questBtn = makeButton(
+      this,
+      CX,
+      470,
+      280,
+      52,
+      "戦略地図・遠征へ",
+      () => {
+        this.playSound(sfx.tap);
+        this.scene.start("ExpeditionScene");
+      },
+      {
+        fontSize: "16px",
+      },
+    );
+    const gachaBtn = makeButton(
+      this,
+      CX,
+      540,
+      280,
+      48,
+      "武将ガチャ",
+      () => {
+        this.playSound(sfx.tap);
+        this.showGacha();
+      },
+      {
+        fontSize: "15px",
+      },
+    );
+    const breedBtn = makeButton(
+      this,
+      CX,
+      600,
+      280,
+      48,
+      "装備合成",
+      () => {
+        this.playSound(sfx.tap);
+        this.showBreeding();
+      },
+      {
+        fontSize: "15px",
+      },
+    );
+    const rosterBtn = makeButton(
+      this,
+      CX,
+      660,
+      280,
+      48,
+      "武将一覧・装備",
+      () => {
+        this.playSound(sfx.tap);
+        this.showRoster();
+      },
+      {
+        fontSize: "15px",
+      },
+    );
 
     this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
     const soundHit = this.add
@@ -186,9 +276,20 @@ export class GameScene extends Phaser.Scene {
     if (this.soundOn) fn();
   }
 
-  private spawnFloatingText(x: number, y: number, text: string, color: string): void {
+  private spawnFloatingText(
+    x: number,
+    y: number,
+    text: string,
+    color: string,
+  ): void {
     const obj = this.add
-      .text(x, y, text, { fontSize: "20px", color, fontStyle: "800", stroke: "#2a1a14", strokeThickness: 4 })
+      .text(x, y, text, {
+        fontSize: "20px",
+        color,
+        fontStyle: "800",
+        stroke: "#2a1a14",
+        strokeThickness: 4,
+      })
       .setOrigin(0.5);
     this.tweens.add({
       targets: obj,
@@ -208,8 +309,12 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(false);
     this.breedingGroup.setVisible(false);
     this.rosterGroup.setVisible(false);
-    const bestText = this.titleGroup.getData("bestText") as Phaser.GameObjects.Text;
-    bestText.setText(`所持コイン: ${loadCurrency()}\n最高進撃距離: ${loadBestDistance()}`);
+    const bestText = this.titleGroup.getData(
+      "bestText",
+    ) as Phaser.GameObjects.Text;
+    bestText.setText(
+      `所持コイン: ${loadCurrency()}\n最高進撃距離: ${loadBestDistance()}`,
+    );
   }
 
   // ---------- クエスト（タップ進撃） ----------
@@ -217,14 +322,22 @@ export class GameScene extends Phaser.Scene {
   private buildQuestScreen(): void {
     this.questGroup = this.add.container(0, 0);
     // 進撃画面は背景イラストを主役にするため、パネルは薄くしてイラストを透かす
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.35 : 0.95 });
+    const panel = drawPanel(this, CX, 400, 400, 700, {
+      depth: 0,
+      fillAlpha: this.textures.exists(BG_KEY) ? 0.35 : 0.95,
+    });
 
     const currencyText = this.add
       .text(CX, 90, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("currencyText");
     const distanceText = this.add
-      .text(CX, 130, "", { ...TYPE.h2, color: THEME.textPrimary, stroke: "#1a0e0a", strokeThickness: 3 })
+      .text(CX, 130, "", {
+        ...TYPE.h2,
+        color: THEME.textPrimary,
+        stroke: "#1a0e0a",
+        strokeThickness: 3,
+      })
       .setOrigin(0.5)
       .setName("distanceText");
 
@@ -240,20 +353,51 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("eventText");
     const rewardText = this.add
-      .text(CX, 310, "", { ...TYPE.h2, color: hexToCss(THEME.accent), stroke: "#1a0e0a", strokeThickness: 3 })
+      .text(CX, 310, "", {
+        ...TYPE.h2,
+        color: hexToCss(THEME.accent),
+        stroke: "#1a0e0a",
+        strokeThickness: 3,
+      })
       .setOrigin(0.5)
       .setName("rewardText");
 
-    const tapBtn = makeButton(this, CX, 470, 220, 220, "進撃\nTAP!", () => this.onTapAdvance(), {
-      fontSize: "22px",
-      radius: 110,
-    });
+    const tapBtn = makeButton(
+      this,
+      CX,
+      470,
+      220,
+      220,
+      "進撃\nTAP!",
+      () => this.onTapAdvance(),
+      {
+        fontSize: "22px",
+        radius: 110,
+      },
+    );
 
-    const backBtn = makeButton(this, CX, 660, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const backBtn = makeButton(
+      this,
+      CX,
+      660,
+      260,
+      48,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
-    this.questGroup.add([panel, currencyText, distanceText, eventText, rewardText, tapBtn.container, backBtn.container]);
+    this.questGroup.add([
+      panel,
+      currencyText,
+      distanceText,
+      eventText,
+      rewardText,
+      tapBtn.container,
+      backBtn.container,
+    ]);
     this.questGroup.setVisible(false);
   }
 
@@ -265,8 +409,12 @@ export class GameScene extends Phaser.Scene {
     this.distance = 0;
     this.refreshQuestVisual();
 
-    const eventText = this.questGroup.getByName("eventText") as Phaser.GameObjects.Text;
-    const rewardText = this.questGroup.getByName("rewardText") as Phaser.GameObjects.Text;
+    const eventText = this.questGroup.getByName(
+      "eventText",
+    ) as Phaser.GameObjects.Text;
+    const rewardText = this.questGroup.getByName(
+      "rewardText",
+    ) as Phaser.GameObjects.Text;
     eventText.setText("タップして進撃しよう！");
     rewardText.setText("");
   }
@@ -279,24 +427,46 @@ export class GameScene extends Phaser.Scene {
     if (event.reward > 0) addCurrency(event.reward);
     saveBestDistance(this.distance);
 
-    if (event.reward > 0) this.spawnFloatingText(CX, 400, `+${event.reward}`, hexToCss(THEME.accent));
+    if (event.reward > 0)
+      this.spawnFloatingText(
+        CX,
+        400,
+        `+${event.reward}`,
+        hexToCss(THEME.accent),
+      );
 
     if (event.type === "encounter") this.playSound(sfx.encounter);
     else if (event.type === "treasure") this.playSound(sfx.treasure);
     else this.playSound(event.won ? sfx.battleWin : sfx.battleLose);
 
-    const eventText = this.questGroup.getByName("eventText") as Phaser.GameObjects.Text;
-    const rewardText = this.questGroup.getByName("rewardText") as Phaser.GameObjects.Text;
+    const eventText = this.questGroup.getByName(
+      "eventText",
+    ) as Phaser.GameObjects.Text;
+    const rewardText = this.questGroup.getByName(
+      "rewardText",
+    ) as Phaser.GameObjects.Text;
     eventText.setText(event.message);
-    rewardText.setText(event.reward > 0 ? `+${event.reward} コイン` : event.won === false ? "報酬なし…" : "");
-    rewardText.setColor(event.won === false ? THEME.textMuted : hexToCss(THEME.accent));
+    rewardText.setText(
+      event.reward > 0
+        ? `+${event.reward} コイン`
+        : event.won === false
+          ? "報酬なし…"
+          : "",
+    );
+    rewardText.setColor(
+      event.won === false ? THEME.textMuted : hexToCss(THEME.accent),
+    );
 
     this.refreshQuestVisual();
   }
 
   private refreshQuestVisual(): void {
-    const currencyText = this.questGroup.getByName("currencyText") as Phaser.GameObjects.Text;
-    const distanceText = this.questGroup.getByName("distanceText") as Phaser.GameObjects.Text;
+    const currencyText = this.questGroup.getByName(
+      "currencyText",
+    ) as Phaser.GameObjects.Text;
+    const distanceText = this.questGroup.getByName(
+      "distanceText",
+    ) as Phaser.GameObjects.Text;
     currencyText.setText(`所持コイン: ${loadCurrency()}`);
     distanceText.setText(`進撃距離 ${this.distance}`);
   }
@@ -305,13 +475,19 @@ export class GameScene extends Phaser.Scene {
 
   private buildGachaScreen(): void {
     this.gachaGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 620, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
+    const panel = drawPanel(this, CX, 400, 400, 620, {
+      depth: 0,
+      fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95,
+    });
 
     const heading = this.add
       .text(CX, 125, "武将ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(CX, 162, `1回 ${GACHA_COST} コイン`, { ...TYPE.body, color: THEME.textMuted })
+      .text(CX, 162, `1回 ${GACHA_COST} コイン`, {
+        ...TYPE.body,
+        color: THEME.textMuted,
+      })
       .setOrigin(0.5);
 
     // 排出武将の立ち絵枠（立ち絵が無い武将はレアリティ色の枠＋名前だけを表示）
@@ -319,7 +495,11 @@ export class GameScene extends Phaser.Scene {
     const artSlot = this.add.container(CX, 320).setName("gachaArt");
 
     const resultText = this.add
-      .text(CX, 470, "", { ...TYPE.h2, color: THEME.textPrimary, align: "center" })
+      .text(CX, 470, "", {
+        ...TYPE.h2,
+        color: THEME.textPrimary,
+        align: "center",
+      })
       .setOrigin(0.5)
       .setName("gachaResult");
     const balanceText = this.add
@@ -327,10 +507,28 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("gachaBalance");
 
-    const drawBtn = makeButton(this, CX, 580, 260, 52, "引く", () => this.rollGacha(), { fontSize: "16px" });
-    const backBtn = makeButton(this, CX, 650, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const drawBtn = makeButton(
+      this,
+      CX,
+      580,
+      260,
+      52,
+      "引く",
+      () => this.rollGacha(),
+      { fontSize: "16px" },
+    );
+    const backBtn = makeButton(
+      this,
+      CX,
+      650,
+      260,
+      48,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
     this.gachaGroup.add([
       panel,
@@ -356,33 +554,58 @@ export class GameScene extends Phaser.Scene {
     const frameH = frameW / ART_ASPECT; // 240
     const cx = CX;
     const cy = 320;
-    const frame = this.gachaGroup.getByName("gachaArtFrame") as Phaser.GameObjects.Graphics;
-    const slot = this.gachaGroup.getByName("gachaArt") as Phaser.GameObjects.Container;
+    const frame = this.gachaGroup.getByName(
+      "gachaArtFrame",
+    ) as Phaser.GameObjects.Graphics;
+    const slot = this.gachaGroup.getByName(
+      "gachaArt",
+    ) as Phaser.GameObjects.Container;
     slot.removeAll(true);
 
-    const color = general ? (RARITY_COLOR[general.rarity] ?? 0xffffff) : THEME.panelBorder;
+    const color = general
+      ? (RARITY_COLOR[general.rarity] ?? 0xffffff)
+      : THEME.panelBorder;
     frame.clear();
     frame.fillStyle(0x1a0e0a, 0.6);
     frame.fillRoundedRect(cx - frameW / 2, cy - frameH / 2, frameW, frameH, 12);
     frame.lineStyle(general ? 3 : 1.5, color, general ? 0.95 : 0.5);
-    frame.strokeRoundedRect(cx - frameW / 2, cy - frameH / 2, frameW, frameH, 12);
+    frame.strokeRoundedRect(
+      cx - frameW / 2,
+      cy - frameH / 2,
+      frameW,
+      frameH,
+      12,
+    );
 
     if (!general) {
-      slot.add(this.add.text(0, 0, "？", { ...TYPE.h1, color: THEME.textMuted }).setOrigin(0.5).setAlpha(0.5));
+      slot.add(
+        this.add
+          .text(0, 0, "？", { ...TYPE.h1, color: THEME.textMuted })
+          .setOrigin(0.5)
+          .setAlpha(0.5),
+      );
       return;
     }
     const artKey = GENERAL_ART[general.id];
     if (artKey && this.textures.exists(artKey)) {
       const pad = 8;
-      const img = this.add.image(0, 0, artKey).setDisplaySize(frameW - pad * 2, frameH - pad * 2);
+      const img = this.add
+        .image(0, 0, artKey)
+        .setDisplaySize(frameW - pad * 2, frameH - pad * 2);
       slot.add(img);
       return;
     }
     // フォールバック: 頭文字＋レアリティ
     const initial = this.add
-      .text(0, -16, general.name.charAt(0), { ...TYPE.h1, fontSize: "64px", color: hexToCss(color) })
+      .text(0, -16, general.name.charAt(0), {
+        ...TYPE.h1,
+        fontSize: "64px",
+        color: hexToCss(color),
+      })
       .setOrigin(0.5);
-    const rarity = this.add.text(0, 48, general.rarity, { ...TYPE.h2, color: hexToCss(color) }).setOrigin(0.5);
+    const rarity = this.add
+      .text(0, 48, general.rarity, { ...TYPE.h2, color: hexToCss(color) })
+      .setOrigin(0.5);
     slot.add([initial, rarity]);
   }
 
@@ -391,20 +614,26 @@ export class GameScene extends Phaser.Scene {
     this.setBackgroundDim(0.6);
     this.titleGroup.setVisible(false);
     this.gachaGroup.setVisible(true);
-    const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
+    const resultText = this.gachaGroup.getByName(
+      "gachaResult",
+    ) as Phaser.GameObjects.Text;
     resultText.setText("");
     this.renderGachaArt(null);
     this.refreshGachaBalance();
   }
 
   private refreshGachaBalance(): void {
-    const balanceText = this.gachaGroup.getByName("gachaBalance") as Phaser.GameObjects.Text;
+    const balanceText = this.gachaGroup.getByName(
+      "gachaBalance",
+    ) as Phaser.GameObjects.Text;
     balanceText.setText(`所持コイン: ${loadCurrency()}`);
   }
 
   private rollGacha(): void {
     const balance = loadCurrency();
-    const resultText = this.gachaGroup.getByName("gachaResult") as Phaser.GameObjects.Text;
+    const resultText = this.gachaGroup.getByName(
+      "gachaResult",
+    ) as Phaser.GameObjects.Text;
     if (!canAffordGacha(balance)) {
       resultText.setText("コインが足りません…").setColor(THEME.textMuted);
       return;
@@ -417,11 +646,24 @@ export class GameScene extends Phaser.Scene {
     resultText
       .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
-    this.tweens.add({ targets: resultText, scale: isRare ? 1.4 : 1.2, duration: isRare ? 180 : 120, yoyo: true });
+    this.tweens.add({
+      targets: resultText,
+      scale: isRare ? 1.4 : 1.2,
+      duration: isRare ? 180 : 120,
+      yoyo: true,
+    });
     this.renderGachaArt(general);
-    const artSlot = this.gachaGroup.getByName("gachaArt") as Phaser.GameObjects.Container;
+    const artSlot = this.gachaGroup.getByName(
+      "gachaArt",
+    ) as Phaser.GameObjects.Container;
     artSlot.setScale(0.6).setAlpha(0);
-    this.tweens.add({ targets: artSlot, scale: 1, alpha: 1, duration: isRare ? 320 : 180, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: artSlot,
+      scale: 1,
+      alpha: 1,
+      duration: isRare ? 320 : 180,
+      ease: "Back.easeOut",
+    });
     if (isRare) {
       this.cameras.main.flash(200, 255, 220, 140);
       cg.happytime();
@@ -433,13 +675,16 @@ export class GameScene extends Phaser.Scene {
 
   private buildBreedingScreen(): void {
     this.breedingGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 660, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
+    const panel = drawPanel(this, CX, 400, 400, 660, {
+      depth: 0,
+      fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95,
+    });
 
     const heading = this.add
       .text(CX, 110, "装備合成", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
-      .text(CX, 145, `2つの親装備のレアリティを選んで合成（${BREED_COST}コイン）`, {
+      .text(CX, 145, `未装着の親装備2個を消費して合成（${BREED_COST}コイン）`, {
         ...TYPE.small,
         color: THEME.textMuted,
         align: "center",
@@ -447,13 +692,21 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const labelA = this.add.text(CX, 200, "親装備A", { ...TYPE.small, color: THEME.textMuted }).setOrigin(0.5);
+    const labelA = this.add
+      .text(CX, 200, "親装備A", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5);
     this.buildRaritySelector(230, "A");
-    const labelB = this.add.text(CX, 300, "親装備B", { ...TYPE.small, color: THEME.textMuted }).setOrigin(0.5);
+    const labelB = this.add
+      .text(CX, 300, "親装備B", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0.5);
     this.buildRaritySelector(330, "B");
 
     const rateText = this.add
-      .text(CX, 400, "", { ...TYPE.body, color: THEME.textMuted, align: "center" })
+      .text(CX, 400, "", {
+        ...TYPE.body,
+        color: THEME.textMuted,
+        align: "center",
+      })
       .setOrigin(0.5)
       .setName("rateText");
     const resultText = this.add
@@ -469,10 +722,28 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("breedInventory");
 
-    const breedBtn = makeButton(this, CX, 590, 260, 52, "合成する", () => this.onBreed(), { fontSize: "16px" });
-    const backBtn = makeButton(this, CX, 655, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const breedBtn = makeButton(
+      this,
+      CX,
+      590,
+      260,
+      52,
+      "合成する",
+      () => this.onBreed(),
+      { fontSize: "16px" },
+    );
+    const backBtn = makeButton(
+      this,
+      CX,
+      655,
+      260,
+      48,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
     this.breedingGroup.add([
       panel,
@@ -487,6 +758,8 @@ export class GameScene extends Phaser.Scene {
       breedBtn.container,
       backBtn.container,
     ]);
+    // Selectors are created before the other controls; keep their backdrop behind them.
+    this.breedingGroup.sendToBack(panel);
     this.breedingGroup.setVisible(false);
   }
 
@@ -499,9 +772,18 @@ export class GameScene extends Phaser.Scene {
 
     RARITIES.forEach((rarity, i) => {
       const x = startX + i * (buttonW + gap);
-      const btn = makeButton(this, x, y, buttonW, buttonH, rarity, () => this.setBreedRarity(slot, rarity), {
-        fontSize: "13px",
-      });
+      const btn = makeButton(
+        this,
+        x,
+        y,
+        buttonW,
+        buttonH,
+        rarity,
+        () => this.setBreedRarity(slot, rarity),
+        {
+          fontSize: "13px",
+        },
+      );
       this.breedingGroup.add(btn.container);
       if (slot === "A") this.breedButtonsA[rarity] = btn;
       else this.breedButtonsB[rarity] = btn;
@@ -530,8 +812,12 @@ export class GameScene extends Phaser.Scene {
 
   private refreshBreedRatePreview(): void {
     const rates = breedRateTable(this.breedA, this.breedB);
-    const rateText = this.breedingGroup.getByName("rateText") as Phaser.GameObjects.Text;
-    rateText.setText(`排出率: Common ${rates.Common}% / Rare ${rates.Rare}% / Epic ${rates.Epic}%`);
+    const rateText = this.breedingGroup.getByName(
+      "rateText",
+    ) as Phaser.GameObjects.Text;
+    rateText.setText(
+      `排出率: Common ${rates.Common}% / Rare ${rates.Rare}% / Epic ${rates.Epic}%`,
+    );
   }
 
   private showBreeding(): void {
@@ -539,7 +825,9 @@ export class GameScene extends Phaser.Scene {
     this.setBackgroundDim(0.6);
     this.titleGroup.setVisible(false);
     this.breedingGroup.setVisible(true);
-    const resultText = this.breedingGroup.getByName("breedResult") as Phaser.GameObjects.Text;
+    const resultText = this.breedingGroup.getByName(
+      "breedResult",
+    ) as Phaser.GameObjects.Text;
     resultText.setText("");
     this.refreshBreedRatePreview();
     this.refreshBreedBalance();
@@ -547,29 +835,56 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshBreedBalance(): void {
-    const balanceText = this.breedingGroup.getByName("breedBalance") as Phaser.GameObjects.Text;
+    const balanceText = this.breedingGroup.getByName(
+      "breedBalance",
+    ) as Phaser.GameObjects.Text;
     balanceText.setText(`所持コイン: ${loadCurrency()}`);
   }
 
   private refreshBreedInventory(): void {
-    const inventoryText = this.breedingGroup.getByName("breedInventory") as Phaser.GameObjects.Text;
+    const inventoryText = this.breedingGroup.getByName(
+      "breedInventory",
+    ) as Phaser.GameObjects.Text;
     const inv = loadEquipmentInventory();
-    inventoryText.setText(`所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`);
+    inventoryText.setText(
+      `所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
+    );
   }
 
   private onBreed(): void {
     const balance = loadCurrency();
-    const resultText = this.breedingGroup.getByName("breedResult") as Phaser.GameObjects.Text;
+    const resultText = this.breedingGroup.getByName(
+      "breedResult",
+    ) as Phaser.GameObjects.Text;
     if (balance < BREED_COST) {
       resultText.setText("コインが足りません…").setColor(THEME.textMuted);
       return;
     }
+    const inventory = loadEquipmentInventory();
+    if (
+      inventory[this.breedA] < (this.breedA === this.breedB ? 2 : 1) ||
+      inventory[this.breedB] < 1
+    ) {
+      resultText
+        .setText("未装着の親装備が2個必要です")
+        .setColor(THEME.textMuted);
+      return;
+    }
     spendCurrency(BREED_COST);
+    spendEquipment(this.breedA);
+    spendEquipment(this.breedB);
     const rarity = breedEquipment(this.breedA, this.breedB);
     addEquipment(rarity);
     this.playSound(sfx.breed);
-    resultText.setText(`【${rarity}】装備を入手！`).setColor(hexToCss(RARITY_COLOR[rarity] ?? 0xffffff));
-    this.tweens.add({ targets: resultText, scale: 1.2, duration: 120, yoyo: true });
+    resultText
+      .setText(`【${rarity}】装備を入手！`)
+      .setColor(hexToCss(RARITY_COLOR[rarity] ?? 0xffffff));
+    this.tweens.add({
+      targets: resultText,
+      scale: 1.2,
+      duration: 120,
+      yoyo: true,
+    });
     this.refreshBreedBalance();
     this.refreshBreedInventory();
   }
@@ -578,29 +893,52 @@ export class GameScene extends Phaser.Scene {
 
   private buildRosterScreen(): void {
     this.rosterGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0, fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95 });
+    const panel = drawPanel(this, CX, 400, 400, 700, {
+      depth: 0,
+      fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95,
+    });
 
     const heading = this.add
       .text(CX, 90, "武将一覧・装備", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
-      .text(CX, 125, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", {
-        ...TYPE.small,
-        color: THEME.textMuted,
-        align: "center",
-        wordWrap: { width: 340, useAdvancedWrap: true },
-      })
+      .text(
+        CX,
+        125,
+        "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）",
+        {
+          ...TYPE.small,
+          color: THEME.textMuted,
+          align: "center",
+          wordWrap: { width: 340, useAdvancedWrap: true },
+        },
+      )
       .setOrigin(0.5);
     const inventoryText = this.add
       .text(CX, 160, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("rosterInventory");
 
-    const backBtn = makeButton(this, CX, 690, 260, 48, "タイトルへ戻る", () => this.showTitle(), {
-      fontSize: "14px",
-    });
+    const backBtn = makeButton(
+      this,
+      CX,
+      690,
+      260,
+      48,
+      "タイトルへ戻る",
+      () => this.showTitle(),
+      {
+        fontSize: "14px",
+      },
+    );
 
-    this.rosterGroup.add([panel, heading, hint, inventoryText, backBtn.container]);
+    this.rosterGroup.add([
+      panel,
+      heading,
+      hint,
+      inventoryText,
+      backBtn.container,
+    ]);
     this.rosterGroup.setVisible(false);
   }
 
@@ -613,9 +951,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshRoster(): void {
-    const inventoryText = this.rosterGroup.getByName("rosterInventory") as Phaser.GameObjects.Text;
+    const inventoryText = this.rosterGroup.getByName(
+      "rosterInventory",
+    ) as Phaser.GameObjects.Text;
     const inv = loadEquipmentInventory();
-    inventoryText.setText(`所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`);
+    inventoryText.setText(
+      `所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
+    );
 
     for (const row of this.rosterRows) row.container.destroy();
     this.rosterRows = [];
@@ -642,17 +984,24 @@ export class GameScene extends Phaser.Scene {
       const rowChildren: Phaser.GameObjects.GameObject[] = [bg];
       const artKey = GENERAL_ART[general.id];
       if (artKey && this.textures.exists(artKey)) {
-        const portrait = this.add.image(portraitX, 0, artKey).setDisplaySize(portraitW, portraitH);
+        const portrait = this.add
+          .image(portraitX, 0, artKey)
+          .setDisplaySize(portraitW, portraitH);
         if (!has) portrait.setTint(0x222222).setAlpha(0.6);
         rowChildren.push(portrait);
       }
-      const textX = artKey && this.textures.exists(artKey) ? portraitX + portraitW / 2 + 8 : -165;
+      const textX =
+        artKey && this.textures.exists(artKey)
+          ? portraitX + portraitW / 2 + 8
+          : -165;
 
       const count = owned[general.id] ?? 0;
       const nameText = this.add
         .text(textX, -14, `【${general.rarity}】${general.name}`, {
           ...TYPE.body,
-          color: has ? hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff) : THEME.textMuted,
+          color: has
+            ? hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff)
+            : THEME.textMuted,
         })
         .setOrigin(0, 0.5);
       const statusText = this.add
@@ -667,7 +1016,9 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0, 0.5);
 
       rowChildren.push(nameText, statusText);
-      const container = this.add.container(CX, y, rowChildren).setSize(360, rowH);
+      const container = this.add
+        .container(CX, y, rowChildren)
+        .setSize(360, rowH);
       if (has) {
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.onCycleEquip(general));
@@ -690,7 +1041,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     const inventory = loadEquipmentInventory();
-    const cycle: readonly (EquipRarity | undefined)[] = [undefined, "Common", "Rare", "Epic"];
+    const cycle: readonly (EquipRarity | undefined)[] = [
+      undefined,
+      "Common",
+      "Rare",
+      "Epic",
+    ];
     const startIndex = (cycle.indexOf(current) + 1) % cycle.length;
     let chosen: EquipRarity | undefined;
     for (let step = 0; step < cycle.length; step++) {

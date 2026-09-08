@@ -1,3 +1,9 @@
+import {
+  contractCost,
+  fulfillContract,
+  demandGenerator,
+  demandMultiplier,
+} from "../logic/contracts";
 import Phaser from "phaser";
 import { ACHIEVEMENTS, checkNewAchievements, unlockAchievements } from "../logic/achievements";
 import {
@@ -96,6 +102,9 @@ export class IdleScene extends Phaser.Scene {
   private townGlow!: Phaser.GameObjects.Graphics;
   private townText!: Phaser.GameObjects.Text;
   private lastTownIndex = -1;
+  private workshopDecor!: Phaser.GameObjects.Container;
+  private workshopSignature = "";
+  private contractModal: Phaser.GameObjects.Container | null = null;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect; label: Phaser.GameObjects.Text }[] = [];
   private rows: { id: string; card: GeneratorCard }[] = [];
@@ -120,7 +129,10 @@ export class IdleScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.analytics = recordSessionStart(loadAnalytics(localStorage), Date.now());
+    this.analytics = recordSessionStart(
+      loadAnalytics(localStorage),
+      Date.now(),
+    );
     saveAnalytics(this.analytics, localStorage);
 
     // セーブ復元＋オフライン進行
@@ -134,14 +146,20 @@ export class IdleScene extends Phaser.Scene {
     this.potionCounter = new SmoothedCounter(this.state.potions);
 
     this.buildBackground();
-    // ヘッダー帯はマスコット/ゾーンパネルより背面に置く（半透明の帯でキャラの頭が霞まないように）
     drawHeaderBand(this, 800, HEADER_H);
     this.buildZonePanels();
+    this.workshopDecor = this.add.container(0, 0);
     const mascot = this.buildAlchemistMascot();
     this.buildHeader();
     this.buildBrewArea(mascot);
     this.buildGeneratorList();
     this.buildSaveTools();
+    const orders = this.makeSmallButton(660, 715, 190, "", () =>
+      this.showContracts(),
+    );
+    this.registerRefresh(() =>
+      orders.label.setText(this.lang === "ja" ? "街の注文" : "Town orders"),
+    );
 
     this.refreshStaticTexts();
     this.refreshUI();
@@ -402,11 +420,21 @@ export class IdleScene extends Phaser.Scene {
     });
   }
 
-  private onBrewTap(bounceTargets: Phaser.GameObjects.GameObject[], glow?: Phaser.GameObjects.Arc): void {
+  private onBrewTap(
+    bounceTargets: Phaser.GameObjects.GameObject[],
+    glow?: Phaser.GameObjects.Arc,
+  ): void {
     const gain = this.state.clickPower * essenceMultiplier(this.state);
     this.state = click(this.state);
     this.playSound(sfx.click);
-    this.tweens.add({ targets: bounceTargets, scale: 0.94, duration: 70, yoyo: true, ease: "Sine.easeOut" });
+    this.tweens.add({
+      targets: bounceTargets,
+      scaleX: "*=0.94",
+      scaleY: "*=0.94",
+      duration: 70,
+      yoyo: true,
+      ease: "Sine.easeOut",
+    });
     if (glow) {
       this.tweens.add({ targets: glow, alpha: 0.35, duration: 70, yoyo: true });
     }
@@ -642,6 +670,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private refreshUI(deltaSec = 0): void {
+    this.refreshWorkshopDecor();
     this.refreshFooterStats();
     this.refreshTownGlow();
     const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
@@ -729,9 +758,139 @@ export class IdleScene extends Phaser.Scene {
       const cost = generatorCost(def, count);
       row.card.setName(generatorName(this.lang, def.id));
       row.card.setCount(count);
-      row.card.rate.setText(`+${formatNumber(def.baseRate)}${t(this.lang, "perSec")}`);
+      row.card.rate.setText(`+${formatNumber(def.baseRate * demandMultiplier(this.state.prestigeCount, def.id))}${t(this.lang, "perSec")}`);
       row.card.setCost(formatNumber(cost));
       row.card.setReady(this.state.potions >= cost);
     }
   }
+
+  private refreshWorkshopDecor(): void {
+    const signature = JSON.stringify(this.state.counts);
+    if (signature === this.workshopSignature) return;
+    this.workshopSignature = signature;
+    this.workshopDecor.removeAll(true);
+    const shelf = this.add.graphics();
+    shelf.fillStyle(0x855e45).fillRoundedRect(38, 294, 244, 7, 3);
+    let index = 0;
+    for (const def of GENERATORS) {
+      const count = this.state.counts[def.id] ?? 0;
+      if (!count) continue;
+      const x = 51 + index * 30;
+      index++;
+      const key =
+        def.id === "cauldron"
+          ? "pw-cauldron-icon"
+          : def.id === "dragon"
+            ? "pw-dragon-icon"
+            : null;
+      if (key && this.textures.exists(key))
+        this.workshopDecor.add(
+          this.add.image(x, 278, key).setDisplaySize(35, 35),
+        );
+      else {
+        const color = Phaser.Display.Color.HSVToRGB(index / 8, 0.6, 0.8).color;
+        shelf.fillStyle(color).fillRoundedRect(x - 8, 273, 16, 20, 4);
+        shelf.fillStyle(0xc9b28e).fillRect(x - 4, 267, 8, 7);
+      }
+      this.workshopDecor.add(
+        this.add
+          .text(x, 303, `${count}`, { fontSize: "11px", color: "#493f36" })
+          .setOrigin(0.5),
+      );
+    }
+    this.workshopDecor.addAt(shelf, 0);
+  }
+
+
+  private showContracts(): void {
+    this.contractModal?.destroy(true);
+    const modal = this.add.container(0, 0).setDepth(200);
+    this.contractModal = modal;
+    const shade = this.add
+      .rectangle(400, 380, 800, 760, 0x152839, 0.7)
+      .setInteractive();
+    const panel = drawPanel(this, 400, 375, 680, 510, {
+      fillColor: 0xf4f5e9,
+      fillAlpha: 1,
+      borderColor: 0xc49d55,
+    });
+    const ja = this.lang === "ja";
+    const text = (y: number, value: string, size = 18) =>
+      this.add
+        .text(400, y, value, {
+          fontSize: `${size}px`,
+          color: "#30483e",
+          align: "center",
+          wordWrap: { width: 610, useAdvancedWrap: true },
+        })
+        .setOrigin(0.5, 0);
+    const demand =
+      this.state.prestigeCount > 0
+        ? `${generatorName(this.lang, demandGenerator(this.state.prestigeCount))} ×1.5`
+        : ja
+          ? "すべての設備が通常生産"
+          : "Standard production";
+    modal.add([
+      shade,
+      panel,
+      text(150, ja ? "街から届いた注文" : "Orders from town", 30),
+      text(200, demand),
+      text(
+        232,
+        ja
+          ? `評判 ${this.state.reputation} · 今周回の生産 +${this.state.reputation * 10}%`
+          : `Reputation ${this.state.reputation} · Production +${this.state.reputation * 10}%`,
+      ),
+    ]);
+    [0, 1].forEach((i) => {
+      const y = 322 + i * 109;
+      const done = this.state.completedContracts.includes(i);
+      const cost = contractCost(this.state, i);
+      const card = drawPanel(this, 400, y, 604, 90, {
+        fillColor: done ? 0xd6e8dc : 0xffffff,
+        borderColor: 0xb8cdbb,
+      });
+      const label = text(
+        y - 30,
+        `${ja ? (i === 0 ? "村人の常備薬" : "商隊へのまとめ納品") : i === 0 ? "Village supplies" : "Caravan shipment"}\n${done ? (ja ? "納品済み" : "Delivered") : `${formatNumber(cost)} ${ja ? "ポーションを納品" : "potions"} · +${i === 0 ? 1 : 3} ${ja ? "評判" : "reputation"}`}`,
+        17,
+      );
+      const hit = this.add
+        .zone(400, y, 604, 90)
+        .setInteractive({ useHandCursor: !done });
+      hit.on("pointerdown", () => {
+        const next = fulfillContract(this.state, i);
+        if (!next) return;
+        this.state = next;
+        save(this.state, localStorage, Date.now());
+        this.playSound(sfx.buy);
+        this.showContracts();
+      });
+      modal.add([card, label, hit]);
+    });
+    modal.add(
+      text(
+        494,
+        ja
+          ? "各注文は今周回に1回。転生で注文と評判がリセット。"
+          : "Each order once per run. Ascension resets orders and reputation.",
+        14,
+      ),
+    );
+    const close = this.add
+      .text(400, 564, ja ? "工房へ戻る" : "Back to workshop", {
+        fontSize: "20px",
+        color: "#287257",
+        backgroundColor: "#dcecdf",
+        padding: { x: 60, y: 12 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    close.on("pointerdown", () => {
+      modal.destroy(true);
+      this.contractModal = null;
+    });
+    modal.add(close);
+  }
+
 }

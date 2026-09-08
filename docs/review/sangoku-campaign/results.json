@@ -1,0 +1,39 @@
+{
+  "shots": [
+    "title",
+    "map-initial",
+    "roster-art",
+    "gacha-art",
+    "formation",
+    "plains-road",
+    "fork",
+    "plains-gate",
+    "plains-clear",
+    "plains-map-cleared",
+    "pass-road",
+    "pass-gate",
+    "pass-clear",
+    "pass-map-cleared",
+    "citadel-road",
+    "citadel-gate",
+    "citadel-clear",
+    "citadel-map-cleared",
+    "map-completed",
+    "defeat",
+    "mobile-map",
+    "missing-art-fallback",
+    "boss-entrance",
+    "boss-strike"
+  ],
+  "errors": [],
+  "checks": [
+    "three chapter clear/unlock",
+    "locked selection",
+    "training costs/persistence",
+    "formation navigation",
+    "save resume at fork",
+    "single settlement",
+    "defeat",
+    "390px viewport"
+  ]
+}
