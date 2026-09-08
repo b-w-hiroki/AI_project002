@@ -317,7 +317,7 @@ export class GameScene extends Phaser.Scene {
       .lineBetween(205, 70, 245, 70)
       .lineBetween(225, 50, 225, 90);
     this.mandateText = this.add
-      .text(CX, 108, "", {
+      .text(CX, 92, "", {
         fontSize: "14px",
         color: "#e4c991",
         align: "center",
