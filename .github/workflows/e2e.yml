@@ -1,0 +1,40 @@
+name: Browser E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "games/potion-workshop/**"
+      - "games/side-scroller/**"
+      - ".github/workflows/e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "games/potion-workshop/**"
+      - "games/side-scroller/**"
+      - ".github/workflows/e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: [potion-workshop, side-scroller]
+    defaults:
+      run:
+        working-directory: games/${{ matrix.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: games/${{ matrix.game }}/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
