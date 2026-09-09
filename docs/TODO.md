@@ -1,5 +1,27 @@
 # TODO
 
+## 2026-09-09 6作品の検証・PR作成
+
+- [x] 6作品全てで `npm ci` / lint / typecheck / vitest / build を実行し成功を確認（339テスト全通過）
+- [x] `playwright.config.ts` の `webServer.url` / `baseURL` が固定で `localhost:5174` になっており、
+  実際の `npm run dev` のポート（color-match:5175 / fist-legend:5176 / karma-quest:5177 / sangoku-tap:5178）と
+  食い違ってe2eが起動タイムアウトするバグを発見・修正（4ファイル）。side-scrollerとpotion-workshopは元々一致していた
+- [x] 上記4作品（color-match/fist-legend/karma-quest/sangoku-tap）は`e2e/`ディレクトリ自体が未作成でテストが無い
+  ことを確認（新たなバグではない、単に未着手）
+- [x] side-scrollerのe2e（3件）は全て成功
+- [ ] **重大: potion-workshopのe2e「進行状況がlocalStorageに自動セーブされる」が失敗、原因はテストの座標ミスではなく
+  実際のクリックがブラウザ実行時（Playwright/Chromium, WebGL）で全く反映されない不具合。** 錬金術師キャラ（またはフォール
+  バックのBrewボタン）を実座標でクリックしても`onBrewTap`が一切呼ばれず、`totalClicks`/`totalBrewed`が0のまま。
+  デバッグの結果、Phaserの`gameobjectdown`が本来ヒットするはずのないx=560の設備カードContainer（`makeGeneratorCard`で
+  `setInteractive(new Phaser.Geom.Rectangle(...))`）に誤って配送されており、クリック位置(159,199)がそのContainerの
+  ワールド座標のヒット領域(355-765, 174-228)の外であるにもかかわらず選ばれてしまう。単純な最小構成（同バージョンの
+  Phaser 4.2.1 + 単一Imageのinteractive）では正常に動作することを確認済みなので、Phaser本体の一般的な不具合ではなく、
+  このシーン固有の要因（複数のinteractiveなContainerが動的に生成される状況でのヒットテスト）が疑われる。実機・実ブラウザ
+  でも同様に発生している可能性があり、**プレイヤーがタップしてもポーションが増えない**という致命的な不具合の恐れがある。
+  次セッションで要調査・要修正（`games/potion-workshop/src/scenes/IdleScene.ts` の `buildBrewArea`/`makeGeneratorCard`
+  周辺、Phaserのバージョンダウングレードも選択肢）
+- [ ] スマートフォン実機・本番ビルド（`npx serve`等）でも上記クリック不具合が再現するか確認
+
 ## 2026-09-07 mainとの統合（今回）
 
 - [x] 最新mainのキャラ拡大・しゃがみ修正・設備カード・OGPを保持し、改修ZIPを統合

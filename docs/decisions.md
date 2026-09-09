@@ -1,5 +1,22 @@
 # 設計判断ログ
 
+## 2026-09-09
+- 6作品全ての `npm ci` / lint / typecheck / vitest（339件）/ build を再実行し成功を確認。
+- `playwright.config.ts` の `webServer.url`/`baseURL` が4作品（color-match/fist-legend/karma-quest/sangoku-tap）で
+  実際の `vite --port` と食い違い（全て`5174`固定）、e2eが起動待ちタイムアウトしていたバグを修正。side-scroller/
+  potion-workshopは元々一致していたため影響なし。
+- 上記4作品は`e2e/`ディレクトリ自体が未作成（テストが存在しない）ことを確認。設定バグの修正のみ行い、テスト新規作成は
+  スコープ外として見送った。
+- potion-workshopのe2e「進行状況がlocalStorageに自動セーブされる」の失敗を調査。テストの座標指定ミスではなく、
+  ビルド後の本番相当（`npx serve`でdist配信）でも再現する実際の不具合と判明: 錬金術師キャラ/フォールバックのBrewボタンを
+  クリックしても`onBrewTap`が呼ばれず`potions`/`totalClicks`が増えない。Phaserの`gameobjectdown`がクリック座標
+  (159,199)から遠い設備カードContainer（ワールド座標355-765,174-228の`makeGeneratorCard`製Container）に誤配送されて
+  いることをデバッグで確認済み（`scene.input.on("gameobjectdown", ...)`で実測）。単純な最小構成のPhaser 4.2.1+単一Image
+  では同じ手順で問題が再現しなかったため、Phaser本体の一般的な不具合ではなく本シーン固有の要因（多数の動的Container生成、
+  もしくはPhaser 4.2.1のContainerヒットテストの既知の癖）を疑っている。実機のプレイヤーにも影響し得る重大度と判断し、
+  `docs/TODO.md`に次セッションの要調査事項として記録した（原因未特定のため今回は暫定対応・ロールバックは行わず、
+  現状のコードのまま状況を記録するに留めた）。
+
 ## 2026-09-08
 - 受領した integration.patch（受領ZIP完成コミット f9933bfe、共通基点 078f19ae、base main c0902db）を最新mainに適用し統合。剣戟のキャラ1.5倍拡大・当たり判定・ジャンプ調整・工房の設備カード表示（9月6日分）は保持しつつ、6作品それぞれの改修（カラー：チャレンジ生成、拳：対戦相手ロジック、カルマ：伝説称号、工房：契約、三国：遠征/キャンペーン地図・新規キャラ絵、剣戟：スタイル選択）を合流させた。
 - 統合後、6作品全てで lint・typecheck・vitest・build を実行し全て成功（合計 339 テスト）。Playwright + Chromiumで6作品のタイトル/主要プレイ画面を目視確認。
