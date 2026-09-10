@@ -2,45 +2,27 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>カラーマッチ | Color Match</title>
-    <meta
-      name="description"
-      content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。"
-    />
-
+    <meta name="description" content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://b-w-hiroki.github.io/AI_project002/color-match/" />
     <meta property="og:title" content="カラーマッチ | Color Match" />
-    <meta
-      property="og:description"
-      content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。"
-    />
+    <meta property="og:description" content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。" />
     <meta property="og:image" content="https://b-w-hiroki.github.io/AI_project002/color-match/og-image.png" />
-
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="カラーマッチ | Color Match" />
-    <meta
-      name="twitter:description"
-      content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。"
-    />
+    <meta name="twitter:description" content="文字の色・意味とカードの色を素早く見分ける、認知力と反応速度を試すカードゲーム。ブラウザですぐ遊べます。" />
     <meta name="twitter:image" content="https://b-w-hiroki.github.io/AI_project002/color-match/og-image.png" />
-
     <style>
-      html, body { margin: 0; background: #fdf6e3; height: 100%; touch-action: none; overscroll-behavior: none; }
-      body {
-        display: grid;
-        place-items: center;
-        overflow: hidden;
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-      }
-      #game canvas { max-width: 100vw; max-height: 100vh; touch-action: none; }
+      html, body { margin:0; background:#fdf6e3; height:100%; touch-action:none; overscroll-behavior:none; }
+      body { display:grid; place-items:center; overflow:hidden; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+      #game canvas { max-width:100vw; max-height:100vh; touch-action:none; }
+      .hub-return { position:fixed; z-index:9999; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); min-height:38px; display:flex; align-items:center; padding:0 12px; border:1px solid rgba(40,40,46,.18); border-radius:999px; background:rgba(255,255,255,.78); backdrop-filter:blur(12px); color:#252631; text-decoration:none; font:800 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:.04em; touch-action:manipulation; box-shadow:0 8px 24px rgba(49,45,30,.12); }
     </style>
   </head>
   <body>
+    <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る">← GAME LAB</a>
     <div id="game"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
