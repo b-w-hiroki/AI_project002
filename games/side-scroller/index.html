@@ -15,16 +15,32 @@
     <meta name="twitter:description" content="剣で敵を倒しながらゴールを目指す横スクロールアクション。ブラウザですぐ遊べます。" />
     <meta name="twitter:image" content="https://b-w-hiroki.github.io/AI_project002/side-scroller/og-image.png" />
     <style>
-      html, body { margin:0; background:#0d0d14; height:100%; touch-action:none; overscroll-behavior:none; }
-      body { display:grid; place-items:center; overflow:hidden; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
-      #game canvas { max-width:100vw; max-height:100vh; touch-action:none; }
-      .hub-return { position:fixed; z-index:9999; top:calc(10px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); display:flex; align-items:center; min-height:38px; padding:0 12px; border:1px solid rgba(255,255,255,.24); border-radius:999px; background:rgba(8,10,16,.66); backdrop-filter:blur(12px); color:#fff; text-decoration:none; font:800 12px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:.04em; box-shadow:0 10px 28px rgba(0,0,0,.22); touch-action:manipulation; }
-      .hub-return:hover { background:rgba(8,10,16,.86); border-color:rgba(255,255,255,.42); }
+      :root { --accent:255,107,138; --shell:#080a10; --shell2:#151d2b; --chrome:#f5fbff; }
+      * { box-sizing:border-box; }
+      html, body { margin:0; height:100%; touch-action:none; overscroll-behavior:none; }
+      body { display:grid; place-items:center; overflow:hidden; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background:radial-gradient(circle at 50% 42%,rgba(var(--accent),.15),transparent 36%),linear-gradient(150deg,var(--shell2),var(--shell) 58%,#040509); color:var(--chrome); }
+      body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.12; background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px); background-size:32px 32px; mask-image:radial-gradient(circle at center,#000 20%,transparent 78%); }
+      #game { position:relative; line-height:0; filter:drop-shadow(0 18px 42px rgba(0,0,0,.5)); }
+      #game canvas { display:block; max-width:calc(100vw - 18px); max-height:calc(100vh - 82px); touch-action:none; border-radius:14px; }
+      #game::before { content:""; position:absolute; z-index:20; pointer-events:none; inset:-6px; border-radius:20px; border:1px solid rgba(var(--accent),.82); box-shadow:0 0 0 2px rgba(255,255,255,.05),0 0 36px rgba(var(--accent),.2),inset 0 0 22px rgba(var(--accent),.08); }
+      #game::after { content:""; position:absolute; z-index:19; pointer-events:none; inset:0; border-radius:14px; background:linear-gradient(180deg,rgba(255,255,255,.045),transparent 13%,transparent 83%,rgba(0,0,0,.2)); box-shadow:inset 0 0 30px rgba(0,0,0,.22); }
+      .game-rail { position:fixed; z-index:9998; left:50%; transform:translateX(-50%); pointer-events:none; display:flex; align-items:center; gap:9px; min-height:30px; max-width:calc(100vw - 180px); padding:0 13px; border:1px solid rgba(var(--accent),.42); border-radius:999px; background:rgba(7,9,14,.74); backdrop-filter:blur(12px); box-shadow:0 8px 26px rgba(0,0,0,.28); color:#f4f9ff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font:800 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans",sans-serif; letter-spacing:.05em; }
+      .game-rail--top { top:calc(8px + env(safe-area-inset-top)); }
+      .game-rail--bottom { bottom:calc(8px + env(safe-area-inset-bottom)); color:#c7d2df; }
+      .rail-kicker { color:rgb(var(--accent)); font-size:10px; letter-spacing:.14em; }
+      .rail-title { color:#fff; font-size:12px; }
+      .status-dot { width:7px; height:7px; flex:0 0 auto; border-radius:50%; background:rgb(var(--accent)); box-shadow:0 0 12px rgba(var(--accent),.9); animation:pulse 1.05s ease-in-out infinite alternate; }
+      @keyframes pulse { from { opacity:.45; transform:scale(.78); } to { opacity:1; transform:scale(1.08); } }
+      .hub-return { position:fixed; z-index:9999; top:calc(8px + env(safe-area-inset-top)); left:calc(8px + env(safe-area-inset-left)); min-height:34px; display:flex; align-items:center; padding:0 11px; border:1px solid rgba(255,255,255,.18); border-radius:999px; background:rgba(7,9,14,.74); backdrop-filter:blur(12px); color:#fff; text-decoration:none; font:800 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:.04em; touch-action:manipulation; }
+      @media (max-width:680px) { .game-rail--top { left:auto; right:8px; transform:none; max-width:calc(100vw - 125px); } .game-rail--bottom { max-width:calc(100vw - 20px); } #game canvas { max-width:calc(100vw - 10px); } }
+      @media (max-height:520px) { .game-rail--bottom { display:none; } #game canvas { max-height:calc(100vh - 48px); } }
     </style>
   </head>
   <body>
     <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る">← GAME LAB</a>
+    <div class="game-rail game-rail--top" aria-hidden="true"><span class="status-dot"></span><span class="rail-kicker">HUNT</span><span class="rail-title">剣戟の森</span></div>
     <div id="game"></div>
+    <div class="game-rail game-rail--bottom" aria-hidden="true"><span class="rail-kicker">MISSION</span><span>予兆を読み、回避して反撃せよ</span></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
