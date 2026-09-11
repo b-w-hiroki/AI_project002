@@ -4,8 +4,6 @@ import { IdleScene } from "./scenes/IdleScene";
 
 const WALL_CLOCK_SAVE_INTERVAL_MS = 5_000;
 
-type PersistableScene = IdleScene & { state: GameState };
-
 /**
  * IdleScene の既存オートセーブは Phaser の frame delta 累積を使うため、
  * ソフトウェア描画・省電力・バックグラウンド復帰など極端に低FPSの環境では
@@ -30,7 +28,7 @@ export function installWallClockPersistence(): void {
     }
     if (now - previous < WALL_CLOCK_SAVE_INTERVAL_MS) return;
 
-    const state = (this as PersistableScene).state;
+    const state = (this as unknown as { state: GameState }).state;
     save(state, localStorage, now);
     lastSavedAt.set(this, now);
   };
