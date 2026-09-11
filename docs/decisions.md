@@ -1,5 +1,25 @@
 # 設計判断ログ
 
+## 2026-09-11
+- 2026-09-09に発見したpotion-workshopの「タップしてもポーションが増えない」重大バグの根本原因を特定・修正。
+  `theme.ts`の`makeActionCard`/`makeGeneratorCard`はContainerの当たり判定を中心基準の矩形
+  `new Phaser.Geom.Rectangle(-w/2, -h/2, w, h)`で定義していたが、PhaserのContainerは
+  `displayOriginX`/`displayOriginY`が常に`width`/`height`の半分を返す仕様（Phaser本体のソースコメントに
+  「入力/物理用の内部値、変更禁止」とある意図的な固定値）になっており、ヒットテスト時にローカル座標へ
+  さらに`+w/2,+h/2`が加算されてしまう。結果、中心基準で定義したはずの矩形が実際には描画位置から丸ごと
+  (w/2, h/2)分ずれた領域でしか反応しなくなっていた。設備カード（`makeGeneratorCard`、x=560・幅410px）は
+  ズレの結果、画面左側の錬金術師タップ領域(x=160付近)まで当たり判定が食い込み、本来ヒットするはずの
+  マスコットの代わりにクリックを奪っていた。修正は該当2箇所の矩形を原点基準`new Phaser.Geom.Rectangle(0, 0, w, h)`
+  に変更するのみ（Graphics製ボタンの`makeRoundedRect`は`displayOriginX`が0のため元の中心基準のままで正しく、
+  変更不要）。
+- 前回セッション終了後、別セッションが`main.ts`に`Phaser.GameObjects.Container.prototype.setInteractive`を
+  グローバルにmonkey-patchして同じ症状に対症療法的に対応していたことが、今回ブランチをmainから作り直した際に
+  判明した。原因究明の結果が完全に一致したため、保守性の低いmonkey-patchは削除し、各呼び出し箇所を直接修正する
+  今回の方法に一本化した。
+- 修正後、potion-workshopのlint/typecheck/vitest（73件）/build、および元々失敗していたe2e（3件、クリックで
+  ポーション増加・localStorage自動セーブ）、さらに本番ビルド（`npx serve`でdist配信）でのクリック動作も
+  全て成功することを確認した。
+
 ## 2026-09-09
 - 6作品全ての `npm ci` / lint / typecheck / vitest（339件）/ build を再実行し成功を確認。
 - `playwright.config.ts` の `webServer.url`/`baseURL` が4作品（color-match/fist-legend/karma-quest/sangoku-tap）で
