@@ -4,16 +4,12 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "games/potion-workshop/**"
-      - "games/side-scroller/**"
-      - "games/sangoku-tap/**"
+      - "games/**"
       - ".github/workflows/e2e.yml"
   push:
     branches: [main]
     paths:
-      - "games/potion-workshop/**"
-      - "games/side-scroller/**"
-      - "games/sangoku-tap/**"
+      - "games/**"
       - ".github/workflows/e2e.yml"
   workflow_dispatch:
 
@@ -26,7 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [potion-workshop, side-scroller, sangoku-tap]
+        game:
+          - color-match
+          - fist-legend
+          - karma-quest
+          - potion-workshop
+          - sangoku-tap
+          - side-scroller
     defaults:
       run:
         working-directory: games/${{ matrix.game }}
