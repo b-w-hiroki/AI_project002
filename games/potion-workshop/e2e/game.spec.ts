@@ -4,6 +4,7 @@ const GAME_W = 800;
 const GAME_H = 760;
 const BREW_X = 160;
 const BREW_Y = 260;
+const SAVE_KEY = "ai_project002_save_v1";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -35,9 +36,17 @@ test("調合ボタンをクリックするとポーションが増える（画�
 
 test("進行状況が localStorage に自動セーブされる", async ({ page }) => {
   await clickBrew(page);
-  await page.waitForTimeout(5_500); // セーブ間隔5秒を待つ
-  const raw = await page.evaluate(() => localStorage.getItem("ai_project002_save_v1"));
-  expect(raw).not.toBeNull();
+
+  // Scene側はフレームdeltaの累積5秒で保存する。ソフトウェア描画のCIでは低FPSになり、
+  // 実時間5.5秒より遅れて閾値へ届くことがあるため、固定sleepではなく保存発火を待つ。
+  await expect
+    .poll(
+      () => page.evaluate((key) => localStorage.getItem(key), SAVE_KEY),
+      { timeout: 15_000, intervals: [500, 1_000, 1_500] },
+    )
+    .not.toBeNull();
+
+  const raw = await page.evaluate((key) => localStorage.getItem(key), SAVE_KEY);
   const data = JSON.parse(raw!);
   expect(data.state.totalBrewed).toBeGreaterThanOrEqual(1);
 });
