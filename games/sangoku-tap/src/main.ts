@@ -1,10 +1,12 @@
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 import Phaser from "phaser";
 import { initCrazyGames } from "./platform/crazygames";
+import { installSangokuPresentation } from "./presentation";
 import { GameScene } from "./scenes/GameScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
+installSangokuPresentation();
 
 new Phaser.Game({
   type: Phaser.AUTO,
