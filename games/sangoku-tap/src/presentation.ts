@@ -1,12 +1,68 @@
 import Phaser from "phaser";
+import { victoryChance, type Expedition } from "./logic/expedition";
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 
 type ExpeditionRuntime = Phaser.Scene & {
-  run: { step: number; status: string } | null;
+  view?: "camp" | "formation" | "road" | "result";
+  run: Expedition | null;
 };
+
+type RoadHud = {
+  root: Phaser.GameObjects.Container;
+  frame: Phaser.GameObjects.Graphics;
+  status: Phaser.GameObjects.Text;
+};
+
+const hudByScene = new WeakMap<object, RoadHud>();
 
 function destroyAll(targets: Phaser.GameObjects.GameObject[]): void {
   for (const target of targets) target.destroy();
+}
+
+function ensureRoadHud(scene: ExpeditionRuntime): RoadHud {
+  const cached = hudByScene.get(scene);
+  if (cached) return cached;
+
+  const frame = scene.add.graphics().setScrollFactor(0);
+  const status = scene.add
+    .text(225, 38, "", {
+      fontFamily: "sans-serif",
+      fontSize: "11px",
+      fontStyle: "800",
+      color: "#f7ddae",
+      letterSpacing: 0.5,
+    })
+    .setOrigin(0.5)
+    .setScrollFactor(0);
+  const root = scene.add
+    .container(0, 0, [frame, status])
+    .setScrollFactor(0)
+    .setDepth(170)
+    .setVisible(false);
+  const hud = { root, frame, status };
+  hudByScene.set(scene, hud);
+  return hud;
+}
+
+function refreshRoadHud(scene: ExpeditionRuntime): void {
+  const hud = ensureRoadHud(scene);
+  const run = scene.run;
+  const active = scene.view === "road" && !!run && run.status === "active";
+  hud.root.setVisible(active);
+  if (!active || !run) return;
+
+  const win = Math.round(victoryChance(run) * 100);
+  const secured = Math.floor(run.loot / 2);
+  const boss = run.step === 9;
+  const next = run.fork ? "ROUTE CHOICE" : boss ? "BOSS GATE" : `NEXT ${run.step + 1}/10`;
+
+  hud.frame.clear();
+  hud.frame.fillStyle(0x0e181d, 0.94);
+  hud.frame.fillRoundedRect(133, 25, 184, 26, 10);
+  hud.frame.lineStyle(1.2, boss ? 0xe2a566 : 0xc5a46e, boss ? 0.9 : 0.55);
+  hud.frame.strokeRoundedRect(133, 25, 184, 26, 10);
+  hud.status.setText(`${next}  ·  WIN ${win}%  ·  ${run.loot}/${secured}銭`);
+  hud.status.setColor(boss ? "#ffe0aa" : "#f7ddae");
 }
 
 function playBossIntro(scene: ExpeditionRuntime): void {
@@ -115,22 +171,27 @@ function playBossResolution(scene: ExpeditionRuntime, cleared: boolean): void {
  * private メソッドへのラップは演出レイヤーに閉じ込め、ゲーム本体の差分を小さく保つ。
  */
 export function installSangokuPresentation(): void {
-  const proto = ExpeditionScene.prototype as unknown as object;
+  const proto = ExpeditionScene.prototype as unknown as Record<string, unknown>;
   const originalEntrance = Reflect.get(proto, "bossEntrance") as
     | ((this: ExpeditionScene) => void)
     | undefined;
   const originalAdvance = Reflect.get(proto, "advance") as
     | ((this: ExpeditionScene) => void)
     | undefined;
+  const originalRender = Reflect.get(proto, "render") as
+    | ((this: ExpeditionScene) => void)
+    | undefined;
 
-  if (originalEntrance) {
+  if (originalEntrance && !Reflect.get(proto, "__momentPassBossEntrance")) {
+    Reflect.set(proto, "__momentPassBossEntrance", originalEntrance);
     Reflect.set(proto, "bossEntrance", function (this: ExpeditionScene) {
       originalEntrance.call(this);
       playBossIntro(this as unknown as ExpeditionRuntime);
     });
   }
 
-  if (originalAdvance) {
+  if (originalAdvance && !Reflect.get(proto, "__momentPassAdvance")) {
+    Reflect.set(proto, "__momentPassAdvance", originalAdvance);
     Reflect.set(proto, "advance", function (this: ExpeditionScene) {
       const runtime = this as unknown as ExpeditionRuntime;
       const wasBoss = runtime.run?.step === 9;
@@ -138,6 +199,14 @@ export function installSangokuPresentation(): void {
       if (wasBoss && runtime.run) {
         sceneResolution(runtime);
       }
+    });
+  }
+
+  if (originalRender && !Reflect.get(proto, "__hudPassRender")) {
+    Reflect.set(proto, "__hudPassRender", originalRender);
+    Reflect.set(proto, "render", function (this: ExpeditionScene) {
+      originalRender.call(this);
+      refreshRoadHud(this as unknown as ExpeditionRuntime);
     });
   }
 }
