@@ -1,9 +1,11 @@
 import Phaser from "phaser";
 import { installColorMatchPresentation } from "./presentation";
+import { installColorConceptArtPass } from "./conceptArt";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
 installColorMatchPresentation();
+installColorConceptArtPass();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
