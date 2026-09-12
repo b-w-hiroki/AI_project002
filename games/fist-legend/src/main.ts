@@ -1,6 +1,9 @@
 import Phaser from "phaser";
+import { installFistLegendPresentation } from "./presentation";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
+
+installFistLegendPresentation();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();

@@ -122,7 +122,7 @@ export interface ThemedButton {
 
 /**
  * 角丸＋ホバー/押下フィードバック付きのボタン。(x, y) は中心。
- * pointerover/out/down/up で塗りを切り替え、押下時はわずかに縮小してタップ感を出す。
+ * 影・上面ハイライト・底面エッジを重ね、アクションゲームの押せるUI感を強める。
  */
 export function makeButton(
   scene: Phaser.Scene,
@@ -136,25 +136,35 @@ export function makeButton(
 ): ThemedButton {
   const radius = options.radius ?? 10;
   const fill = options.fillColor ?? 0xe4eef8;
-  const hover = options.hoverColor ?? blend(fill, 0x8ecbf5, 0.4);
-  const press = options.pressColor ?? blend(fill, 0x000000, 0.12);
+  const hover = options.hoverColor ?? blend(fill, 0x8ecbf5, 0.46);
+  const press = options.pressColor ?? blend(fill, 0x59708d, 0.16);
   const disabledColor = options.disabledColor ?? 0xdfe6ec;
 
   const g = scene.add.graphics();
-  const draw = (color: number, alpha = 1) => {
+  const draw = (color: number, alpha = 1, active = false) => {
     g.clear();
+    g.fillStyle(THEME.shadow, active ? 0.22 : 0.34);
+    g.fillRoundedRect(-w / 2 + 1, -h / 2 + 4, w - 2, h, radius);
     g.fillStyle(color, alpha);
     g.fillRoundedRect(-w / 2, -h / 2, w, h, radius);
-    g.lineStyle(1.5, options.borderColor ?? 0x9ecbef, 0.6);
+    g.fillStyle(0xffffff, active ? 0.5 : 0.68);
+    g.fillRoundedRect(-w / 2 + 2, -h / 2 + 2, w - 4, Math.max(6, h * 0.3), radius * 0.72);
+    g.fillStyle(0x56789c, active ? 0.08 : 0.13);
+    g.fillRoundedRect(-w / 2 + 3, h / 2 - 7, w - 6, 5, 3);
+    g.lineStyle(active ? 2.5 : 2, options.borderColor ?? THEME.panelBorder, active ? 1 : 0.86);
     g.strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+    g.lineStyle(1, 0xffffff, active ? 0.62 : 0.84);
+    g.strokeRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, Math.max(4, radius - 3));
   };
   draw(fill);
 
   const text = scene.add
-    .text(0, 0, label, {
+    .text(0, -1, label, {
+      fontFamily: FONT_FAMILY,
       fontSize: options.fontSize ?? "14px",
       color: options.textColor ?? THEME.textPrimary,
-      fontStyle: options.fontStyle ?? "600",
+      fontStyle: options.fontStyle ?? "800",
+      letterSpacing: 0.3,
     })
     .setOrigin(0.5);
 
@@ -162,23 +172,23 @@ export function makeButton(
   let enabled = true;
 
   container.setInteractive({ useHandCursor: true });
-  container.on("pointerover", () => enabled && draw(hover));
+  container.on("pointerover", () => enabled && draw(hover, 1, true));
   container.on("pointerout", () => enabled && draw(fill));
   container.on("pointerdown", () => {
     if (!enabled) return;
-    draw(press);
-    scene.tweens.add({ targets: container, scale: 0.96, duration: 60, yoyo: true });
+    draw(press, 1, true);
+    scene.tweens.add({ targets: container, scaleX: 0.965, scaleY: 0.94, duration: 55, yoyo: true, ease: "Quad.easeOut" });
     onClick();
   });
-  container.on("pointerup", () => enabled && draw(hover));
+  container.on("pointerup", () => enabled && draw(hover, 1, true));
 
   return {
     container,
     setLabel: (t: string) => text.setText(t),
     setEnabled: (want: boolean) => {
       enabled = want;
-      draw(want ? fill : disabledColor);
-      text.setAlpha(want ? 1 : 0.5);
+      draw(want ? fill : disabledColor, want ? 1 : 0.84);
+      text.setAlpha(want ? 1 : 0.45);
       container.disableInteractive();
       if (want) container.setInteractive({ useHandCursor: true });
     },
