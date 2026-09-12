@@ -1,7 +1,16 @@
 import Phaser from "phaser";
+import {
+  GENERATORS,
+  PRESTIGE_UNLOCK,
+  formatNumber,
+  generatorCost,
+  productionPerSec,
+  type GameState,
+} from "./logic/economy";
 import { IdleScene } from "./scenes/IdleScene";
 
 type IdleRuntime = Phaser.Scene & {
+  state?: GameState;
   potionText?: Phaser.GameObjects.Text;
 };
 
@@ -10,7 +19,16 @@ type TapState = {
   streak: number;
 };
 
+interface WorkshopHud {
+  root: Phaser.GameObjects.Container;
+  frame: Phaser.GameObjects.Graphics;
+  rateText: Phaser.GameObjects.Text;
+  goalText: Phaser.GameObjects.Text;
+  prestigeText: Phaser.GameObjects.Text;
+}
+
 const tapState = new WeakMap<object, TapState>();
+const hudByScene = new WeakMap<object, WorkshopHud>();
 const BURST_OFFSETS = [
   { x: -34, y: -12, r: 5 },
   { x: -19, y: -31, r: 4 },
@@ -18,6 +36,74 @@ const BURST_OFFSETS = [
   { x: 25, y: -26, r: 4 },
   { x: 36, y: -5, r: 5 },
 ] as const;
+
+function ensureWorkshopHud(scene: IdleRuntime): WorkshopHud {
+  const cached = hudByScene.get(scene);
+  if (cached) return cached;
+
+  const frame = scene.add.graphics();
+  const rateText = scene.add
+    .text(28, 111, "", {
+      fontFamily: "sans-serif",
+      fontSize: "12px",
+      fontStyle: "800",
+      color: "#315f55",
+    })
+    .setOrigin(0, 0.5);
+  const goalText = scene.add
+    .text(292, 111, "", {
+      fontFamily: "sans-serif",
+      fontSize: "11px",
+      fontStyle: "800",
+      color: "#557064",
+    })
+    .setOrigin(1, 0.5);
+  const prestigeText = scene.add
+    .text(160, 132, "", {
+      fontFamily: "sans-serif",
+      fontSize: "10px",
+      fontStyle: "800",
+      color: "#7958a5",
+    })
+    .setOrigin(0.5);
+
+  const root = scene.add
+    .container(0, 0, [frame, rateText, goalText, prestigeText])
+    .setDepth(72);
+  const hud = { root, frame, rateText, goalText, prestigeText };
+  hudByScene.set(scene, hud);
+  return hud;
+}
+
+function refreshWorkshopHud(scene: IdleRuntime): void {
+  const state = scene.state;
+  if (!state) return;
+  const hud = ensureWorkshopHud(scene);
+  const perSec = productionPerSec(state);
+  const next = GENERATORS.reduce((best, generator) => {
+    const cost = generatorCost(generator, state.counts[generator.id] ?? 0);
+    if (!best || cost < best.cost) return { generator, cost };
+    return best;
+  }, null as { generator: (typeof GENERATORS)[number]; cost: number } | null);
+  const prestigeProgress = Phaser.Math.Clamp(state.totalBrewed / PRESTIGE_UNLOCK, 0, 1);
+
+  hud.frame.clear();
+  hud.frame.fillStyle(0xffffff, 0.88);
+  hud.frame.fillRoundedRect(14, 99, 292, 45, 14);
+  hud.frame.lineStyle(1.5, 0x87cbb7, 0.6);
+  hud.frame.strokeRoundedRect(14, 99, 292, 45, 14);
+  hud.frame.fillStyle(0xdcd3ef, 0.9);
+  hud.frame.fillRoundedRect(28, 137, 264, 4, 2);
+  hud.frame.fillStyle(prestigeProgress >= 1 ? 0xc58cff : 0x9d5cff, 1);
+  hud.frame.fillRoundedRect(28, 137, 264 * prestigeProgress, 4, 2);
+
+  hud.rateText.setText(`PRODUCTION  +${formatNumber(perSec)}/s  ·  REP ${state.reputation}`);
+  hud.goalText.setText(next ? `NEXT  ${next.generator.name} ${formatNumber(next.cost)}` : "NEXT  ALL BUILT");
+  hud.prestigeText.setText(
+    prestigeProgress >= 1 ? "PRESTIGE READY" : `PRESTIGE ${Math.floor(prestigeProgress * 100)}%`,
+  );
+  hud.prestigeText.setColor(prestigeProgress >= 1 ? "#8a35c9" : "#7958a5");
+}
 
 function brewBurst(scene: IdleRuntime): void {
   const ring = scene.add
@@ -105,7 +191,7 @@ function recordTap(scene: IdleRuntime): number {
  * 連打が続くと短いBREW表示を出し、「押す→増える」の手応えを明確にする。
  */
 export function installPotionPresentation(): void {
-  const proto = IdleScene.prototype as unknown as object;
+  const proto = IdleScene.prototype as unknown as Record<string, unknown>;
   const originalBrewTap = Reflect.get(proto, "onBrewTap") as
     | ((
         this: IdleScene,
@@ -113,16 +199,28 @@ export function installPotionPresentation(): void {
         glow?: Phaser.GameObjects.Arc,
       ) => void)
     | undefined;
-  if (!originalBrewTap) return;
+  if (originalBrewTap && !Reflect.get(proto, "__hudPassBrewTap")) {
+    Reflect.set(proto, "__hudPassBrewTap", originalBrewTap);
+    Reflect.set(proto, "onBrewTap", function (
+      this: IdleScene,
+      bounceTargets: Phaser.GameObjects.GameObject[],
+      glow?: Phaser.GameObjects.Arc,
+    ) {
+      originalBrewTap.call(this, bounceTargets, glow);
+      const runtime = this as unknown as IdleRuntime;
+      brewBurst(runtime);
+      showStreak(runtime, recordTap(runtime));
+    });
+  }
 
-  Reflect.set(proto, "onBrewTap", function (
-    this: IdleScene,
-    bounceTargets: Phaser.GameObjects.GameObject[],
-    glow?: Phaser.GameObjects.Arc,
-  ) {
-    originalBrewTap.call(this, bounceTargets, glow);
-    const runtime = this as unknown as IdleRuntime;
-    brewBurst(runtime);
-    showStreak(runtime, recordTap(runtime));
-  });
+  const originalUpdate = Reflect.get(proto, "update") as
+    | ((this: IdleScene, time: number, delta: number) => void)
+    | undefined;
+  if (!Reflect.get(proto, "__hudPassUpdate")) {
+    Reflect.set(proto, "__hudPassUpdate", originalUpdate ?? (() => undefined));
+    Reflect.set(proto, "update", function (this: IdleScene, time: number, delta: number) {
+      originalUpdate?.call(this, time, delta);
+      refreshWorkshopHud(this as unknown as IdleRuntime);
+    });
+  }
 }

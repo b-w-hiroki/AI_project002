@@ -1,12 +1,117 @@
 import Phaser from "phaser";
+import { FACTION_LABEL, dominantFaction, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type KarmaScene = Phaser.Scene & {
+  phase?: "title" | "karma" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
+  runEvaluation?: number;
+  karma?: KarmaState;
   mandate?: { label?: string };
 };
+
+interface JourneyHud {
+  root: Phaser.GameObjects.Container;
+  frame: Phaser.GameObjects.Graphics;
+  yearText: Phaser.GameObjects.Text;
+  phaseText: Phaser.GameObjects.Text;
+  evalText: Phaser.GameObjects.Text;
+  factionText: Phaser.GameObjects.Text;
+  mandateText: Phaser.GameObjects.Text;
+}
+
+const hudByScene = new WeakMap<object, JourneyHud>();
+const PHASE_LABEL: Record<string, string> = {
+  karma: "盟約",
+  encounter: "出来事",
+  battle: "討伐",
+  report: "報告",
+};
+
+function ensureJourneyHud(scene: KarmaScene): JourneyHud {
+  const cached = hudByScene.get(scene);
+  if (cached) return cached;
+
+  const frame = scene.add.graphics();
+  const yearText = scene.add
+    .text(22, 22, "", {
+      fontSize: "12px",
+      fontStyle: "900",
+      color: "#f4dd9d",
+      letterSpacing: 1,
+    })
+    .setOrigin(0, 0.5);
+  const phaseText = scene.add
+    .text(225, 22, "", {
+      fontSize: "13px",
+      fontStyle: "900",
+      color: "#f3ead5",
+    })
+    .setOrigin(0.5);
+  const evalText = scene.add
+    .text(428, 22, "", {
+      fontSize: "12px",
+      fontStyle: "900",
+      color: "#f4dd9d",
+    })
+    .setOrigin(1, 0.5);
+  const factionText = scene.add
+    .text(22, 49, "", {
+      fontSize: "11px",
+      fontStyle: "700",
+      color: "#bad0c0",
+    })
+    .setOrigin(0, 0.5);
+  const mandateText = scene.add
+    .text(428, 49, "", {
+      fontSize: "11px",
+      fontStyle: "700",
+      color: "#d9cfba",
+      align: "right",
+    })
+    .setOrigin(1, 0.5)
+    .setMaxLines(1);
+
+  const root = scene.add
+    .container(0, 0, [frame, yearText, phaseText, evalText, factionText, mandateText])
+    .setDepth(1700)
+    .setVisible(false);
+  const hud = { root, frame, yearText, phaseText, evalText, factionText, mandateText };
+  hudByScene.set(scene, hud);
+  return hud;
+}
+
+function refreshJourneyHud(scene: KarmaScene): void {
+  const hud = ensureJourneyHud(scene);
+  const phase = scene.phase ?? "title";
+  const active = phase !== "title" && phase !== "final" && phase !== "transition";
+  hud.root.setVisible(active);
+  if (!active) return;
+
+  const stage = Phaser.Math.Clamp(scene.stage ?? 1, 1, 12);
+  const evaluation = scene.runEvaluation ?? 0;
+  const karma = scene.karma;
+  const dominant = karma ? dominantFaction(karma) : null;
+  const factionLabel = dominant ? FACTION_LABEL[dominant] : "未定";
+  const mandate = scene.mandate?.label ?? "神託を待つ";
+  const shortMandate = mandate.length > 24 ? `${mandate.slice(0, 24)}…` : mandate;
+
+  hud.frame.clear();
+  hud.frame.fillStyle(0x0b1612, 0.94);
+  hud.frame.fillRoundedRect(10, 8, 430, 56, 14);
+  hud.frame.lineStyle(1.5, 0xd9b45a, 0.55);
+  hud.frame.strokeRoundedRect(10, 8, 430, 56, 14);
+  hud.frame.lineStyle(1, 0x8ba394, 0.28);
+  hud.frame.lineBetween(20, 35, 430, 35);
+
+  hud.yearText.setText(`YEAR ${stage}/12`);
+  hud.phaseText.setText(`CURRENT  ${PHASE_LABEL[phase] ?? "旅"}`);
+  hud.evalText.setText(`評価 ${evaluation >= 0 ? "+" : ""}${evaluation}`);
+  hud.factionText.setText(`傾向  ${factionLabel}`);
+  hud.mandateText.setText(`神託  ${shortMandate}`);
+}
 
 function showChapterCard(scene: KarmaScene): void {
   const stage = scene.stage ?? 1;
@@ -136,6 +241,16 @@ export function installKarmaQuestPresentation(): void {
       const accepted = args[0] === true;
       const result = originalChoice.apply(this, args);
       showChoiceEcho(this, accepted);
+      return result;
+    };
+  }
+
+  const originalUpdate = proto.update;
+  if (!proto.__hudPassUpdate) {
+    proto.__hudPassUpdate = originalUpdate ?? (() => undefined);
+    proto.update = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+      const result = originalUpdate?.apply(this, args);
+      refreshJourneyHud(this as KarmaScene);
       return result;
     };
   }

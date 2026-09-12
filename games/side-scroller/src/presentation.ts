@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { bossPhase } from "./logic/style";
+import { type PlayerState } from "./logic/combat";
+import { bossPhase, type CombatStyle } from "./logic/style";
 import { GameScene } from "./scenes/GameScene";
 
 type BossEnemy = {
@@ -10,9 +11,86 @@ type BossEnemy = {
 
 type GameRuntime = Phaser.Scene & {
   enemies: BossEnemy[];
+  wave?: number;
+  waveEnemiesAlive?: number;
+  playerState?: PlayerState;
+  combatStyle?: CombatStyle;
+  status?: string;
 };
 
+interface WaveHud {
+  root: Phaser.GameObjects.Container;
+  frame: Phaser.GameObjects.Graphics;
+  title: Phaser.GameObjects.Text;
+  sub: Phaser.GameObjects.Text;
+}
+
 const lastPhase = new WeakMap<object, string>();
+const hudByScene = new WeakMap<object, WaveHud>();
+
+function ensureWaveHud(scene: GameRuntime): WaveHud {
+  const cached = hudByScene.get(scene);
+  if (cached) return cached;
+
+  const frame = scene.add.graphics().setScrollFactor(0);
+  const title = scene.add
+    .text(400, 18, "", {
+      fontFamily: "sans-serif",
+      fontSize: "13px",
+      fontStyle: "900",
+      color: "#34445d",
+      letterSpacing: 0.5,
+    })
+    .setOrigin(0.5)
+    .setScrollFactor(0);
+  const sub = scene.add
+    .text(400, 40, "", {
+      fontFamily: "sans-serif",
+      fontSize: "10px",
+      fontStyle: "800",
+      color: "#6c7890",
+    })
+    .setOrigin(0.5)
+    .setScrollFactor(0);
+
+  const root = scene.add
+    .container(0, 0, [frame, title, sub])
+    .setScrollFactor(0)
+    .setDepth(120)
+    .setVisible(false);
+  const hud = { root, frame, title, sub };
+  hudByScene.set(scene, hud);
+  return hud;
+}
+
+function refreshWaveHud(scene: GameRuntime): void {
+  const hud = ensureWaveHud(scene);
+  const active = scene.status === "playing";
+  hud.root.setVisible(active);
+  if (!active) return;
+
+  const wave = scene.wave ?? 1;
+  const remaining = Math.max(0, scene.waveEnemiesAlive ?? scene.enemies.length);
+  const player = scene.playerState;
+  const combo = player?.comboStreak ?? 0;
+  const boss = scene.enemies.some((enemy) => enemy.boss);
+  const style = scene.combatStyle === "draw" ? "居合" : "連撃";
+  const objective = boss ? "BOSSを倒せ" : remaining > 0 ? `残敵 ${remaining}` : "WAVE CLEAR";
+
+  hud.frame.clear();
+  hud.frame.fillStyle(0xffffff, 0.9);
+  hud.frame.fillRoundedRect(292, 7, 216, 45, 13);
+  hud.frame.lineStyle(1.5, boss ? 0xe0447a : 0x8a4fd1, boss ? 0.85 : 0.45);
+  hud.frame.strokeRoundedRect(292, 7, 216, 45, 13);
+  if (boss) {
+    hud.frame.fillStyle(0xe0447a, 0.12);
+    hud.frame.fillRoundedRect(296, 11, 208, 37, 10);
+  }
+
+  hud.title.setText(`WAVE ${wave}  ·  ${objective}`);
+  hud.title.setColor(boss ? "#a72f58" : "#34445d");
+  hud.sub.setText(`${style} STYLE  ·  COMBO ×${combo}  ·  SCORE ${player?.score ?? 0}`);
+}
 
 function announce(
   scene: Phaser.Scene,
@@ -106,15 +184,17 @@ function onBossPhase(scene: GameRuntime, enemy: BossEnemy): void {
  * フェーズ切替時だけ生成するため、通常フレームの負荷は最小限に抑える。
  */
 export function installSideScrollerPresentation(): void {
-  const proto = GameScene.prototype as unknown as object;
+  const proto = GameScene.prototype as unknown as Record<string, unknown>;
   const originalUpdateEnemies = Reflect.get(proto, "updateEnemies") as
     | ((this: GameScene) => void)
     | undefined;
-  if (!originalUpdateEnemies) return;
+  if (!originalUpdateEnemies || Reflect.get(proto, "__hudPassUpdateEnemies")) return;
 
+  Reflect.set(proto, "__hudPassUpdateEnemies", originalUpdateEnemies);
   Reflect.set(proto, "updateEnemies", function (this: GameScene) {
     originalUpdateEnemies.call(this);
     const runtime = this as unknown as GameRuntime;
+    refreshWaveHud(runtime);
     const boss = runtime.enemies.find((enemy) => enemy.boss);
     if (!boss) {
       lastPhase.delete(runtime);
