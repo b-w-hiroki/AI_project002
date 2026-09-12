@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const GAME_W = 800;
 const GAME_H = 760;
-const BREW_X = 160;
-const BREW_Y = 260;
+const BREW_X = 205;
+const BREW_Y = 446;
 const SAVE_KEY = "ai_project002_save_v1";
 
 test.beforeEach(async ({ page }) => {
@@ -25,7 +25,7 @@ test("ゲームが起動して canvas が表示される", async ({ page }) => {
   await page.screenshot({ path: "e2e/screenshots/game.png" });
 });
 
-test("調合ボタンをクリックするとポーションが増える（画面が変化する）", async ({ page }) => {
+test("大釜をクリックするとポーションが増える（画面が変化する）", async ({ page }) => {
   const canvas = page.locator("canvas");
   const before = await canvas.screenshot();
   await clickBrew(page);
