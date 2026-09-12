@@ -62,7 +62,7 @@ type UpgradeTarget =
 interface WorkshopConceptUi {
   root: Phaser.GameObjects.Container;
   cauldron: Phaser.GameObjects.Image | Phaser.GameObjects.Arc;
-  magicGlow: Phaser.GameObjects.Arc;
+  magicGlow: Phaser.GameObjects.Ellipse;
   workshopLabel: Phaser.GameObjects.Text;
   repText: Phaser.GameObjects.Text;
   speechText: Phaser.GameObjects.Text;
@@ -283,7 +283,7 @@ function buildConceptUi(scene: IdleRuntime): WorkshopConceptUi {
   const brewCta = text(scene, 205, 523, ja(scene, "ポーション製造  TAP!", "BREW POTION  TAP!"), 14, "#fff7df", "900");
 
   cauldron.on("pointerdown", () => {
-    invoke(scene, "onBrewTap", [cauldron], magicGlow);
+    invoke(scene, "onBrewTap", [cauldron]);
   });
 
   const workshopLabel = text(scene, 462, 124, "", 12, "#82683e", "900").setOrigin(0, 0.5);
