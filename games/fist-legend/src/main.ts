@@ -2,9 +2,11 @@ import Phaser from "phaser";
 import { installFistLegendPresentation } from "./presentation";
 import { installFistConceptArtPass } from "./conceptArt";
 import { installFistVisualPolish } from "./visualPolish";
+import { installResponsiveViewport } from "./responsive";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
+installResponsiveViewport();
 installFistLegendPresentation();
 installFistConceptArtPass();
 installFistVisualPolish();
