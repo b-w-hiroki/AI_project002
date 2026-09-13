@@ -51,6 +51,12 @@
         max-width:calc(100dvw - 10px) !important;
         max-height:calc(100dvh - 10px) !important;
       }
+      /* Landscape is the primary combat view. External page chrome must not cover HP/Wave HUD. */
+      html[data-layout-mode="phone-landscape"] .hub-return,
+      html[data-layout-mode="phone-landscape"] .game-rail--top,
+      html[data-layout-mode="phone-landscape"] .game-rail--bottom {
+        display:none !important;
+      }
     </style>
   </head>
   <body>
