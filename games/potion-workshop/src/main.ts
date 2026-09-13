@@ -5,6 +5,7 @@ import { installWallClockPersistence } from "./persistence";
 import { installPotionPresentation } from "./presentation";
 import { installPotionConceptArtPass } from "./conceptArt";
 import { installPotionVisualPolish } from "./visualPolish";
+import { installPotionMobileLayout } from "./mobileLayout";
 import { IdleScene } from "./scenes/IdleScene";
 
 /**
@@ -16,9 +17,6 @@ import { IdleScene } from "./scenes/IdleScene";
  * 明示しているため、見た目上は右側にある設備カードが左側の錬金術師タップを
  * 奪っていた。Container に限って該当形状を 0..w / 0..h へ正規化し、
  * 描画位置と入力位置を一致させる。
- *
- * theme.ts 側の各カード実装を個別に分岐させず、Phaser 4.2.1 固有の互換処理を
- * エントリポイントへ隔離している。Phaser 更新時に削除・再検証しやすい形にする。
  */
 const containerSetInteractive = Phaser.GameObjects.Container.prototype.setInteractive;
 Phaser.GameObjects.Container.prototype.setInteractive = function (
@@ -40,11 +38,11 @@ Phaser.GameObjects.Container.prototype.setInteractive = function (
   return containerSetInteractive.call(this, hitArea as never, hitAreaCallback, dropZone);
 };
 
-// CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
 installPotionPresentation();
 installPotionConceptArtPass();
 installPotionVisualPolish();
+installPotionMobileLayout();
 installWallClockPersistence();
 
 const game = new Phaser.Game({
@@ -63,4 +61,11 @@ const game = new Phaser.Game({
   scene: [IdleScene],
 });
 
-installResponsiveGame(game, { baseWidth: 800, baseHeight: 760 });
+installResponsiveGame(game, {
+  baseWidth: 800,
+  baseHeight: 760,
+  surface: {
+    portrait: { width: 450, height: 800 },
+    landscape: { width: 800, height: 450 },
+  },
+});
