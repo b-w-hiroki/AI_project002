@@ -16,14 +16,22 @@ async function clickGamePoint(page: Page, x: number, y: number): Promise<void> {
   });
 }
 
+async function clickCanvasRatio(page: Page, xRatio: number, yRatio: number): Promise<void> {
+  const canvas = page.locator("canvas");
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("canvas bounds unavailable");
+  await page.mouse.click(box.x + box.width * xRatio, box.y + box.height * yRatio);
+}
+
 async function enterBattle(page: Page): Promise<void> {
   // LoadoutScene: ステージ開始は論理座標 (400, 545)。
   await clickGamePoint(page, 400, 545);
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(700);
 
-  // GameScene開始直後の型選択では左側（連撃の型）を選ぶ。
-  // Responsive適用後も zone の中心は論理座標 (220, 320) 付近。
-  await clickGamePoint(page, 220, 320);
+  // Phone向け型選択の左カード中央付近をCSS実寸ベースで押す。
+  // PhaserのScale.resize直後はcanvas内部サイズとCSS表示サイズの更新タイミングがずれるため、
+  // 論理座標ではなく表示中canvasの比率で選択する。
+  await clickCanvasRatio(page, 0.3, 0.6);
   await page.waitForTimeout(700);
 }
 
