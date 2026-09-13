@@ -419,7 +419,10 @@ export function makeActionCard(
 
   const container = scene.add.container(x, y, [bg, disc, icon, title, sub, pill, costText]);
   container.setSize(w, h);
-  container.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+  // Container#displayOriginX/Y は常に width/height の半分を返す仕様（Phaser内部の物理/入力用の固定値）のため、
+  // ヒットテスト時にローカル座標へ +w/2,+h/2 が加算される。中心基準(-w/2,-h/2,w,h)で矩形を定義すると
+  // 実際の当たり判定がその分ずれてしまうため、原点基準(0,0,w,h)で定義して打ち消す必要がある。
+  container.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
   if (container.input) container.input.cursor = "pointer";
 
   let mood: CardMood = "idle";
@@ -630,7 +633,9 @@ export function makeGeneratorCard(
 
   const container = scene.add.container(x, y, [bg, disc, icon, badgeBg, badgeText, name, rate, pill, costText]);
   container.setSize(w, h);
-  container.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
+  // makeActionCard と同じ理由（Container#displayOriginX/Y が width/height の半分を返す仕様のため）で
+  // 原点基準(0,0,w,h)で矩形を定義する。中心基準だと当たり判定がw/2,h/2分ずれる。
+  container.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
   if (container.input) container.input.cursor = "pointer";
 
   let ready = false;
