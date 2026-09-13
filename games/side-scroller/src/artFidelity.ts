@@ -18,15 +18,25 @@ type Runtime = Phaser.Scene & {
   wave?: number;
 };
 
-type Layer = { root: Phaser.GameObjects.Container; graphics: Phaser.GameObjects.Graphics };
+type Layer = {
+  root: Phaser.GameObjects.Container;
+  graphics: Phaser.GameObjects.Graphics;
+  bossArt?: Phaser.GameObjects.Image;
+};
 const layers = new WeakMap<object, Layer>();
+const BOSS_ART_KEY = "sf-boss-forest-guardian";
 
 function build(scene: Runtime): Layer {
   const cached = layers.get(scene);
   if (cached) return cached;
   const graphics = scene.add.graphics().setScrollFactor(0);
   const root = scene.add.container(0, 0, [graphics]).setScrollFactor(0).setDepth(1770).setVisible(false);
-  const layer = { root, graphics };
+  let bossArt: Phaser.GameObjects.Image | undefined;
+  if (scene.textures.exists(BOSS_ART_KEY)) {
+    bossArt = scene.add.image(0, 0, BOSS_ART_KEY).setScrollFactor(0).setVisible(false);
+    root.add(bossArt);
+  }
+  const layer = { root, graphics, bossArt };
   layers.set(scene, layer);
   return layer;
 }
@@ -89,27 +99,42 @@ function refresh(scene: Runtime): void {
     g.lineStyle(2, 0xb9efff, 0.12 + ougiRatio * 0.34).strokeEllipse(playerPos.x, playerPos.y + 30, 92 * pulse, 26 * pulse);
   }
 
-  // BOSSのフェーズをキャラ周囲の色で読めるようにする。
+  // BOSSは専用キーアートを物理スプライトへ追従させる。判定は元スプライトのままなのでゲーム性は変えない。
   const boss = scene.enemies?.find((enemy) => enemy.boss && enemy.sprite);
   if (boss?.sprite) {
     const pos = screenPoint(scene, boss.sprite);
     const phase = bossPhase(scene.time.now - (boss.bornAt ?? scene.time.now));
     const danger = phase === "charge" ? 0xff3f35 : phase === "tell" ? 0xffb34f : 0x6ee3ff;
-    const radius = phase === "charge" ? 74 : 62;
+    const radius = phase === "charge" ? 88 : 76;
     const pulse = 1 + Math.sin(scene.time.now / (phase === "charge" ? 90 : 180)) * 0.08;
-    g.fillStyle(danger, phase === "charge" ? 0.13 : 0.07).fillCircle(pos.x, pos.y, radius * pulse);
-    g.lineStyle(phase === "charge" ? 5 : 3, danger, phase === "charge" ? 0.72 : 0.45).strokeCircle(pos.x, pos.y, (radius - 8) * pulse);
+
+    if (ui.bossArt) {
+      boss.sprite.setAlpha(0);
+      const size = portrait ? 154 : 176;
+      ui.bossArt
+        .setVisible(true)
+        .setPosition(pos.x, pos.y - (portrait ? 25 : 30))
+        .setDisplaySize(size * pulse, size * pulse)
+        .setAlpha(phase === "charge" ? 1 : 0.96);
+    } else {
+      boss.sprite.setAlpha(1);
+    }
+
+    g.fillStyle(danger, phase === "charge" ? 0.14 : 0.075).fillCircle(pos.x, pos.y - 22, radius * pulse);
+    g.lineStyle(phase === "charge" ? 5 : 3, danger, phase === "charge" ? 0.76 : 0.48).strokeCircle(pos.x, pos.y - 22, (radius - 8) * pulse);
     if (phase === "tell" || phase === "charge") {
-      for (let i = 0; i < 4; i++) {
-        const a = (Math.PI * 2 * i) / 4 + scene.time.now / 700;
-        g.lineStyle(2, danger, 0.5).lineBetween(
-          pos.x + Math.cos(a) * 82,
-          pos.y + Math.sin(a) * 82,
-          pos.x + Math.cos(a) * 104,
-          pos.y + Math.sin(a) * 104,
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6 + scene.time.now / 700;
+        g.lineStyle(2, danger, 0.52).lineBetween(
+          pos.x + Math.cos(a) * 94,
+          pos.y - 22 + Math.sin(a) * 94,
+          pos.x + Math.cos(a) * 118,
+          pos.y - 22 + Math.sin(a) * 118,
         );
       }
     }
+  } else if (ui.bossArt) {
+    ui.bossArt.setVisible(false);
   }
 
   // 高コンボ時だけ地面に速度線を追加。常時派手にしない。
@@ -125,6 +150,17 @@ function refresh(scene: Runtime): void {
 
 export function installSideArtFidelity(): void {
   const proto = GameScene.prototype as unknown as MethodTable;
+
+  const originalPreload = proto.preload;
+  if (!proto.__bossKeyArtPreload) {
+    proto.__bossKeyArtPreload = originalPreload ?? (() => undefined);
+    proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+      const result = originalPreload?.apply(this, args);
+      this.load.svg(BOSS_ART_KEY, `images/${BOSS_ART_KEY}.svg`);
+      return result;
+    };
+  }
+
   const original = proto.update;
   if (proto.__artFidelityUpdate) return;
   proto.__artFidelityUpdate = original ?? (() => undefined);
