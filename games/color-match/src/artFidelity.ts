@@ -28,11 +28,11 @@ function build(scene: Runtime): Layer {
 }
 
 function star(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, color: number, alpha: number): void {
-  const points: Phaser.Types.Math.Vector2Like[] = [];
+  const points: Phaser.Math.Vector2[] = [];
   for (let i = 0; i < 10; i++) {
     const a = -Math.PI / 2 + (Math.PI * i) / 5;
     const rr = i % 2 === 0 ? r : r * 0.45;
-    points.push({ x: x + Math.cos(a) * rr, y: y + Math.sin(a) * rr });
+    points.push(new Phaser.Math.Vector2(x + Math.cos(a) * rr, y + Math.sin(a) * rr));
   }
   g.fillStyle(color, alpha).fillPoints(points, true);
 }
@@ -52,14 +52,12 @@ function refresh(scene: Runtime): void {
   const g = ui.graphics;
   g.clear();
 
-  // 画面全体をゲーム盤としてまとめる虹色の薄いフレーム。
   const frameAlpha = 0.14 + Math.min(0.18, streak * 0.012);
   RAINBOW.forEach((color, index) => {
     const inset = 4 + index * 2;
     g.lineStyle(2, color, frameAlpha * (1 - index * 0.08)).strokeRoundedRect(inset, inset, width - inset * 2, height - inset * 2, 22);
   });
 
-  // 背景の魔法粒子。FLOWが高いほど数が増える。
   const particleCount = Math.min(portrait ? 18 : 24, 8 + Math.floor(streak * 0.8));
   for (let i = 0; i < particleCount; i++) {
     const xBase = (i * 83 + 29) % width;
@@ -71,7 +69,6 @@ function refresh(scene: Runtime): void {
     else g.fillStyle(color, 0.2).fillCircle(x, y, i % 2 ? 2.3 : 1.5);
   }
 
-  // CHAINが伸びるほど盤面からマスコット方向へ魔法の軌跡が走る。
   if (streak >= 2) {
     const origin = portrait ? { x: 225, y: 515 } : { x: 470, y: 270 };
     const target = portrait ? { x: 372, y: 650 } : { x: 720, y: 275 };
@@ -88,7 +85,6 @@ function refresh(scene: Runtime): void {
     }
   }
 
-  // FLOW突入時は盤面中央に虹色リング。カード自体を覆わない細線にする。
   if (streak >= TURBO_ENTRY_STREAK) {
     const cx = portrait ? 225 : 465;
     const cy = portrait ? 490 : 260;
@@ -98,7 +94,6 @@ function refresh(scene: Runtime): void {
     });
   }
 
-  // RULE SHIFT 2秒前は上部に魔法の予兆を出す。
   if (untilSwitch <= 2000 && remaining > 0) {
     const alpha = 0.18 + (0.5 + 0.5 * Math.sin(scene.time.now / 110)) * 0.2;
     g.fillStyle(0xffe56b, alpha).fillRect(0, 0, width, portrait ? 10 : 8);
@@ -108,14 +103,12 @@ function refresh(scene: Runtime): void {
     }
   }
 
-  // 最後10秒は周辺だけをピンクに脈動させ、回答カードの可読性は維持。
   if (remaining <= 10000) {
     const alpha = 0.06 + (0.5 + 0.5 * Math.sin(scene.time.now / 115)) * 0.09;
     g.fillStyle(0xff496d, alpha).fillRect(0, 0, 7, height).fillRect(width - 7, 0, 7, height);
     g.fillStyle(0xff496d, alpha * 0.8).fillRect(0, height - 7, width, 7);
   }
 
-  // 正答直後の短いキラメキ。accepting=falseの時間だけ中央を強調。
   if (scene.accepting === false) {
     const cx = portrait ? 225 : 475;
     const cy = portrait ? 350 : 220;
