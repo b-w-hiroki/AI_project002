@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#66b4e1"/>
+      <stop offset="0.5" stop-color="#b6dce0"/>
+      <stop offset="0.78" stop-color="#e4d5a4"/>
+      <stop offset="1" stop-color="#728765"/>
+    </linearGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#90abb3"/><stop offset="1" stop-color="#6f877e"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#73979e"/><stop offset="1" stop-color="#536e5f"/></linearGradient>
+    <linearGradient id="city" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff7dc"/><stop offset="1" stop-color="#ccd4cb"/></linearGradient>
+    <linearGradient id="river" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cdf6f2" stop-opacity=".9"/><stop offset="1" stop-color="#5ba7c5" stop-opacity=".76"/></linearGradient>
+    <radialGradient id="sun" cx="79%" cy="14%" r="45%"><stop offset="0" stop-color="#fff7be" stop-opacity=".95"/><stop offset=".4" stop-color="#fff7be" stop-opacity=".25"/><stop offset="1" stop-color="#fff7be" stop-opacity="0"/></radialGradient>
+    <linearGradient id="vig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10241f" stop-opacity=".12"/><stop offset=".6" stop-color="#10241f" stop-opacity="0"/><stop offset="1" stop-color="#07100d" stop-opacity=".46"/></linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky)"/>
+  <rect width="800" height="450" fill="url(#sun)"/>
+
+  <g opacity=".24" fill="#fff">
+    <ellipse cx="95" cy="72" rx="105" ry="28"/><ellipse cx="215" cy="58" rx="70" ry="20"/><ellipse cx="650" cy="86" rx="120" ry="30"/><ellipse cx="755" cy="62" rx="62" ry="19"/>
+  </g>
+
+  <path d="M0 245 L132 88 L230 218 L360 72 L485 224 L600 92 L800 238 L800 306 L0 306Z" fill="url(#m1)" opacity=".62"/>
+  <path d="M0 292 L160 144 L300 274 L455 118 L610 279 L745 152 L800 235 L800 342 L0 342Z" fill="url(#m2)" opacity=".88"/>
+  <path d="M0 320 C110 284 205 307 312 286 C442 260 575 293 800 254 L800 377 L0 377Z" fill="#6f9068"/>
+  <path d="M0 350 C110 320 210 338 350 313 C492 288 608 312 800 290 L800 410 L0 410Z" fill="#56795a" opacity=".9"/>
+
+  <g transform="translate(455 116)">
+    <path d="M0 173 L0 78 L38 78 L38 42 L70 42 L70 10 L101 10 L101 49 L133 49 L133 0 L168 0 L168 51 L198 51 L198 26 L230 26 L230 79 L265 79 L265 173Z" fill="url(#city)" stroke="#a9b0a2" stroke-width="2"/>
+    <g fill="#d2aa60"><path d="M61 42 L79 42 L70 21Z"/><path d="M95 10 L107 10 L101 -13Z"/><path d="M126 0 L175 0 L150 -31Z"/><path d="M190 26 L237 26 L214 -2Z"/></g>
+    <g fill="#b7c4c3"><rect x="16" y="95" width="23" height="17" rx="2"/><rect x="56" y="69" width="21" height="16" rx="2"/><rect x="117" y="71" width="24" height="17" rx="2"/><rect x="183" y="68" width="21" height="16" rx="2"/><rect x="229" y="96" width="23" height="17" rx="2"/></g>
+    <rect x="116" y="119" width="38" height="54" fill="#6b675a"/>
+    <rect x="5" y="163" width="255" height="16" rx="3" fill="#c9c7b9"/>
+  </g>
+
+  <path d="M585 286 C635 312 650 347 626 386 C612 410 608 430 612 450 L730 450 C705 421 701 393 721 361 C742 327 722 296 682 270Z" fill="url(#river)"/>
+  <path d="M600 309 C628 324 660 326 700 307" stroke="#f0fcff" stroke-width="4" stroke-linecap="round" opacity=".55" fill="none"/>
+
+  <g fill="#315f48" opacity=".96"><circle cx="48" cy="315" r="72"/><circle cx="128" cy="322" r="62"/><circle cx="215" cy="327" r="78"/><circle cx="760" cy="316" r="76"/></g>
+  <g fill="#447253" opacity=".86"><circle cx="34" cy="296" r="35"/><circle cx="150" cy="289" r="30"/><circle cx="236" cy="290" r="38"/><circle cx="750" cy="287" r="34"/></g>
+
+  <path d="M0 369 C165 347 285 357 405 382 C525 406 676 399 800 364 L800 450 L0 450Z" fill="#4d5d4f"/>
+  <path d="M0 388 C190 365 315 378 420 398 C540 420 680 412 800 383" stroke="#7c7b68" stroke-width="22" opacity=".9" fill="none"/>
+
+  <g fill="#f4da79" opacity=".45"><circle cx="92" cy="128" r="2"/><circle cx="168" cy="171" r="1.7"/><circle cx="300" cy="111" r="2"/><circle cx="445" cy="92" r="1.5"/><circle cx="690" cy="128" r="2"/><circle cx="754" cy="211" r="1.7"/></g>
+  <rect width="800" height="450" fill="url(#vig)"/>
+</svg>
