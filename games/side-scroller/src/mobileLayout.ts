@@ -14,6 +14,7 @@ type BossEnemy = {
 type Runtime = Phaser.Scene & {
   playerState?: PlayerState;
   status?: string;
+  styleChoosing?: boolean;
   wave?: number;
   waveEnemiesAlive?: number;
   enemies?: BossEnemy[];
@@ -257,7 +258,7 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
 
   setLegacyHudVisible(scene, !phone);
   setLegacyPresentationVisible(scene, !phone);
-  ui.root.setVisible(phone && scene.status === "playing");
+  ui.root.setVisible(phone && scene.status === "playing" && !scene.styleChoosing);
   if (!phone) return;
 
   const portrait = layout.isPortrait;
@@ -363,7 +364,7 @@ function refresh(scene: Runtime): void {
     ui.ougiButton.label.setColor(ready ? "#ffffff" : "#d2c7a8");
   }
 
-  const active = scene.status === "playing";
+  const active = scene.status === "playing" && !scene.styleChoosing;
   ui.root.setVisible(active);
   ui.controls.setVisible(active);
 
