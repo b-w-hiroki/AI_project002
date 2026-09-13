@@ -63,25 +63,21 @@ function refresh(scene: Runtime): void {
   const g = ui.graphics;
   g.clear();
 
-  // 主人公の背後に派閥色の光を置く。選択結果がキャラの見た目へ即座に返る。
   const hero = portrait ? { x: 145, y: 405, r: 122 } : { x: 162, y: 262, r: 118 };
   const pulse = 1 + Math.sin(scene.time.now / 560) * 0.035;
   g.fillStyle(dominantColor, 0.075).fillCircle(hero.x, hero.y, hero.r * pulse);
   g.lineStyle(2, dominantColor, 0.3).strokeCircle(hero.x, hero.y, (hero.r - 8) * pulse);
 
-  // 王都の旗を画面左右へ置き、背景とUIの間に世界の所属感を足す。
   const bannerY = portrait ? 150 : 84;
   const bannerXs = portrait ? [72, 396] : [82, 718];
   bannerXs.forEach((x, index) => {
     g.fillStyle(0x163f76, 0.8).fillRoundedRect(x - 15, bannerY, 30, portrait ? 92 : 68, 3);
     g.fillStyle(0xd7b75d, 0.86).fillTriangle(x - 15, bannerY + (portrait ? 92 : 68), x + 15, bannerY + (portrait ? 92 : 68), x, bannerY + (portrait ? 108 : 82));
     g.lineStyle(2, 0xe4c86e, 0.72).lineBetween(x, bannerY - 18, x, bannerY + (portrait ? 102 : 76));
-    // 紋章の簡易十字。左右を反転させず同じ王国旗として扱う。
     g.lineStyle(3, 0xf3d477, 0.82).lineBetween(x - 8, bannerY + 31, x + 8, bannerY + 31).lineBetween(x, bannerY + 20, x, bannerY + 43);
     if (index === 1) g.fillStyle(0xffffff, 0.08).fillCircle(x, bannerY + 34, 21);
   });
 
-  // 選択肢に向かう運命の光。青/赤の2本が主人公から分岐する。
   if (portrait) {
     g.lineStyle(3, 0x5eb7ff, 0.2).beginPath().moveTo(175, 565).lineTo(225, 655).strokePath();
     g.lineStyle(3, 0xd85c54, 0.18).beginPath().moveTo(175, 565).lineTo(225, 725).strokePath();
@@ -90,8 +86,7 @@ function refresh(scene: Runtime): void {
     g.lineStyle(3, 0xd85c54, 0.18).beginPath().moveTo(250, 292).lineTo(670, 340).strokePath();
   }
 
-  // 季節と時間を感じる葉/光粒子。固定位置に時間変化だけを与え、UIを邪魔しない。
-  const particles = portrait
+  const particles: Array<[number, number]> = portrait
     ? [[45, 118], [102, 178], [197, 128], [239, 184], [382, 126], [405, 336], [69, 518], [188, 578]]
     : [[52, 92], [154, 117], [275, 82], [382, 126], [518, 96], [742, 135], [322, 370], [585, 385]];
   particles.forEach(([x, y], index) => {
@@ -100,7 +95,6 @@ function refresh(scene: Runtime): void {
     g.fillStyle(color, 0.26).fillEllipse(x + drift, y + drift * 0.35, index % 2 ? 4 : 6, index % 2 ? 2 : 3);
   });
 
-  // 派閥アイコンは実データの強さに応じてサイズ/明度を変える。
   FACTIONS.forEach((faction, index) => {
     const icon = ui.icons.get(faction);
     if (!icon) return;
@@ -112,13 +106,10 @@ function refresh(scene: Runtime): void {
     }
     icon.setAlpha(faction === dominant ? 1 : 0.55 + ratio * 0.25);
     if (faction === dominant) {
-      const x = icon.x;
-      const y = icon.y;
-      g.lineStyle(2, COLORS[faction], 0.72).strokeCircle(x, y, portrait ? 17 : 24);
+      g.lineStyle(2, COLORS[faction], 0.72).strokeCircle(icon.x, icon.y, portrait ? 17 : 24);
     }
   });
 
-  // 12年の物語進行を下端の小さな刻みとして常時見せる。
   const stage = Phaser.Math.Clamp(scene.stage ?? 1, 1, 12);
   const baseY = portrait ? 790 : 438;
   const startX = portrait ? 104 : 300;
