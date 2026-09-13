@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installKarmaQuestPresentation } from "./presentation";
 import { installKarmaConceptArtPass } from "./conceptArt";
+import { installKarmaArtFidelity } from "./artFidelity";
 import { installKarmaVisualPolish } from "./visualPolish";
 import { installKarmaMobileLayout } from "./mobileLayout";
 import { initCrazyGames } from "./platform/crazygames";
@@ -11,6 +12,7 @@ installKarmaQuestPresentation();
 installKarmaConceptArtPass();
 installKarmaVisualPolish();
 installKarmaMobileLayout();
+installKarmaArtFidelity();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
