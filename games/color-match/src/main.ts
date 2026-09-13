@@ -2,9 +2,11 @@ import Phaser from "phaser";
 import { installColorMatchPresentation } from "./presentation";
 import { installColorConceptArtPass } from "./conceptArt";
 import { installColorVisualPolish } from "./visualPolish";
+import { installResponsiveViewport } from "./responsive";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
+installResponsiveViewport();
 installColorMatchPresentation();
 installColorConceptArtPass();
 installColorVisualPolish();
