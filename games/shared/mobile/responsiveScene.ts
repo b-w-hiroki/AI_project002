@@ -1,5 +1,11 @@
 import { layoutSignature, resolveViewportLayout, type LayoutOptions, type ViewportLayout } from "./layout";
-import { applyViewportCss, ensureViewportFitCover, readSafeAreaInsets, viewportSize } from "./safeArea";
+import {
+  applyViewportCss,
+  ensureResponsiveStyles,
+  ensureViewportFitCover,
+  readSafeAreaInsets,
+  viewportSize,
+} from "./safeArea";
 
 export const MOBILE_LAYOUT_EVENT = "mobile-layout";
 export const MOBILE_LAYOUT_REGISTRY_KEY = "mobileViewportLayout";
@@ -102,6 +108,7 @@ export function installResponsiveGame(
 
   if (canUseDom()) {
     ensureViewportFitCover(document);
+    ensureResponsiveStyles(document);
     window.addEventListener("resize", schedule, { passive: true });
     window.addEventListener("orientationchange", schedule, { passive: true });
     window.visualViewport?.addEventListener("resize", schedule, { passive: true });
