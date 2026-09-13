@@ -5,6 +5,7 @@ import { initCrazyGames } from "./platform/crazygames";
 import { installSangokuPresentation } from "./presentation";
 import { installSangokuConceptArtPass } from "./conceptArt";
 import { installSangokuVisualPolish } from "./visualPolish";
+import { installSangokuMobileLayout } from "./mobileLayout";
 import { GameScene } from "./scenes/GameScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
@@ -12,6 +13,7 @@ void initCrazyGames();
 installSangokuPresentation();
 installSangokuConceptArtPass();
 installSangokuVisualPolish();
+installSangokuMobileLayout();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
