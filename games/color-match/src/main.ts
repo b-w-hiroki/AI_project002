@@ -3,6 +3,7 @@ import { installResponsiveGame } from "../../shared/mobile";
 import { installColorMatchPresentation } from "./presentation";
 import { installColorConceptArtPass } from "./conceptArt";
 import { installColorArtFidelity } from "./artFidelity";
+import { installColorFantasyBackground } from "./fantasyBackground";
 import { installColorVisualPolish } from "./visualPolish";
 import { installColorMobileLayout } from "./mobileLayout";
 import { initCrazyGames } from "./platform/crazygames";
@@ -13,6 +14,7 @@ installColorConceptArtPass();
 installColorVisualPolish();
 installColorMobileLayout();
 installColorArtFidelity();
+installColorFantasyBackground();
 
 void initCrazyGames();
 
