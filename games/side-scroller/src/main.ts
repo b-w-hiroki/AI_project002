@@ -3,11 +3,13 @@ import { initCrazyGames } from "./platform/crazygames";
 import { installSideScrollerPresentation } from "./presentation";
 import { installSideConceptArtPass } from "./conceptArt";
 import { installSideVisualPolish } from "./visualPolish";
+import { installResponsiveViewport } from "./responsive";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
+installResponsiveViewport();
 installSideScrollerPresentation();
 installSideConceptArtPass();
 installSideVisualPolish();

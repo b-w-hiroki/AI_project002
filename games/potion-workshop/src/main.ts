@@ -4,6 +4,7 @@ import { installWallClockPersistence } from "./persistence";
 import { installPotionPresentation } from "./presentation";
 import { installPotionConceptArtPass } from "./conceptArt";
 import { installPotionVisualPolish } from "./visualPolish";
+import { installResponsiveViewport } from "./responsive";
 import { IdleScene } from "./scenes/IdleScene";
 
 /**
@@ -41,6 +42,7 @@ Phaser.GameObjects.Container.prototype.setInteractive = function (
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
+installResponsiveViewport();
 installPotionPresentation();
 installPotionConceptArtPass();
 installPotionVisualPolish();
@@ -57,7 +59,7 @@ new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   input: {
-    activePointers: 2, // マルチタッチ（ピンチ等の誤操作抑止）を許容
+    activePointers: 2,
   },
   scene: [IdleScene],
 });
