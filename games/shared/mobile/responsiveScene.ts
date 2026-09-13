@@ -10,6 +10,7 @@ type EventEmitterLike = {
   on(event: string, handler: EventHandler, context?: unknown): unknown;
   off(event: string, handler: EventHandler, context?: unknown): unknown;
   once?(event: string, handler: EventHandler, context?: unknown): unknown;
+  emit?(event: string, ...args: unknown[]): unknown;
 };
 
 type RegistryLike = {
