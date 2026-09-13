@@ -1,23 +1,30 @@
 import { expect, test } from "@playwright/test";
 
-const GAME_W = 800;
-const GAME_H = 760;
-const BREW_X = 205;
-const BREW_Y = 446;
 const SAVE_KEY = "ai_project002_save_v1";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("canvas").waitFor();
-  await page.waitForTimeout(600); // 初回描画待ち
+  await page.waitForTimeout(600);
 });
+
+async function canvasSize(page: import("@playwright/test").Page): Promise<{ width: number; height: number }> {
+  return page.locator("canvas").evaluate((canvas) => ({
+    width: (canvas as HTMLCanvasElement).width,
+    height: (canvas as HTMLCanvasElement).height,
+  }));
+}
 
 async function clickBrew(page: import("@playwright/test").Page): Promise<void> {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;
-  const sx = box.width / GAME_W;
-  const sy = box.height / GAME_H;
-  await page.mouse.click(box.x + BREW_X * sx, box.y + BREW_Y * sy);
+  const logical = await canvasSize(page);
+  const portrait = logical.height > logical.width;
+  const brew = portrait ? { x: 225, y: 365 } : { x: 335, y: 246 };
+  await page.mouse.click(
+    box.x + brew.x * (box.width / logical.width),
+    box.y + brew.y * (box.height / logical.height),
+  );
 }
 
 test("ゲームが起動して canvas が表示される", async ({ page }) => {
@@ -34,11 +41,19 @@ test("大釜をクリックするとポーションが増える（画面が変�
   expect(before.equals(after)).toBe(false);
 });
 
+test("縦持ちと横持ちでゲーム面が切り替わる", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page)).height).toBe(800);
+  await expect.poll(async () => (await canvasSize(page)).width).toBe(450);
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => (await canvasSize(page)).width).toBe(800);
+  await expect.poll(async () => (await canvasSize(page)).height).toBe(450);
+});
+
 test("進行状況が localStorage に自動セーブされる", async ({ page }) => {
   await clickBrew(page);
 
-  // Scene側はフレームdeltaの累積5秒で保存する。ソフトウェア描画のCIでは低FPSになり、
-  // 実時間5.5秒より遅れて閾値へ届くことがあるため、固定sleepではなく保存発火を待つ。
   await expect
     .poll(
       () => page.evaluate((key) => localStorage.getItem(key), SAVE_KEY),
