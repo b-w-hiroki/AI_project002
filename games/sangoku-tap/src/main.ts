@@ -1,20 +1,19 @@
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 import Phaser from "phaser";
+import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installSangokuPresentation } from "./presentation";
 import { installSangokuConceptArtPass } from "./conceptArt";
 import { installSangokuVisualPolish } from "./visualPolish";
-import { installResponsiveViewport } from "./responsive";
 import { GameScene } from "./scenes/GameScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
-installResponsiveViewport();
 installSangokuPresentation();
 installSangokuConceptArtPass();
 installSangokuVisualPolish();
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game",
   width: 450,
@@ -23,3 +22,5 @@ new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [GameScene, ExpeditionScene],
 });
+
+installResponsiveGame(game, { baseWidth: 450, baseHeight: 800 });
