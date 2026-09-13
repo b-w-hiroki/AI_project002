@@ -6,6 +6,7 @@ import { installSideConceptArtPass } from "./conceptArt";
 import { installSideArtFidelity } from "./artFidelity";
 import { installSideVisualPolish } from "./visualPolish";
 import { installSideMobileLayout } from "./mobileLayout";
+import { installSideMobileScenePolish } from "./mobileScenePolish";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
@@ -15,6 +16,7 @@ installSideConceptArtPass();
 installSideVisualPolish();
 installSideMobileLayout();
 installSideArtFidelity();
+installSideMobileScenePolish();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
