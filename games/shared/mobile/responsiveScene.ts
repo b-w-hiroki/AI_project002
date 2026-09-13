@@ -24,14 +24,28 @@ type RegistryLike = {
   set(key: string, value: unknown): unknown;
 };
 
+type ScaleLike = {
+  resize(width: number, height: number): unknown;
+  gameSize?: { width: number; height: number };
+};
+
 export type ResponsiveGameLike = {
   events: EventEmitterLike;
   registry: RegistryLike;
+  scale?: ScaleLike;
 };
 
 export type ResponsiveSceneLike = {
   game: ResponsiveGameLike;
   events: EventEmitterLike;
+};
+
+export type SurfaceSize = { width: number; height: number };
+export type ResponsiveGameOptions = LayoutOptions & {
+  surface?: {
+    portrait: SurfaceSize;
+    landscape: SurfaceSize;
+  };
 };
 
 export type ResponsiveController = {
@@ -44,9 +58,17 @@ function canUseDom(): boolean {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
+function applySurface(game: ResponsiveGameLike, layout: ViewportLayout, options: ResponsiveGameOptions): void {
+  if (!game.scale || !options.surface) return;
+  const target = layout.isPortrait ? options.surface.portrait : options.surface.landscape;
+  const current = game.scale.gameSize;
+  if (current?.width === target.width && current.height === target.height) return;
+  game.scale.resize(target.width, target.height);
+}
+
 export function installResponsiveGame(
   game: ResponsiveGameLike,
-  options: LayoutOptions,
+  options: ResponsiveGameOptions,
 ): ResponsiveController {
   let currentLayout: ViewportLayout | null = null;
   let currentSignature = "";
@@ -70,6 +92,7 @@ export function installResponsiveGame(
     currentLayout = layout;
     game.registry.set(MOBILE_LAYOUT_REGISTRY_KEY, layout);
     applyViewportCss(layout, document);
+    applySurface(game, layout, options);
 
     if (signature !== currentSignature) {
       currentSignature = signature;
