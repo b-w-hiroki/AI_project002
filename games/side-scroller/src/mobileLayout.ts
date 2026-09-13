@@ -187,6 +187,14 @@ function setLegacyPresentationVisible(scene: Phaser.Scene, visible: boolean): vo
 }
 
 function showPhoneStyleChoice(scene: Runtime): void {
+  const visualQaBattle = new URLSearchParams(window.location.search).get("visualqa") === "battle";
+  if (visualQaBattle) {
+    scene.combatStyle = "chain";
+    scene.styleChoosing = false;
+    scene.physics.resume();
+    return;
+  }
+
   const portrait = window.innerHeight >= window.innerWidth;
   const width = portrait ? 450 : 800;
   const height = portrait ? 800 : 450;
