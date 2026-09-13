@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { initCrazyGames } from "./platform/crazygames";
 import { installSideScrollerPresentation } from "./presentation";
 import { installSideConceptArtPass } from "./conceptArt";
+import { installSideVisualPolish } from "./visualPolish";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
@@ -9,6 +10,7 @@ import { LoadoutScene } from "./scenes/LoadoutScene";
 void initCrazyGames();
 installSideScrollerPresentation();
 installSideConceptArtPass();
+installSideVisualPolish();
 
 new Phaser.Game({
   type: Phaser.AUTO,
