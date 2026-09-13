@@ -3,12 +3,14 @@ import { installResponsiveGame } from "../../shared/mobile";
 import { installColorMatchPresentation } from "./presentation";
 import { installColorConceptArtPass } from "./conceptArt";
 import { installColorVisualPolish } from "./visualPolish";
+import { installColorMobileLayout } from "./mobileLayout";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
 installColorMatchPresentation();
 installColorConceptArtPass();
 installColorVisualPolish();
+installColorMobileLayout();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
@@ -26,4 +28,11 @@ const game = new Phaser.Game({
   scene: [GameScene],
 });
 
-installResponsiveGame(game, { baseWidth: 450, baseHeight: 800 });
+installResponsiveGame(game, {
+  baseWidth: 450,
+  baseHeight: 800,
+  surface: {
+    portrait: { width: 450, height: 800 },
+    landscape: { width: 800, height: 450 },
+  },
+});
