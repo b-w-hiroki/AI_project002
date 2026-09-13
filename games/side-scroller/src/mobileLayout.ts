@@ -14,6 +14,8 @@ type BossEnemy = {
 type Runtime = Phaser.Scene & {
   playerState?: PlayerState;
   status?: string;
+  combatStyle?: "chain" | "draw";
+  styleChoosing?: boolean;
   wave?: number;
   waveEnemiesAlive?: number;
   enemies?: BossEnemy[];
@@ -184,6 +186,79 @@ function setLegacyPresentationVisible(scene: Phaser.Scene, visible: boolean): vo
   }
 }
 
+function showPhoneStyleChoice(scene: Runtime): void {
+  const visualQaBattle = new URLSearchParams(window.location.search).get("visualqa") === "battle";
+  if (visualQaBattle) {
+    scene.combatStyle = "chain";
+    scene.styleChoosing = false;
+    scene.physics.resume();
+    return;
+  }
+
+  const portrait = window.innerHeight >= window.innerWidth;
+  const width = portrait ? 450 : 800;
+  const height = portrait ? 800 : 450;
+  scene.styleChoosing = true;
+  scene.physics.pause();
+
+  const root = scene.add.container(0, 0).setScrollFactor(0).setDepth(2700);
+  const shade = scene.add.rectangle(width / 2, height / 2, width, height, 0x06131d, 0.86).setInteractive();
+  const title = text(scene, width / 2, portrait ? 145 : 105, "今回の剣を、どう振るう？", portrait ? 25 : 22, "#fff0cc");
+  root.add([shade, title]);
+
+  const cards = portrait
+    ? [
+        { style: "chain" as const, x: 225, y: 320, w: 360, h: 150, fill: 0x174553 },
+        { style: "draw" as const, x: 225, y: 515, w: 360, h: 150, fill: 0x503743 },
+      ]
+    : [
+        { style: "chain" as const, x: 238, y: 270, w: 300, h: 150, fill: 0x174553 },
+        { style: "draw" as const, x: 562, y: 270, w: 300, h: 150, fill: 0x503743 },
+      ];
+
+  const select = (style: "chain" | "draw") => {
+    if (!scene.styleChoosing) return;
+    scene.combatStyle = style;
+    scene.styleChoosing = false;
+    root.destroy(true);
+    scene.physics.resume();
+  };
+
+  cards.forEach(({ style, x, y, w, h, fill }) => {
+    const panel = scene.add.graphics();
+    panel.fillStyle(fill, 0.97).fillRoundedRect(x - w / 2, y - h / 2, w, h, 18);
+    panel.lineStyle(2, 0xe1bf78, 0.8).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 18);
+    panel.fillStyle(0xffffff, 0.06).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, 42, 13);
+
+    const label = scene.add
+      .text(
+        x,
+        y - 28,
+        style === "chain" ? "連撃の型\n連続命中で最大 +60%" : "居合の型\n1.2秒間、命中なしで次撃 +90%",
+        {
+          fontFamily: '"Hiragino Sans", "Yu Gothic", sans-serif',
+          fontSize: portrait ? "19px" : "17px",
+          fontStyle: "800",
+          color: "#fff0d5",
+          align: "center",
+          lineSpacing: 10,
+        },
+      )
+      .setOrigin(0.5);
+    const tip = text(
+      scene,
+      x,
+      y + 48,
+      style === "chain" ? "攻めをつないで、押し切る" : "間合いを取り、一撃を通す",
+      portrait ? 14 : 13,
+      "#e7d4b3",
+    );
+    const hit = scene.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+    hit.on("pointerdown", () => select(style));
+    root.add([panel, label, tip, hit]);
+  });
+}
+
 function buildUi(scene: Runtime): MobileUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
@@ -239,7 +314,7 @@ function rebuildControls(scene: Runtime, ui: MobileUi, portrait: boolean): void 
     keyButton(scene, ui.controls, 72, 378, 27, "←", scene.cursors?.left, 0x233d50);
     keyButton(scene, ui.controls, 136, 378, 27, "→", scene.cursors?.right, 0x233d50);
     keyButton(scene, ui.controls, 104, 322, 25, "↑", scene.cursors?.up, 0x355d78);
-    keyButton(scene, ui.controls, 104, 430, 25, "↓", scene.cursors?.down, 0x355d78);
+    keyButton(scene, ui.controls, 104, 418, 25, "↓", scene.cursors?.down, 0x355d78);
 
     keyButton(scene, ui.controls, 716, 378, 40, "斬", scene.attackKey, 0xd94f5b);
     keyButton(scene, ui.controls, 766, 316, 27, "跳", scene.cursors?.up, 0x42677f);
@@ -257,7 +332,7 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
 
   setLegacyHudVisible(scene, !phone);
   setLegacyPresentationVisible(scene, !phone);
-  ui.root.setVisible(phone && scene.status === "playing");
+  ui.root.setVisible(phone && scene.status === "playing" && !scene.styleChoosing);
   if (!phone) return;
 
   const portrait = layout.isPortrait;
@@ -363,7 +438,7 @@ function refresh(scene: Runtime): void {
     ui.ougiButton.label.setColor(ready ? "#ffffff" : "#d2c7a8");
   }
 
-  const active = scene.status === "playing";
+  const active = scene.status === "playing" && !scene.styleChoosing;
   ui.root.setVisible(active);
   ui.controls.setVisible(active);
 
@@ -372,6 +447,20 @@ function refresh(scene: Runtime): void {
 
 export function installSideMobileLayout(): void {
   const proto = GameScene.prototype as unknown as MethodTable;
+
+  // Phoneでは型選択自体も専用レイアウトにする。旧UIは800×600固定なので縦持ちで右カードが画面外へ出る。
+  const legacyStyleChoice = proto.chooseCombatStyle;
+  if (legacyStyleChoice && !proto.__rebootStyleChoice) {
+    proto.__rebootStyleChoice = legacyStyleChoice;
+    proto.chooseCombatStyle = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+      const shortEdge = Math.min(window.innerWidth, window.innerHeight);
+      if (shortEdge <= 600) {
+        showPhoneStyleChoice(this as Runtime);
+        return undefined;
+      }
+      return legacyStyleChoice.apply(this, args);
+    };
+  }
 
   // Phoneでは旧仮想スティック群を生成せず、このファイルのレイアウトだけを使う。
   const legacyVirtualControls = proto.buildVirtualControls;

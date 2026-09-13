@@ -64,3 +64,11 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      - name: Upload side-scroller visual QA
+        if: matrix.game == 'side-scroller' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: side-scroller-visual-qa
+          path: games/side-scroller/e2e/screenshots/
+          if-no-files-found: error
+          retention-days: 14
