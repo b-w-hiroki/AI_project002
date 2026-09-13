@@ -3,6 +3,7 @@ import { initCrazyGames } from "./platform/crazygames";
 import { installWallClockPersistence } from "./persistence";
 import { installPotionPresentation } from "./presentation";
 import { installPotionConceptArtPass } from "./conceptArt";
+import { installPotionVisualPolish } from "./visualPolish";
 import { IdleScene } from "./scenes/IdleScene";
 
 /**
@@ -42,6 +43,7 @@ Phaser.GameObjects.Container.prototype.setInteractive = function (
 void initCrazyGames();
 installPotionPresentation();
 installPotionConceptArtPass();
+installPotionVisualPolish();
 installWallClockPersistence();
 
 new Phaser.Game({
