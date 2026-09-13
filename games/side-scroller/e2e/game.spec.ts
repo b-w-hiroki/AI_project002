@@ -14,31 +14,16 @@ async function canvasPoint(page: Page, x: number, y: number): Promise<{ x: numbe
   };
 }
 
-async function clickGamePoint(page: Page, x: number, y: number): Promise<void> {
-  const point = await canvasPoint(page, x, y);
-  await page.mouse.click(point.x, point.y);
-}
-
 async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
   const point = await canvasPoint(page, x, y);
   await page.touchscreen.tap(point.x, point.y);
 }
 
-async function tapCanvasRatio(page: Page, xRatio: number, yRatio: number): Promise<void> {
-  const canvas = page.locator("canvas");
-  const box = await canvas.boundingBox();
-  if (!box) throw new Error("canvas bounds unavailable");
-  await page.touchscreen.tap(box.x + box.width * xRatio, box.y + box.height * yRatio);
-}
-
-async function enterBattleWithTouch(page: Page): Promise<void> {
-  // LoadoutScene: ステージ開始は論理座標 (400, 545)。
+async function enterBattleForVisualQa(page: Page): Promise<void> {
+  // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
+  // ここでは LoadoutScene のステージ開始だけを実端末同様の touch 入力で押す。
   await tapGamePoint(page, 400, 545);
-  await page.waitForTimeout(700);
-
-  // Phone向け型選択の左カード中央付近を、実端末と同じtouch入力で押す。
-  await tapCanvasRatio(page, 0.3, 0.6);
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -76,10 +61,10 @@ test.describe("phone visual QA", () => {
 
   test("visual QA: phone portrait battle 390x844", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.reload();
+    await page.goto("/?visualqa=battle");
     await page.locator("canvas").waitFor();
     await page.waitForTimeout(500);
-    await enterBattleWithTouch(page);
+    await enterBattleForVisualQa(page);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-portrait-battle-390x844.png",
       animations: "disabled",
@@ -88,10 +73,10 @@ test.describe("phone visual QA", () => {
 
   test("visual QA: phone landscape battle 844x390", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
-    await page.reload();
+    await page.goto("/?visualqa=battle");
     await page.locator("canvas").waitFor();
     await page.waitForTimeout(500);
-    await enterBattleWithTouch(page);
+    await enterBattleForVisualQa(page);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-landscape-battle-844x390.png",
       animations: "disabled",
