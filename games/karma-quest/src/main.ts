@@ -1,12 +1,11 @@
 import Phaser from "phaser";
+import { installResponsiveGame } from "../../shared/mobile";
 import { installKarmaQuestPresentation } from "./presentation";
 import { installKarmaConceptArtPass } from "./conceptArt";
 import { installKarmaVisualPolish } from "./visualPolish";
-import { installResponsiveViewport } from "./responsive";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
-installResponsiveViewport();
 installKarmaQuestPresentation();
 installKarmaConceptArtPass();
 installKarmaVisualPolish();
@@ -14,7 +13,7 @@ installKarmaVisualPolish();
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game",
   width: 450,
@@ -26,3 +25,5 @@ new Phaser.Game({
   },
   scene: [GameScene],
 });
+
+installResponsiveGame(game, { baseWidth: 450, baseHeight: 800 });
