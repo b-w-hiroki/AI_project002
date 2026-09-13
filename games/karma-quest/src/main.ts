@@ -3,12 +3,14 @@ import { installResponsiveGame } from "../../shared/mobile";
 import { installKarmaQuestPresentation } from "./presentation";
 import { installKarmaConceptArtPass } from "./conceptArt";
 import { installKarmaVisualPolish } from "./visualPolish";
+import { installKarmaMobileLayout } from "./mobileLayout";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
 installKarmaQuestPresentation();
 installKarmaConceptArtPass();
 installKarmaVisualPolish();
+installKarmaMobileLayout();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
