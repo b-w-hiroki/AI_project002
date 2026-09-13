@@ -53,7 +53,6 @@ function refresh(scene: Runtime): void {
   const g = ui.graphics;
   g.clear();
 
-  // 木枠と光源を足し、カード群を「Webパネル」ではなく工房の棚・掲示板に見せる。
   g.fillStyle(0x25140d, 0.18).fillRect(0, 0, width, height);
   g.lineStyle(3, 0x6f4227, 0.7);
   if (portrait) {
@@ -73,8 +72,7 @@ function refresh(scene: Runtime): void {
   g.lineStyle(2, 0xb8ffd7, 0.24).strokeCircle(brewX, brewY, (portrait ? 106 : 112) * pulse);
   g.lineStyle(1, 0x78e9ff, 0.22).strokeCircle(brewX, brewY, (portrait ? 91 : 98) / pulse);
 
-  // 調合の泡と火花。固定UIの上に乗せず、釜周りだけへ限定。
-  const bubbles = portrait
+  const bubbles: Array<[number, number, number]> = portrait
     ? [[184, 316, 5], [254, 304, 4], [279, 342, 3], [168, 357, 3], [244, 286, 2]]
     : [[296, 205, 5], [360, 188, 4], [382, 225, 3], [282, 240, 3], [349, 174, 2]];
   bubbles.forEach(([x, y, r], index) => {
@@ -83,7 +81,6 @@ function refresh(scene: Runtime): void {
     g.lineStyle(1, 0xffffff, 0.5).strokeCircle(x, y + bob, r);
   });
 
-  // 左右の小瓶シルエットで工房感を足す。
   const shelfY = portrait ? 492 : 387;
   const shelfXs = portrait ? [34, 57, 80, 370, 393, 416] : [36, 62, 88, 320, 346, 372];
   shelfXs.forEach((x, index) => {
@@ -94,7 +91,6 @@ function refresh(scene: Runtime): void {
     g.fillStyle(0xf8e9ca, 0.8).fillRect(x - 3, shelfY - 21, 6, 6);
   });
 
-  // 使い魔を画面内へ常駐させ、キャラクター性を増やす。
   if (ui.familiar) {
     if (portrait) ui.familiar.setPosition(370, 318).setDisplaySize(74, 74);
     else ui.familiar.setPosition(314, 142).setDisplaySize(66, 66);
@@ -105,7 +101,6 @@ function refresh(scene: Runtime): void {
     .setPosition(brewX, portrait ? 484 : 374)
     .setText(`MAGIC FLOW  +${Math.floor(rate * 10) / 10}/sec`);
 
-  // 評判が上がるほど工房に金色のきらめきを増やす。
   const sparkleCount = Math.min(8, 2 + Math.floor(state.reputation / 2));
   for (let i = 0; i < sparkleCount; i++) {
     const x = portrait ? 38 + ((i * 71) % 374) : 26 + ((i * 101) % 740);
