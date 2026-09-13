@@ -1,10 +1,10 @@
 import Phaser from "phaser";
+import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installWallClockPersistence } from "./persistence";
 import { installPotionPresentation } from "./presentation";
 import { installPotionConceptArtPass } from "./conceptArt";
 import { installPotionVisualPolish } from "./visualPolish";
-import { installResponsiveViewport } from "./responsive";
 import { IdleScene } from "./scenes/IdleScene";
 
 /**
@@ -42,13 +42,12 @@ Phaser.GameObjects.Container.prototype.setInteractive = function (
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
-installResponsiveViewport();
 installPotionPresentation();
 installPotionConceptArtPass();
 installPotionVisualPolish();
 installWallClockPersistence();
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game",
   width: 800,
@@ -63,3 +62,5 @@ new Phaser.Game({
   },
   scene: [IdleScene],
 });
+
+installResponsiveGame(game, { baseWidth: 800, baseHeight: 760 });
