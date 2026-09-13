@@ -2,9 +2,11 @@ import Phaser from "phaser";
 import { installKarmaQuestPresentation } from "./presentation";
 import { installKarmaConceptArtPass } from "./conceptArt";
 import { installKarmaVisualPolish } from "./visualPolish";
+import { installResponsiveViewport } from "./responsive";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
+installResponsiveViewport();
 installKarmaQuestPresentation();
 installKarmaConceptArtPass();
 installKarmaVisualPolish();
