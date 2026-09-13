@@ -54,14 +54,18 @@ test("縦持ちと横持ちでゲーム面が切り替わる", async ({ page }) 
 test("進行状況が localStorage に自動セーブされる", async ({ page }) => {
   await clickBrew(page);
 
+  // 起動直後の1フレーム目は読み込み待ち分のdeltaが大きく計上され、クリック前でも
+  // ほぼ即座に1回目の自動保存が走ることがある（totalBrewed: 0のまま）。
+  // localStorageが非nullになったことだけを見ると、そのクリック前のスナップショットを
+  // 拾って誤判定するため、クリックの効果（totalBrewed >= 1）が反映されるまで直接ポーリングする。
   await expect
     .poll(
-      () => page.evaluate((key) => localStorage.getItem(key), SAVE_KEY),
+      async () => {
+        const raw = await page.evaluate((key) => localStorage.getItem(key), SAVE_KEY);
+        if (!raw) return 0;
+        return JSON.parse(raw).state.totalBrewed;
+      },
       { timeout: 15_000, intervals: [500, 1_000, 1_500] },
     )
-    .not.toBeNull();
-
-  const raw = await page.evaluate((key) => localStorage.getItem(key), SAVE_KEY);
-  const data = JSON.parse(raw!);
-  expect(data.state.totalBrewed).toBeGreaterThanOrEqual(1);
+    .toBeGreaterThanOrEqual(1);
 });

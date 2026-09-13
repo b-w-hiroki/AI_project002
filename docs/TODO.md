@@ -1,5 +1,25 @@
 # TODO
 
+## 2026-09-11 potion-workshopのタップ不具合を修正
+
+- [x] 2026-09-09に発見した「タップしてもポーションが増えない」重大バグの根本原因を特定し修正。
+  原因: `theme.ts`の`makeActionCard`/`makeGeneratorCard`が、Containerの当たり判定を中心基準の矩形
+  `new Phaser.Geom.Rectangle(-w/2, -h/2, w, h)`で定義していた。しかしPhaserの`Container`は
+  `displayOriginX`/`displayOriginY`が常に`width/height`の半分を返す仕様（内部コメントに「入力/物理用の固定値、
+  変更禁止」とあり、意図的にそうなっている）のため、ヒットテスト時にローカル座標へさらに`+w/2,+h/2`が加算され、
+  実際の当たり判定領域が描画位置から丸ごと(w/2, h/2)分ずれてしまっていた。設備カード（`makeGeneratorCard`、
+  x=560付近）は横幅410pxもあったため、ずれた結果の当たり判定が画面左側の錬金術師タップ領域(x=160付近)まで
+  食い込み、本来ヒットするはずのマスコットの代わりにこちらが誤ってクリックを奪っていた
+- [x] 修正: 該当2箇所の矩形を原点基準`new Phaser.Geom.Rectangle(0, 0, w, h)`に変更（Containerの
+  displayOrigin分のズレを打ち消す）。Graphics製のボタン（`makeRoundedRect`、`displayOriginX`が0のため
+  中心基準のままで正しい）は変更不要
+- [x] 前回セッション後、別セッションが`main.ts`に`Phaser.GameObjects.Container.prototype.setInteractive`を
+  グローバルにmonkey-patchする暫定対応を先に入れていたことが今回のブランチ作り直し時に判明。原因が同じ問題で
+  あることを確認した上で、対症療法のmonkey-patchは削除し、各呼び出し箇所を直接修正する今回の方法に一本化した
+- [x] 修正後、potion-workshopの`npm run lint/typecheck/test（73件）/build`、および元々失敗していた
+  `npm run e2e`（3件、クリックでポーション増加・localStorage自動セーブ含む）が全て成功することを確認
+- [ ] スマホ実機での確認は引き続き未実施
+
 ## 2026-09-09 6作品の検証・PR作成
 
 - [x] 6作品全てで `npm ci` / lint / typecheck / vitest / build を実行し成功を確認（339テスト全通過）
@@ -9,18 +29,9 @@
 - [x] 上記4作品（color-match/fist-legend/karma-quest/sangoku-tap）は`e2e/`ディレクトリ自体が未作成でテストが無い
   ことを確認（新たなバグではない、単に未着手）
 - [x] side-scrollerのe2e（3件）は全て成功
-- [ ] **重大: potion-workshopのe2e「進行状況がlocalStorageに自動セーブされる」が失敗、原因はテストの座標ミスではなく
-  実際のクリックがブラウザ実行時（Playwright/Chromium, WebGL）で全く反映されない不具合。** 錬金術師キャラ（またはフォール
-  バックのBrewボタン）を実座標でクリックしても`onBrewTap`が一切呼ばれず、`totalClicks`/`totalBrewed`が0のまま。
-  デバッグの結果、Phaserの`gameobjectdown`が本来ヒットするはずのないx=560の設備カードContainer（`makeGeneratorCard`で
-  `setInteractive(new Phaser.Geom.Rectangle(...))`）に誤って配送されており、クリック位置(159,199)がそのContainerの
-  ワールド座標のヒット領域(355-765, 174-228)の外であるにもかかわらず選ばれてしまう。単純な最小構成（同バージョンの
-  Phaser 4.2.1 + 単一Imageのinteractive）では正常に動作することを確認済みなので、Phaser本体の一般的な不具合ではなく、
-  このシーン固有の要因（複数のinteractiveなContainerが動的に生成される状況でのヒットテスト）が疑われる。実機・実ブラウザ
-  でも同様に発生している可能性があり、**プレイヤーがタップしてもポーションが増えない**という致命的な不具合の恐れがある。
-  次セッションで要調査・要修正（`games/potion-workshop/src/scenes/IdleScene.ts` の `buildBrewArea`/`makeGeneratorCard`
-  周辺、Phaserのバージョンダウングレードも選択肢）
-- [ ] スマートフォン実機・本番ビルド（`npx serve`等）でも上記クリック不具合が再現するか確認
+- [x] **重大: potion-workshopのe2e「進行状況がlocalStorageに自動セーブされる」が失敗していたクリック不具合 →
+  2026-09-11に根本原因を特定し修正済み（詳細は上の「2026-09-11 potion-workshopのタップ不具合を修正」参照）**
+- [x] 本番ビルド（`npx serve`）でも修正後に再現しないことを確認。スマートフォン実機での確認は引き続き未実施
 
 ## 2026-09-07 mainとの統合（今回）
 
