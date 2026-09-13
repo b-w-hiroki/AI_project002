@@ -6,6 +6,7 @@ type MethodTable = Record<string, SceneMethod | undefined>;
 
 type Runtime = Phaser.Scene & {
   styleText?: Phaser.GameObjects.Text;
+  statusPanel?: Phaser.GameObjects.Graphics;
 };
 
 function isPhone(): boolean {
@@ -38,13 +39,14 @@ function suppressLegacyPhoneChrome(scene: Runtime): void {
   // The old style readout is useful on desktop, but competes with the dedicated mobile HUD.
   scene.styleText?.setVisible(false);
 
-  // buildHud() created two fixed Graphics panels without keeping references to them.
-  // Hide only top-of-screen fixed HUD graphics; status/game-over panels lower on screen remain intact.
+  // buildHud() creates fixed Graphics at depth 20. Keep the game-over/status panel, but
+  // suppress the obsolete top HUD panels now replaced by mobileLayout.ts.
   for (const child of scene.children.list) {
     if (!(child instanceof Phaser.GameObjects.Graphics)) continue;
-    if (child.depth !== 20 || child.scrollFactorX !== 0 || child.scrollFactorY !== 0) continue;
-    const bounds = child.getBounds();
-    if (bounds.y < 150 && bounds.width >= 100) child.setVisible(false);
+    if (child === scene.statusPanel) continue;
+    if (child.depth === 20 && child.scrollFactorX === 0 && child.scrollFactorY === 0) {
+      child.setVisible(false);
+    }
   }
 }
 
