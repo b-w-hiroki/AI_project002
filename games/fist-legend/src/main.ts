@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installFistLegendPresentation } from "./presentation";
 import { installFistConceptArtPass } from "./conceptArt";
+import { installFistArtFidelity } from "./artFidelity";
 import { installFistVisualPolish } from "./visualPolish";
 import { installFistMobileLayout } from "./mobileLayout";
 import { initCrazyGames } from "./platform/crazygames";
@@ -11,8 +12,8 @@ installFistLegendPresentation();
 installFistConceptArtPass();
 installFistVisualPolish();
 installFistMobileLayout();
+installFistArtFidelity();
 
-// CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
 
 const game = new Phaser.Game({
