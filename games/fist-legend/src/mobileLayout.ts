@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
-import { MAX_HP, MOVE_LABEL, OUGI_GAUGE_MAX, type BattleOutcome, type BattleState, type MoveType } from "./logic/battle";
+import { MAX_HP, OUGI_GAUGE_MAX, type BattleOutcome, type BattleState, type MoveType } from "./logic/battle";
 import { MOVE_TELL, OPPONENTS, type Opponent } from "./logic/opponent";
 import { loadCurrency, loadWinCount } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
@@ -43,6 +43,8 @@ type MobileUi = {
   battleGauge: Phaser.GameObjects.Text;
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
+  resultRetry: Phaser.GameObjects.Container;
+  resultTitle: Phaser.GameObjects.Container;
   portrait: boolean;
   phone: boolean;
 };
@@ -152,8 +154,8 @@ function buildUi(scene: Runtime): MobileUi {
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
   const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
   resultGroup.add([resultHeading, resultStats]);
-  button(scene, resultGroup, 225, 430, 330, 58, "もう一度", 0xa9402d, () => scene.startBattle?.());
-  button(scene, resultGroup, 225, 500, 330, 48, "タイトルへ", 0x334c70, () => scene.showTitle?.());
+  const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, "もう一度", 0xa9402d, () => scene.startBattle?.());
+  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, "タイトルへ", 0x334c70, () => scene.showTitle?.());
 
   const ui: MobileUi = {
     root,
@@ -169,6 +171,8 @@ function buildUi(scene: Runtime): MobileUi {
     battleGauge,
     resultHeading,
     resultStats,
+    resultRetry,
+    resultTitle,
     portrait: false,
     phone: false,
   };
@@ -271,9 +275,9 @@ function refresh(scene: Runtime): void {
       const moveXs = [92, 225, 358];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
-        b?.setPosition(moveXs[index]!, 690).setVisible(true);
+        b?.setPosition(moveXs[index]!, 690).setScale(1).setVisible(true);
       });
-      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setPosition(225, 764).setVisible(true);
+      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setPosition(225, 764).setScale(1).setVisible(true);
     } else {
       ui.battleTell.setPosition(400, 102);
       ui.battleGauge.setPosition(400, 132);
@@ -295,16 +299,10 @@ function refresh(scene: Runtime): void {
   if (scene.phase === "result") {
     ui.chrome.fillStyle(0x120907, 0.97).fillRect(0, 0, width, height);
     const outcome = scene.lastOutcome;
-    ui.resultHeading.setPosition(width / 2, portrait ? 285 : 165).setText(outcome === "playerWin" ? "勝利" : outcome === "enemyWin" ? "敗北" : "引き分け");
-    ui.resultStats.setPosition(width / 2, portrait ? 345 : 220).setText(`豪拳石 ${loadCurrency()}\n次は相手の構えをさらに読もう`);
-    if (!portrait) {
-      ui.resultGroup.each((child) => {
-        const obj = child as Phaser.GameObjects.GameObject & { x?: number; y?: number };
-        if (typeof obj.x === "number" && obj.x === 225) obj.x = 400;
-        if (typeof obj.y === "number" && obj.y === 430) obj.y = 300;
-        if (typeof obj.y === "number" && obj.y === 500) obj.y = 360;
-      });
-    }
+    ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? "勝利" : outcome === "enemyWin" ? "敗北" : "引き分け");
+    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`豪拳石 ${loadCurrency()}\n次は相手の構えをさらに読もう`);
+    ui.resultRetry.setPosition(width / 2, portrait ? 430 : 292).setScale(portrait ? 1 : 0.86);
+    ui.resultTitle.setPosition(width / 2, portrait ? 500 : 352).setScale(portrait ? 1 : 0.86);
   }
 }
 
