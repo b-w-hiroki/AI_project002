@@ -1,11 +1,13 @@
 import Phaser from "phaser";
 import { installFistLegendPresentation } from "./presentation";
 import { installFistConceptArtPass } from "./conceptArt";
+import { installFistVisualPolish } from "./visualPolish";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
 installFistLegendPresentation();
 installFistConceptArtPass();
+installFistVisualPolish();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
