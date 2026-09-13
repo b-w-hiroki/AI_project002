@@ -3,17 +3,18 @@ import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installSideScrollerPresentation } from "./presentation";
 import { installSideConceptArtPass } from "./conceptArt";
+import { installSideArtFidelity } from "./artFidelity";
 import { installSideVisualPolish } from "./visualPolish";
 import { installSideMobileLayout } from "./mobileLayout";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
-// CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 void initCrazyGames();
 installSideScrollerPresentation();
 installSideConceptArtPass();
 installSideVisualPolish();
 installSideMobileLayout();
+installSideArtFidelity();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
