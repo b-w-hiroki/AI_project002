@@ -4,6 +4,7 @@ import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installSangokuPresentation } from "./presentation";
 import { installSangokuConceptArtPass } from "./conceptArt";
+import { installSangokuArtFidelity } from "./artFidelity";
 import { installSangokuVisualPolish } from "./visualPolish";
 import { installSangokuMobileLayout } from "./mobileLayout";
 import { GameScene } from "./scenes/GameScene";
@@ -12,6 +13,7 @@ import { GameScene } from "./scenes/GameScene";
 void initCrazyGames();
 installSangokuPresentation();
 installSangokuConceptArtPass();
+installSangokuArtFidelity();
 installSangokuVisualPolish();
 installSangokuMobileLayout();
 
