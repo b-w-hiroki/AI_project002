@@ -29,3 +29,21 @@ test("攻撃キー(X)で剣の演出が表示される", async ({ page }) => {
   const after = await canvas.screenshot();
   expect(before.equals(after)).toBe(false);
 });
+
+test("visual QA: phone portrait 390x844", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  const canvas = page.locator("canvas");
+  await canvas.waitFor();
+  await page.waitForTimeout(700);
+  await canvas.screenshot({ path: "e2e/screenshots/side-portrait-390x844.png", animations: "disabled" });
+});
+
+test("visual QA: phone landscape 844x390", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.reload();
+  const canvas = page.locator("canvas");
+  await canvas.waitFor();
+  await page.waitForTimeout(700);
+  await canvas.screenshot({ path: "e2e/screenshots/side-landscape-844x390.png", animations: "disabled" });
+});
