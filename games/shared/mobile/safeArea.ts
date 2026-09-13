@@ -1,6 +1,7 @@
 import type { SafeAreaInsets, ViewportLayout } from "./layout";
 
 const PROBE_ID = "ai-project002-safe-area-probe";
+const STYLE_ID = "ai-project002-mobile-foundation";
 
 function px(value: string): number {
   const parsed = Number.parseFloat(value);
@@ -25,6 +26,55 @@ export function ensureViewportFitCover(doc: Document = document): void {
     parts.push("viewport-fit=cover");
     existing.content = parts.join(", ");
   }
+}
+
+export function ensureResponsiveStyles(doc: Document = document): void {
+  if (doc.getElementById(STYLE_ID)) return;
+  const style = doc.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      min-height: 100dvh;
+      overscroll-behavior: none;
+    }
+    #game {
+      max-width: calc(var(--mobile-content-width, 100vw));
+      max-height: calc(var(--mobile-content-height, 100vh));
+    }
+    #game canvas {
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    html[data-layout-mode="phone-portrait"] .hub-return,
+    html[data-layout-mode="phone-landscape"] .hub-return {
+      min-width: 44px;
+      min-height: 44px;
+      justify-content: center;
+    }
+    html[data-layout-mode="phone-portrait"] .game-rail--bottom {
+      bottom: calc(6px + env(safe-area-inset-bottom));
+      max-width: calc(100vw - 16px);
+    }
+    html[data-layout-mode="phone-landscape"] .game-rail--bottom {
+      display: none;
+    }
+    html[data-layout-mode="phone-landscape"] .game-rail--top {
+      top: calc(4px + env(safe-area-inset-top));
+    }
+    html[data-layout-mode="phone-landscape"] #game canvas {
+      max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px) !important;
+      max-width: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right) - 8px) !important;
+    }
+    @media (pointer: coarse) {
+      button, [role="button"], a {
+        -webkit-tap-highlight-color: transparent;
+      }
+    }
+  `;
+  doc.head.appendChild(style);
 }
 
 export function readSafeAreaInsets(doc: Document = document): SafeAreaInsets {
