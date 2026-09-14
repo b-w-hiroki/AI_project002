@@ -149,26 +149,26 @@ function build(scene: Runtime): ArcadeUi {
   panel(scene, root, 225, 278, 250, 112, 0xffffff, 0x8ac8f4, 0.97, 16);
   const promptText = text(scene, root, 225, 278, "", 46, "#273d5b", "900");
 
-  const chainText = text(scene, root, 378, 245, "0\nCHAIN!", 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
+  const chainText = text(scene, root, 82, 670, "0\nCHAIN!", 21, "#ff5f8f", "900").setStroke("#ffffff", 4).setAngle(-4);
 
-  const cardXs = [80, 225, 370];
-  const cardYs = [430, 545];
+  const cardXs = [128, 322];
+  const cardYs = [390, 490, 590];
   const cards: CardView[] = [];
   COLORS.forEach((color, i) => {
-    const x = cardXs[i % 3]!;
-    const y = cardYs[Math.floor(i / 3)]!;
+    const x = cardXs[i % 2]!;
+    const y = cardYs[Math.floor(i / 2)]!;
     const bg = scene.add.graphics();
     const paint = (pressed = false) => {
       bg.clear();
-      bg.fillStyle(0x14375b, 0.12).fillRoundedRect(x - 59 + 3, y - 45 + 5, 118, 90, 14);
-      bg.fillStyle(0xffffff, pressed ? 0.84 : 0.96).fillRoundedRect(x - 59, y - 45, 118, 90, 14);
-      bg.fillStyle(color.hex, 0.07).fillCircle(x + 29, y - 18, 20);
-      bg.lineStyle(pressed ? 5 : 3, color.hex, 0.95).strokeRoundedRect(x - 59, y - 45, 118, 90, 14);
+      bg.fillStyle(0x14375b, 0.12).fillRoundedRect(x - 78 + 3, y - 38 + 5, 156, 76, 14);
+      bg.fillStyle(0xffffff, pressed ? 0.84 : 0.96).fillRoundedRect(x - 78, y - 38, 156, 76, 14);
+      bg.fillStyle(color.hex, 0.07).fillCircle(x + 49, y - 16, 19);
+      bg.lineStyle(pressed ? 5 : 3, color.hex, 0.95).strokeRoundedRect(x - 78, y - 38, 156, 76, 14);
     };
     paint();
     root.add(bg);
     const label = text(scene, root, x, y, "", 20, `#${color.hex.toString(16).padStart(6, "0")}`, "900");
-    const hit = scene.add.zone(x, y, 118, 90).setInteractive({ useHandCursor: true });
+    const hit = scene.add.zone(x, y, 156, 76).setInteractive({ useHandCursor: true });
     root.add(hit);
     hit.on("pointerdown", () => {
       if (scene.phase !== "playing" || scene.accepting === false) return;
@@ -182,13 +182,13 @@ function build(scene: Runtime): ArcadeUi {
 
   let mascot: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("cm-mascot")) {
-    mascot = scene.add.image(402, 632, "cm-mascot").setDisplaySize(68, 68);
+    mascot = scene.add.image(394, 670, "cm-mascot").setDisplaySize(72, 72);
     root.add(mascot);
-    scene.tweens.add({ targets: mascot, y: 626, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    scene.tweens.add({ targets: mascot, y: 664, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
-  panel(scene, root, 192, 704, 334, 62, 0x153d68, 0x79cff7, 0.94, 14);
-  text(scene, root, 46, 686, "NEXT", 9, "#bdeaff", "900").setOrigin(0, 0.5);
-  const nextText = text(scene, root, 192, 709, "", 12, "#ffffff", "900");
+  panel(scene, root, 225, 748, 398, 58, 0x153d68, 0x79cff7, 0.94, 14);
+  text(scene, root, 42, 732, "NEXT", 10, "#bdeaff", "900").setOrigin(0, 0.5);
+  const nextText = text(scene, root, 225, 752, "", 13, "#ffffff", "900");
 
   const ui = { root, timerRing, timerText, scoreText, ruleText, promptText, chainText, nextText, cards, mascot };
   uiByScene.set(scene, ui);

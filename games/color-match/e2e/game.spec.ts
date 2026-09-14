@@ -52,6 +52,9 @@ test("touch starts a challenge and rotation preserves play", async ({ page }) =>
   await tapPoint(page, 225, 670);
   await expect.poll(() => phase(page)).toBe("playing");
   await checkFrame(page, "portrait-play");
+  const portraitBefore = await page.locator("canvas").screenshot();
+  await tapPoint(page, 128, 390);
+  await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(portraitBefore)).toBe(true);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   const before = await page.locator("canvas").screenshot();

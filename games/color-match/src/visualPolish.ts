@@ -24,7 +24,7 @@ function build(scene: Runtime): PolishUi {
 
   const graphics = scene.add.graphics();
   const cheer = scene.add
-    .text(318, 631, "", {
+    .text(236, 690, "", {
       fontFamily: '"Hiragino Sans", "Yu Gothic", sans-serif',
       fontSize: "14px",
       fontStyle: "900",
@@ -69,18 +69,14 @@ function refresh(scene: Runtime): void {
     ui.graphics.lineStyle(1.5, 0xffffff, 0.8).strokeCircle(238 + i * 24, 181, 6);
   });
 
-  // Keep the guide inside the dedicated gap between answer cards and NEXT.
-  ui.graphics.fillStyle(0xffffff, 0.94).fillRoundedRect(258, 602, 112, 58, 15);
-  ui.graphics.lineStyle(2, 0x70b9f3, 0.8).strokeRoundedRect(258, 602, 112, 58, 15);
-  ui.graphics.fillStyle(0xffffff, 0.94).fillTriangle(367, 622, 380, 631, 367, 641);
+  // Dedicated feedback band from the portrait mock: CHAIN, FLOW and mascot.
+  const flow = Phaser.Math.Clamp(streak / 10, 0, 1);
+  ui.graphics.fillStyle(0x16385e, 0.95).fillRoundedRect(132, 681, 208, 18, 9);
+  ui.graphics.fillStyle(streak >= TURBO_ENTRY_STREAK ? 0xff8d43 : 0x43d8f4, 0.95)
+    .fillRoundedRect(135, 684, 202 * flow, 12, 6);
+  ui.graphics.lineStyle(2, 0x9cecff, 0.72).strokeRoundedRect(132, 681, 208, 18, 9);
 
-  ui.cheer.setText(
-    streak >= TURBO_ENTRY_STREAK
-      ? `すごい！\nFLOW継続中！`
-      : streak >= 2
-        ? `${streak} CHAIN!\nその調子！`
-        : "見て、考えて、\nタップ！",
-  );
+  ui.cheer.setText(`FLOW ${Math.round(flow * 100)}%`);
 }
 
 export function installColorVisualPolish(): void {
