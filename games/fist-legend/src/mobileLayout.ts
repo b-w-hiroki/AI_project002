@@ -236,10 +236,10 @@ function positionFighters(scene: Runtime, portrait: boolean): void {
   const enemy = scene.enemySprite;
   if (!player || !enemy) return;
   if (portrait) {
-    player.setPosition(125, 400);
-    fitFighter(player, 238);
-    enemy.setPosition(325, 330);
-    fitFighter(enemy, 238);
+    player.setPosition(225, 500);
+    fitFighter(player, 200);
+    enemy.setPosition(225, 270);
+    fitFighter(enemy, 200);
   } else {
     player.setPosition(185, 245);
     fitFighter(player, 240);
@@ -306,15 +306,17 @@ function refresh(scene: Runtime): void {
     if (portrait) {
       ui.chrome.fillStyle(0x120a08, 0.95).fillRect(0, 620, 450, 180);
       ui.chrome.lineStyle(1, 0xffd68a, 0.32).lineBetween(0, 620, 450, 620);
-      ui.battleTell.setPosition(225, 112);
-      ui.battleGauge.setPosition(225, 162);
-      const moveXs = [92, 225, 358];
+      ui.chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365, 340, 58, 14);
+      ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365, 340, 58, 14);
+      ui.battleTell.setPosition(225, 394);
+      ui.battleGauge.setPosition(225, 90);
+      const movePositions = [{ x: 120, y: 680 }, { x: 330, y: 680 }, { x: 120, y: 750 }];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
-        b?.setPosition(moveXs[index]!, 690).setScale(1).setVisible(true);
+        b?.setPosition(movePositions[index]!.x, movePositions[index]!.y).setScale(1).setVisible(true);
       });
-      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setPosition(225, 764).setScale(1).setVisible(true);
-      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setVisible(false);
+      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
+      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(330, 750).setScale(1).setVisible(true);
     } else {
       ui.chrome.fillStyle(0x100806, 0.84).fillRoundedRect(270, 101, 260, 58, 14);
       ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(270, 101, 260, 58, 14);
