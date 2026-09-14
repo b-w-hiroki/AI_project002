@@ -51,6 +51,7 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await checkFrame(page, "portrait-title");
   await tapPoint(page, 225, 650);
   await expect.poll(() => phase(page)).toBe("karma");
+  await page.waitForTimeout(1200);
   await checkFrame(page, "portrait-karma");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);

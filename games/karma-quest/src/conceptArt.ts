@@ -162,67 +162,49 @@ function build(scene: Runtime): KarmaUi {
   const root = scene.add.container(0, 0).setDepth(1800).setVisible(false);
   drawWorld(scene, root);
 
-  label(scene, root, 18, 32, "カルマクエスト", 31, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#244b63", 5);
-  label(scene, root, 20, 64, "Karma Quest — 勇者育成 × 派閥シミュレーション", 9, "#ecf8ff", "800").setOrigin(0, 0.5);
-  label(scene, root, 22, 96, "この選択が、君の運命をつくる。", 13, "#fff5d8", "800").setOrigin(0, 0.5);
-
-  panel(scene, root, 35, 332, 56, 330, 0x17201d, 0xd5b36f, 0.95, 12);
-  ["クエスト", "仲間", "持ち物", "図鑑", "情勢"].forEach((item, i) => {
-    const y = 220 + i * 62;
-    if (i === 0) {
-      const hi = scene.add.graphics();
-      hi.fillStyle(0xa17d34, 0.78).fillRoundedRect(10, y - 24, 50, 48, 8);
-      hi.lineStyle(1, 0xf2d38a, 0.7).strokeRoundedRect(10, y - 24, 50, 48, 8);
-      root.add(hi);
-    }
-    label(scene, root, 35, y, item, 10, i === 0 ? "#fff3d2" : "#d9cab0", i === 0 ? "900" : "700");
-  });
-
-  panel(scene, root, 276, 36, 322, 44, 0x10201a, 0xd1ad61, 0.92, 11);
-  const yearText = label(scene, root, 138, 36, "", 10, "#f5dfaa", "900").setOrigin(0, 0.5);
-  const evalText = label(scene, root, 414, 36, "", 10, "#f5dfaa", "900").setOrigin(1, 0.5);
-  const mandateText = label(scene, root, 276, 55, "", 8, "#cfe1d5", "700");
+  panel(scene, root, 225, 108, 414, 76, 0x10201a, 0xd1ad61, 0.94, 12);
+  const yearText = label(scene, root, 35, 94, "", 14, "#f5dfaa", "900").setOrigin(0, 0.5);
+  const evalText = label(scene, root, 415, 94, "", 14, "#f5dfaa", "900").setOrigin(1, 0.5);
+  const mandateText = label(scene, root, 225, 122, "", 12, "#e8f1e9", "800");
 
   // Hero is the visual anchor on the left.
   let hero: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(145, 410, "kq-hero-warrior").setDisplaySize(245, 327);
+    hero = scene.add.image(225, 270, "kq-hero-warrior").setDisplaySize(220, 293);
     root.add(hero);
   }
-  panel(scene, root, 139, 548, 192, 78, 0x14251e, 0xc7a758, 0.88, 12);
-  const dominantText = label(scene, root, 139, 526, "", 10, "#f5dfaa", "900");
-  const statsText = label(scene, root, 139, 557, "", 11, "#edf5ee", "900");
+  panel(scene, root, 225, 390, 330, 54, 0x14251e, 0xc7a758, 0.88, 12);
+  const dominantText = label(scene, root, 225, 378, "", 11, "#f5dfaa", "900");
+  const statsText = label(scene, root, 225, 400, "", 10, "#edf5ee", "900");
 
   // Story parchment.
-  panel(scene, root, 337, 225, 200, 246, 0xf2e8cc, 0xb58d48, 0.985, 8);
-  const requestTitle = label(scene, root, 337, 132, "", 12, "#5d4525", "900");
-  const requestText = scene.add.text(337, 206, "", {
+  panel(scene, root, 225, 475, 414, 116, 0xf2e8cc, 0xb58d48, 0.985, 12);
+  const requestTitle = label(scene, root, 225, 440, "", 14, "#5d4525", "900");
+  const requestText = scene.add.text(225, 485, "", {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
-    fontSize: "12px",
+    fontSize: "14px",
     fontStyle: "700",
     color: "#433d33",
     align: "center",
     lineSpacing: 6,
-    wordWrap: { width: 166, useAdvancedWrap: true },
+    wordWrap: { width: 370, useAdvancedWrap: true },
   }).setOrigin(0.5);
   root.add(requestText);
-  label(scene, root, 337, 304, "人の想いが、世界を動かす。", 8, "#806e50", "700");
 
   // Karma / faction evaluation panel.
-  panel(scene, root, 337, 438, 200, 168, 0x11211e, 0xc2a058, 0.96, 10);
-  label(scene, root, 337, 374, "勢力の評価", 12, "#f7e7bd", "900");
+  panel(scene, root, 225, 570, 414, 72, 0x11211e, 0xc2a058, 0.96, 10);
+  label(scene, root, 225, 545, "選択後の勢力", 11, "#f7e7bd", "900");
   const bars = scene.add.graphics();
   root.add(bars);
-  const factionTexts = FACTIONS.map((_, i) => label(scene, root, 273, 405 + i * 30, "", 9, "#e8ddc7", "800").setOrigin(0, 0.5));
+  const factionTexts = FACTIONS.map((_, i) => label(scene, root, 30 + i * 105, 568, "", 10, "#e8ddc7", "800").setOrigin(0, 0.5));
 
   // Bottom dialogue and choices.
-  panel(scene, root, 225, 679, 414, 216, 0x111b18, 0xd1ac62, 0.97, 15);
-  label(scene, root, 35, 601, "旅の老人", 10, "#f2d99c", "900").setOrigin(0, 0.5);
-  label(scene, root, 225, 625, "この選択が、次の一年を変える。", 11, "#eee4cd", "800");
-  const acceptText = button(scene, root, 225, 674, 352, 48, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x2f6fa8);
-  const declineText = button(scene, root, 225, 735, 352, 48, "断る", () => invoke(scene, "onKarmaChoice", false), 0x4f4a45);
-  const acceptHint = label(scene, root, 225, 703, "", 8, "#b9d9ef", "800");
-  const declineHint = label(scene, root, 225, 764, "", 8, "#d9cec2", "800");
+  panel(scene, root, 225, 690, 414, 180, 0x111b18, 0xd1ac62, 0.97, 15);
+  label(scene, root, 225, 620, "この選択が、次の一年を変える。", 11, "#eee4cd", "800");
+  const acceptText = button(scene, root, 225, 660, 360, 52, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x2f6fa8);
+  const declineText = button(scene, root, 225, 730, 360, 52, "断る", () => invoke(scene, "onKarmaChoice", false), 0x4f4a45);
+  const acceptHint = label(scene, root, 225, 692, "", 9, "#b9d9ef", "800");
+  const declineHint = label(scene, root, 225, 762, "", 9, "#d9cec2", "800");
   acceptText.setDepth(2);
   declineText.setDepth(2);
 
@@ -252,16 +234,17 @@ function refresh(scene: Runtime): void {
   ui.requestTitle.setText(request ? `【${FACTION_LABEL[request.faction]}】` : "旅人からの依頼");
   ui.requestText.setText(request?.text ?? "次の依頼を待っています。\nあなたの判断が世界を動かす。\nどうする？");
   ui.dominantText.setText(`カルマ  ${FACTION_LABEL[dominant]}`);
-  ui.statsText.setText(`ATK ${stats.atk}   DEF ${stats.def}\nHP ${stats.hp}   MAGIC ${stats.magic}`);
+  ui.statsText.setText(`ATK ${stats.atk}   DEF ${stats.def}   HP ${stats.hp}   MAGIC ${stats.magic}`);
   ui.acceptHint.setText(request ? `${FACTION_SHORT[request.faction]} +${request.karmaDelta}  /  勇者が成長` : "");
   ui.declineHint.setText(request ? "他派閥 +1  /  別の物語へ" : "");
 
   ui.bars.clear();
   FACTIONS.forEach((faction, i) => {
-    const y = 405 + i * 30;
+    const y = 592;
+    const x = 30 + i * 105;
     const ratio = Phaser.Math.Clamp(karma[faction] / max, 0, 1);
-    ui.bars.fillStyle(0x59645d, 0.7).fillRoundedRect(326, y - 4, 78, 8, 4);
-    ui.bars.fillStyle(FACTION_COLORS[faction], 0.96).fillRoundedRect(326, y - 4, 78 * ratio, 8, 4);
+    ui.bars.fillStyle(0x59645d, 0.7).fillRoundedRect(x, y - 4, 78, 8, 4);
+    ui.bars.fillStyle(FACTION_COLORS[faction], 0.96).fillRoundedRect(x, y - 4, 78 * ratio, 8, 4);
     ui.factionTexts[i]?.setText(`${FACTION_SHORT[faction]}  ${karma[faction]}`);
   });
 

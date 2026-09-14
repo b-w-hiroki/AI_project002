@@ -62,6 +62,10 @@ function refresh(scene: Runtime): void {
   const active = scene.phase === "karma" && !!scene.karma;
   ui.root.setVisible(active);
   if (!active || !scene.karma) return;
+  const portrait = scene.scale.gameSize.height >= scene.scale.gameSize.width;
+  ui.compass.setVisible(!portrait);
+  ui.karmaText.setVisible(!portrait);
+  if (portrait) return;
 
   const dominant = dominantFaction(scene.karma);
   ui.compass.clear();

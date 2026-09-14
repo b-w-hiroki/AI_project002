@@ -63,7 +63,7 @@ function refresh(scene: Runtime): void {
   const g = ui.graphics;
   g.clear();
 
-  const hero = portrait ? { x: 145, y: 405, r: 122 } : { x: 162, y: 262, r: 118 };
+  const hero = portrait ? { x: 225, y: 270, r: 124 } : { x: 162, y: 262, r: 118 };
   const pulse = 1 + Math.sin(scene.time.now / 560) * 0.035;
   g.fillStyle(dominantColor, 0.075).fillCircle(hero.x, hero.y, hero.r * pulse);
   g.lineStyle(2, dominantColor, 0.3).strokeCircle(hero.x, hero.y, (hero.r - 8) * pulse);
@@ -78,10 +78,7 @@ function refresh(scene: Runtime): void {
     if (index === 1) g.fillStyle(0xffffff, 0.08).fillCircle(x, bannerY + 34, 21);
   });
 
-  if (portrait) {
-    g.lineStyle(3, 0x5eb7ff, 0.2).beginPath().moveTo(175, 565).lineTo(225, 655).strokePath();
-    g.lineStyle(3, 0xd85c54, 0.18).beginPath().moveTo(175, 565).lineTo(225, 725).strokePath();
-  } else {
+  if (!portrait) {
     g.lineStyle(3, 0x5eb7ff, 0.2).beginPath().moveTo(250, 292).lineTo(510, 340).strokePath();
     g.lineStyle(3, 0xd85c54, 0.18).beginPath().moveTo(250, 292).lineTo(670, 340).strokePath();
   }
@@ -100,12 +97,12 @@ function refresh(scene: Runtime): void {
     if (!icon) return;
     const ratio = Math.max(0.18, karma[faction] / max);
     if (portrait) {
-      icon.setPosition(265, 405 + index * 30).setDisplaySize(22 + ratio * 5, 22 + ratio * 5);
+      icon.setVisible(false);
     } else {
-      icon.setPosition(668, 172 + index * 52).setDisplaySize(32 + ratio * 8, 32 + ratio * 8);
+      icon.setVisible(true).setPosition(668, 172 + index * 52).setDisplaySize(32 + ratio * 8, 32 + ratio * 8);
     }
     icon.setAlpha(faction === dominant ? 1 : 0.55 + ratio * 0.25);
-    if (faction === dominant) {
+    if (!portrait && faction === dominant) {
       g.lineStyle(2, COLORS[faction], 0.72).strokeCircle(icon.x, icon.y, portrait ? 17 : 24);
     }
   });
