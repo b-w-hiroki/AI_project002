@@ -49,13 +49,24 @@ async function checkFrame(page: Page, name: string) {
 
 test("touch starts a challenge and rotation preserves play", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapPoint(page, 225, 670);
+  await tapPoint(page, 225, 705);
   await expect.poll(() => phase(page)).toBe("playing");
   await checkFrame(page, "portrait-play");
+  const portraitBefore = await page.locator("canvas").screenshot();
+  await tapPoint(page, 128, 390);
+  await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(portraitBefore)).toBe(true);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   const before = await page.locator("canvas").screenshot();
   await tapPoint(page, 470, 170);
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
   await checkFrame(page, "landscape-play");
+});
+
+test("portrait result keeps the mock hierarchy", async ({ page }) => {
+  await tapPoint(page, 225, 705);
+  await expect.poll(() => phase(page)).toBe("playing");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
+  await expect.poll(() => phase(page)).toBe("result");
+  await checkFrame(page, "portrait-result");
 });
