@@ -182,9 +182,9 @@ function build(scene: Runtime): ArcadeUi {
 
   let mascot: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("cm-mascot")) {
-    mascot = scene.add.image(376, 654, "cm-mascot").setDisplaySize(118, 118);
+    mascot = scene.add.image(402, 632, "cm-mascot").setDisplaySize(68, 68);
     root.add(mascot);
-    scene.tweens.add({ targets: mascot, y: 646, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    scene.tweens.add({ targets: mascot, y: 626, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
   panel(scene, root, 192, 704, 334, 62, 0x153d68, 0x79cff7, 0.94, 14);
   text(scene, root, 46, 686, "NEXT", 9, "#bdeaff", "900").setOrigin(0, 0.5);
