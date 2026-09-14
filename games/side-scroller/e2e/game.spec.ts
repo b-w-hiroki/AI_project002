@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 
 async function canvasPoint(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
   const canvas = page.locator("canvas");
@@ -30,6 +31,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("canvas").waitFor();
   await page.waitForTimeout(500); // 初回描画待ち
+});
+
+test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
+  await expectResponsiveCanvas(page);
 });
 
 test("ゲームが起動して canvas が表示される", async ({ page }) => {

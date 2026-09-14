@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type Phaser from "phaser";
+import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 
 declare global { interface Window { __qaGame: Phaser.Game } }
 
@@ -18,6 +19,10 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => !!window.__qaGame);
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
+
+test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
+  await expectResponsiveCanvas(page);
+});
 
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 
 const SAVE_KEY = "ai_project002_save_v1";
 
@@ -6,6 +7,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await page.locator("canvas").waitFor();
   await page.waitForTimeout(600);
+});
+
+test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
+  await expectResponsiveCanvas(page);
 });
 
 async function canvasSize(page: import("@playwright/test").Page): Promise<{ width: number; height: number }> {

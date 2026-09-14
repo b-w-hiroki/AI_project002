@@ -47,6 +47,10 @@ export function ensureResponsiveStyles(doc: Document = document): void {
       touch-action: none;
       -webkit-user-select: none;
       user-select: none;
+      width: var(--game-canvas-width) !important;
+      height: var(--game-canvas-height) !important;
+      max-width: none !important;
+      max-height: none !important;
     }
     html[data-layout-mode="phone-portrait"] .hub-return,
     html[data-layout-mode="phone-landscape"] .hub-return {
@@ -65,8 +69,8 @@ export function ensureResponsiveStyles(doc: Document = document): void {
       top: calc(4px + env(safe-area-inset-top));
     }
     html[data-layout-mode="phone-landscape"] #game canvas {
-      max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px) !important;
-      max-width: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right) - 8px) !important;
+      max-height: none !important;
+      max-width: none !important;
     }
     @media (pointer: coarse) {
       button, [role="button"], a {
