@@ -49,7 +49,7 @@ async function checkFrame(page: Page, name: string) {
 
 test("touch starts a challenge and rotation preserves play", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapPoint(page, 225, 670);
+  await tapPoint(page, 225, 705);
   await expect.poll(() => phase(page)).toBe("playing");
   await checkFrame(page, "portrait-play");
   const portraitBefore = await page.locator("canvas").screenshot();
@@ -61,4 +61,12 @@ test("touch starts a challenge and rotation preserves play", async ({ page }) =>
   await tapPoint(page, 470, 170);
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
   await checkFrame(page, "landscape-play");
+});
+
+test("portrait result keeps the mock hierarchy", async ({ page }) => {
+  await tapPoint(page, 225, 705);
+  await expect.poll(() => phase(page)).toBe("playing");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
+  await expect.poll(() => phase(page)).toBe("result");
+  await checkFrame(page, "portrait-result");
 });
