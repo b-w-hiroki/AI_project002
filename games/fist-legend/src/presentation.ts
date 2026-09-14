@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getResponsiveLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX } from "./logic/battle";
 import { GameScene } from "./scenes/GameScene";
 
@@ -94,7 +95,8 @@ function ensureBattleHud(scene: FistRuntime): BattleHud {
 
 function refreshBattleHud(scene: FistRuntime): void {
   const hud = ensureBattleHud(scene);
-  const active = scene.phase === "battle" && !!scene.battle;
+  const layout = getResponsiveLayout(scene);
+  const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
   hud.root.setVisible(active);
   if (!active || !scene.battle) return;
 

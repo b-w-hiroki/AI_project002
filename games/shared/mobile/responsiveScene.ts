@@ -27,6 +27,11 @@ type RegistryLike = {
 type ScaleLike = {
   resize(width: number, height: number): unknown;
   gameSize?: { width: number; height: number };
+  canvas?: HTMLCanvasElement;
+  baseSize?: { width: number; height: number };
+  canvasBounds?: { width: number; height: number };
+  displayScale?: { set(x: number, y: number): unknown };
+  updateBounds?(): unknown;
 };
 
 export type ResponsiveGameLike = {
@@ -64,6 +69,24 @@ function applySurface(game: ResponsiveGameLike, layout: ViewportLayout, options:
   const current = game.scale.gameSize;
   if (current?.width === target.width && current.height === target.height) return;
   game.scale.resize(target.width, target.height);
+  // Phaser's resize() can retain the previous orientation's display size.
+  // Recalculate both CSS dimensions from one scale factor so artwork is never
+  // stretched independently on either axis.
+  if (game.scale.canvas) {
+    const availableWidth = Math.max(1, layout.contentWidth - 18);
+    const availableHeight = Math.max(1, layout.contentHeight - (layout.isPortrait ? 82 : 8));
+    const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
+    game.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
+    game.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
+    game.scale.canvas.style.setProperty("margin", "0 auto", "important");
+    game.scale.updateBounds?.();
+    if (game.scale.baseSize && game.scale.canvasBounds && game.scale.displayScale) {
+      game.scale.displayScale.set(
+        game.scale.baseSize.width / game.scale.canvasBounds.width,
+        game.scale.baseSize.height / game.scale.canvasBounds.height,
+      );
+    }
+  }
 }
 
 export function installResponsiveGame(

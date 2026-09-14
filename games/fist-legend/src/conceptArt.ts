@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getResponsiveLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX } from "./logic/battle";
 import { GameScene } from "./scenes/GameScene";
 
@@ -88,7 +89,8 @@ function build(scene: Runtime): VersusChrome {
 
 function refresh(scene: Runtime): void {
   const ui = build(scene);
-  const active = scene.phase === "battle" && !!scene.battle;
+  const layout = getResponsiveLayout(scene);
+  const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
   ui.root.setVisible(active);
   if (!active || !scene.battle) return;
 

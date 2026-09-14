@@ -190,7 +190,7 @@ export class GameScene extends Phaser.Scene {
         align: "center",
       })
       .setOrigin(0.5);
-    this.battleGroup.add(this.tell);
+    (this.battleGroup.getByName("legacy-battle-hud") as Phaser.GameObjects.Container).add(this.tell);
     this.buildResultScreen();
     this.buildGachaScreen();
     this.showTitle();
@@ -459,8 +459,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.ougiBtn.setEnabled(false);
 
-    this.battleGroup.add([
-      ...(bg ? [bg] : []),
+    const legacyHud = this.add.container(0, 0, [
       topShade,
       bottomShade,
       playerHpBg,
@@ -471,8 +470,6 @@ export class GameScene extends Phaser.Scene {
       enemyLabel,
       this.timerText,
       this.clashText,
-      this.playerSprite,
-      this.enemySprite,
       ougiBg,
       this.ougiFill,
       ougiLabel,
@@ -480,7 +477,8 @@ export class GameScene extends Phaser.Scene {
       kickBtn.container,
       kiBtn.container,
       this.ougiBtn.container,
-    ]);
+    ]).setName("legacy-battle-hud");
+    this.battleGroup.add([...(bg ? [bg] : []), this.playerSprite, this.enemySprite, legacyHud]);
   }
 
   /**

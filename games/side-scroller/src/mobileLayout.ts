@@ -341,6 +341,17 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   if (current.width !== target.width || current.height !== target.height) {
     scene.scale.resize(target.width, target.height);
   }
+  const availableWidth = Math.max(1, layout.contentWidth - 18);
+  const availableHeight = Math.max(1, layout.contentHeight - (layout.isPortrait ? 82 : 8));
+  const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
+  scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("margin", "0 auto", "important");
+  scene.scale.updateBounds();
+  scene.scale.displayScale.set(
+    scene.scale.baseSize.width / scene.scale.canvasBounds.width,
+    scene.scale.baseSize.height / scene.scale.canvasBounds.height,
+  );
   scene.cameras.main.setViewport(0, 0, target.width, target.height);
   scene.cameras.main.setFollowOffset(0, portrait ? -34 : 0);
 
