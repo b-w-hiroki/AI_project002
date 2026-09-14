@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [potion-workshop, side-scroller]
+        game: [color-match, fist-legend, karma-quest, potion-workshop, sangoku-tap, side-scroller]
     defaults:
       run:
         working-directory: games/${{ matrix.game }}
@@ -64,11 +64,11 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
-      - name: Upload side-scroller visual QA
-        if: matrix.game == 'side-scroller' && always()
+      - name: Upload browser visual QA
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: side-scroller-visual-qa
-          path: games/side-scroller/e2e/screenshots/
-          if-no-files-found: error
+          name: ${{ matrix.game }}-visual-qa
+          path: games/${{ matrix.game }}/e2e/screenshots/
+          if-no-files-found: warn
           retention-days: 14

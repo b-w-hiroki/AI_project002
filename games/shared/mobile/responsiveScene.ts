@@ -27,6 +27,11 @@ type RegistryLike = {
 type ScaleLike = {
   resize(width: number, height: number): unknown;
   gameSize?: { width: number; height: number };
+  canvas?: HTMLCanvasElement;
+  baseSize?: { width: number; height: number };
+  canvasBounds?: { width: number; height: number };
+  displayScale?: { set(x: number, y: number): unknown };
+  updateBounds?(): unknown;
 };
 
 export type ResponsiveGameLike = {
@@ -59,11 +64,43 @@ function canUseDom(): boolean {
 }
 
 function applySurface(game: ResponsiveGameLike, layout: ViewportLayout, options: ResponsiveGameOptions): void {
-  if (!game.scale || !options.surface) return;
-  const target = layout.isPortrait ? options.surface.portrait : options.surface.landscape;
+  if (!game.scale) return;
   const current = game.scale.gameSize;
-  if (current?.width === target.width && current.height === target.height) return;
-  game.scale.resize(target.width, target.height);
+  const target = options.surface
+    ? (layout.isPortrait ? options.surface.portrait : options.surface.landscape)
+    : game.scale.canvas
+      ? { width: game.scale.canvas.width, height: game.scale.canvas.height }
+      : current ?? game.scale.baseSize;
+  if (!target) return;
+  // Phaser Size objects are mutable and may be updated by its own resize
+  // listener while this handler runs, so snapshot both dimensions first.
+  const targetWidth = target.width;
+  const targetHeight = target.height;
+  if (options.surface && (current?.width !== targetWidth || current.height !== targetHeight)) {
+    game.scale.resize(targetWidth, targetHeight);
+  }
+  // Phaser's resize() can retain the previous orientation's display size.
+  // Recalculate both CSS dimensions from one scale factor so artwork is never
+  // stretched independently on either axis.
+  if (game.scale.canvas) {
+    const availableWidth = Math.max(1, layout.contentWidth - 18);
+    const availableHeight = Math.max(1, layout.contentHeight - (layout.isPortrait ? 82 : 8));
+    const fit = Math.min(availableWidth / targetWidth, availableHeight / targetHeight);
+    const canvasWidth = `${Math.floor(targetWidth * fit)}px`;
+    const canvasHeight = `${Math.floor(targetHeight * fit)}px`;
+    document.documentElement.style.setProperty("--game-canvas-width", canvasWidth);
+    document.documentElement.style.setProperty("--game-canvas-height", canvasHeight);
+    game.scale.canvas.style.setProperty("width", canvasWidth, "important");
+    game.scale.canvas.style.setProperty("height", canvasHeight, "important");
+    game.scale.canvas.style.setProperty("margin", "0 auto", "important");
+    game.scale.updateBounds?.();
+    if (game.scale.baseSize && game.scale.canvasBounds && game.scale.displayScale) {
+      game.scale.displayScale.set(
+        game.scale.baseSize.width / game.scale.canvasBounds.width,
+        game.scale.baseSize.height / game.scale.canvasBounds.height,
+      );
+    }
+  }
 }
 
 export function installResponsiveGame(

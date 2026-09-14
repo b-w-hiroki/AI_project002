@@ -10,6 +10,9 @@ type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
 type Runtime = Phaser.Scene & {
   phase?: "title" | "battle" | "result";
   battle?: BattleState;
+  titleGroup?: Phaser.GameObjects.Container;
+  battleGroup?: Phaser.GameObjects.Container;
+  resultGroup?: Phaser.GameObjects.Container;
   opponent?: Opponent;
   nextEnemyMove?: MoveType;
   beat?: number;
@@ -86,11 +89,11 @@ function button(
     .rectangle(0, 0, width, height, color, 0.92)
     .setStrokeStyle(2, 0xffe0a3, 0.6);
   const labelText = text(scene, 0, 0, label, height >= 56 ? 20 : 15);
+  const hit = scene.add.zone(0, 0, width, Math.max(48, height)).setInteractive({ useHandCursor: true });
   const container = scene.add
-    .container(x, y, [bg, labelText])
-    .setSize(width, Math.max(48, height))
-    .setInteractive({ useHandCursor: true });
-  container.on("pointerdown", onTap);
+    .container(x, y, [bg, labelText, hit])
+    .setSize(width, Math.max(48, height));
+  hit.on("pointerdown", onTap);
   root.add(container);
   return container;
 }
@@ -182,7 +185,22 @@ function buildUi(scene: Runtime): MobileUi {
 
 function applySurface(scene: Runtime, width: number, height: number): void {
   const current = scene.scale.gameSize;
-  if (current.width !== width || current.height !== height) scene.scale.resize(width, height);
+  if (current.width !== width || current.height !== height) {
+    scene.scale.resize(width, height);
+  }
+  const viewport = window.visualViewport;
+  const portrait = height > width;
+  const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
+  const availableHeight = (viewport?.height ?? window.innerHeight) - (portrait ? 82 : 8);
+  const fit = Math.min(availableWidth / width, availableHeight / height);
+  scene.scale.canvas.style.setProperty("width", `${Math.floor(width * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("height", `${Math.floor(height * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("margin", "0 auto", "important");
+  scene.scale.updateBounds();
+  scene.scale.displayScale.set(
+    scene.scale.baseSize.width / scene.scale.canvasBounds.width,
+    scene.scale.baseSize.height / scene.scale.canvasBounds.height,
+  );
   scene.cameras.main.setViewport(0, 0, width, height);
 }
 
@@ -191,7 +209,10 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   ui.phone = !layout.isTablet;
   ui.root.setVisible(ui.phone);
   hideLegacyOrientationWarning(scene);
-  if (!ui.phone) return;
+  scene.titleGroup?.setVisible(!ui.phone && scene.phase === "title");
+  scene.resultGroup?.setVisible(!ui.phone && scene.phase === "result");
+  (scene.battleGroup?.getByName("legacy-battle-hud") as Phaser.GameObjects.Container | null)?.setVisible(!ui.phone);
+  if (!ui.phone) { applySurface(scene, 800, 600); return; }
 
   ui.portrait = layout.isPortrait;
   if (scene.gachaGroup?.visible) {
@@ -203,16 +224,25 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   applySurface(scene, layout.isPortrait ? 450 : 800, layout.isPortrait ? 800 : 450);
 }
 
+function fitFighter(sprite: FighterSprite, height: number): void {
+  // Uniform scaling keeps the source artwork's aspect ratio.
+  sprite.setScale(sprite instanceof Phaser.GameObjects.Image ? height / sprite.height : height / 110);
+}
+
 function positionFighters(scene: Runtime, portrait: boolean): void {
   const player = scene.playerSprite;
   const enemy = scene.enemySprite;
   if (!player || !enemy) return;
   if (portrait) {
-    player.setPosition(135, 400).setScale(0.82);
-    enemy.setPosition(315, 330).setScale(0.82);
+    player.setPosition(125, 400);
+    fitFighter(player, 238);
+    enemy.setPosition(325, 330);
+    fitFighter(enemy, 238);
   } else {
-    player.setPosition(185, 245).setScale(0.9);
-    enemy.setPosition(615, 245).setScale(0.9);
+    player.setPosition(185, 245);
+    fitFighter(player, 240);
+    enemy.setPosition(615, 245);
+    fitFighter(enemy, 240);
   }
 }
 
@@ -221,6 +251,8 @@ function refresh(scene: Runtime): void {
   if (!ui.phone) return;
 
   hideLegacyOrientationWarning(scene);
+  scene.titleGroup?.setVisible(false);
+  scene.resultGroup?.setVisible(false);
   if (scene.gachaGroup?.visible) {
     ui.root.setVisible(false);
     applySurface(scene, 800, 600);

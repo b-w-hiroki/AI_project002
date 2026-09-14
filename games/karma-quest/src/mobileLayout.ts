@@ -207,7 +207,21 @@ function build(scene: Runtime): LandscapeUi {
 
 function targetSize(scene: Runtime, landscape: boolean, specialLandscape: boolean): void {
   const target = landscape && specialLandscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
-  if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) scene.scale.resize(target.width, target.height);
+  if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
+    scene.scale.resize(target.width, target.height);
+  }
+  const viewport = window.visualViewport;
+  const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
+  const availableHeight = (viewport?.height ?? window.innerHeight) - (landscape ? 8 : 82);
+  const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
+  scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("margin", "0 auto", "important");
+  scene.scale.updateBounds();
+  scene.scale.displayScale.set(
+    scene.scale.baseSize.width / scene.scale.canvasBounds.width,
+    scene.scale.baseSize.height / scene.scale.canvasBounds.height,
+  );
 }
 
 function refresh(scene: Runtime): void {

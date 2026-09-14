@@ -191,7 +191,7 @@ function build(scene: Runtime): LandscapeUi {
   const scoreText = text(scene, play, 720, 55, "0000", 26, "#fff0a6", "900");
 
   const answers: AnswerView[] = [];
-  const xs = [500, 630, 760];
+  const xs = [470, 600, 730];
   const ys = [170, 285];
   COLORS.forEach((color, i) => {
     const x = xs[i % 3]!;
@@ -211,8 +211,8 @@ function build(scene: Runtime): LandscapeUi {
     answers.push({ bg, text: answerText });
   });
 
-  panel(scene, play, 620, 390, 330, 54, 0x153d68, 0x79cff7, 0.94, 14);
-  const nextText = text(scene, play, 620, 390, "", 12, "#ffffff", "900");
+  panel(scene, play, 610, 390, 330, 54, 0x153d68, 0x79cff7, 0.94, 14);
+  const nextText = text(scene, play, 610, 390, "", 12, "#ffffff", "900");
   if (scene.textures.exists("cm-mascot")) {
     const mascot = scene.add.image(94, 345, "cm-mascot").setDisplaySize(118, 118);
     play.add(mascot);

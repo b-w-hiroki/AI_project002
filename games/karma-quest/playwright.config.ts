@@ -1,17 +1,17 @@
 import { defineConfig } from "@playwright/test";
 
+const chromiumPath = process.env.PW_CHROMIUM_PATH;
+
 export default defineConfig({
   testDir: "e2e",
   use: {
-    baseURL: "http://localhost:5177",
-    // リモートコンテナのプリインストール Chromium を使う（playwright install は不要）
-    launchOptions: {
-      executablePath: process.env.PW_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium",
-    },
+    baseURL: "http://localhost:15177",
+    // Use an explicit local browser, or Playwright-managed Chromium in CI.
+    launchOptions: chromiumPath ? { executablePath: chromiumPath } : {},
   },
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:5177",
-    reuseExistingServer: true,
+    command: "npm run dev -- --port 15177",
+    url: "http://localhost:15177",
+    reuseExistingServer: false,
   },
 });

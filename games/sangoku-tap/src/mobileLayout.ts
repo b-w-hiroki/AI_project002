@@ -329,6 +329,17 @@ function bindExpeditionOrientation(scene: Runtime): void {
     if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
       scene.scale.resize(target.width, target.height);
     }
+    const availableWidth = Math.max(1, layout.contentWidth - 18);
+    const availableHeight = Math.max(1, layout.contentHeight - (layout.isPortrait ? 82 : 8));
+    const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
+    scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
+    scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
+    scene.scale.canvas.style.setProperty("margin", "0 auto", "important");
+    scene.scale.updateBounds();
+    scene.scale.displayScale.set(
+      scene.scale.baseSize.width / scene.scale.canvasBounds.width,
+      scene.scale.baseSize.height / scene.scale.canvasBounds.height,
+    );
     invoke(scene, "render");
   });
 }
@@ -360,7 +371,9 @@ export function installSangokuMobileLayout(): void {
   if (gameCreate && !gameProto.__mobileCreate) {
     gameProto.__mobileCreate = gameCreate;
     gameProto.create = function (this: Phaser.Scene, ...args: unknown[]): unknown {
-      if (this.scale.gameSize.width !== 450 || this.scale.gameSize.height !== 800) this.scale.resize(450, 800);
+      if (this.scale.gameSize.width !== 450 || this.scale.gameSize.height !== 800) {
+        this.scale.resize(450, 800);
+      }
       return gameCreate.apply(this, args);
     };
   }
