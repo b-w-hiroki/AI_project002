@@ -166,25 +166,26 @@ function build(scene: Runtime): KarmaUi {
   daylight.fillGradientStyle(0x5f986d, 0x5f986d, 0x193d2c, 0x193d2c, 0.12, 0.12, 0.32, 0.32).fillRect(0, 500, 450, 300);
   root.add(daylight);
 
-  panel(scene, root, 225, 108, 414, 76, 0x10201a, 0xd1ad61, 0.94, 12);
-  const yearText = label(scene, root, 35, 94, "", 14, "#f5dfaa", "900").setOrigin(0, 0.5);
-  const evalText = label(scene, root, 415, 94, "", 14, "#f5dfaa", "900").setOrigin(1, 0.5);
-  const mandateText = label(scene, root, 225, 122, "", 12, "#e8f1e9", "800");
+  panel(scene, root, 225, 40, 450, 80, 0x10201a, 0xd1ad61, 0.94, 0);
+  const yearText = label(scene, root, 24, 25, "", 14, "#f5dfaa", "900").setOrigin(0, 0.5);
+  const evalText = label(scene, root, 426, 25, "", 14, "#f5dfaa", "900").setOrigin(1, 0.5);
+  const mandateText = label(scene, root, 225, 55, "", 13, "#e8f1e9", "800");
 
   // Hero is the visual anchor on the left.
   let hero: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(225, 270, "kq-hero-warrior").setDisplaySize(220, 293);
+    hero = scene.add.image(225, 220, "kq-hero-warrior");
+    const heroScale = Math.min(220 / hero.width, 270 / hero.height);
+    hero.setScale(heroScale);
     root.add(hero);
   }
-  panel(scene, root, 225, 390, 330, 54, 0x14251e, 0xc7a758, 0.88, 12);
-  const dominantText = label(scene, root, 225, 378, "", 11, "#f5dfaa", "900");
-  const statsText = label(scene, root, 225, 400, "", 10, "#edf5ee", "900");
+  const dominantText = label(scene, root, 225, 340, "", 13, "#f5dfaa", "900");
+  const statsText = label(scene, root, 225, 352, "", 10, "#edf5ee", "900").setVisible(false);
 
   // Story parchment.
-  panel(scene, root, 225, 475, 414, 116, 0xf2e8cc, 0xb58d48, 0.985, 12);
-  const requestTitle = label(scene, root, 225, 440, "", 14, "#5d4525", "900");
-  const requestText = scene.add.text(225, 485, "", {
+  panel(scene, root, 225, 424, 402, 112, 0xf2e8cc, 0xb58d48, 0.985, 12);
+  const requestTitle = label(scene, root, 225, 392, "", 15, "#5d4525", "900");
+  const requestText = scene.add.text(225, 438, "", {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
     fontSize: "14px",
     fontStyle: "700",
@@ -196,21 +197,24 @@ function build(scene: Runtime): KarmaUi {
   root.add(requestText);
 
   // Karma / faction evaluation panel.
-  panel(scene, root, 225, 570, 414, 72, 0x11211e, 0xc2a058, 0.96, 10);
-  label(scene, root, 225, 545, "選択後の勢力", 11, "#f7e7bd", "900");
+  panel(scene, root, 225, 524, 402, 64, 0x11211e, 0xc2a058, 0.96, 10);
+  label(scene, root, 225, 502, "選択後の勢力", 11, "#f7e7bd", "900");
   const bars = scene.add.graphics();
   root.add(bars);
-  const factionTexts = FACTIONS.map((_, i) => label(scene, root, 30 + i * 105, 568, "", 10, "#e8ddc7", "800").setOrigin(0, 0.5));
+  const factionTexts = FACTIONS.map((_, i) => label(scene, root, 30 + i * 105, 524, "", 10, "#e8ddc7", "800").setOrigin(0, 0.5));
 
   // Bottom dialogue and choices.
-  panel(scene, root, 225, 690, 414, 180, 0x111b18, 0xd1ac62, 0.97, 15);
-  label(scene, root, 225, 620, "この選択が、次の一年を変える。", 11, "#eee4cd", "800");
-  const acceptText = button(scene, root, 225, 660, 360, 52, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x2f6fa8);
-  const declineText = button(scene, root, 225, 730, 360, 52, "断る", () => invoke(scene, "onKarmaChoice", false), 0x4f4a45);
-  const acceptHint = label(scene, root, 225, 692, "", 9, "#b9d9ef", "800");
-  const declineHint = label(scene, root, 225, 762, "", 9, "#d9cec2", "800");
+  panel(scene, root, 225, 640, 402, 144, 0x111b18, 0xd1ac62, 0.97, 15);
+  const acceptText = button(scene, root, 225, 611, 360, 48, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x2f6fa8);
+  const declineText = button(scene, root, 225, 674, 360, 48, "断る", () => invoke(scene, "onKarmaChoice", false), 0x4f4a45);
+  const acceptHint = label(scene, root, 225, 640, "", 10, "#b9d9ef", "800");
+  const declineHint = label(scene, root, 225, 703, "", 10, "#d9cec2", "800");
   acceptText.setDepth(2);
   declineText.setDepth(2);
+
+  panel(scene, root, 225, 760, 450, 80, 0x0c1713, 0xd1ac62, 0.94, 0);
+  label(scene, root, 225, 746, "CHRONICLE  ·  ALLIES", 12, "#f5dfaa", "900");
+  label(scene, root, 225, 774, "十二年の選択が、勇者の伝説になる", 11, "#d5dfd6", "700");
 
   const ui = { root, yearText, evalText, mandateText, requestTitle, requestText, statsText, dominantText, factionTexts, bars, acceptHint, declineHint, hero };
   uiByScene.set(scene, ui);
@@ -244,7 +248,7 @@ function refresh(scene: Runtime): void {
 
   ui.bars.clear();
   FACTIONS.forEach((faction, i) => {
-    const y = 592;
+    const y = 548;
     const x = 30 + i * 105;
     const ratio = Phaser.Math.Clamp(karma[faction] / max, 0, 1);
     ui.bars.fillStyle(0x59645d, 0.7).fillRoundedRect(x, y - 4, 78, 8, 4);

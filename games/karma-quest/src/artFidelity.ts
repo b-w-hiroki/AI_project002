@@ -63,14 +63,14 @@ function refresh(scene: Runtime): void {
   const g = ui.graphics;
   g.clear();
 
-  const hero = portrait ? { x: 225, y: 270, r: 124 } : { x: 162, y: 262, r: 118 };
+  const hero = portrait ? { x: 225, y: 220, r: 120 } : { x: 162, y: 262, r: 118 };
   const pulse = 1 + Math.sin(scene.time.now / 560) * 0.035;
   g.fillStyle(dominantColor, 0.075).fillCircle(hero.x, hero.y, hero.r * pulse);
   g.lineStyle(2, dominantColor, 0.3).strokeCircle(hero.x, hero.y, (hero.r - 8) * pulse);
 
-  const bannerY = portrait ? 150 : 84;
-  const bannerXs = portrait ? [72, 396] : [82, 718];
-  bannerXs.forEach((x, index) => {
+  const bannerY = 84;
+  const bannerXs = [82, 718];
+  if (!portrait) bannerXs.forEach((x, index) => {
     g.fillStyle(0x163f76, 0.8).fillRoundedRect(x - 15, bannerY, 30, portrait ? 92 : 68, 3);
     g.fillStyle(0xd7b75d, 0.86).fillTriangle(x - 15, bannerY + (portrait ? 92 : 68), x + 15, bannerY + (portrait ? 92 : 68), x, bannerY + (portrait ? 108 : 82));
     g.lineStyle(2, 0xe4c86e, 0.72).lineBetween(x, bannerY - 18, x, bannerY + (portrait ? 102 : 76));
@@ -84,7 +84,7 @@ function refresh(scene: Runtime): void {
   }
 
   const particles: Array<[number, number]> = portrait
-    ? [[45, 118], [102, 178], [197, 128], [239, 184], [382, 126], [405, 336], [69, 518], [188, 578]]
+    ? []
     : [[52, 92], [154, 117], [275, 82], [382, 126], [518, 96], [742, 135], [322, 370], [585, 385]];
   particles.forEach(([x, y], index) => {
     const drift = Math.sin(scene.time.now / 700 + index * 0.8) * 5;
@@ -108,7 +108,7 @@ function refresh(scene: Runtime): void {
   });
 
   const stage = Phaser.Math.Clamp(scene.stage ?? 1, 1, 12);
-  const baseY = portrait ? 790 : 438;
+  const baseY = portrait ? 792 : 438;
   const startX = portrait ? 104 : 300;
   const gap = portrait ? 21 : 24;
   for (let i = 0; i < 12; i++) {
