@@ -212,7 +212,8 @@ function targetSize(scene: Runtime, landscape: boolean, specialLandscape: boolea
   }
   const viewport = window.visualViewport;
   const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
-  const availableHeight = (viewport?.height ?? window.innerHeight) - (landscape ? 8 : 82);
+  // Portrait chrome is hidden for this game; reserve only the 5px top/bottom edge.
+  const availableHeight = (viewport?.height ?? window.innerHeight) - (landscape ? 8 : 10);
   const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
   scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
   scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");

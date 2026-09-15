@@ -72,6 +72,7 @@ test("touch starts battle and a move advances the beat after rotation", async ({
   await checkFrame(page, "portrait-battle");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await checkFrame(page, "landscape-battle-ready");
   const before = await page.locator("canvas").screenshot();
   // 横持ち専用UIの拳ボタン中央。文字検索では旧HUDの装飾文字も候補になるため、
   // 実際のタッチ領域を直接操作する。

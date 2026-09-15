@@ -4,9 +4,7 @@ import { GameScene } from "./scenes/GameScene";
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 
-const PORTRAIT_KEY = "kq-bg-kingdom-portrait";
 const LANDSCAPE_KEY = "kq-bg-kingdom-landscape";
-const PORTRAIT_DEPTH = 1800;
 const LANDSCAPE_DEPTH = 5200;
 
 function installIntoContainer(
@@ -22,9 +20,13 @@ function installIntoContainer(
 
   const background = scene.add
     .image(width / 2, height / 2, key)
-    .setDisplaySize(width, height)
     .setOrigin(0.5)
     .setName(marker);
+
+  // Cover the design canvas while preserving the source aspect ratio. The
+  // generated art is never stretched; only the small horizontal overflow is cropped.
+  const source = scene.textures.get(key).getSourceImage() as { width: number; height: number };
+  background.setScale(Math.max(width / source.width, height / source.height));
 
   // index 0 is the existing code-drawn fallback world. Insert directly above it,
   // but keep every live UI / hero / parchment child above the new art.
@@ -35,9 +37,7 @@ function installIntoContainer(
 function ensureKingdomBackgrounds(scene: Phaser.Scene): void {
   for (const child of scene.children.list) {
     if (!(child instanceof Phaser.GameObjects.Container)) continue;
-    if (child.depth === PORTRAIT_DEPTH) {
-      installIntoContainer(scene, child, PORTRAIT_KEY, 450, 800);
-    } else if (child.depth === LANDSCAPE_DEPTH) {
+    if (child.depth === LANDSCAPE_DEPTH) {
       installIntoContainer(scene, child, LANDSCAPE_KEY, 800, 450);
     }
   }
@@ -51,7 +51,6 @@ export function installKarmaKingdomBackground(): void {
     proto.__kingdomBackgroundPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.svg(PORTRAIT_KEY, `images/${PORTRAIT_KEY}.svg`);
       this.load.svg(LANDSCAPE_KEY, `images/${LANDSCAPE_KEY}.svg`);
       return result;
     };

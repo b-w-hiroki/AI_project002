@@ -59,9 +59,14 @@ function build(scene: Runtime): PolishUi {
 
 function refresh(scene: Runtime): void {
   const ui = build(scene);
-  const active = scene.phase === "karma" && !!scene.karma;
+  const { width, height } = scene.scale.gameSize;
+  const active = scene.phase === "karma" && !!scene.karma && width > height;
   ui.root.setVisible(active);
   if (!active || !scene.karma) return;
+  const portrait = height >= width;
+  ui.compass.setVisible(!portrait);
+  ui.karmaText.setVisible(!portrait);
+  if (portrait) return;
 
   const dominant = dominantFaction(scene.karma);
   ui.compass.clear();
