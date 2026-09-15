@@ -50,11 +50,11 @@ function build(scene: Runtime): Layer {
 
 function refresh(scene: Runtime): void {
   const ui = build(scene);
-  const active = scene.phase === "karma" && !!scene.karma;
+  const { width, height } = scene.scale.gameSize;
+  const active = scene.phase === "karma" && !!scene.karma && width > height;
   ui.root.setVisible(active);
   if (!active || !scene.karma) return;
 
-  const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
   const karma = scene.karma;
   const dominant = dominantFaction(karma);

@@ -4,10 +4,7 @@ import { GameScene } from "./scenes/GameScene";
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 
-const PORTRAIT_KEY = "kq-bg-kingdom-portrait-v2";
-const PORTRAIT_FALLBACK_KEY = "kq-bg-kingdom-portrait";
 const LANDSCAPE_KEY = "kq-bg-kingdom-landscape";
-const PORTRAIT_DEPTH = 1800;
 const LANDSCAPE_DEPTH = 5200;
 
 function installIntoContainer(
@@ -40,10 +37,7 @@ function installIntoContainer(
 function ensureKingdomBackgrounds(scene: Phaser.Scene): void {
   for (const child of scene.children.list) {
     if (!(child instanceof Phaser.GameObjects.Container)) continue;
-    if (child.depth === PORTRAIT_DEPTH) {
-      const key = scene.textures.exists(PORTRAIT_KEY) ? PORTRAIT_KEY : PORTRAIT_FALLBACK_KEY;
-      installIntoContainer(scene, child, key, 450, 800);
-    } else if (child.depth === LANDSCAPE_DEPTH) {
+    if (child.depth === LANDSCAPE_DEPTH) {
       installIntoContainer(scene, child, LANDSCAPE_KEY, 800, 450);
     }
   }
@@ -57,8 +51,6 @@ export function installKarmaKingdomBackground(): void {
     proto.__kingdomBackgroundPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.image(PORTRAIT_KEY, `images/${PORTRAIT_KEY}.png`);
-      this.load.svg(PORTRAIT_FALLBACK_KEY, `images/${PORTRAIT_FALLBACK_KEY}.svg`);
       this.load.svg(LANDSCAPE_KEY, `images/${LANDSCAPE_KEY}.svg`);
       return result;
     };

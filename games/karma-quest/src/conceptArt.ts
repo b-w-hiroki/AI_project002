@@ -1,13 +1,5 @@
 import Phaser from "phaser";
-import {
-  FACTIONS,
-  FACTION_LABEL,
-  deriveStats,
-  dominantFaction,
-  type Faction,
-  type KarmaRequest,
-  type KarmaState,
-} from "./logic/karma";
+import { FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
@@ -15,255 +7,113 @@ type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
   phase?: "title" | "karma" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
-  runEvaluation?: number;
   karma?: KarmaState;
-  mandate?: { label?: string; bonus?: number; threat?: number };
   currentRequest?: KarmaRequest | null;
 };
-
 type KarmaUi = {
   root: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
-  evalText: Phaser.GameObjects.Text;
-  mandateText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
-  statsText: Phaser.GameObjects.Text;
-  dominantText: Phaser.GameObjects.Text;
-  factionTexts: Phaser.GameObjects.Text[];
-  bars: Phaser.GameObjects.Graphics;
-  acceptHint: Phaser.GameObjects.Text;
-  declineHint: Phaser.GameObjects.Text;
-  hero?: Phaser.GameObjects.Image;
+  requestIcon?: Phaser.GameObjects.Image;
+  acceptIcon?: Phaser.GameObjects.Image;
 };
 
 const uiByScene = new WeakMap<object, KarmaUi>();
-const FACTION_COLORS: Readonly<Record<Faction, number>> = {
-  warrior: 0x3c8ed2,
-  merchant: 0xd2a232,
-  outlaw: 0x54a965,
-  mage: 0x9b55c8,
-};
-const FACTION_SHORT: Readonly<Record<Faction, string>> = {
-  warrior: "戦士",
-  merchant: "商人",
-  outlaw: "荒くれ",
-  mage: "魔術師",
-};
+const FACTION_TEXTURES = {
+  warrior: "kq-faction-icon-warrior",
+  merchant: "kq-faction-icon-merchant",
+  outlaw: "kq-faction-icon-outlaw",
+  mage: "kq-faction-icon-mage",
+} as const;
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
   const fn = Reflect.get(scene, key);
   return typeof fn === "function" ? (fn as (...v: unknown[]) => unknown).apply(scene, args) : undefined;
 }
 
-function label(
-  scene: Phaser.Scene,
-  root: Phaser.GameObjects.Container,
-  x: number,
-  y: number,
-  value: string,
-  size: number,
-  color = "#f8f0dd",
-  weight = "700",
-): Phaser.GameObjects.Text {
-  const t = scene.add.text(x, y, value, {
-    fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
-    fontSize: `${size}px`,
-    fontStyle: weight,
-    color,
-    align: "center",
-    lineSpacing: 4,
+function label(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, value: string, size: number, color = "#ead49a", weight = "700"): Phaser.GameObjects.Text {
+  const text = scene.add.text(x, y, value, {
+    fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif', fontSize: `${size}px`, fontStyle: weight,
+    color, align: "center", lineSpacing: 5,
   }).setOrigin(0.5);
-  root.add(t);
-  return t;
+  root.add(text);
+  return text;
 }
 
-function panel(
-  scene: Phaser.Scene,
-  root: Phaser.GameObjects.Container,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  fill: number,
-  border: number,
-  alpha = 0.96,
-  radius = 14,
-): Phaser.GameObjects.Graphics {
-  const g = scene.add.graphics();
-  g.fillStyle(0x07100d, 0.28).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, radius);
-  g.fillStyle(fill, alpha).fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
-  g.fillStyle(0xffffff, 0.08).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, Math.max(5, h * 0.13), radius * 0.72);
-  g.lineStyle(1.4, border, 0.76).strokeRoundedRect(x - w / 2, y - h / 2, w, h, radius);
-  root.add(g);
-  return g;
-}
-
-function button(
-  scene: Runtime,
-  root: Phaser.GameObjects.Container,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  textValue: string,
-  onClick: () => void,
-  accent: number,
-): Phaser.GameObjects.Text {
-  const bg = scene.add.graphics();
-  const paint = (down = false) => {
-    bg.clear();
-    const c = down ? Phaser.Display.Color.ValueToColor(accent).darken(14).color : accent;
-    bg.fillStyle(0x09110f, 0.25).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 12);
-    bg.fillStyle(c, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
-    bg.fillStyle(0xffffff, 0.12).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.28, 9);
-    bg.lineStyle(1.5, 0xf1d493, 0.68).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+function button(scene: Runtime, root: Phaser.GameObjects.Container, y: number, textValue: string, onClick: () => void): void {
+  const x = 225;
+  const width = 320;
+  const height = 50;
+  const background = scene.add.graphics();
+  const paint = (pressed = false) => {
+    background.clear();
+    background.fillStyle(pressed ? 0x35594a : 0x2a4a3e, 1).fillRoundedRect(x - width / 2, y - height / 2, width, height, 12);
+    background.lineStyle(1.5, 0xcaa840, 0.95).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 12);
   };
   paint();
-  root.add(bg);
-  const txt = label(scene, root, x, y, textValue, 13, "#fff7e9", "900");
-  const hit = scene.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+  root.add(background);
+  label(scene, root, x, y, textValue, 18, "#f2eee1", "900");
+  const hit = scene.add.zone(x, y, width, height).setInteractive({ useHandCursor: true });
   root.add(hit);
   hit.on("pointerdown", () => { paint(true); onClick(); });
   hit.on("pointerup", () => paint(false));
   hit.on("pointerout", () => paint(false));
-  return txt;
-}
-
-function drawWorld(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
-  const g = scene.add.graphics();
-  g.fillGradientStyle(0x3d8ec8, 0x63b7dc, 0xc7e4b7, 0x88b77a, 1, 1, 1, 1).fillRect(0, 0, 450, 800);
-  // Distant mountains.
-  g.fillStyle(0x7fa9aa, 0.75).fillTriangle(0, 405, 115, 155, 232, 405);
-  g.fillStyle(0x6d9aa2, 0.68).fillTriangle(140, 405, 285, 190, 430, 405);
-  g.fillStyle(0xa8c8c2, 0.72).fillTriangle(310, 405, 395, 230, 470, 405);
-  // Kingdom on the right skyline.
-  g.fillStyle(0xf2eee0, 0.93).fillRect(250, 215, 160, 130);
-  for (const x of [265, 305, 345, 385]) {
-    g.fillRect(x, 165, 18, 72);
-    g.fillTriangle(x - 6, 165, x + 9, 132, x + 24, 165);
-  }
-  g.fillStyle(0xc9d8df, 0.75).fillRect(224, 342, 190, 22);
-  // River and foreground terrace.
-  g.fillStyle(0x8bd3dd, 0.62).fillTriangle(245, 355, 345, 355, 240, 690);
-  g.fillStyle(0x7aa05f, 0.92).fillRect(0, 560, 450, 240);
-  g.fillStyle(0x5c7e4e, 0.82).fillCircle(40, 585, 100).fillCircle(170, 600, 115).fillCircle(405, 570, 100);
-  g.fillStyle(0x5d6555, 1).fillRect(0, 620, 450, 180);
-  g.fillStyle(0x83806e, 1).fillRect(0, 620, 450, 22);
-  // Soft vignette.
-  g.fillStyle(0x0b1712, 0.18).fillRect(0, 0, 450, 800);
-  root.add(g);
 }
 
 function build(scene: Runtime): KarmaUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
+  const root = scene.add.container(0, 0).setDepth(6000).setVisible(false);
+  const graphics = scene.add.graphics();
+  graphics.fillStyle(0x0d1c17, 1).fillRect(0, 0, 450, 800);
+  graphics.lineStyle(1.5, 0xcaa840, 0.92).strokeCircle(225, 70, 24);
+  graphics.lineStyle(1, 0xcaa840, 0.92).lineBetween(205, 70, 245, 70).lineBetween(225, 50, 225, 90);
+  graphics.fillStyle(0x183a2e, 1).fillRoundedRect(24, 160, 402, 480, 14);
+  graphics.lineStyle(1.5, 0xcaa840, 0.95).strokeRoundedRect(24, 160, 402, 480, 14);
+  root.add(graphics);
 
-  const root = scene.add.container(0, 0).setDepth(1800).setVisible(false);
-  drawWorld(scene, root);
-  const daylight = scene.add.graphics();
-  daylight.fillStyle(0xeef9e8, 0.13).fillRect(0, 0, 450, 620);
-  daylight.fillGradientStyle(0x5f986d, 0x5f986d, 0x193d2c, 0x193d2c, 0.12, 0.12, 0.32, 0.32).fillRect(0, 500, 450, 300);
-  root.add(daylight);
-
-  panel(scene, root, 225, 40, 450, 80, 0x10201a, 0xd1ad61, 0.94, 0);
-  const yearText = label(scene, root, 24, 25, "", 14, "#f5dfaa", "900").setOrigin(0, 0.5);
-  const evalText = label(scene, root, 426, 25, "", 14, "#f5dfaa", "900").setOrigin(1, 0.5);
-  const mandateText = label(scene, root, 225, 55, "", 13, "#e8f1e9", "800");
-
-  // Hero is the visual anchor on the left.
-  let hero: Phaser.GameObjects.Image | undefined;
-  if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(225, 220, "kq-hero-warrior");
-    const heroScale = Math.min(220 / hero.width, 270 / hero.height);
-    hero.setScale(heroScale);
-    root.add(hero);
-  }
-  const dominantText = label(scene, root, 225, 340, "", 13, "#f5dfaa", "900");
-  const statsText = label(scene, root, 225, 352, "", 10, "#edf5ee", "900").setVisible(false);
-
-  // Story parchment.
-  panel(scene, root, 225, 424, 402, 112, 0xf2e8cc, 0xb58d48, 0.985, 12);
-  const requestTitle = label(scene, root, 225, 392, "", 15, "#5d4525", "900");
-  const requestText = scene.add.text(225, 438, "", {
-    fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
-    fontSize: "14px",
-    fontStyle: "700",
-    color: "#433d33",
-    align: "center",
-    lineSpacing: 6,
-    wordWrap: { width: 370, useAdvancedWrap: true },
+  label(scene, root, 225, 116, "剣と慈悲を携える勇者", 14);
+  label(scene, root, 225, 140, "最初の旅：自由に勇者を育てよう", 14);
+  const yearText = label(scene, root, 225, 210, "", 13, "#9aafa2", "800");
+  const requestTitle = label(scene, root, 225, 324, "", 17, "#d9b64d", "900");
+  const requestText = scene.add.text(225, 392, "", {
+    fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif', fontSize: "15px", fontStyle: "700",
+    color: "#cbd2cb", align: "center", lineSpacing: 6, wordWrap: { width: 320, useAdvancedWrap: true },
   }).setOrigin(0.5);
   root.add(requestText);
 
-  // Karma / faction evaluation panel.
-  panel(scene, root, 225, 524, 402, 64, 0x11211e, 0xc2a058, 0.96, 10);
-  label(scene, root, 225, 502, "選択後の勢力", 11, "#f7e7bd", "900");
-  const bars = scene.add.graphics();
-  root.add(bars);
-  const factionTexts = FACTIONS.map((_, i) => label(scene, root, 30 + i * 105, 524, "", 10, "#e8ddc7", "800").setOrigin(0, 0.5));
+  let requestIcon: Phaser.GameObjects.Image | undefined;
+  let acceptIcon: Phaser.GameObjects.Image | undefined;
+  if (scene.textures.exists(FACTION_TEXTURES.warrior)) {
+    requestIcon = scene.add.image(225, 270, FACTION_TEXTURES.warrior).setDisplaySize(72, 72);
+    acceptIcon = scene.add.image(103, 500, FACTION_TEXTURES.warrior).setDisplaySize(34, 34).setDepth(2);
+    root.add([requestIcon, acceptIcon]);
+  }
+  button(scene, root, 500, "力を貸す", () => invoke(scene, "onKarmaChoice", true));
+  button(scene, root, 575, "断る", () => invoke(scene, "onKarmaChoice", false));
+  if (acceptIcon) root.bringToTop(acceptIcon);
 
-  // Bottom dialogue and choices.
-  panel(scene, root, 225, 640, 402, 144, 0x111b18, 0xd1ac62, 0.97, 15);
-  const acceptText = button(scene, root, 225, 611, 360, 48, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x2f6fa8);
-  const declineText = button(scene, root, 225, 674, 360, 48, "断る", () => invoke(scene, "onKarmaChoice", false), 0x4f4a45);
-  const acceptHint = label(scene, root, 225, 640, "", 10, "#b9d9ef", "800");
-  const declineHint = label(scene, root, 225, 703, "", 10, "#d9cec2", "800");
-  acceptText.setDepth(2);
-  declineText.setDepth(2);
-
-  panel(scene, root, 225, 760, 450, 80, 0x0c1713, 0xd1ac62, 0.94, 0);
-  label(scene, root, 225, 746, "CHRONICLE  ·  ALLIES", 12, "#f5dfaa", "900");
-  label(scene, root, 225, 774, "十二年の選択が、勇者の伝説になる", 11, "#d5dfd6", "700");
-
-  const ui = { root, yearText, evalText, mandateText, requestTitle, requestText, statsText, dominantText, factionTexts, bars, acceptHint, declineHint, hero };
+  const ui = { root, yearText, requestTitle, requestText, requestIcon, acceptIcon };
   uiByScene.set(scene, ui);
   return ui;
 }
 
 function refresh(scene: Runtime): void {
   const ui = build(scene);
-  const active = scene.phase === "karma" && !!scene.karma;
+  const { width, height } = scene.scale.gameSize;
+  const active = scene.phase === "karma" && !!scene.karma && height >= width;
   ui.root.setVisible(active);
-  if (!active || !scene.karma) return;
-
-  const karma = scene.karma;
+  if (!active) return;
   const request = scene.currentRequest;
-  const stats = deriveStats(karma);
-  const dominant = dominantFaction(karma);
-  const max = Math.max(10, ...FACTIONS.map((f) => karma[f]));
   const stage = Phaser.Math.Clamp(scene.stage ?? 1, 1, 12);
-  const evaluation = scene.runEvaluation ?? 0;
-  const mandate = scene.mandate?.label ?? "神託を待つ";
-
-  ui.yearText.setText(`YEAR ${stage}/12  ·  春`);
-  ui.evalText.setText(`評価 ${evaluation >= 0 ? "+" : ""}${evaluation}`);
-  ui.mandateText.setText(`神託  ${mandate.length > 30 ? `${mandate.slice(0, 30)}…` : mandate}`);
-  ui.requestTitle.setText(request ? `【${FACTION_LABEL[request.faction]}】` : "旅人からの依頼");
-  ui.requestText.setText(request?.text ?? "次の依頼を待っています。\nあなたの判断が世界を動かす。\nどうする？");
-  ui.dominantText.setText(`カルマ  ${FACTION_LABEL[dominant]}`);
-  ui.statsText.setText(`ATK ${stats.atk}   DEF ${stats.def}   HP ${stats.hp}   MAGIC ${stats.magic}`);
-  ui.acceptHint.setText(request ? `${FACTION_SHORT[request.faction]} +${request.karmaDelta}  /  勇者が成長` : "");
-  ui.declineHint.setText(request ? "他派閥 +1  /  別の物語へ" : "");
-
-  ui.bars.clear();
-  FACTIONS.forEach((faction, i) => {
-    const y = 548;
-    const x = 30 + i * 105;
-    const ratio = Phaser.Math.Clamp(karma[faction] / max, 0, 1);
-    ui.bars.fillStyle(0x59645d, 0.7).fillRoundedRect(x, y - 4, 78, 8, 4);
-    ui.bars.fillStyle(FACTION_COLORS[faction], 0.96).fillRoundedRect(x, y - 4, 78 * ratio, 8, 4);
-    ui.factionTexts[i]?.setText(`${FACTION_SHORT[faction]}  ${karma[faction]}`);
-  });
-
-  if (ui.hero) {
-    const tint = FACTION_COLORS[dominant];
-    ui.hero.setTint(Phaser.Display.Color.Interpolate.ColorWithColor(
-      Phaser.Display.Color.IntegerToColor(0xffffff),
-      Phaser.Display.Color.IntegerToColor(tint),
-      100,
-      8,
-    ).color);
+  ui.yearText.setText(`${stage} / 12 年目`);
+  ui.requestTitle.setText(request ? `【${FACTION_LABEL[request.faction]}】` : "【旅人からの依頼】");
+  ui.requestText.setText(request?.text ?? "次の依頼を待っています……");
+  if (request) {
+    const texture = FACTION_TEXTURES[request.faction];
+    ui.requestIcon?.setTexture(texture);
+    ui.acceptIcon?.setTexture(texture);
   }
 }
 
