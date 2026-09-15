@@ -64,7 +64,9 @@ test("touch starts a journey and a choice records a deed after rotation", async 
 });
 
 test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
-  await page.setViewportSize({ width: 450, height: 800 });
+  // The responsive controller keeps a 9px edge on each side, so 468x810 renders the
+  // 450x800 design canvas at its native size for pixel-level mock comparison.
+  await page.setViewportSize({ width: 468, height: 810 });
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const startRun = Reflect.get(scene, "startRun");

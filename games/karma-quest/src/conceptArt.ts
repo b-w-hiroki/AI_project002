@@ -73,11 +73,11 @@ function build(scene: Runtime): KarmaUi {
   graphics.lineStyle(1.5, 0xcaa840, 0.95).strokeRoundedRect(24, 160, 402, 480, 14);
   root.add(graphics);
 
-  label(scene, root, 225, 116, "剣と慈悲を携える勇者", 14);
-  label(scene, root, 225, 140, "最初の旅：自由に勇者を育てよう", 14);
+  label(scene, root, 225, 115, "剣と慈悲を携える勇者", 14);
+  label(scene, root, 225, 139, "最初の旅：自由に勇者を育てよう", 14);
   const yearText = label(scene, root, 225, 210, "", 13, "#9aafa2", "800");
-  const requestTitle = label(scene, root, 225, 324, "", 17, "#d9b64d", "900");
-  const requestText = scene.add.text(225, 392, "", {
+  const requestTitle = label(scene, root, 225, 322, "", 17, "#d9b64d", "900");
+  const requestText = scene.add.text(225, 390, "", {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif', fontSize: "15px", fontStyle: "700",
     color: "#cbd2cb", align: "center", lineSpacing: 6, wordWrap: { width: 320, useAdvancedWrap: true },
   }).setOrigin(0.5);
@@ -91,7 +91,7 @@ function build(scene: Runtime): KarmaUi {
     root.add([requestIcon, acceptIcon]);
   }
   button(scene, root, 500, "力を貸す", () => invoke(scene, "onKarmaChoice", true));
-  button(scene, root, 575, "断る", () => invoke(scene, "onKarmaChoice", false));
+  button(scene, root, 570, "断る", () => invoke(scene, "onKarmaChoice", false));
   if (acceptIcon) root.bringToTop(acceptIcon);
 
   const ui = { root, yearText, requestTitle, requestText, requestIcon, acceptIcon };
