@@ -48,8 +48,8 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, y: number, t
   const background = scene.add.graphics();
   const paint = (pressed = false) => {
     background.clear();
-    background.fillStyle(pressed ? 0x35594a : 0x2a4a3e, 1).fillRoundedRect(x - width / 2, y - height / 2, width, height, 12);
-    background.lineStyle(1.5, 0xcaa840, 0.95).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 12);
+    background.fillStyle(pressed ? 0x35594a : 0x2c4a3c, 1).fillRoundedRect(x - width / 2, y - height / 2, width, height, 12);
+    background.lineStyle(2, 0xd9b45a, 0.55).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 12);
   };
   paint();
   root.add(background);
@@ -66,11 +66,11 @@ function build(scene: Runtime): KarmaUi {
   if (cached) return cached;
   const root = scene.add.container(0, 0).setDepth(6000).setVisible(false);
   const graphics = scene.add.graphics();
-  graphics.fillStyle(0x0d1c17, 1).fillRect(0, 0, 450, 800);
-  graphics.lineStyle(1.5, 0xcaa840, 0.92).strokeCircle(225, 70, 24);
-  graphics.lineStyle(1, 0xcaa840, 0.92).lineBetween(205, 70, 245, 70).lineBetween(225, 50, 225, 90);
-  graphics.fillStyle(0x183a2e, 1).fillRoundedRect(24, 160, 402, 480, 14);
-  graphics.lineStyle(1.5, 0xcaa840, 0.95).strokeRoundedRect(24, 160, 402, 480, 14);
+  graphics.fillStyle(0x14201c, 1).fillRect(0, 0, 450, 800);
+  graphics.lineStyle(2, 0xd9b45a, 0.6).strokeCircle(225, 70, 24);
+  graphics.lineStyle(1, 0xd9b45a, 0.6).lineBetween(205, 70, 245, 70).lineBetween(225, 50, 225, 90);
+  graphics.fillStyle(0x1e392f, 0.96).fillRoundedRect(24, 160, 402, 480, 14);
+  graphics.lineStyle(2, 0xd9b45a, 0.7).strokeRoundedRect(24, 160, 402, 480, 14);
   root.add(graphics);
 
   label(scene, root, 225, 115, "剣と慈悲を携える勇者", 14);
