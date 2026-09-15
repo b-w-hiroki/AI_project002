@@ -62,3 +62,23 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await expect.poll(() => phase(page)).not.toBe("karma");
   await checkFrame(page, "landscape-after-choice");
 });
+
+test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
+  await page.setViewportSize({ width: 450, height: 800 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const startRun = Reflect.get(scene, "startRun");
+    if (typeof startRun === "function") startRun.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "currentRequest", { faction: "warrior", text: "実戦で腕試しがしたい…", karmaDelta: 8 });
+  });
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-choice-mock.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.002,
+  });
+});
