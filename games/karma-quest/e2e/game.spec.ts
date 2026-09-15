@@ -158,3 +158,23 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });
 });
+
+test("portrait choice reveals the world reaction scene", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const startRun = Reflect.get(scene, "startRun");
+    if (typeof startRun === "function") startRun.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const choose = Reflect.get(scene, "onKarmaChoice");
+    if (typeof choose === "function") choose.call(scene, true);
+  });
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-reaction-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.01,
+  });
+});
