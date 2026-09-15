@@ -161,6 +161,10 @@ function build(scene: Runtime): KarmaUi {
 
   const root = scene.add.container(0, 0).setDepth(1800).setVisible(false);
   drawWorld(scene, root);
+  const daylight = scene.add.graphics();
+  daylight.fillStyle(0xeef9e8, 0.13).fillRect(0, 0, 450, 620);
+  daylight.fillGradientStyle(0x5f986d, 0x5f986d, 0x193d2c, 0x193d2c, 0.12, 0.12, 0.32, 0.32).fillRect(0, 500, 450, 300);
+  root.add(daylight);
 
   panel(scene, root, 225, 108, 414, 76, 0x10201a, 0xd1ad61, 0.94, 12);
   const yearText = label(scene, root, 35, 94, "", 14, "#f5dfaa", "900").setOrigin(0, 0.5);

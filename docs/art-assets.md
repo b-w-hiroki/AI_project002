@@ -166,6 +166,7 @@ ChatGPT等の画像生成でイラスト素材を用意し、ゲームらしい�
 | kq-faction-icon-merchant | 商人の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上 |
 | kq-faction-icon-outlaw | 荒くれ者の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上 |
 | kq-faction-icon-mage | 魔術師の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上（画像が無い派閥はアイコン省略でテキストのみ表示） |
+| kq-bg-kingdom-portrait-v2 | 縦画面の王都・王国背景 | 948×1659、不透過 | 組み込み済み | 2026-09-15 | 内蔵imagegenで生成。中央上部に勇者、下半分に依頼・派閥・選択UIを重ねる縦構図。比率を維持したcover配置で、既存SVGは未読込時のフォールバックとして保持 |
 
 ### プロンプト（日本語）— kq-hero-warrior
 > ファンタジーRPGの勇者キャラクター、腰に剣を携えた凛々しい正面立ち姿、まだ駆け出しを感じさせるシンプルな軽装、深緑と金を基調にした落ち着いた配色、カジュアルなソシャゲ風イラスト、くっきりした輪郭線、背景透過、育成RPGのメインキャラクター立ち絵（育成前のベース外見）、384x512px
@@ -196,6 +197,12 @@ ChatGPT等の画像生成でイラスト素材を用意し、ゲームらしい�
 
 ### Prompt (English) — kq-faction-icon-mage
 > An emblem-style icon representing the "Mage Faction", a magic circle and staff or a magic gem motif, a mystical and intellectual impression, dark-green and gold color palette, circular badge-shaped frame, casual mobile-game art style, clean bold outlines, transparent background, faction-selection UI icon, 128x128px
+
+### プロンプト（日本語）— kq-bg-kingdom-portrait-v2
+> 縦画面の育成ファンタジーRPGで使う王都と王国の背景イラスト。画面上部には朝日に照らされた白い王城と青緑の尖塔、中景には緑の谷と城下町、左右には旗と石造りの建物を配置する。中央上部は勇者の全身立ち絵を重ねられるよう明るい空と城門へ続く道で抜けを作り、画面下半分は羊皮紙の依頼文・派閥ゲージ・二つの選択肢UIを重ねられるよう細部とコントラストを抑える。深緑・金・青空を基調にした、明るく壮大で親しみやすいカジュアルなソシャゲ風コンセプトアート。くっきりした輪郭と丁寧な厚塗り、奥行きのあるレイヤー構成。人物、文字、ロゴ、UI、透かしは入れない。不透過、1024x1792px。
+
+### Prompt (English) — kq-bg-kingdom-portrait-v2
+> A portrait kingdom background for a hero-raising fantasy mobile RPG. A white royal castle with teal spires lit by warm morning sun in the upper area, a green valley and castle town in the middle distance, and banners and stone buildings framing both sides. Keep a bright, open visual corridor from the upper center sky down the road to the castle gate so a full-body hero can be overlaid. Reduce detail and contrast in the lower half so parchment request text, faction meters, and two large choice buttons remain readable. Bright, grand, friendly mobile-RPG concept art in deep green, gold, and clear sky blue, with clean silhouettes, polished painterly detail, and layered depth. No people, text, logos, UI, or watermark. Opaque, 1024x1792px.
 
 ---
 
