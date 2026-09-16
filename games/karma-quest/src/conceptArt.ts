@@ -79,6 +79,26 @@ function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): v
   root.add(g);
 }
 
+function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): void {
+  const g = scene.add.graphics();
+  g.fillStyle(0xffffff, 0.28).fillRoundedRect(62, y - 14, 326, 28, 7);
+  g.fillStyle(color, 1).fillCircle(82, y, 10);
+  root.add(g);
+  text(scene, root, 82, y, "◆", 11, "#ffffff", "900");
+  text(scene, root, 138, y, label, 17, "#352f29", "900");
+  text(scene, root, 223, y, arrow, 20, arrow === "↓" ? "#b1262c" : arrow === "→" ? "#6d685f" : "#16864f", "900");
+  text(scene, root, 303, y, result, 16, "#352f29", "800");
+}
+
+function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): void {
+  const g = scene.add.graphics();
+  g.fillStyle(color, 0.12).fillRoundedRect(x - 47, y - 16, 94, 32, 6);
+  g.lineStyle(1, color, 0.72).strokeRoundedRect(x - 47, y - 16, 94, 32, 6);
+  root.add(g);
+  text(scene, root, x - 11, y, label, 14, "#43382e", "800");
+  text(scene, root, x + 30, y, value, 16, "#17663f", "900");
+}
+
 function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, label: string, fill: number, onClick: () => void): void {
   const g = scene.add.graphics();
   const paint = (pressed = false) => {
@@ -165,7 +185,10 @@ function buildReaction(scene: Runtime): Phaser.GameObjects.Container {
   panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
   text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
   text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  text(scene, root, 225, 612, "民の声　　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 18, "#352f29", "800", 350);
+  effectRow(scene, root, 589, 0x2f8c4b, "民の声", "↑", "大きく上昇");
+  effectRow(scene, root, 619, 0x245e9b, "王国", "↑", "やや上昇");
+  effectRow(scene, root, 649, 0x7a5899, "教会", "→", "変化なし");
+  effectRow(scene, root, 679, 0xa32d34, "貴族", "↓", "やや低下");
   button(scene, root, 225, 718, 328, 58, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
   screenFrame(scene, root);
   return root;
@@ -189,7 +212,10 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 225, 397, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
   fitted(scene, root, "kq-hero-warrior", 122, 584, 188, 242);
   text(scene, root, 303, 510, "カイト　Lv.12", 23, "#35281e", "900");
-  text(scene, root, 303, 577, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 17, "#43382e", "800");
+  metricChip(scene, root, 264, 555, "正義", "+2", 0x2e6ba3);
+  metricChip(scene, root, 362, 555, "共感", "+1", 0xb84a63);
+  metricChip(scene, root, 264, 594, "洞察", "+0", 0x70529a);
+  metricChip(scene, root, 362, 594, "魅力", "+1", 0xb48727);
   button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
