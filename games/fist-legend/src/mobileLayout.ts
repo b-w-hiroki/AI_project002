@@ -153,6 +153,8 @@ function buildUi(scene: Runtime): MobileUi {
   });
   const ougi = button(scene, battleGroup, 225, 764, 350, 56, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
   ougi.setName("mobile-ougi");
+  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
+  landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
 
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
   const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
@@ -234,10 +236,10 @@ function positionFighters(scene: Runtime, portrait: boolean): void {
   const enemy = scene.enemySprite;
   if (!player || !enemy) return;
   if (portrait) {
-    player.setPosition(125, 400);
-    fitFighter(player, 238);
-    enemy.setPosition(325, 330);
-    fitFighter(enemy, 238);
+    player.setPosition(225, 500);
+    fitFighter(player, 200);
+    enemy.setPosition(225, 270);
+    fitFighter(enemy, 200);
   } else {
     player.setPosition(185, 245);
     fitFighter(player, 240);
@@ -293,36 +295,46 @@ function refresh(scene: Runtime): void {
     const enemyRatio = Phaser.Math.Clamp(battle.enemyHp / MAX_HP, 0, 1);
     const gaugeRatio = Phaser.Math.Clamp(battle.playerGauge / OUGI_GAUGE_MAX, 0, 1);
 
-    ui.chrome.fillStyle(0x100806, 0.9).fillRoundedRect(8, 8, width - 16, 90, 16);
-    ui.chrome.fillStyle(0x37130f, 1).fillRoundedRect(18, 54, width * 0.38, 12, 6);
-    ui.chrome.fillStyle(0xe74d30, 1).fillRoundedRect(18, 54, width * 0.38 * playerRatio, 12, 6);
+    const hudTop = portrait ? 8 : 44;
+    const hpY = portrait ? 54 : 78;
+    ui.chrome.fillStyle(0x100806, 0.9).fillRoundedRect(8, hudTop, width - 16, portrait ? 90 : 62, 16);
+    ui.chrome.fillStyle(0x37130f, 1).fillRoundedRect(18, hpY, width * 0.38, 12, 6);
+    ui.chrome.fillStyle(0xe74d30, 1).fillRoundedRect(18, hpY, width * 0.38 * playerRatio, 12, 6);
     const enemyX = width - 18 - width * 0.38;
-    ui.chrome.fillStyle(0x12233c, 1).fillRoundedRect(enemyX, 54, width * 0.38, 12, 6);
-    ui.chrome.fillStyle(0x489ff0, 1).fillRoundedRect(enemyX + width * 0.38 * (1 - enemyRatio), 54, width * 0.38 * enemyRatio, 12, 6);
+    ui.chrome.fillStyle(0x12233c, 1).fillRoundedRect(enemyX, hpY, width * 0.38, 12, 6);
+    ui.chrome.fillStyle(0x489ff0, 1).fillRoundedRect(enemyX + width * 0.38 * (1 - enemyRatio), hpY, width * 0.38 * enemyRatio, 12, 6);
     if (portrait) {
       ui.chrome.fillStyle(0x120a08, 0.95).fillRect(0, 620, 450, 180);
       ui.chrome.lineStyle(1, 0xffd68a, 0.32).lineBetween(0, 620, 450, 620);
-      ui.battleTell.setPosition(225, 112);
-      ui.battleGauge.setPosition(225, 162);
-      const moveXs = [92, 225, 358];
+      ui.chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365, 340, 58, 14);
+      ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365, 340, 58, 14);
+      ui.battleTell.setPosition(225, 394);
+      ui.battleGauge.setPosition(225, 90);
+      const movePositions = [{ x: 120, y: 680 }, { x: 330, y: 680 }, { x: 120, y: 750 }];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
-        b?.setPosition(moveXs[index]!, 690).setScale(1).setVisible(true);
+        b?.setPosition(movePositions[index]!.x, movePositions[index]!.y).setScale(1).setVisible(true);
       });
-      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setPosition(225, 764).setScale(1).setVisible(true);
+      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
+      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(330, 750).setScale(1).setVisible(true);
     } else {
-      ui.battleTell.setPosition(400, 102);
-      ui.battleGauge.setPosition(400, 132);
-      const moveXs = [520, 635, 750];
+      ui.chrome.fillStyle(0x100806, 0.84).fillRoundedRect(270, 101, 260, 58, 14);
+      ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(270, 101, 260, 58, 14);
+      ui.chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
+      ui.chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
+      ui.battleTell.setPosition(400, 124);
+      ui.battleGauge.setPosition(165, 404);
+      const moveXs = [410, 520, 630];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
-        b?.setPosition(moveXs[index]!, 392).setScale(0.82).setVisible(true);
+        b?.setPosition(moveXs[index]!, 402).setScale(0.82).setVisible(true);
       });
-      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setPosition(290, 395).setScale(0.8).setVisible(true);
+      (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
+      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(735, 402).setScale(1).setVisible(true);
     }
 
     const remaining = Math.max(0, Math.ceil(scene.timeRemainingSec ?? 0));
-    ui.battleStatus.setPosition(18, 18).setText(`PLAYER ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ENEMY ${battle.enemyHp}/${MAX_HP}`);
+    ui.battleStatus.setPosition(18, portrait ? 18 : 50).setText(`PLAYER ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ENEMY ${battle.enemyHp}/${MAX_HP}`);
     ui.battleTell.setText(`${MOVE_TELL[scene.nextEnemyMove ?? "punch"]}\n拳 > 気 > 蹴 > 拳`);
     ui.battleGauge.setText(gaugeRatio >= 1 ? "奥義 READY" : `奥義 ${Math.round(gaugeRatio * 100)}%  ·  EXCHANGE ${(scene.beat ?? 0) + 1}`);
     return;

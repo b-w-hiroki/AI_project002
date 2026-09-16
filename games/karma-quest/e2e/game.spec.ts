@@ -51,6 +51,8 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await checkFrame(page, "portrait-title");
   await tapPoint(page, 225, 650);
   await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
   await checkFrame(page, "portrait-karma");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
@@ -59,4 +61,122 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
   await expect.poll(() => phase(page)).not.toBe("karma");
   await checkFrame(page, "landscape-after-choice");
+});
+
+test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
+  // The responsive controller keeps a 9px edge on each side, so 468x810 renders the
+  // 450x800 design canvas at its native size for pixel-level mock comparison.
+  await page.setViewportSize({ width: 468, height: 810 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const startRun = Reflect.get(scene, "startRun");
+    if (typeof startRun === "function") startRun.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "currentRequest", { faction: "warrior", text: "実戦で腕試しがしたい…", karmaDelta: 8 });
+  });
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-choice-mock.png", {
+    animations: "disabled",
+    maxDiffPixelRatio: 0.035,
+  });
+});
+
+async function useNativePortrait(page: Page) {
+  await page.setViewportSize({ width: 468, height: 810 });
+}
+
+test("portrait title keeps the approved visual mock", async ({ page }) => {
+  await useNativePortrait(page);
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.035,
+  });
+});
+
+test("portrait battle keeps the approved visual mock", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const titleGroup = Reflect.get(scene, "titleGroup") as { setVisible(value: boolean): void };
+    titleGroup.setVisible(false);
+    const showBattle = Reflect.get(scene, "showBattlePhase");
+    if (typeof showBattle === "function") showBattle.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-battle-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.035,
+  });
+});
+
+test("portrait report keeps the approved visual mock", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const titleGroup = Reflect.get(scene, "titleGroup") as { setVisible(value: boolean): void };
+    titleGroup.setVisible(false);
+    Reflect.set(scene, "deeds", [
+      { id: "request", label: "戦士の派閥に力を貸した", quality: 4, tag: "valor" },
+    ]);
+    Reflect.set(scene, "cheerCount", 1);
+    Reflect.set(scene, "deity", "mercy");
+    const showReport = Reflect.get(scene, "showReportPhase");
+    if (typeof showReport === "function") showReport.call(scene, { win: true, hpRatioRemaining: 0.5 });
+    const rows = Reflect.get(scene, "highlightRows") as Array<{ selected: boolean }>;
+    rows.slice(0, 2).forEach(row => { row.selected = true; });
+    const redraw = Reflect.get(scene, "drawHighlightRow");
+    rows.forEach(row => { if (typeof redraw === "function") redraw.call(scene, row); });
+    const refresh = Reflect.get(scene, "refreshReportPreview");
+    if (typeof refresh === "function") refresh.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("report");
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-report-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.035,
+  });
+});
+
+test("portrait final keeps the approved visual mock", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const titleGroup = Reflect.get(scene, "titleGroup") as { setVisible(value: boolean): void };
+    titleGroup.setVisible(false);
+    Reflect.set(scene, "stage", 12);
+    Reflect.set(scene, "runEvaluation", 180);
+    Reflect.set(scene, "legendCounts", { valor: 4, mercy: 12 });
+    Reflect.set(scene, "chronicle", [
+      "11年目 · 慈愛神\n魔物を討ち、道を切り開いた ／ 勇者に1回の声援を送った",
+      "12年目 · 慈愛神\n魔物を討ち、道を切り開いた ／ 勇者に1回の声援を送った",
+    ]);
+    const showFinal = Reflect.get(scene, "showFinal");
+    if (typeof showFinal === "function") showFinal.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("final");
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.035,
+  });
+});
+
+test("portrait choice reveals the world reaction scene", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const startRun = Reflect.get(scene, "startRun");
+    if (typeof startRun === "function") startRun.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const choose = Reflect.get(scene, "onKarmaChoice");
+    if (typeof choose === "function") choose.call(scene, true);
+  });
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-reaction-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.01,
+  });
+  await page.locator("canvas").click({ position: { x: 225, y: 718 } });
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").reactionUntil)).toBe(0);
 });

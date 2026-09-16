@@ -389,6 +389,7 @@ export class GameScene extends Phaser.Scene {
 
     this.playerSprite = this.buildFighter(180, IMG.hero, 0x3b7fd1);
     this.enemySprite = this.buildFighter(620, IMG.enemy, 0xd1493b);
+    if (this.enemySprite instanceof Phaser.GameObjects.Image) this.enemySprite.setFlipX(true);
 
     const ougiBg = this.add.graphics();
     ougiBg.fillStyle(0x000000, 0.5);
@@ -483,8 +484,7 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * ファイター立ち絵。画像があれば 3:4 比率のまま FIGHTER_H に収めて表示し、無ければ従来の
-   * 角丸長方形（Graphics）で代替する。ヒーロー画像は右向き、敵画像は左向きに描かれているため
-   * setFlipX は不要（向かい合う配置になる）。
+   * 角丸長方形（Graphics）で代替する。敵画像は画面中央へ向くよう、生成後に左右反転する。
    */
   private buildFighter(
     x: number,

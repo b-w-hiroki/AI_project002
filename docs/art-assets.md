@@ -166,6 +166,10 @@ ChatGPT等の画像生成でイラスト素材を用意し、ゲームらしい�
 | kq-faction-icon-merchant | 商人の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上 |
 | kq-faction-icon-outlaw | 荒くれ者の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上 |
 | kq-faction-icon-mage | 魔術師の派閥アイコン | 128×128、背景透過 | 組み込み済み | 2026-09-05 | 同上（画像が無い派閥はアイコン省略でテキストのみ表示） |
+| kq-bg-kingdom-portrait-v2 | 縦画面の王都・王国背景 | 948×1659、不透過 | 組み込み済み | 2026-09-15 | 内蔵imagegenで生成。正式モックの王都ホーム・選択シーン・年代記背景に、比率維持のcover配置で使用 |
+| kq-hero-warrior-back | 王都ホーム用・背中向き勇者 | 1086×1448、背景透過 | 組み込み済み | 2026-09-15 | 写真5と既存勇者を参照して内蔵imagegenで生成。王都ホームと選択シーンに比率維持で使用 |
+| kq-npc-elder | 選択シーン用・老人NPC | 1024×1536、背景透過 | 組み込み済み | 2026-09-15 | 写真5を参照して内蔵imagegenで生成。王都ホームの依頼カードと選択シーンに比率維持で使用 |
+| kq-bg-village-reaction | 世界の反応用・山村と住民 | 1024×1536、不透過 | 組み込み済み | 2026-09-15 | 写真5を参照して内蔵imagegenで生成。選択直後の世界反応と年代記カードに使用 |
 
 ### プロンプト（日本語）— kq-hero-warrior
 > ファンタジーRPGの勇者キャラクター、腰に剣を携えた凛々しい正面立ち姿、まだ駆け出しを感じさせるシンプルな軽装、深緑と金を基調にした落ち着いた配色、カジュアルなソシャゲ風イラスト、くっきりした輪郭線、背景透過、育成RPGのメインキャラクター立ち絵（育成前のベース外見）、384x512px
@@ -196,6 +200,12 @@ ChatGPT等の画像生成でイラスト素材を用意し、ゲームらしい�
 
 ### Prompt (English) — kq-faction-icon-mage
 > An emblem-style icon representing the "Mage Faction", a magic circle and staff or a magic gem motif, a mystical and intellectual impression, dark-green and gold color palette, circular badge-shaped frame, casual mobile-game art style, clean bold outlines, transparent background, faction-selection UI icon, 128x128px
+
+### プロンプト（日本語）— kq-bg-kingdom-portrait-v2
+> 縦画面の育成ファンタジーRPGで使う王都と王国の背景イラスト。画面上部には朝日に照らされた白い王城と青緑の尖塔、中景には緑の谷と城下町、左右には旗と石造りの建物を配置する。中央上部は勇者の全身立ち絵を重ねられるよう明るい空と城門へ続く道で抜けを作り、画面下半分は羊皮紙の依頼文・派閥ゲージ・二つの選択肢UIを重ねられるよう細部とコントラストを抑える。深緑・金・青空を基調にした、明るく壮大で親しみやすいカジュアルなソシャゲ風コンセプトアート。くっきりした輪郭と丁寧な厚塗り、奥行きのあるレイヤー構成。人物、文字、ロゴ、UI、透かしは入れない。不透過、1024x1792px。
+
+### Prompt (English) — kq-bg-kingdom-portrait-v2
+> A portrait kingdom background for a hero-raising fantasy mobile RPG. A white royal castle with teal spires lit by warm morning sun in the upper area, a green valley and castle town in the middle distance, and banners and stone buildings framing both sides. Keep a bright, open visual corridor from the upper center sky down the road to the castle gate so a full-body hero can be overlaid. Reduce detail and contrast in the lower half so parchment request text, faction meters, and two large choice buttons remain readable. Bright, grand, friendly mobile-RPG concept art in deep green, gold, and clear sky blue, with clean silhouettes, polished painterly detail, and layered depth. No people, text, logos, UI, or watermark. Opaque, 1024x1792px.
 
 ---
 
@@ -239,7 +249,7 @@ ChatGPT等の画像生成でイラスト素材を用意し、ゲームらしい�
 
 ## 進捗サマリー（このセクションはClaudeが更新する）
 
-- 組み込み済み: 全6作 21/21（ポーション工房 4、剣戟の森 3、カラーマッチ 2、覇拳伝 4、カルマクエスト 5、三国ポチポチ 3）— 2026-09-05 に残り17点を一括受領・組み込み
+- 組み込み済み: 全6作 25/25（ポーション工房 4、剣戟の森 3、カラーマッチ 2、覇拳伝 4、カルマクエスト 9、三国ポチポチ 3）— 2026-09-15 にカルマクエストの正式モック対応素材4点を追加
 - 未依頼: hub-banner（ルートハブページ用）のみ
 - 受領時の加工メモ（2026-09-05）: 黒背景で届いた立ち絵（蒼刃・カルマ勇者・剣戟主人公）と、チェッカー模様が焼き込まれた立ち絵（覇拳伝の主人公・対戦相手）は、画像の外周から連結する背景色だけをフラッドフィルで透過化した（キャラ内部の同系色は保持される）。今後の依頼では「背景は透過（アルファチャンネル付きPNG）」を強調し、チェッカー模様の書き出しは避けてもらうこと
 
