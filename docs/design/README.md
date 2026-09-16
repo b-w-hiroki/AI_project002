@@ -2,6 +2,8 @@
 
 ## Current
 
+Karma QuestのUI造形・配色・部品仕様は **[Karma Quest UIデザイン基準](karma-ui-design-system.md)** を参照。ユーザー指定の金枠ボタンを起点とする最新基準。
+
 画面・体験設計の最新版は **[AI Project 002 — コンセプトアート準拠・再設計](concept-art-redesign.md)** を起点にする。
 
 次の実装フェーズは **[スマホ最適化 + ビジュアル強化 実装指示書](mobile-responsive-visual-implementation.md)** に従い、6作品を縦持ち / 横持ちの両方へ最適化した後、コンセプトアートとの差をアセット単位で詰める。
