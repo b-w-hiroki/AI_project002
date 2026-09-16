@@ -177,4 +177,6 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
   await expect(page.locator("canvas")).toHaveScreenshot("karma-reaction-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.01,
   });
+  await page.locator("canvas").click({ position: { x: 225, y: 718 } });
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").reactionUntil)).toBe(0);
 });

@@ -162,10 +162,11 @@ function buildReaction(scene: Runtime): Phaser.GameObjects.Container {
   panel(scene, root, 225, 49, 414, 72, 0xf4e5c5, 0.97);
   text(scene, root, 225, 29, "1年目  春", 15, "#35281e", "800");
   text(scene, root, 225, 61, "選択の結果", 30, "#35281e", "900");
-  panel(scene, root, 225, 588, 408, 284, 0xf7efd9, 0.98);
-  text(scene, root, 225, 480, "食料を支援しました", 29, "#35281e", "900");
-  text(scene, root, 225, 539, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  text(scene, root, 225, 638, "民の声　　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 19, "#352f29", "800", 350);
+  panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
+  text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
+  text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
+  text(scene, root, 225, 612, "民の声　　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 18, "#352f29", "800", 350);
+  button(scene, root, 225, 718, 328, 58, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
   screenFrame(scene, root);
   return root;
 }
@@ -186,9 +187,9 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   panel(scene, root, 225, 376, 388, 110, 0xe4ddcb, 0.99);
   text(scene, root, 225, 352, "???", 22, "#35281e", "900");
   text(scene, root, 225, 397, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
-  fitted(scene, root, "kq-hero-warrior", 115, 575, 164, 220);
-  text(scene, root, 298, 516, "カイト　Lv.12", 23, "#35281e", "900");
-  text(scene, root, 298, 580, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 17, "#43382e", "800");
+  fitted(scene, root, "kq-hero-warrior", 122, 584, 188, 242);
+  text(scene, root, 303, 510, "カイト　Lv.12", 23, "#35281e", "900");
+  text(scene, root, 303, 577, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 17, "#43382e", "800");
   button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
@@ -242,7 +243,7 @@ export function installKarmaConceptArtPass(): void {
       const result = originalChoice.apply(this, args);
       const runtime = this as Runtime;
       runtime.lastAccepted = args[0] === true;
-      runtime.reactionUntil = this.time.now + 1500;
+      runtime.reactionUntil = Number.POSITIVE_INFINITY;
       return result;
     };
   }
