@@ -172,7 +172,13 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   panel(scene, root, 225, 39, 420, 60, 0x0b1a29, 0.92);
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
-  fitted(scene, root, HERO_BACK_KEY, 100, 385, 290, 460);
+  // Crop the existing front portrait at the chest; keep a uniform scale so
+  // the conversation portrait does not imply a full-body depth relationship.
+  if (scene.textures.exists("kq-hero-warrior")) {
+    const portrait = scene.add.image(-55, 328, "kq-hero-warrior").setOrigin(0, 0);
+    portrait.setScale(0.9).setCrop(60, 0, 285, 255);
+    root.add(portrait);
+  }
   fitted(scene, root, ELDER_KEY, 325, 448, 224, 336);
   panel(scene, root, 300, 175, 272, 188, 0xf7efd9, 0.985);
   const requestBand = scene.add.graphics();
