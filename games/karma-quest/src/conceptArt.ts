@@ -79,6 +79,24 @@ function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): v
   root.add(g);
 }
 
+// Reading surfaces share the button's metalwork, but use quiet parchment
+// instead of an action gradient or directional ornament.
+function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
+  const g = scene.add.graphics();
+  const shape = (inset: number) => {
+    const l = x - width / 2 + inset, r = x + width / 2 - inset;
+    const t = y - height / 2 + inset, b = y + height / 2 - inset;
+    return [[l + 8, t], [r - 8, t], [r, t + 8], [r, b - 8],
+      [r - 8, b], [l + 8, b], [l, b - 8], [l, t + 8]]
+      .map(([px, py]) => new Phaser.Math.Vector2(px, py));
+  };
+  g.fillStyle(0x201d1a, 1).fillPoints(shape(0), true);
+  g.fillStyle(0xf7efd9, 1).fillPoints(shape(3), true);
+  g.lineStyle(2, 0xb79451, 1).strokePoints(shape(1), true);
+  g.lineStyle(1, 0xb79451, 0.55).strokePoints(shape(7), true);
+  root.add(g);
+}
+
 function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): void {
   const g = scene.add.graphics();
   g.fillStyle(0xffffff, 0.28).fillRoundedRect(62, y - 14, 326, 28, 7);
@@ -162,7 +180,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   fitted(scene, root, HERO_BACK_KEY, 246, 430, 300, 410);
   panel(scene, root, 166, 590, 274, 38, 0x0758a4, 0.96);
   text(scene, root, 166, 590, "●　新しい依頼が届いています", 14, "#ffffff", "900");
-  panel(scene, root, 225, 656, 414, 112, 0xf5ecd3, 0.98);
+  requestCard(scene, root, 225, 656, 414, 112);
   fitted(scene, root, ELDER_KEY, 58, 660, 72, 84);
   text(scene, root, 238, 633, "飢える民たち", 20, "#3c2a1e", "900");
   text(scene, root, 240, 674, "王都の周辺で食料が不足しています。\n助けを求める声が届いています。", 15, "#43382e", "700", 320);
@@ -201,10 +219,10 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
     root.add(portrait);
   }
   fitted(scene, root, ELDER_KEY, 325, 448, 224, 336);
-  panel(scene, root, 300, 175, 272, 188, 0xf7efd9, 0.985);
+  requestCard(scene, root, 300, 175, 272, 188);
   const requestBand = scene.add.graphics();
-  requestBand.fillStyle(0x392d22, 0.92).fillRoundedRect(172, 88, 256, 46, 8);
-  requestBand.lineStyle(1, 0xe0bb69, 0.9).strokeRoundedRect(172, 88, 256, 46, 8);
+  requestBand.fillStyle(0x102c52, 1).fillRect(176, 93, 248, 41);
+  requestBand.lineStyle(1, 0xb79451, 1).lineBetween(176, 134, 424, 134);
   root.add(requestBand);
   const requestTitle = text(scene, root, 300, 111, "", 20, "#35281e", "900", 234);
   const requestText = text(scene, root, 300, 197, "", 20, "#352f29", "700", 232);
