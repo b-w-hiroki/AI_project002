@@ -71,6 +71,14 @@ function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: numbe
   root.add(g);
 }
 
+function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
+  const g = scene.add.graphics();
+  g.lineStyle(5, 0x09131c, 0.96).strokeRoundedRect(5, 5, 440, 790, 12);
+  g.lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 434, 784, 10);
+  g.lineStyle(1, 0xffedb4, 0.45).strokeRoundedRect(12, 12, 426, 776, 8);
+  root.add(g);
+}
+
 function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, label: string, fill: number, onClick: () => void): void {
   const g = scene.add.graphics();
   const paint = (pressed = false) => {
@@ -96,22 +104,32 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const shade = scene.add.graphics();
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.32, 0.32, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 42, 420, 60, 0x0a1b2b, 0.86);
-  text(scene, root, 42, 34, "Lv.12\nカイト", 11, "#ffffff", "900");
-  text(scene, root, 210, 27, "◆ 2,420     ◆ 180", 12, "#fff2c4", "900");
-  text(scene, root, 370, 29, "1年目　春", 11, "#fff6dd", "900");
-  text(scene, root, 225, 134, "この世界の\n物語は、\nあなたの選択から。", 29, "#ffffff", "900", 330);
-  fitted(scene, root, HERO_BACK_KEY, 225, 420, 310, 420);
-  panel(scene, root, 225, 650, 408, 92, 0xf5ecd3, 0.98);
-  fitted(scene, root, ELDER_KEY, 55, 650, 66, 76);
-  text(scene, root, 230, 635, "飢える民たち", 15, "#3c2a1e", "900");
-  text(scene, root, 235, 665, "王都の周辺で食料が不足しています。", 11, "#43382e", "700", 300);
+  panel(scene, root, 225, 43, 420, 64, 0x0a1b2b, 0.9);
+  text(scene, root, 46, 34, "Lv.12\nカイト", 12, "#ffffff", "900");
+  text(scene, root, 220, 28, "● 2,420     ◆ 180", 13, "#fff2c4", "900");
+  text(scene, root, 374, 29, "1年目　春", 12, "#fff6dd", "900");
+  const rail = scene.add.graphics();
+  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 54, 354, 8);
+  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 54, 354, 8);
+  root.add(rail);
+  text(scene, root, 39, 140, "☰\nメニュー", 11, "#fff3ce", "900");
+  text(scene, root, 39, 218, "◆\nクエスト", 10, "#fff3ce", "900");
+  text(scene, root, 39, 296, "♟\n仲間", 10, "#fff3ce", "900");
+  text(scene, root, 39, 374, "▣\n持ち物", 10, "#fff3ce", "900");
+  text(scene, root, 39, 434, "▤\n図鑑", 10, "#fff3ce", "900");
+  text(scene, root, 260, 137, "この世界の\n物語は、\nあなたの選択から。", 31, "#ffffff", "900", 330);
+  fitted(scene, root, HERO_BACK_KEY, 246, 430, 300, 410);
+  panel(scene, root, 225, 660, 414, 100, 0xf5ecd3, 0.98);
+  fitted(scene, root, ELDER_KEY, 58, 660, 72, 84);
+  text(scene, root, 238, 640, "飢える民たち", 17, "#3c2a1e", "900");
+  text(scene, root, 240, 676, "王都の周辺で食料が不足しています。\n助けを求める声が届いています。", 12, "#43382e", "700", 310);
   const nav = scene.add.graphics();
-  nav.fillStyle(0x07131e, 0.94).fillRect(0, 735, 450, 65);
-  nav.lineStyle(1, 0xe2bd6b, 0.65).lineBetween(0, 735, 450, 735);
+  nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
+  nav.lineStyle(2, 0xe2bd6b, 0.82).lineBetween(10, 724, 440, 724);
   root.add(nav);
-  text(scene, root, 225, 770, "王都  ·  ワールド  ·  キャラクター  ·  ガチャ  ·  ショップ", 10, "#fff0c8", "800");
-  const start = scene.add.zone(225, 650, 420, 110).setInteractive({ useHandCursor: true });
+  text(scene, root, 225, 758, "♜ 王都　 ◇ ワールド　 ♞ キャラ　 ✦ ガチャ　 ▣ ショップ", 12, "#fff0c8", "900");
+  screenFrame(scene, root);
+  const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
   start.on("pointerdown", () => invoke(scene, "startRun"));
   root.add(start);
   return root;
@@ -123,30 +141,32 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   const shade = scene.add.graphics();
   shade.fillStyle(0x071017, 0.24).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 35, 420, 52, 0x0b1a29, 0.9);
-  const yearText = text(scene, root, 55, 35, "", 12, "#fff4d0", "900");
-  text(scene, root, 280, 35, "選択が、世界をつくる", 14, "#ffffff", "900");
-  fitted(scene, root, HERO_BACK_KEY, 103, 405, 235, 420);
-  fitted(scene, root, ELDER_KEY, 334, 410, 235, 420);
-  panel(scene, root, 312, 188, 248, 190, 0xf7efd9, 0.98);
-  const requestTitle = text(scene, root, 312, 125, "", 14, "#35281e", "900", 210);
-  const requestText = text(scene, root, 312, 192, "", 13, "#352f29", "700", 205);
-  button(scene, root, 225, 610, 360, 64, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true));
-  button(scene, root, 225, 692, 360, 64, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false));
-  text(scene, root, 225, 760, "「どんな選択にも、意味がある」", 13, "#fff3d0", "700");
+  panel(scene, root, 225, 39, 420, 60, 0x0b1a29, 0.92);
+  const yearText = text(scene, root, 62, 39, "", 14, "#fff4d0", "900");
+  text(scene, root, 282, 39, "選択が、世界をつくる", 17, "#ffffff", "900");
+  fitted(scene, root, HERO_BACK_KEY, 105, 406, 250, 440);
+  fitted(scene, root, ELDER_KEY, 338, 408, 250, 440);
+  panel(scene, root, 308, 184, 268, 212, 0xf7efd9, 0.985);
+  const requestTitle = text(scene, root, 308, 112, "", 17, "#35281e", "900", 228);
+  const requestText = text(scene, root, 308, 190, "", 15, "#352f29", "700", 225);
+  button(scene, root, 225, 602, 374, 72, "⚖　食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true));
+  button(scene, root, 225, 693, 374, 72, "♛　支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false));
+  text(scene, root, 225, 763, "「どんな選択にも、意味がある」", 15, "#fff3d0", "700");
+  screenFrame(scene, root);
   return { choiceRoot: root, yearText, requestTitle, requestText };
 }
 
 function buildReaction(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   cover(scene, root, REACTION_BG_KEY);
-  panel(scene, root, 225, 43, 410, 58, 0xf4e5c5, 0.96);
-  text(scene, root, 225, 32, "1年目  春", 12, "#35281e", "800");
-  text(scene, root, 225, 56, "選択の結果", 24, "#35281e", "900");
-  panel(scene, root, 225, 585, 400, 250, 0xf7efd9, 0.97);
-  text(scene, root, 225, 500, "食料を支援しました", 23, "#35281e", "900");
-  text(scene, root, 225, 548, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 14, "#43382e", "700", 330);
-  text(scene, root, 225, 622, "民の声　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 15, "#352f29", "800", 320);
+  panel(scene, root, 225, 49, 414, 72, 0xf4e5c5, 0.97);
+  text(scene, root, 225, 31, "1年目  春", 13, "#35281e", "800");
+  text(scene, root, 225, 60, "選択の結果", 27, "#35281e", "900");
+  panel(scene, root, 225, 590, 408, 272, 0xf7efd9, 0.98);
+  text(scene, root, 225, 492, "食料を支援しました", 26, "#35281e", "900");
+  text(scene, root, 225, 544, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 16, "#43382e", "700", 350);
+  text(scene, root, 225, 632, "民の声　　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 17, "#352f29", "800", 340);
+  screenFrame(scene, root);
   return root;
 }
 
@@ -156,20 +176,21 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const dim = scene.add.graphics();
   dim.fillStyle(0x06101a, 0.42).fillRect(0, 0, 450, 800);
   root.add(dim);
-  panel(scene, root, 225, 400, 414, 742, 0xf7efd9, 0.985);
-  text(scene, root, 225, 62, "年代記", 29, "#35281e", "900");
-  text(scene, root, 225, 92, "あなたが紡いだ、この世界の物語", 12, "#43382e", "700");
-  panel(scene, root, 225, 215, 374, 190, 0xfff8e8, 0.98);
-  fitted(scene, root, REACTION_BG_KEY, 118, 210, 155, 150);
-  text(scene, root, 295, 175, "飢える民たち", 17, "#35281e", "900");
-  text(scene, root, 295, 225, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 12, "#43382e", "700", 190);
-  panel(scene, root, 225, 370, 374, 100, 0xe4ddcb, 0.98);
-  text(scene, root, 225, 350, "???", 18, "#35281e", "900");
-  text(scene, root, 225, 386, "この選択が、新たな物語への扉を開いた。", 11, "#43382e", "700", 310);
-  fitted(scene, root, "kq-hero-warrior", 120, 585, 150, 200);
-  text(scene, root, 292, 530, "カイト  Lv.12", 18, "#35281e", "900");
-  text(scene, root, 292, 580, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 13, "#43382e", "800");
-  button(scene, root, 225, 700, 330, 56, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
+  panel(scene, root, 225, 400, 422, 756, 0xf7efd9, 0.988);
+  text(scene, root, 225, 57, "▤　年代記", 32, "#35281e", "900");
+  text(scene, root, 225, 92, "あなたが紡いだ、この世界の物語", 14, "#43382e", "700");
+  panel(scene, root, 225, 215, 388, 198, 0xfff8e8, 0.99);
+  fitted(scene, root, REACTION_BG_KEY, 112, 210, 160, 158);
+  text(scene, root, 296, 171, "飢える民たち", 19, "#35281e", "900");
+  text(scene, root, 296, 229, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 14, "#43382e", "700", 198);
+  panel(scene, root, 225, 376, 388, 110, 0xe4ddcb, 0.99);
+  text(scene, root, 225, 354, "???", 20, "#35281e", "900");
+  text(scene, root, 225, 395, "この選択が、新たな物語への扉を開いた。", 13, "#43382e", "700", 330);
+  fitted(scene, root, "kq-hero-warrior", 115, 575, 164, 220);
+  text(scene, root, 298, 520, "カイト　Lv.12", 20, "#35281e", "900");
+  text(scene, root, 298, 578, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 15, "#43382e", "800");
+  button(scene, root, 225, 708, 350, 64, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
+  screenFrame(scene, root);
   return root;
 }
 
