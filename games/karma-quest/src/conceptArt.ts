@@ -101,16 +101,37 @@ function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: 
 
 function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, label: string, fill: number, onClick: () => void): void {
   const g = scene.add.graphics();
+  const outline = (inset: number) => {
+    const l = x - width / 2 + inset, r = x + width / 2 - inset;
+    const t = y - height / 2 + inset, b = y + height / 2 - inset;
+    const cut = 9;
+    return [{ x: l + cut, y: t }, { x: r - cut, y: t }, { x: r, y: t + cut },
+      { x: r, y: b - cut }, { x: r - cut, y: b }, { x: l + cut, y: b },
+      { x: l, y: b - cut }, { x: l, y: t + cut }].map(point => new Phaser.Math.Vector2(point.x, point.y));
+  };
   const paint = (pressed = false) => {
     g.clear();
-    g.fillStyle(0x04070a, 0.5).fillRoundedRect(x - width / 2 + 3, y - height / 2 + 5, width, height, 8);
-    g.fillStyle(pressed ? Phaser.Display.Color.ValueToColor(fill).darken(12).color : fill, 0.98).fillRoundedRect(x - width / 2, y - height / 2, width, height, 8);
-    g.fillStyle(0xffffff, 0.14).fillRoundedRect(x - width / 2 + 2, y - height / 2 + 2, width - 4, height * 0.25, 6);
-    g.lineStyle(2, 0xf0d18a, 0.95).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 8);
+    const blue = fill === 0x0758a4;
+    const base = blue ? 0x102c52 : 0x501923;
+    g.fillStyle(0x050b13, 0.95).fillPoints(outline(0), true);
+    g.fillStyle(base, 1).fillPoints(outline(4), true);
+    const top = pressed ? base : blue ? 0x235783 : 0x80343d;
+    g.fillGradientStyle(top, base, base, 0x0b1425, 1).fillRect(x - width / 2 + 14, y - height / 2 + 5, width - 28, height - 10);
+    g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
+    g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
+    g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
+    // Small gold corner flourishes, matching the mock's inset metalwork.
+    for (const side of [-1, 1]) {
+      const edge = x + side * (width / 2 - 13);
+      g.lineStyle(2, 0xe8cb83, 0.9);
+      g.lineBetween(edge, y - height / 2 + 18, edge + side * 6, y - height / 2 + 10);
+      g.lineBetween(edge, y + height / 2 - 18, edge + side * 6, y + height / 2 - 10);
+    }
+    g.fillStyle(0xf4e5bd, 0.95).fillTriangle(x + width / 2 - 26, y - 5, x + width / 2 - 26, y + 5, x + width / 2 - 20, y);
   };
   paint();
   root.add(g);
-  text(scene, root, x, y, label, 21, "#fffaf0", "900", width - 24);
+  text(scene, root, x, y, label, 22, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
   const zone = scene.add.zone(x, y, width, height).setInteractive({ useHandCursor: true });
   root.add(zone);
   zone.on("pointerdown", () => { paint(true); onClick(); });
