@@ -6,6 +6,11 @@ const insideCanvas = (rect: UiRect) => rect.x >= 0 && rect.y >= 0
   && rect.y + rect.height <= PORTRAIT_CANVAS.height;
 
 describe("portrait screen blueprint", () => {
+  it("separates result effects from a phone-sized next action", () => {
+    const { effects, next } = PORTRAIT_BLUEPRINT.reaction;
+    expect(rectGap(effects, next).vertical).toBeGreaterThanOrEqual(16);
+    expect(next.height * 314 / 450).toBeGreaterThanOrEqual(52);
+  });
   it("keeps every UI region inside the design canvas", () => {
     for (const screen of Object.values(PORTRAIT_BLUEPRINT)) {
       for (const rect of Object.values(screen)) expect(insideCanvas(rect)).toBe(true);

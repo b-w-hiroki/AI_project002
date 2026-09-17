@@ -21,9 +21,9 @@ export const PORTRAIT_BLUEPRINT = {
   },
   reaction: {
     heading: { x: 18, y: 13, width: 414, height: 72 },
-    result: { x: 21, y: 442, width: 408, height: 316 },
-    effects: { x: 62, y: 575, width: 326, height: 118 },
-    next: { x: 61, y: 689, width: 328, height: 58 },
+    result: { x: 21, y: 442, width: 408, height: 348 },
+    effects: { x: 62, y: 576, width: 326, height: 118 },
+    next: { x: 61, y: 710, width: 328, height: 80 },
   },
   final: {
     parchment: { x: 14, y: 22, width: 422, height: 756 },

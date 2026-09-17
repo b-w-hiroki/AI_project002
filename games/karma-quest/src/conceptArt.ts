@@ -24,8 +24,10 @@ type MockUi = {
   acceptLabel: Phaser.GameObjects.Text;
   reactionTitle: Phaser.GameObjects.Text;
   reactionBody: Phaser.GameObjects.Text;
+  reactionQuote: Phaser.GameObjects.Text;
   reactionArrows: Phaser.GameObjects.Text[];
   reactionResults: Phaser.GameObjects.Text[];
+  landscapeReaction?: Omit<MockUi, "titleRoot" | "choiceRoot" | "finalRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel" | "landscapeReaction">;
 };
 
 const BG_KEY = "kq-bg-kingdom-portrait-v2";
@@ -104,7 +106,20 @@ function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): v
   g.lineStyle(5, 0x09131c, 0.96).strokeRoundedRect(5, 5, 440, 790, 12);
   g.lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 434, 784, 10);
   g.lineStyle(1, 0xffedb4, 0.45).strokeRoundedRect(12, 12, 426, 776, 8);
+  ornament(g, 8, 8, 434, 784);
   root.add(g);
+}
+
+// Mirrored, inset metalwork keeps the flourish inside the panel's reserved edge.
+function ornament(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number): void {
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    const cx = sx < 0 ? x : x + width;
+    const cy = sy < 0 ? y : y + height;
+    const point = (a: number, b: number) => new Phaser.Math.Vector2(cx - sx * a, cy - sy * b);
+    g.lineStyle(2, 0xd5ad60, 1).strokePoints([point(3, 27), point(3, 13), point(13, 13), point(13, 3), point(27, 3)], false);
+    g.lineStyle(1, 0xffe4a0, 0.9).strokePoints([point(6, 30), point(6, 17), point(17, 17), point(17, 6), point(30, 6)], false);
+    g.fillStyle(0xf2d28b, 1).fillPoints([point(8, 17), point(12, 21), point(16, 17), point(12, 13)], true);
+  }
 }
 
 // Reading surfaces share the button's metalwork, but use quiet parchment
@@ -122,6 +137,7 @@ function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x:
   g.fillStyle(0xf7efd9, 1).fillPoints(shape(3), true);
   g.lineStyle(2, 0xb79451, 1).strokePoints(shape(1), true);
   g.lineStyle(1, 0xb79451, 0.55).strokePoints(shape(7), true);
+  ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
   root.add(g);
 }
 
@@ -180,6 +196,7 @@ function button(
     g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
     g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
     g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
+    ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
     if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokePoints(outline(8), true);
     if (state === "processing") g.fillStyle(0x071017, 0.44).fillPoints(outline(5), true);
     // Small gold corner flourishes, matching the mock's inset metalwork.
@@ -294,28 +311,38 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
 }
 
-function buildReaction(scene: Runtime): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionArrows" | "reactionResults"> {
-  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
-  cover(scene, root, REACTION_BG_KEY);
-  panel(scene, root, 225, 49, 414, 72, 0xf4e5c5, 0.97);
-  text(scene, root, 225, 29, "1年目  春", 18, "#35281e", "800");
-  text(scene, root, 225, 61, "選択の結果", 30, "#35281e", "900");
-  panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
+function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionQuote" | "reactionArrows" | "reactionResults"> {
+  const screen = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  if (landscape) {
+    const background = scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450);
+    screen.add(background);
+    artWindow(scene, screen, REACTION_BG_KEY, 8, 8, 350, 434);
+    requestCard(scene, screen, 183, 49, 334, 72);
+  } else {
+    cover(scene, screen, REACTION_BG_KEY);
+    requestCard(scene, screen, 225, 49, 414, 72);
+  }
+  text(scene, screen, landscape ? 183 : 225, 29, "1年目  春", 18, "#35281e", "800");
+  text(scene, screen, landscape ? 183 : 225, 61, "選択の結果", 30, "#35281e", "900");
+  const root = scene.add.container(landscape ? 354 : 0, landscape ? -374 : 0);
+  screen.add(root);
+  panel(scene, root, 225, 616, 408, 348, 0xf7efd9, 0.98);
   const reactionTitle = text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
   const reactionBody = text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  text(scene, root, 225, 558, "「ありがとうございます。王都は私たちの希望です」", 13, "#6a4a2a", "700", 350);
+  const reactionQuote = text(scene, root, 225, 558, "「王都は、私たちの希望です」", 17, "#6a4a2a", "700", 350);
   const effectRows = [
-    effectRow(scene, root, 589, 0x2f8c4b, "民の声", "↑", "大きく上昇"),
-    effectRow(scene, root, 619, 0x245e9b, "王国", "↑", "やや上昇"),
-    effectRow(scene, root, 649, 0x7a5899, "教会", "→", "変化なし"),
-    effectRow(scene, root, 679, 0xa32d34, "貴族", "↓", "やや低下"),
+    effectRow(scene, root, 590, 0x2f8c4b, "民の声", "↑", "大きく上昇"),
+    effectRow(scene, root, 620, 0x245e9b, "王国", "↑", "やや上昇"),
+    effectRow(scene, root, 650, 0x7a5899, "教会", "→", "変化なし"),
+    effectRow(scene, root, 680, 0xa32d34, "貴族", "↓", "やや低下"),
   ];
-  button(scene, root, 225, 718, 328, 58, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
-  screenFrame(scene, root);
+  button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
+  if (!landscape) screenFrame(scene, screen);
   return {
-    reactionRoot: root,
+    reactionRoot: screen,
     reactionTitle,
     reactionBody,
+    reactionQuote,
     reactionArrows: effectRows.map(([arrow]) => arrow),
     reactionResults: effectRows.map(([, result]) => result),
   };
@@ -359,7 +386,7 @@ function build(scene: Runtime): MockUi {
   const choice = buildChoice(scene);
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, ...reaction, finalRoot };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeReaction: buildReaction(scene, true) };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -371,8 +398,10 @@ function refresh(scene: Runtime): void {
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
   ui.reactionRoot.setVisible(portrait && (scene.reactionUntil ?? 0) > scene.time.now);
+  ui.landscapeReaction?.reactionRoot.setVisible(!portrait && (scene.reactionUntil ?? 0) > scene.time.now);
   ui.finalRoot.setVisible(portrait && scene.phase === "final");
   const accepted = scene.lastAccepted !== false;
+  ui.reactionQuote.setText(accepted ? "「王都は、私たちの希望です」" : "「私たちの声は、届かなかった……」");
   ui.reactionTitle.setText(accepted ? "食料を支援しました" : "支援を見送りました");
   ui.reactionBody.setText(accepted
     ? "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。"
@@ -381,6 +410,17 @@ function refresh(scene: Runtime): void {
   const results = accepted ? ["大きく上昇", "やや上昇", "変化なし", "やや低下"] : ["大きく低下", "変化なし", "やや上昇", "やや上昇"];
   ui.reactionArrows.forEach((item, index) => item.setText(arrows[index] ?? "→").setColor((arrows[index] ?? "→") === "↓" ? "#b1262c" : (arrows[index] ?? "→") === "→" ? "#6d685f" : "#16864f"));
   ui.reactionResults.forEach((item, index) => item.setText(results[index] ?? "変化なし"));
+  const wide = ui.landscapeReaction;
+  if (wide) {
+    wide.reactionTitle.setText(ui.reactionTitle.text);
+    wide.reactionBody.setText(ui.reactionBody.text);
+    wide.reactionQuote.setText(ui.reactionQuote.text);
+    wide.reactionArrows.forEach((item, i) => {
+      const source = ui.reactionArrows[i];
+      if (source) item.setText(source.text).setColor(source.style.color as string);
+    });
+    wide.reactionResults.forEach((item, i) => item.setText(ui.reactionResults[i]?.text ?? ""));
+  }
   if (!portrait || scene.phase !== "karma") return;
   const request = scene.currentRequest;
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
