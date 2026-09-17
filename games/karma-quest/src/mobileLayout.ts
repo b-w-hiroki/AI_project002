@@ -86,22 +86,34 @@ function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: numbe
 
 function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, value: string, action: () => void, accent: number): void {
   const g = scene.add.graphics();
-  const paint = (pressed = false) => {
+  let armed = false;
+  let processing = false;
+  const paint = (state: "idle" | "focus" | "pressed" | "processing" = "idle") => {
     g.clear();
-    const color = pressed ? Phaser.Display.Color.ValueToColor(accent).darken(12).color : accent;
+    const color = state === "pressed" ? Phaser.Display.Color.ValueToColor(accent).darken(12).color : accent;
     g.fillStyle(0x07110d, 0.28).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 13);
     g.fillStyle(color, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 13);
     g.fillStyle(0xffffff, 0.12).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.26, 10);
     g.lineStyle(1.6, 0xf0d394, 0.68).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokeRoundedRect(x - w / 2 + 4, y - h / 2 + 4, w - 8, h - 8, 10);
+    if (state === "processing") g.fillStyle(0x07110d, 0.42).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6, 10);
   };
   paint();
   root.add(g);
   text(scene, root, x, y, value, 15, "#fff7e9", "900");
   const hit = scene.add.zone(x, y, w, Math.max(52, h)).setInteractive({ useHandCursor: true });
   root.add(hit);
-  hit.on("pointerdown", () => { paint(true); action(); });
-  hit.on("pointerup", () => paint(false));
-  hit.on("pointerout", () => paint(false));
+  hit.on("pointerover", () => { if (!processing) paint("focus"); });
+  hit.on("pointerdown", () => { if (!processing) { armed = true; paint("pressed"); } });
+  hit.on("pointerup", () => {
+    if (!armed || processing) return;
+    armed = false;
+    processing = true;
+    paint("processing");
+    action();
+    scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
+  });
+  hit.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
 }
 
 function world(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
@@ -208,10 +220,9 @@ function build(scene: Runtime): LandscapeUi {
 function targetSize(
   scene: Runtime,
   landscape: boolean,
-  specialLandscape: boolean,
   safe: { safeLeft: number; safeRight: number; safeTop: number; safeBottom: number } | null,
 ): void {
-  const target = landscape && specialLandscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
+  const target = landscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
   if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
     scene.scale.resize(target.width, target.height);
   }
@@ -236,7 +247,7 @@ function refresh(scene: Runtime): void {
   const layout = getResponsiveLayout(scene as never);
   const physicalLandscape = !!layout && !layout.isPortrait;
   const mobilePhase = scene.phase === "title" || scene.phase === "karma";
-  targetSize(scene, physicalLandscape, mobilePhase, layout);
+  targetSize(scene, physicalLandscape, layout);
 
   const ui = build(scene);
   const active = physicalLandscape && mobilePhase;

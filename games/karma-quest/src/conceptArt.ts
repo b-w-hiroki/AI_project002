@@ -40,7 +40,7 @@ function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
 }
 
 function text(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, value: string, size: number, color = "#fff8e8", weight = "700", width?: number): Phaser.GameObjects.Text {
-  const darkText = color === "#35281e" || color === "#352f29" || color === "#3c2a1e" || color === "#43382e";
+  const darkText = color === "#35281e" || color === "#352f29" || color === "#3c2a1e" || color === "#43382e" || color === "#6a4a2a";
   const object = scene.add.text(x, y, value, {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif', fontSize: `${size}px`, fontStyle: weight,
     color, align: "center", lineSpacing: 5, wordWrap: width ? { width, useAdvancedWrap: true } : undefined,
@@ -85,6 +85,17 @@ function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key:
   const cropX = (image.width - cropWidth) / 2, cropY = (image.height - cropHeight) / 2;
   image.setScale(scale).setPosition(x - cropX * scale, y - cropY * scale);
   image.setCrop(cropX, cropY, cropWidth, cropHeight);
+  root.add(image);
+}
+
+function bustWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number): void {
+  if (!scene.textures.exists(key)) return;
+  const image = scene.add.image(x, y, key).setOrigin(0);
+  const cropHeight = image.height * 0.42;
+  const cropWidth = Math.min(image.width, cropHeight * (width / height));
+  const cropX = (image.width - cropWidth) / 2;
+  const scale = Math.max(width / cropWidth, height / cropHeight);
+  image.setCrop(cropX, 0, cropWidth, cropHeight).setScale(scale).setPosition(x - cropX * scale, y);
   root.add(image);
 }
 
@@ -135,8 +146,21 @@ function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: 
   text(scene, root, x + 30, y, value, 16, "#17663f", "900");
 }
 
-function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, label: string, fill: number, onClick: () => void): Phaser.GameObjects.Text {
+function button(
+  scene: Runtime,
+  root: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  label: string,
+  fill: number,
+  onClick: () => void,
+  detail?: string,
+): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
+  let armed = false;
+  let processing = false;
   const outline = (inset: number) => {
     const l = x - width / 2 + inset, r = x + width / 2 - inset;
     const t = y - height / 2 + inset, b = y + height / 2 - inset;
@@ -145,17 +169,19 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y
       { x: r, y: b - cut }, { x: r - cut, y: b }, { x: l + cut, y: b },
       { x: l, y: b - cut }, { x: l, y: t + cut }].map(point => new Phaser.Math.Vector2(point.x, point.y));
   };
-  const paint = (pressed = false) => {
+  const paint = (state: "idle" | "focus" | "pressed" | "processing" = "idle") => {
     g.clear();
     const blue = fill === 0x0758a4;
     const base = blue ? 0x102c52 : 0x501923;
     g.fillStyle(0x050b13, 0.95).fillPoints(outline(0), true);
     g.fillStyle(base, 1).fillPoints(outline(4), true);
-    const top = pressed ? base : blue ? 0x235783 : 0x80343d;
+    const top = state === "pressed" ? base : blue ? 0x235783 : 0x80343d;
     g.fillGradientStyle(top, base, base, 0x0b1425, 1).fillRect(x - width / 2 + 14, y - height / 2 + 5, width - 28, height - 10);
     g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
     g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
     g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
+    if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokePoints(outline(8), true);
+    if (state === "processing") g.fillStyle(0x071017, 0.44).fillPoints(outline(5), true);
     // Small gold corner flourishes, matching the mock's inset metalwork.
     for (const side of [-1, 1]) {
       const edge = x + side * (width / 2 - 13);
@@ -167,12 +193,21 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y
   };
   paint();
   root.add(g);
-  const labelText = text(scene, root, x, y, label, 22, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
-  const zone = scene.add.zone(x, y, width, height).setInteractive({ useHandCursor: true });
+  const labelText = text(scene, root, x, detail ? y - 10 : y, label, detail ? 21 : 22, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
+  if (detail) text(scene, root, x, y + 18, detail, 13, "#eadfca", "700", width - 76).setStroke("#091420", 1);
+  const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
-  zone.on("pointerdown", () => { paint(true); onClick(); });
-  zone.on("pointerup", () => paint(false));
-  zone.on("pointerout", () => paint(false));
+  zone.on("pointerover", () => { if (!processing) paint("focus"); });
+  zone.on("pointerdown", () => { if (!processing) { armed = true; paint("pressed"); } });
+  zone.on("pointerup", () => {
+    if (!armed || processing) return;
+    armed = false;
+    processing = true;
+    paint("processing");
+    onClick();
+    scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
+  });
+  zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
   return labelText;
 }
 
@@ -252,8 +287,8 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   const requestTitle = text(scene, root, 290, 111, "", 20, "#35281e", "900", 270);
   const requestText = text(scene, root, 290, 197, "", 20, "#352f29", "700", 270);
   requestTitle.setColor("#fff4d5");
-  const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true));
-  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false));
+  const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "村に届け、民の声に応える");
+  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "王都の備蓄を守り、別の道を選ぶ");
   text(scene, root, 225, 766, "「どんな選択にも、意味がある」", 17, "#fff3d0", "700");
   screenFrame(scene, root);
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
@@ -268,6 +303,7 @@ function buildReaction(scene: Runtime): Pick<MockUi, "reactionRoot" | "reactionT
   panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
   const reactionTitle = text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
   const reactionBody = text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
+  text(scene, root, 225, 558, "「ありがとうございます。王都は私たちの希望です」", 13, "#6a4a2a", "700", 350);
   const effectRows = [
     effectRow(scene, root, 589, 0x2f8c4b, "民の声", "↑", "大きく上昇"),
     effectRow(scene, root, 619, 0x245e9b, "王国", "↑", "やや上昇"),
@@ -305,7 +341,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   panel(scene, root, 225, 492, 382, 54, 0x102c52, 0.9);
   text(scene, root, 225, 491, "王都ルナディス — 物語の始まる街", 18, "#fffaf0", "900").setStroke("#091420", 1);
-  artWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
+  bustWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
   text(scene, root, 303, 542, "カイト　Lv.12", 23, "#35281e", "900");
   metricChip(scene, root, 264, 589, "正義", "+2", 0x2e6ba3);
   metricChip(scene, root, 362, 589, "共感", "+1", 0xb84a63);

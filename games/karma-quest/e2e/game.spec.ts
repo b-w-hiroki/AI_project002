@@ -90,6 +90,10 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await tapPoint(page, 510, 385);
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
   await expect.poll(() => phase(page)).not.toBe("karma");
+  await expect.poll(() => page.locator("canvas").evaluate(node => ({
+    width: (node as HTMLCanvasElement).width,
+    height: (node as HTMLCanvasElement).height,
+  }))).toEqual({ width: 800, height: 450 });
   await checkFrame(page, "landscape-after-choice");
 });
 
