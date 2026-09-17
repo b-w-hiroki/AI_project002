@@ -232,30 +232,48 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
   cover(scene, root, BG_KEY);
   const shade = scene.add.graphics();
-  shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.32, 0.32, 0.04, 0.04).fillRect(0, 0, 450, 800);
+  shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 43, 420, 64, 0x0a1b2b, 0.9);
-  text(scene, root, 48, 34, "Lv.12\nカイト", 14, "#ffffff", "900");
-  text(scene, root, 220, 28, "● 2,420     ◆ 180", 15, "#fff2c4", "900");
-  text(scene, root, 374, 29, "1年目　春", 14, "#fff6dd", "900");
+  panel(scene, root, 108, 45, 184, 66, 0x0a1b2b, 0.94);
+  bustWindow(scene, root, "kq-hero-warrior", 22, 18, 52, 54);
+  text(scene, root, 134, 34, "Lv.12  カイト", 18, "#ffffff", "900").setStroke("#091420", 1);
+  text(scene, root, 134, 60, "旅する剣士", 16, "#fff2c4", "700").setStroke("#091420", 0);
+  panel(scene, root, 322, 31, 224, 38, 0x102c52, 0.96);
+  text(scene, root, 322, 31, "● 2,420    ◆ 180", 20, "#fff2c4", "900").setStroke("#091420", 1);
+  panel(scene, root, 339, 83, 190, 54, 0x102c52, 0.92);
+  text(scene, root, 339, 74, "1年目　春", 20, "#fff6dd", "900").setStroke("#091420", 1);
+  text(scene, root, 339, 96, "王都ルナディス", 14, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 54, 354, 8);
   rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 54, 354, 8);
   root.add(rail);
-  text(scene, root, 39, 140, "☰\nメニュー", 13, "#fff3ce", "900");
-  text(scene, root, 39, 218, "◆\nクエスト", 12, "#fff3ce", "900");
-  text(scene, root, 39, 296, "♟\n仲間", 12, "#fff3ce", "900");
-  text(scene, root, 39, 374, "▣\n持ち物", 12, "#fff3ce", "900");
-  text(scene, root, 39, 434, "▤\n図鑑", 12, "#fff3ce", "900");
-  text(scene, root, 260, 140, "この世界の\n物語は、\nあなたの選択から。", 34, "#ffffff", "900", 350);
+  for (const [index, label] of ["メニュー", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
+    const y = 125 + index * 69;
+    const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
+    if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
+    if (index === 1 || index === 4) {
+      ink.strokeRect(26, y - 12, 26, 25);
+      if (index === 4) ink.lineBetween(39, y - 12, 39, y + 13);
+      else { ink.lineBetween(31, y - 5, 47, y - 5); ink.lineBetween(31, y + 2, 44, y + 2); }
+    }
+    if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
+    if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
+    root.add(ink);
+    text(scene, root, 39, y + 29, label, index === 0 ? 13 : 18, "#fff3ce", "900").setStroke("#091420", 0);
+  }
+  const copyGround = scene.add.graphics();
+  copyGround.fillGradientStyle(0xfff9e8, 0xfff9e8, 0xfff9e8, 0xfff9e8, 0.84, 0.84, 0.08, 0.08).fillRect(231, 128, 199, 158);
+  root.add(copyGround);
+  text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
+  text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
-  fitted(scene, root, HERO_BACK_KEY, 232, 505, 390, 520);
+  fitted(scene, root, HERO_BACK_KEY, 157, 571, 460, 614);
   panel(scene, root, 166, 590, 274, 38, 0x0758a4, 0.96);
   text(scene, root, 166, 590, "●　新しい依頼が届いています", 14, "#ffffff", "900");
   requestCard(scene, root, 225, 656, 414, 112);
-  artWindow(scene, root, ELDER_KEY, 31, 618, 68, 78);
+  bustWindow(scene, root, ELDER_KEY, 31, 618, 82, 78);
   text(scene, root, 260, 633, "飢える民たち", 21, "#3c2a1e", "900");
-  text(scene, root, 270, 674, "王都周辺で食料が不足。\n民が助けを求めています。", 18, "#43382e", "700", 280);
+  text(scene, root, 265, 674, "王都周辺で食料が不足。\n民が助けを求めています。", 20, "#43382e", "700", 276);
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
