@@ -32,9 +32,12 @@ test("compact phones keep the primary choice readable and tappable", async ({ pa
       const box = await page.locator("canvas").boundingBox();
       return box ? { inside: box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, scale: box.width / 450 } : null;
     }).toEqual(expect.objectContaining({ inside: true }));
-    const box = await page.locator("canvas").boundingBox();
-    expect(box).not.toBeNull();
-    expect(80 * box!.width / 450).toBeGreaterThanOrEqual(52);
+    // Phaser applies its resize on the next animation frame. Wait for that frame
+    // before checking the physical tap height or a previous viewport can leak in.
+    await expect.poll(async () => {
+      const box = await page.locator("canvas").boundingBox();
+      return box ? 80 * box.width / 450 : 0;
+    }).toBeGreaterThanOrEqual(52);
   }
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);

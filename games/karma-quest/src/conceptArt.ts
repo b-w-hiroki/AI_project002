@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
+import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -241,7 +242,8 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
     portrait.setScale(0.9).setCrop(60, 0, 285, 255);
     root.add(portrait);
   }
-  fitted(scene, root, ELDER_KEY, 325, 448, 224, 336);
+  const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
+  fitted(scene, root, ELDER_KEY, npc.x + npc.width / 2, npc.y + npc.height / 2, npc.width, npc.height);
   requestCard(scene, root, 290, 175, 304, 188);
   const requestBand = scene.add.graphics();
   requestBand.fillStyle(0x102c52, 1).fillRect(146, 93, 288, 41);
