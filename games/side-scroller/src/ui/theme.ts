@@ -7,19 +7,20 @@ import Phaser from "phaser";
  */
 
 /**
- * 「淡い青空・ファンタジー」トーン。ユーザーから「もっと明るいソシャゲ調に」との要望を受け、
- * 濃紺ベースの配色から水色〜白のグラデーションを基調にしたパステル系に刷新した。
- * パネルが明るくなった分、テキストは濃紺〜紺青系の暗色に統一している（明るい背景での可読性優先）。
+ * 「夜の森・ダークファンタジー」トーン。バトル画面（GameScene）が戦場イラスト・濃い森色調に
+ * 刷新された一方、装備選択画面（LoadoutScene）はそれ以前の「淡い青空」パステル配色のままだった
+ * ため、両画面を行き来すると世界観が一致しない見た目になっていた。バトル画面の配色に合わせて
+ * 暗めの森トーンに統一し、テキストは明るい暖色系に変更している（暗い背景での可読性優先）。
  */
 export const THEME = {
-  panelFill: 0xf3f9ff,
-  panelFillAlt: 0xeaf5ff,
-  panelBorder: 0x9ecbef,
-  shadow: 0x9db8d6,
+  panelFill: 0x1b2418,
+  panelFillAlt: 0x243024,
+  panelBorder: 0x6b8f5a,
+  shadow: 0x000000,
   accent: 0xff6b8a,
   accentSoft: 0xffb3c1,
-  textPrimary: "#2d3a52",
-  textMuted: "#7488a0",
+  textPrimary: "#f2ead9",
+  textMuted: "#b9c9b0",
 } as const;
 
 /**
@@ -27,9 +28,9 @@ export const THEME = {
  * 「今どの階層を見ているか」が色だけで判別できるようにする（ポーション工房と共通の考え方）。
  */
 export const ELEVATION = {
-  bg: 0xcfe9ff,
-  zone: 0xffffff,
-  card: 0xeaf5ff,
+  bg: 0x0f160e,
+  zone: 0x1c2818,
+  card: 0x28361f,
 } as const;
 
 /** 4/8/16/24/32px の余白スケール。マジックナンバーの散在を避けるために使う */
