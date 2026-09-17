@@ -3,6 +3,7 @@
 ## Karma Quest UI基準の展開
 
 - [x] 金枠ボタンを起点としたデザイン基準を `docs/design/karma-ui-design-system.md` に定義
+- [x] 縦4画面の座標・描画順・重なり防止条件を `docs/design/karma-screen-blueprints.md` に定義
 - [x] 同基準を依頼カード、ホームナビ・HUD、年代記・結果へ適用
 - [ ] 横画面へ同基準を適用
 - [x] 320×568、360×640、375×667で実表示とタップ領域を確認し、主要CTA 52px以上を維持
