@@ -205,15 +205,22 @@ function build(scene: Runtime): LandscapeUi {
   return ui;
 }
 
-function targetSize(scene: Runtime, landscape: boolean, specialLandscape: boolean): void {
+function targetSize(
+  scene: Runtime,
+  landscape: boolean,
+  specialLandscape: boolean,
+  safe: { safeLeft: number; safeRight: number; safeTop: number; safeBottom: number } | null,
+): void {
   const target = landscape && specialLandscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
   if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
     scene.scale.resize(target.width, target.height);
   }
   const viewport = window.visualViewport;
-  const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
-  // Portrait chrome is hidden for this game; reserve only the 5px top/bottom edge.
-  const availableHeight = (viewport?.height ?? window.innerHeight) - (landscape ? 8 : 10);
+  const edge = landscape ? 8 : 6;
+  const availableWidth = (viewport?.width ?? window.innerWidth) - (safe?.safeLeft ?? 0) - (safe?.safeRight ?? 0) - edge;
+  // Account for notches and mobile browser UI through visualViewport and the
+  // measured safe area, then use the rest of the screen for the design canvas.
+  const availableHeight = (viewport?.height ?? window.innerHeight) - (safe?.safeTop ?? 0) - (safe?.safeBottom ?? 0) - edge;
   const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
   scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
   scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
@@ -229,7 +236,7 @@ function refresh(scene: Runtime): void {
   const layout = getResponsiveLayout(scene as never);
   const physicalLandscape = !!layout && !layout.isPortrait;
   const mobilePhase = scene.phase === "title" || scene.phase === "karma";
-  targetSize(scene, physicalLandscape, mobilePhase);
+  targetSize(scene, physicalLandscape, mobilePhase, layout);
 
   const ui = build(scene);
   const active = physicalLandscape && mobilePhase;

@@ -24,6 +24,33 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("compact phones keep the primary choice readable and tappable", async ({ page }) => {
+  for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 375, height: 667 }]) {
+    await page.setViewportSize(viewport);
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+    await expect.poll(async () => {
+      const box = await page.locator("canvas").boundingBox();
+      return box ? { inside: box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, scale: box.width / 450 } : null;
+    }).toEqual(expect.objectContaining({ inside: true }));
+    const box = await page.locator("canvas").boundingBox();
+    expect(box).not.toBeNull();
+    expect(80 * box!.width / 450).toBeGreaterThanOrEqual(52);
+  }
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(async () => (await page.locator("canvas").boundingBox())?.width ?? 0).toBeLessThanOrEqual(314);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/compact-320-title.png" });
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "currentRequest", { id: "village_food", faction: "merchant", text: "王都の周辺で、村の民が飢えています。食料を分け与えますか？", karmaDelta: 8 });
+  });
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/compact-320-choice.png" });
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => phase(page)).not.toBe("karma");
+});
+
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;
@@ -64,9 +91,9 @@ test("touch starts a journey and a choice records a deed after rotation", async 
 });
 
 test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
-  // The responsive controller keeps a 9px edge on each side, so 468x810 renders the
+  // The responsive controller keeps a 3px edge on each side, so 456x806 renders the
   // 450x800 design canvas at its native size for pixel-level mock comparison.
-  await page.setViewportSize({ width: 468, height: 810 });
+  await page.setViewportSize({ width: 456, height: 806 });
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const startRun = Reflect.get(scene, "startRun");
@@ -77,7 +104,7 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
     .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    Reflect.set(scene, "currentRequest", { faction: "warrior", text: "実戦で腕試しがしたい…", karmaDelta: 8 });
+    Reflect.set(scene, "currentRequest", { id: "village_food", faction: "merchant", text: "王都の周辺で、村の民が飢えています。食料を分け与えますか？", karmaDelta: 8 });
   });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-choice-mock.png", {
     animations: "disabled",
@@ -86,7 +113,7 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
 });
 
 async function useNativePortrait(page: Page) {
-  await page.setViewportSize({ width: 468, height: 810 });
+  await page.setViewportSize({ width: 456, height: 806 });
 }
 
 test("portrait title keeps the approved visual mock", async ({ page }) => {
