@@ -42,6 +42,7 @@ import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
   drawPanel,
+  drawPill,
   drawSpeakerIcon,
   makeButton,
   THEME,
@@ -218,69 +219,84 @@ export class GameScene extends Phaser.Scene {
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
     const bg = this.buildArenaBackground();
-    // 背景の上に暗幕を敷いてルール説明を読みやすくする
-    const tint = this.shade(0, 0, 800, 600, bg ? 0.55 : 0);
-    const panel = drawPanel(this, 400, 300, 600, 420, {
+    // 闘技場イラストを主役にするため、上部帯とタグラインだけをイラストに重ね、
+    // 詳細ルールとCTAは下部のドックパネルにまとめて表示面積を確保する
+    const tint = this.shade(0, 0, 800, 600, bg ? 0.28 : 0);
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(0x000000, 0.4);
+    topBar.fillRect(0, 0, 800, 58);
+    const title = this.add
+      .text(24, 29, "覇拳伝", { ...TYPE.h2, fontSize: "22px", color: THEME.textPrimary })
+      .setOrigin(0, 0.5);
+    const currencyPill = drawPill(this, 590, 29, 110, 34, "");
+    const winPill = drawPill(this, 706, 29, 96, 34, "");
+
+    const tagline = this.add
+      .text(400, 100, "この拳で、頂を掴め", {
+        ...TYPE.h2,
+        fontSize: "20px",
+        color: THEME.textPrimary,
+        stroke: "#170c07",
+        strokeThickness: 4,
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    const dockPanel = drawPanel(this, 400, 470, 720, 250, {
       depth: 0,
-      fillAlpha: bg ? 0.82 : 0.95,
+      fillAlpha: bg ? 0.85 : 0.95,
     });
 
-    const title = this.add
-      .text(400, 130, "覇拳伝", { ...TYPE.h1, color: THEME.textPrimary })
-      .setOrigin(0.5);
     const rules = this.add
       .text(
         400,
-        220,
-        "拳・蹴・気の3ボタンで応酬する格闘バトル。\n拳は気に、気は蹴に、蹴は拳に有利。\n相手の構えを読み、有利で奥義を溜めよう。\n満タンで必殺の「奥義」を放てる。\n拳→拳→拳→気の順で隠しコマンド技も。\n60秒以内にHPを多く残した方が勝利！",
-        { ...TYPE.body, color: THEME.textMuted, align: "center" },
+        372,
+        "拳は気に、気は蹴に、蹴は拳に有利。読み合いで奥義を溜め、60秒でHPを多く残した方が勝利。",
+        { ...TYPE.small, color: THEME.textMuted, align: "center" },
       )
-      .setOrigin(0.5);
-
-    const currency = this.add
-      .text(400, 340, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
 
     const startBtn = makeButton(
       this,
-      300,
-      410,
-      180,
-      48,
-      "バトル開始",
+      310,
+      412,
+      400,
+      54,
+      "対戦開始",
       () => {
         this.playSound(sfx.buttonTap);
         this.startBattle();
       },
       {
-        fontSize: "16px",
+        fontSize: "18px",
+        fillColor: THEME.accent,
+        borderColor: 0xffe1b0,
       },
     );
     const gachaBtn = makeButton(
       this,
-      500,
-      410,
-      180,
-      48,
+      620,
+      412,
+      160,
+      54,
       "ガチャ",
       () => {
         this.playSound(sfx.buttonTap);
         this.openGacha();
       },
-      {
-        fontSize: "16px",
-      },
+      { fontSize: "16px" },
     );
 
-    this.soundIcon = drawSpeakerIcon(this, 660, 30, this.soundOn, 18);
+    this.soundIcon = drawSpeakerIcon(this, 770, 29, this.soundOn, 16);
     const soundHit = this.add
-      .rectangle(660, 30, 40, 40, 0x000000, 0)
+      .rectangle(770, 29, 36, 36, 0x000000, 0)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => {
         this.soundOn = !this.soundOn;
         localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
         this.soundIcon.destroy();
-        this.soundIcon = drawSpeakerIcon(this, 660, 30, this.soundOn, 18);
+        this.soundIcon = drawSpeakerIcon(this, 770, 29, this.soundOn, 16);
         this.titleGroup.add(this.soundIcon);
         this.playSound(sfx.buttonTap);
       });
@@ -288,16 +304,20 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.add([
       ...(bg ? [bg] : []),
       tint,
-      panel,
+      topBar,
       title,
+      currencyPill.container,
+      winPill.container,
+      tagline,
+      dockPanel,
       rules,
-      currency,
       startBtn.container,
       gachaBtn.container,
       this.soundIcon,
       soundHit,
     ]);
-    this.titleGroup.setData("currencyText", currency);
+    this.titleGroup.setData("currencyPill", currencyPill);
+    this.titleGroup.setData("winPill", winPill);
     this.opponentHint = this.add
       .text(400, 564, OPPONENTS[0]!.hint, {
         fontSize: "15px",
@@ -338,12 +358,14 @@ export class GameScene extends Phaser.Scene {
     this.battleGroup.setVisible(false);
     this.resultGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
-    const currencyText = this.titleGroup.getData(
-      "currencyText",
-    ) as Phaser.GameObjects.Text;
-    currencyText.setText(
-      `所持: 豪拳石 ${loadCurrency()}  勝利数: ${loadWinCount()}`,
-    );
+    const currencyPill = this.titleGroup.getData("currencyPill") as {
+      setText: (t: string) => void;
+    };
+    const winPill = this.titleGroup.getData("winPill") as {
+      setText: (t: string) => void;
+    };
+    currencyPill.setText(`豪拳石 ${loadCurrency()}`);
+    winPill.setText(`勝利 ${loadWinCount()}`);
   }
 
   // ---------- バトル ----------

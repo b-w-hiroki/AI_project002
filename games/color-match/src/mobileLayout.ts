@@ -148,8 +148,8 @@ function build(scene: Runtime): LandscapeUi {
 
   const root = scene.add.container(0, 0).setDepth(4200).setVisible(false);
   sky(scene, root);
-  text(scene, root, 22, 24, "カラーマッチ", 26, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#245bc4", 5);
-  text(scene, root, 24, 50, "60 SEC ARCADE · COLOR / WORD SWITCH", 9, "#e8f8ff", "800").setOrigin(0, 0.5);
+  text(scene, root, 22, 22, "カラーマッチ", 26, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#245bc4", 5);
+  text(scene, root, 24, 55, "60 SEC ARCADE · COLOR / WORD SWITCH", 9, "#e8f8ff", "800").setOrigin(0, 0.5);
 
   const title = scene.add.container(0, 0);
   const play = scene.add.container(0, 0);

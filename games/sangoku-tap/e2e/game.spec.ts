@@ -49,7 +49,7 @@ async function checkFrame(page: Page, name: string) {
 
 test("touch opens campaign and starts an expedition after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapPoint(page, 225, 470);
+  await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await checkFrame(page, "portrait-campaign");
   await page.setViewportSize({ width: 844, height: 390 });

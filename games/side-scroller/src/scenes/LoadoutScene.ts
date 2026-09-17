@@ -19,6 +19,9 @@ import { cg } from "../platform/crazygames";
 import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
 import { ELEVATION, THEME, drawPanel, drawWeaponKindIcon, makeButton } from "../ui/theme";
 
+/** GameSceneと同じテクスチャキー。Phaserのテクスチャキャッシュはグローバルなので同一キーで共有できる */
+const ART_BG_KEY = "sf-bg-forest";
+
 const KIND_LABEL: Readonly<Record<WeaponKind, string>> = {
   melee: "近距離",
   mid: "中距離",
@@ -72,6 +75,12 @@ export class LoadoutScene extends Phaser.Scene {
     super("LoadoutScene");
   }
 
+  preload(): void {
+    // GameScene と同じ森イラストを再利用し、装備選択画面もバトル画面と地続きの世界観にする。
+    // 404でもPhaserは警告を出すだけで続行するため、使用箇所でtextures.exists()を確認する
+    this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
+  }
+
   create(): void {
     cg.gameplayStart();
     this.data_ = loadLoadout(window.localStorage);
@@ -111,14 +120,23 @@ export class LoadoutScene extends Phaser.Scene {
     this.refresh();
   }
 
-  /** 淡い青空グラデーション＋うっすらとした放射状の光で、ソシャゲ調の明るいファンタジー基調にする */
+  /**
+   * バトル画面（GameScene）と同じ森イラストを敷き、暗幕を重ねて文字の可読性を確保する。
+   * イラストが無い環境では夜の森トーンの濃緑グラデーションにフォールバックする。
+   */
   private buildBackground(): void {
+    if (this.textures.exists(ART_BG_KEY)) {
+      const src = this.textures.get(ART_BG_KEY).getSourceImage();
+      const scale = Math.max(800 / src.width, 600 / src.height);
+      this.add
+        .image(400, 300, ART_BG_KEY)
+        .setDisplaySize(src.width * scale, src.height * scale);
+      this.add.rectangle(400, 300, 800, 600, 0x0f160e, 0.72);
+      return;
+    }
     const g = this.add.graphics();
-    g.fillGradientStyle(0xaee0ff, 0xaee0ff, 0xf3fbff, 0xf3fbff, 1);
+    g.fillGradientStyle(0x14200f, 0x14200f, 0x0a0f08, 0x0a0f08, 1);
     g.fillRect(0, 0, 800, 600);
-    const glow = this.add.graphics();
-    glow.fillStyle(0xffffff, 0.4);
-    glow.fillCircle(400, -40, 260);
   }
 
   private persist(): void {

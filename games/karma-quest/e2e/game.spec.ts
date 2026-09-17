@@ -51,8 +51,10 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await checkFrame(page, "portrait-title");
   await tapPoint(page, 225, 650);
   await expect.poll(() => phase(page)).toBe("karma");
+  // CIのソフトウェアレンダリングでは選択後の演出tweenが5秒を超えて残ることがあるため、
+  // タイムアウトを余裕を持って延長する
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await checkFrame(page, "portrait-karma");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
@@ -73,8 +75,10 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
     if (typeof startRun === "function") startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
+  // CIのソフトウェアレンダリングでは選択後の演出tweenが5秒を超えて残ることがあるため、
+  // タイムアウトを余裕を持って延長する
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "currentRequest", { faction: "warrior", text: "実戦で腕試しがしたい…", karmaDelta: 8 });
@@ -167,8 +171,10 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
     if (typeof startRun === "function") startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
+  // CIのソフトウェアレンダリングでは選択後の演出tweenが5秒を超えて残ることがあるため、
+  // タイムアウトを余裕を持って延長する
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const choose = Reflect.get(scene, "onKarmaChoice");

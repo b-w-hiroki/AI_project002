@@ -38,6 +38,7 @@ import {
 import { cg } from "../platform/crazygames";
 import {
   drawPanel,
+  drawPill,
   drawSpeakerIcon,
   makeButton,
   THEME,
@@ -158,110 +159,115 @@ export class GameScene extends Phaser.Scene {
 
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, {
-      depth: 0,
-      fillAlpha: this.textures.exists(BG_KEY) ? 0.72 : 0.95,
-    });
+    const hasArt = this.textures.exists(BG_KEY);
 
+    // 上部帯: タイトル+資源ピル。イラストが見えるよう帯は薄めにする
+    const topBar = this.add.graphics();
+    topBar.fillStyle(0x000000, 0.4);
+    topBar.fillRect(0, 0, 450, 78);
     const title = this.add
-      .text(CX, 110, "三国ポチポチ", { ...TYPE.h1, color: THEME.textPrimary })
-      .setOrigin(0.5);
-    const rules = this.add
-      .text(
-        CX,
-        250,
-        "3人の仲間と、三地域の踏破を目指す。\n街道を進むか、財宝の山道へ挑むか。\n兵力を見て、続行と帰還を選ぼう。\n\n3地点ごとの功績で部隊を鍛錬。\n関門を越えて、次の地域を開放しよう。",
-        { ...TYPE.body, color: THEME.textMuted, align: "center" },
-      )
-      .setOrigin(0.5);
+      .text(24, 39, "三国ポチポチ", { ...TYPE.h2, fontSize: "20px", color: THEME.textPrimary })
+      .setOrigin(0, 0.5);
+    const coinPill = drawPill(this, 288, 39, 76, 32, "");
+    const bestPill = drawPill(this, 368, 39, 76, 32, "");
 
-    const best = this.add
-      .text(CX, 400, "", {
-        ...TYPE.small,
-        color: THEME.textMuted,
+    // タグライン: イラストの上に直接乗せ、既存の詳細ルールは省いてモックの「一言」構成に寄せる
+    const tagline = this.add
+      .text(CX, 128, "乱世を駆け、英雄を集めよ", {
+        ...TYPE.h2,
+        fontSize: "18px",
+        color: THEME.textPrimary,
+        stroke: "#170c07",
+        strokeThickness: 4,
         align: "center",
       })
       .setOrigin(0.5);
 
+    // 下部カード: 主要CTA + 副次アクション3つを1枚のパネルにまとめ、イラストの露出面積を確保する
+    const dockPanel = drawPanel(this, CX, 700, 410, 190, {
+      depth: 0,
+      fillAlpha: hasArt ? 0.9 : 0.97,
+    });
+
     const questBtn = makeButton(
       this,
       CX,
-      470,
-      280,
-      52,
+      635,
+      370,
+      58,
       "戦略地図・遠征へ",
       () => {
         this.playSound(sfx.tap);
         this.scene.start("ExpeditionScene");
       },
       {
-        fontSize: "16px",
+        fontSize: "18px",
+        fillColor: THEME.accent,
+        borderColor: 0xffe1b0,
       },
     );
+
+    const subBtnW = 114;
     const gachaBtn = makeButton(
       this,
-      CX,
-      540,
-      280,
-      48,
+      CX - subBtnW - 8,
+      710,
+      subBtnW,
+      46,
       "武将ガチャ",
       () => {
         this.playSound(sfx.tap);
         this.showGacha();
       },
-      {
-        fontSize: "15px",
-      },
+      { fontSize: "13px" },
     );
     const breedBtn = makeButton(
       this,
       CX,
-      600,
-      280,
-      48,
+      710,
+      subBtnW,
+      46,
       "装備合成",
       () => {
         this.playSound(sfx.tap);
         this.showBreeding();
       },
-      {
-        fontSize: "15px",
-      },
+      { fontSize: "13px" },
     );
     const rosterBtn = makeButton(
       this,
-      CX,
-      660,
-      280,
-      48,
-      "武将一覧・装備",
+      CX + subBtnW + 8,
+      710,
+      subBtnW,
+      46,
+      "武将一覧",
       () => {
         this.playSound(sfx.tap);
         this.showRoster();
       },
-      {
-        fontSize: "15px",
-      },
+      { fontSize: "13px" },
     );
 
-    this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
+    this.soundIcon = drawSpeakerIcon(this, 428, 39, this.soundOn, 16);
     const soundHit = this.add
-      .rectangle(390, 65, 40, 40, 0x000000, 0)
+      .rectangle(428, 39, 36, 36, 0x000000, 0)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => {
         this.soundOn = !this.soundOn;
         localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
         this.soundIcon.destroy();
-        this.soundIcon = drawSpeakerIcon(this, 390, 65, this.soundOn, 18);
+        this.soundIcon = drawSpeakerIcon(this, 428, 39, this.soundOn, 16);
         this.titleGroup.add(this.soundIcon);
         this.playSound(sfx.tap);
       });
 
     this.titleGroup.add([
-      panel,
+      topBar,
       title,
-      rules,
-      best,
+      coinPill.container,
+      bestPill.container,
+      tagline,
+      dockPanel,
       questBtn.container,
       gachaBtn.container,
       breedBtn.container,
@@ -269,7 +275,8 @@ export class GameScene extends Phaser.Scene {
       this.soundIcon,
       soundHit,
     ]);
-    this.titleGroup.setData("bestText", best);
+    this.titleGroup.setData("coinPill", coinPill);
+    this.titleGroup.setData("bestPill", bestPill);
   }
 
   private playSound(fn: () => void): void {
@@ -303,18 +310,21 @@ export class GameScene extends Phaser.Scene {
 
   private showTitle(): void {
     this.phase = "title";
-    this.setBackgroundDim(0.55);
+    // タイトル画面はイラストを主役にするため、他画面より薄めに暗幕をかける
+    this.setBackgroundDim(this.textures.exists(BG_KEY) ? 0.22 : 0.55);
     this.titleGroup.setVisible(true);
     this.questGroup.setVisible(false);
     this.gachaGroup.setVisible(false);
     this.breedingGroup.setVisible(false);
     this.rosterGroup.setVisible(false);
-    const bestText = this.titleGroup.getData(
-      "bestText",
-    ) as Phaser.GameObjects.Text;
-    bestText.setText(
-      `所持コイン: ${loadCurrency()}\n最高進撃距離: ${loadBestDistance()}`,
-    );
+    const coinPill = this.titleGroup.getData("coinPill") as {
+      setText: (t: string) => void;
+    };
+    const bestPill = this.titleGroup.getData("bestPill") as {
+      setText: (t: string) => void;
+    };
+    coinPill.setText(`銭 ${loadCurrency()}`);
+    bestPill.setText(`最高 ${loadBestDistance()}`);
   }
 
   // ---------- クエスト（タップ進撃） ----------
