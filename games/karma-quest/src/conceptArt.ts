@@ -20,6 +20,10 @@ type MockUi = {
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
+  reactionTitle: Phaser.GameObjects.Text;
+  reactionBody: Phaser.GameObjects.Text;
+  reactionArrows: Phaser.GameObjects.Text[];
+  reactionResults: Phaser.GameObjects.Text[];
 };
 
 const BG_KEY = "kq-bg-kingdom-portrait-v2";
@@ -71,6 +75,17 @@ function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: numbe
   root.add(g);
 }
 
+function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number): void {
+  if (!scene.textures.exists(key)) return;
+  const image = scene.add.image(x, y, key).setOrigin(0);
+  const scale = Math.max(width / image.width, height / image.height);
+  const cropWidth = width / scale, cropHeight = height / scale;
+  const cropX = (image.width - cropWidth) / 2, cropY = (image.height - cropHeight) / 2;
+  image.setScale(scale).setPosition(x - cropX * scale, y - cropY * scale);
+  image.setCrop(cropX, cropY, cropWidth, cropHeight);
+  root.add(image);
+}
+
 function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
   const g = scene.add.graphics();
   g.lineStyle(5, 0x09131c, 0.96).strokeRoundedRect(5, 5, 440, 790, 12);
@@ -97,15 +112,16 @@ function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x:
   root.add(g);
 }
 
-function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): void {
+function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): [Phaser.GameObjects.Text, Phaser.GameObjects.Text] {
   const g = scene.add.graphics();
   g.fillStyle(0xffffff, 0.28).fillRoundedRect(62, y - 14, 326, 28, 7);
   g.fillStyle(color, 1).fillCircle(82, y, 10);
   root.add(g);
   text(scene, root, 82, y, "◆", 11, "#ffffff", "900");
   text(scene, root, 138, y, label, 17, "#352f29", "900");
-  text(scene, root, 223, y, arrow, 20, arrow === "↓" ? "#b1262c" : arrow === "→" ? "#6d685f" : "#16864f", "900");
-  text(scene, root, 303, y, result, 16, "#352f29", "800");
+  const arrowText = text(scene, root, 223, y, arrow, 20, arrow === "↓" ? "#b1262c" : arrow === "→" ? "#6d685f" : "#16864f", "900");
+  const resultText = text(scene, root, 303, y, result, 16, "#352f29", "800");
+  return [arrowText, resultText];
 }
 
 function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): void {
@@ -177,18 +193,23 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 39, 374, "▣\n持ち物", 12, "#fff3ce", "900");
   text(scene, root, 39, 434, "▤\n図鑑", 12, "#fff3ce", "900");
   text(scene, root, 260, 140, "この世界の\n物語は、\nあなたの選択から。", 34, "#ffffff", "900", 350);
-  fitted(scene, root, HERO_BACK_KEY, 246, 430, 300, 410);
+  // The home mock shows a close foreground hero, with the lower body behind HUD.
+  fitted(scene, root, HERO_BACK_KEY, 232, 505, 390, 520);
   panel(scene, root, 166, 590, 274, 38, 0x0758a4, 0.96);
   text(scene, root, 166, 590, "●　新しい依頼が届いています", 14, "#ffffff", "900");
   requestCard(scene, root, 225, 656, 414, 112);
-  fitted(scene, root, ELDER_KEY, 58, 660, 72, 84);
+  artWindow(scene, root, ELDER_KEY, 31, 618, 68, 78);
   text(scene, root, 238, 633, "飢える民たち", 20, "#3c2a1e", "900");
   text(scene, root, 240, 674, "王都の周辺で食料が不足しています。\n助けを求める声が届いています。", 15, "#43382e", "700", 320);
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
   nav.lineStyle(2, 0xe2bd6b, 0.82).lineBetween(10, 724, 440, 724);
-  nav.fillStyle(0x0758a4, 0.92).fillRoundedRect(18, 734, 68, 48, 8);
+  nav.fillStyle(0x102c52, 1).fillRect(18, 734, 68, 48);
+  nav.lineStyle(1, 0xb79451, 0.9).strokeRect(18, 734, 68, 48);
+  for (const divider of [94, 180, 270, 356]) {
+    nav.lineStyle(1, 0xb79451, 0.35).lineBetween(divider, 734, divider, 783);
+  }
   root.add(nav);
   text(scene, root, 52, 758, "◆\n王都", 13, "#ffffff", "900");
   text(scene, root, 135, 758, "◇\nワールド", 12, "#fff0c8", "900");
@@ -234,22 +255,30 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   return { choiceRoot: root, yearText, requestTitle, requestText };
 }
 
-function buildReaction(scene: Runtime): Phaser.GameObjects.Container {
+function buildReaction(scene: Runtime): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionArrows" | "reactionResults"> {
   const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   cover(scene, root, REACTION_BG_KEY);
   panel(scene, root, 225, 49, 414, 72, 0xf4e5c5, 0.97);
   text(scene, root, 225, 29, "1年目  春", 15, "#35281e", "800");
   text(scene, root, 225, 61, "選択の結果", 30, "#35281e", "900");
   panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
-  text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
-  text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  effectRow(scene, root, 589, 0x2f8c4b, "民の声", "↑", "大きく上昇");
-  effectRow(scene, root, 619, 0x245e9b, "王国", "↑", "やや上昇");
-  effectRow(scene, root, 649, 0x7a5899, "教会", "→", "変化なし");
-  effectRow(scene, root, 679, 0xa32d34, "貴族", "↓", "やや低下");
+  const reactionTitle = text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
+  const reactionBody = text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
+  const effectRows = [
+    effectRow(scene, root, 589, 0x2f8c4b, "民の声", "↑", "大きく上昇"),
+    effectRow(scene, root, 619, 0x245e9b, "王国", "↑", "やや上昇"),
+    effectRow(scene, root, 649, 0x7a5899, "教会", "→", "変化なし"),
+    effectRow(scene, root, 679, 0xa32d34, "貴族", "↓", "やや低下"),
+  ];
   button(scene, root, 225, 718, 328, 58, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
   screenFrame(scene, root);
-  return root;
+  return {
+    reactionRoot: root,
+    reactionTitle,
+    reactionBody,
+    reactionArrows: effectRows.map(([arrow]) => arrow),
+    reactionResults: effectRows.map(([, result]) => result),
+  };
 }
 
 function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
@@ -258,22 +287,26 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const dim = scene.add.graphics();
   dim.fillStyle(0x06101a, 0.42).fillRect(0, 0, 450, 800);
   root.add(dim);
-  panel(scene, root, 225, 400, 422, 756, 0xf7efd9, 0.988);
-  text(scene, root, 225, 55, "▤　年代記", 35, "#35281e", "900");
-  text(scene, root, 225, 94, "あなたが紡いだ、この世界の物語", 16, "#43382e", "700");
-  panel(scene, root, 225, 215, 388, 198, 0xfff8e8, 0.99);
-  fitted(scene, root, REACTION_BG_KEY, 112, 210, 160, 158);
-  text(scene, root, 296, 169, "飢える民たち", 21, "#35281e", "900");
-  text(scene, root, 296, 232, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 16, "#43382e", "700", 206);
-  panel(scene, root, 225, 376, 388, 110, 0xe4ddcb, 0.99);
-  text(scene, root, 225, 352, "???", 22, "#35281e", "900");
-  text(scene, root, 225, 397, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
-  fitted(scene, root, "kq-hero-warrior", 122, 584, 188, 242);
-  text(scene, root, 303, 510, "カイト　Lv.12", 23, "#35281e", "900");
-  metricChip(scene, root, 264, 555, "正義", "+2", 0x2e6ba3);
-  metricChip(scene, root, 362, 555, "共感", "+1", 0xb84a63);
-  metricChip(scene, root, 264, 594, "洞察", "+0", 0x70529a);
-  metricChip(scene, root, 362, 594, "魅力", "+1", 0xb48727);
+  requestCard(scene, root, 225, 400, 422, 756);
+  panel(scene, root, 225, 66, 394, 80, 0x102c52, 1);
+  text(scene, root, 225, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
+  text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 16, "#fffaf0", "700").setStroke("#091420", 0);
+  requestCard(scene, root, 225, 209, 388, 182);
+  artWindow(scene, root, REACTION_BG_KEY, 45, 141, 132, 140);
+  text(scene, root, 290, 151, "飢える民たち", 21, "#35281e", "900");
+  text(scene, root, 295, 218, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 16, "#43382e", "700", 206);
+  requestCard(scene, root, 225, 355, 388, 98);
+  text(scene, root, 225, 331, "???", 22, "#35281e", "900");
+  text(scene, root, 225, 373, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
+  artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
+  panel(scene, root, 225, 492, 382, 54, 0x102c52, 0.9);
+  text(scene, root, 225, 491, "王都ルナディス — 物語の始まる街", 18, "#fffaf0", "900").setStroke("#091420", 1);
+  artWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
+  text(scene, root, 303, 542, "カイト　Lv.12", 23, "#35281e", "900");
+  metricChip(scene, root, 264, 589, "正義", "+2", 0x2e6ba3);
+  metricChip(scene, root, 362, 589, "共感", "+1", 0xb84a63);
+  metricChip(scene, root, 264, 633, "洞察", "+0", 0x70529a);
+  metricChip(scene, root, 362, 633, "魅力", "+1", 0xb48727);
   button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
@@ -284,9 +317,9 @@ function build(scene: Runtime): MockUi {
   if (cached) return cached;
   const titleRoot = buildTitle(scene);
   const choice = buildChoice(scene);
-  const reactionRoot = buildReaction(scene);
+  const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, reactionRoot, finalRoot };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -299,6 +332,15 @@ function refresh(scene: Runtime): void {
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
   ui.reactionRoot.setVisible(portrait && (scene.reactionUntil ?? 0) > scene.time.now);
   ui.finalRoot.setVisible(portrait && scene.phase === "final");
+  const accepted = scene.lastAccepted !== false;
+  ui.reactionTitle.setText(accepted ? "食料を支援しました" : "支援を見送りました");
+  ui.reactionBody.setText(accepted
+    ? "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。"
+    : "王都は備蓄を守りましたが、\n村には不安と失望が広がりました。");
+  const arrows = accepted ? ["↑", "↑", "→", "↓"] : ["↓", "→", "↑", "↑"];
+  const results = accepted ? ["大きく上昇", "やや上昇", "変化なし", "やや低下"] : ["大きく低下", "変化なし", "やや上昇", "やや上昇"];
+  ui.reactionArrows.forEach((item, index) => item.setText(arrows[index] ?? "→").setColor((arrows[index] ?? "→") === "↓" ? "#b1262c" : (arrows[index] ?? "→") === "→" ? "#6d685f" : "#16864f"));
+  ui.reactionResults.forEach((item, index) => item.setText(results[index] ?? "変化なし"));
   if (!portrait || scene.phase !== "karma") return;
   const request = scene.currentRequest;
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);

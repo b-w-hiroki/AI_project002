@@ -180,3 +180,30 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
   await page.locator("canvas").click({ position: { x: 225, y: 718 } });
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").reactionUntil)).toBe(0);
 });
+
+test("declining a request changes the world reaction copy and effects", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const startRun = Reflect.get(scene, "startRun");
+    if (typeof startRun === "function") startRun.call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const choose = Reflect.get(scene, "onKarmaChoice");
+    if (typeof choose === "function") choose.call(scene, false);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const labels: string[] = [];
+    const visit = (item: unknown): void => {
+      if (!item || typeof item !== "object") return;
+      const candidate = item as { text?: unknown; list?: unknown[] };
+      if (typeof candidate.text === "string") labels.push(candidate.text);
+      candidate.list?.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return labels;
+  })).toEqual(expect.arrayContaining(["支援を見送りました", "大きく低下"]));
+});
