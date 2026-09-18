@@ -59,4 +59,23 @@ try {
   <main>${names.map((name, i) => `<section><h2>${labels[i]}</h2><div class="ref"><img src="${mock}" style="left:-${[8, 330, 644, 964][i]}px"></div><h2>現在の実装</h2><img class="actual" src="${current[i]}"></section>`).join('')}</main>`);
   await sheet.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
   await sheet.screenshot({ path: resolve('docs/review/karma-four-screen-comparison.png'), fullPage: true });
+  const factions = ['warrior', 'merchant', 'outlaw', 'mage'];
+  const ids = ['warrior_iron', 'merchant_monster', 'outlaw_gold', 'mage_stone'];
+  const factionLabels = ['戦士 · 鍛冶場', '商人 · 市場', '荒くれ者 · 中庭', '魔術師 · 研究室'];
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 450);
+  for (const [i, faction] of factions.entries()) {
+    await page.evaluate(({ faction, id }) => {
+      const scene = window.__qaGame.scene.getScene('GameScene');
+      scene.phase = 'karma';
+      scene.currentRequest = { id, faction, text: '', karmaDelta: 5 };
+      scene.onKarmaChoice(true);
+    }, { faction, id: ids[i] });
+    await capture(`result-${faction}`);
+  }
+  const patterns = await Promise.all(factions.map(faction => data(`docs/review/karma-compact-result-${faction}.png`)));
+  await sheet.setViewportSize({ width: 1336, height: 630 });
+  await sheet.setContent(`<style>body{margin:0;padding:16px;background:#091724;color:#f7e4bb;font:18px sans-serif}main{display:flex;gap:16px}section{width:314px}h2{font-size:20px;margin:0 0 12px}img{width:314px;display:block}</style><main>${patterns.map((src, i) => `<section><h2>${factionLabels[i]}</h2><img src="${src}"></section>`).join('')}</main>`);
+  await sheet.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
+  await sheet.screenshot({ path: resolve('docs/review/karma-faction-patterns.png') });
 } finally { await browser.close(); }

@@ -413,12 +413,14 @@ test("all request results keep readable text separated on compact phones", async
         await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(mode === "wide" ? 800 : 450);
       }
       if (mode === "final") await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "showFinal").call(window.__qaGame.scene.getScene("GameScene")));
-      await expect.poll(() => page.evaluate(mode => {
+      await expect.poll(() => page.evaluate(({ mode, faction }) => {
         const scene = window.__qaGame.scene.getScene("GameScene");
         const labels: Phaser.GameObjects.Text[] = [];
+        const artwork: string[] = [];
         const visit = (node: Phaser.GameObjects.GameObject): void => {
           if (Reflect.get(node, "visible") === false) return;
           if ("text" in node) labels.push(node as Phaser.GameObjects.Text);
+          if ("texture" in node) artwork.push((node as Phaser.GameObjects.Image).texture.key);
           if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
         };
         scene.children.list.forEach(visit);
@@ -433,8 +435,10 @@ test("all request results keep readable text separated on compact phones", async
           .every(label => Number.parseFloat(String(label.style.fontSize)) * scale >= 14);
         const separated = a.bottom + 3 <= b.top || b.bottom + 3 <= a.top;
         const inside = a.left >= 20 && a.right <= canvas.width - 20 && (mode !== "final" || a.bottom <= 303);
-        return readable && separated && inside;
-      }, mode), { message: `${request.id}, accepted=${accepted}, ${mode}` }).toBe(true);
+        const factionArt = { warrior: "kq-bg-warrior-forge-v1", merchant: "kq-bg-merchant-market-v1", outlaw: "kq-bg-outlaw-courtyard-v1", mage: "kq-bg-mage-study-v1" };
+        const activeArt = artwork.filter(key => Object.values(factionArt).includes(key));
+        return readable && separated && inside && activeArt.length === 1 && activeArt[0] === factionArt[faction];
+      }, { mode, faction: request.faction }), { message: `${request.id}, accepted=${accepted}, ${mode}` }).toBe(true);
     }
   }
 });

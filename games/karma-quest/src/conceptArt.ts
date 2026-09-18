@@ -44,6 +44,12 @@ const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
 const REACTION_BG_KEY = "kq-bg-village-reaction";
 const MAGE_BG_KEY = "kq-bg-mage-study-v1";
+const FACTION_ART = {
+  warrior: "kq-bg-warrior-forge-v1",
+  merchant: "kq-bg-merchant-market-v1",
+  outlaw: "kq-bg-outlaw-courtyard-v1",
+  mage: MAGE_BG_KEY,
+};
 const uiByScene = new WeakMap<object, MockUi>();
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
@@ -432,12 +438,13 @@ function outcomeArt(scene: Runtime, root: Phaser.GameObjects.Container, x: numbe
   let current = "";
   root.setData("refreshOutcomeArt", () => {
     const outcome = scene.lastOutcome;
-    const key = outcome?.faction === "mage" ? MAGE_BG_KEY
-      : outcome?.requestId === "village_food" && scene.lastAccepted ? REACTION_BG_KEY : HOME_BG_KEY;
+    const key = outcome?.requestId === "village_food"
+      ? scene.lastAccepted ? REACTION_BG_KEY : HOME_BG_KEY
+      : outcome ? FACTION_ART[outcome.faction] : HOME_BG_KEY;
     if (key === current) return;
     current = key;
     art.removeAll(true);
-    artWindow(scene, art, key, x, y, width, height, key === MAGE_BG_KEY ? 0.25 : 0.5);
+    artWindow(scene, art, key, x, y, width, height, Object.values(FACTION_ART).includes(key) ? 0.22 : 0.5);
   });
 }
 
@@ -690,7 +697,7 @@ export function installKarmaConceptArtPass(): void {
       this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
       this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
       this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
-      this.load.image(MAGE_BG_KEY, `images/${MAGE_BG_KEY}.png`);
+      for (const key of Object.values(FACTION_ART)) this.load.image(key, `images/${key}.png`);
       return result;
     };
   }
