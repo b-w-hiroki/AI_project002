@@ -38,6 +38,11 @@ try {
   await page.waitForFunction(() => document.querySelector('canvas').width === 450);
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').onKarmaChoice(true));
   await capture('reaction');
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+  await capture('reaction-landscape');
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 450);
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').showFinal());
   await capture('chronicle');
   await page.setViewportSize({ width: 844, height: 390 });

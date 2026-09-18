@@ -159,7 +159,7 @@ function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x:
 
 function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): [Phaser.GameObjects.Text, Phaser.GameObjects.Text] {
   const g = scene.add.graphics();
-  g.fillStyle(0xffffff, 0.28).fillRoundedRect(62, y - 14, 326, 28, 7);
+  g.lineStyle(1, 0xb79451, 0.26).lineBetween(65, y + 18, 385, y + 18);
   g.fillStyle(color, 1).fillCircle(82, y, 10);
   root.add(g);
   text(scene, root, 82, y, "◆", 11, "#ffffff", "900");
@@ -448,23 +448,50 @@ function outcomeArt(scene: Runtime, root: Phaser.GameObjects.Container, x: numbe
   });
 }
 
+function resultPaper(scene: Phaser.Scene, root: Phaser.GameObjects.Container, landscape: boolean): void {
+  const top = landscape ? 442 : 384;
+  const g = scene.add.graphics();
+  // A continuous reading surface lets the illustration fade into the page
+  // instead of looking like an image above a separate web card.
+  g.fillStyle(0xf7efd9, 1).fillRect(12, top, 426, 800 - top);
+  if (!landscape) g.fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(12, top - 54, 426, 54);
+  g.fillGradientStyle(0xb99552, 0xf7efd9, 0xb99552, 0xf7efd9, 0.25, 0, 0.25, 0).fillRect(12, top, 28, 800 - top);
+  g.fillGradientStyle(0xf7efd9, 0xb99552, 0xf7efd9, 0xb99552, 0, 0.25, 0, 0.25).fillRect(410, top, 28, 800 - top);
+  // Fixed, low-contrast paper grain; no per-frame random noise or animation.
+  for (let i = 0; i < 460; i++) {
+    const x = 24 + ((i * 137) % 402);
+    const y = top + ((i * 97) % (788 - top));
+    g.fillStyle(i % 2 ? 0x977543 : 0xffffff, 0.055).fillRect(x, y, i % 3 + 1, 1);
+  }
+  const ruleY = landscape ? 445 : 391;
+  g.lineStyle(1, 0xaa8242, 0.7).lineBetween(70, ruleY, 200, ruleY).lineBetween(250, ruleY, 380, ruleY);
+  g.fillStyle(0xb38a44, 0.9).fillPoints([
+    new Phaser.Math.Vector2(225, ruleY - 5), new Phaser.Math.Vector2(232, ruleY),
+    new Phaser.Math.Vector2(225, ruleY + 5), new Phaser.Math.Vector2(218, ruleY),
+  ], true);
+  root.add(g);
+}
+
 function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionQuote" | "reactionArrows" | "reactionResults"> {
   const screen = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   if (landscape) {
     const background = scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450);
     screen.add(background);
     outcomeArt(scene, screen, 8, 8, 350, 434);
-    requestCard(scene, screen, 183, 49, 334, 72);
   } else {
-    cover(scene, screen, HOME_BG_KEY);
-    outcomeArt(scene, screen, 12, 88, 426, 296);
-    requestCard(scene, screen, 225, 49, 414, 72);
+    screen.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 450, 800));
+    outcomeArt(scene, screen, 8, 8, 434, 430);
   }
-  text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#35281e", "800").setName("reactionYear");
-  text(scene, screen, landscape ? 183 : 225, 61, "選択の結果", 30, "#35281e", "900");
+  const width = landscape ? 350 : 434;
+  const lighting = scene.add.graphics();
+  lighting.fillGradientStyle(0x061522, 0x061522, 0x061522, 0x061522, 0.94, 0.94, 0, 0).fillRect(8, 8, width, 120);
+  lighting.lineStyle(1, 0xe0bb69, 0.8).lineBetween(landscape ? 72 : 114, 84, landscape ? 294 : 336, 84);
+  screen.add(lighting);
+  text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#f4dfaa", "800").setStroke("#091420", 1).setName("reactionYear");
+  text(scene, screen, landscape ? 183 : 225, 61, "選択の結果", 30, "#fff4d5", "900").setStroke("#091420", 1);
   const root = scene.add.container(landscape ? 354 : 0, landscape ? -374 : 0);
   screen.add(root);
-  panel(scene, root, 225, landscape ? 616 : 587, 408, landscape ? 348 : 406, 0xf7efd9, 0.98);
+  resultPaper(scene, root, landscape);
   const reactionTitle = text(scene, root, 225, landscape ? 470 : 415, "", 28, "#35281e", "900");
   const reactionBody = text(scene, root, 225, landscape ? 518 : 472, "", 21, "#43382e", "700", 378).setName("reactionBody");
   const reactionQuote = text(scene, root, 225, landscape ? 558 : 526, "", 18, "#6a4a2a", "700", 370).setName("reactionQuote");
