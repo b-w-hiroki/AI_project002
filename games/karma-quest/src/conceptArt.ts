@@ -14,6 +14,7 @@ type Runtime = Phaser.Scene & {
   reactionUntil?: number;
   lastAccepted?: boolean;
   lastOutcome?: ReturnType<typeof requestOutcome>;
+  choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
 type MockUi = {
   titleRoot: Phaser.GameObjects.Container;
@@ -156,13 +157,13 @@ function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: n
   return [arrowText, resultText];
 }
 
-function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): void {
+function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
   g.fillStyle(color, 0.12).fillRoundedRect(x - 47, y - 16, 94, 32, 6);
   g.lineStyle(1, color, 0.72).strokeRoundedRect(x - 47, y - 16, 94, 32, 6);
   root.add(g);
   text(scene, root, x - 11, y, label, 14, "#43382e", "800");
-  text(scene, root, x + 30, y, value, 16, "#17663f", "900");
+  return text(scene, root, x + 30, y, value, 16, "#17663f", "900");
 }
 
 function button(
@@ -439,20 +440,33 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 16, "#fffaf0", "700").setStroke("#091420", 0);
   requestCard(scene, root, 225, 209, 388, 182);
   artWindow(scene, root, REACTION_BG_KEY, 45, 141, 132, 140);
-  text(scene, root, 290, 151, "飢える民たち", 21, "#35281e", "900");
-  text(scene, root, 295, 218, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 16, "#43382e", "700", 206);
+  const eventTitle = text(scene, root, 290, 153, "", 20, "#35281e", "900", 212);
+  const eventBody = text(scene, root, 295, 230, "", 17, "#43382e", "700", 206);
   requestCard(scene, root, 225, 355, 388, 98);
-  text(scene, root, 225, 331, "???", 22, "#35281e", "900");
-  text(scene, root, 225, 373, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
+  const previousTitle = text(scene, root, 225, 333, "", 20, "#35281e", "900", 350);
+  const recordCount = text(scene, root, 225, 376, "", 18, "#43382e", "700", 340);
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   panel(scene, root, 225, 492, 382, 54, 0x102c52, 0.9);
   text(scene, root, 225, 491, "王都ルナディス — 物語の始まる街", 18, "#fffaf0", "900").setStroke("#091420", 1);
   bustWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
-  text(scene, root, 303, 542, "カイト　Lv.12", 23, "#35281e", "900");
-  metricChip(scene, root, 264, 589, "正義", "+2", 0x2e6ba3);
-  metricChip(scene, root, 362, 589, "共感", "+1", 0xb84a63);
-  metricChip(scene, root, 264, 633, "洞察", "+0", 0x70529a);
-  metricChip(scene, root, 362, 633, "魅力", "+1", 0xb48727);
+  text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
+  const stats = [
+    metricChip(scene, root, 264, 589, "攻撃", "", 0x2e6ba3),
+    metricChip(scene, root, 362, 589, "防御", "", 0xb84a63),
+    metricChip(scene, root, 264, 633, "体力", "", 0x70529a),
+    metricChip(scene, root, 362, 633, "魔力", "", 0xb48727),
+  ];
+  root.setData("refreshChronicle", () => {
+    const history = scene.choiceHistory ?? [];
+    const latest = history.at(-1);
+    const previous = history.at(-2);
+    eventTitle.setText(latest ? `${latest.year}年目\n${latest.outcome.title}` : "旅の記録");
+    eventBody.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
+    previousTitle.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
+    recordCount.setText(`この旅で刻んだ選択：${history.length}件`);
+    const values = deriveStats(scene.karma ?? initialKarma());
+    [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
+  });
   button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
@@ -479,6 +493,7 @@ function refresh(scene: Runtime): void {
   ui.reactionRoot.setVisible(portrait && (scene.reactionUntil ?? 0) > scene.time.now);
   ui.landscapeReaction?.reactionRoot.setVisible(!portrait && (scene.reactionUntil ?? 0) > scene.time.now);
   ui.finalRoot.setVisible(portrait && scene.phase === "final");
+  if (scene.phase === "final") (ui.finalRoot.getData("refreshChronicle") as () => void)();
   const accepted = scene.lastAccepted !== false;
   ui.reactionQuote.setText(accepted ? "「王都は、私たちの希望です」" : "「私たちの声は、届かなかった……」");
   ui.reactionTitle.setText(accepted ? "食料を支援しました" : "支援を見送りました");
@@ -534,6 +549,18 @@ function refresh(scene: Runtime): void {
 
 export function installKarmaConceptArtPass(): void {
   const proto = GameScene.prototype as unknown as MethodTable;
+  const originalStart = proto.startRun;
+  if (originalStart && !proto.__visualMockStart) {
+    proto.__visualMockStart = originalStart;
+    proto.startRun = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+      const runtime = this as Runtime;
+      runtime.choiceHistory = [];
+      runtime.lastOutcome = undefined;
+      runtime.lastAccepted = undefined;
+      runtime.reactionUntil = 0;
+      return originalStart.apply(this, args);
+    };
+  }
   const originalPreload = proto.preload;
   if (!proto.__visualMockPreload) {
     proto.__visualMockPreload = originalPreload ?? (() => undefined);
@@ -558,6 +585,7 @@ export function installKarmaConceptArtPass(): void {
       const result = originalChoice.apply(this, args);
       runtime.lastAccepted = args[0] === true;
       runtime.lastOutcome = requestOutcome(request, runtime.lastAccepted, before, runtime.karma);
+      (runtime.choiceHistory ??= []).push({ year: runtime.stage ?? 1, outcome: runtime.lastOutcome });
       runtime.reactionUntil = Number.POSITIVE_INFINITY;
       return result;
     };

@@ -203,6 +203,15 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startRun").call(scene);
+    const choose = Reflect.get(scene, "onKarmaChoice");
+    Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りない", karmaDelta: 5 });
+    choose.call(scene, true);
+    Reflect.set(scene, "stage", 2);
+    Reflect.set(scene, "phase", "karma");
+    Reflect.set(scene, "currentRequest", { id: "mage_book", faction: "mage", text: "禁書を読みたい", karmaDelta: 4 });
+    choose.call(scene, false);
+    Reflect.set(scene, "reactionUntil", 0);
     const titleGroup = Reflect.get(scene, "titleGroup") as { setVisible(value: boolean): void };
     titleGroup.setVisible(false);
     Reflect.set(scene, "stage", 12);
@@ -216,9 +225,21 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
     if (typeof showFinal === "function") showFinal.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("final");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+    return root.list.filter(item => item instanceof Object && "text" in item).map(item => Reflect.get(item, "text"));
+  })).toEqual(expect.arrayContaining(["2年目\n支援を見送りました", "1年目 · 鉄を届けました", "この旅で刻んだ選択：2件", "14", "9", "44", "5"]));
   await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
-    animations: "disabled", maxDiffPixelRatio: 0.035,
+    animations: "disabled", maxDiffPixelRatio: 0.005,
   });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-chronicle-current.png" });
+  await page.locator("canvas").click({ position: { x: 225, y: 708 } });
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { history: Reflect.get(scene, "choiceHistory"), outcome: Reflect.get(scene, "lastOutcome"), reaction: Reflect.get(scene, "reactionUntil"), karma: Reflect.get(scene, "karma") };
+  })).toEqual({ history: [], outcome: undefined, reaction: 0, karma: { warrior: 0, merchant: 0, outlaw: 0, mage: 0 } });
 });
 
 test("portrait choice reveals the world reaction scene", async ({ page }) => {
