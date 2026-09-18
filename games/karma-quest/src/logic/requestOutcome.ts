@@ -15,6 +15,8 @@ const COPY: Record<string, [string, string]> = {
 export function requestOutcome(request: KarmaRequest, accepted: boolean, before: KarmaState, after: KarmaState) {
   const [title, body] = COPY[request.id] ?? ['依頼を引き受けました', '依頼者の願いに応えました。'];
   return {
+    faction: request.faction,
+    requestId: request.id,
     title: accepted ? title : '支援を見送りました',
     body: accepted ? body : '今回の依頼は引き受けず、\n他の派閥が力を増しました。',
     quote: accepted ? '「力を貸してくれて、ありがとう」' : '「今回は、力を借りられないのですね」',

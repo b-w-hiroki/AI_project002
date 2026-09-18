@@ -43,6 +43,7 @@ const HOME_BG_KEY = "kq-bg-capital-home-v3";
 const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
 const REACTION_BG_KEY = "kq-bg-village-reaction";
+const MAGE_BG_KEY = "kq-bg-mage-study-v1";
 const uiByScene = new WeakMap<object, MockUi>();
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
@@ -425,16 +426,31 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
 }
 
+function outcomeArt(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
+  const art = scene.add.container(0, 0);
+  root.add(art);
+  let current = "";
+  root.setData("refreshOutcomeArt", () => {
+    const outcome = scene.lastOutcome;
+    const key = outcome?.faction === "mage" ? MAGE_BG_KEY
+      : outcome?.requestId === "village_food" && scene.lastAccepted ? REACTION_BG_KEY : HOME_BG_KEY;
+    if (key === current) return;
+    current = key;
+    art.removeAll(true);
+    artWindow(scene, art, key, x, y, width, height, key === MAGE_BG_KEY ? 0.25 : 0.5);
+  });
+}
+
 function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionQuote" | "reactionArrows" | "reactionResults"> {
   const screen = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   if (landscape) {
     const background = scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450);
     screen.add(background);
-    artWindow(scene, screen, REACTION_BG_KEY, 8, 8, 350, 434);
+    outcomeArt(scene, screen, 8, 8, 350, 434);
     requestCard(scene, screen, 183, 49, 334, 72);
   } else {
-    cover(scene, screen, REACTION_BG_KEY);
-    artWindow(scene, screen, REACTION_BG_KEY, 12, 88, 426, 296, 0.5);
+    cover(scene, screen, HOME_BG_KEY);
+    outcomeArt(scene, screen, 12, 88, 426, 296);
     requestCard(scene, screen, 225, 49, 414, 72);
   }
   text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#35281e", "800").setName("reactionYear");
@@ -478,7 +494,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 225, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
   requestCard(scene, root, 225, 215, 388, 194);
-  artWindow(scene, root, REACTION_BG_KEY, 45, 140, 124, 154, 1);
+  outcomeArt(scene, root, 45, 140, 124, 154);
   const eventTitle = text(scene, root, 290, 154, "", 22, "#35281e", "900", 226).setName("chronicleTitle");
   const eventBody = text(scene, root, 292, 244, "", 21, "#43382e", "700", 222).setName("chronicleBody");
   requestCard(scene, root, 225, 362, 388, 86);
@@ -580,6 +596,10 @@ function refresh(scene: Runtime): void {
   const ui = build(scene);
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {
+    const refreshArt = root?.getData("refreshOutcomeArt") as (() => void) | undefined;
+    refreshArt?.();
+  }
   for (const [root, phase] of [[ui.landscapeTitle, "title"], [ui.landscapeFinal, "final"]] as const) {
     root?.setVisible(!portrait && scene.phase === phase);
     if (root?.visible) (root.getData("refreshOverview") as () => void)();
@@ -670,6 +690,7 @@ export function installKarmaConceptArtPass(): void {
       this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
       this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
       this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
+      this.load.image(MAGE_BG_KEY, `images/${MAGE_BG_KEY}.png`);
       return result;
     };
   }
