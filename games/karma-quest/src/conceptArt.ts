@@ -151,6 +151,16 @@ function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x:
   };
   g.fillStyle(0x201d1a, 1).fillPoints(shape(0), true);
   g.fillStyle(0xf7efd9, 1).fillPoints(shape(3), true);
+  const left = x - width / 2 + 10, top = y - height / 2 + 10;
+  const innerWidth = width - 20, innerHeight = height - 20;
+  // Keep the reading area opaque; material lives at the edges, not over ink.
+  g.fillGradientStyle(0xb99552, 0xf7efd9, 0xb99552, 0xf7efd9, 0.23, 0, 0.23, 0).fillRect(left, top, 22, innerHeight);
+  g.fillGradientStyle(0xf7efd9, 0xb99552, 0xf7efd9, 0xb99552, 0, 0.23, 0, 0.23).fillRect(left + innerWidth - 22, top, 22, innerHeight);
+  g.fillGradientStyle(0xfffcf0, 0xfffcf0, 0xfffcf0, 0xfffcf0, 0.55, 0.55, 0, 0).fillRect(left, top, innerWidth, 22);
+  g.fillGradientStyle(0x9d763c, 0x9d763c, 0x9d763c, 0x9d763c, 0, 0, 0.18, 0.18).fillRect(left, top + innerHeight - 18, innerWidth, 18);
+  for (let i = 0; i < Math.floor(width * height / 650); i++) {
+    g.fillStyle(0x795c39, 0.055).fillRect(left + (i * 137) % innerWidth, top + (i * 97) % innerHeight, 1, 1);
+  }
   g.lineStyle(2, 0xb79451, 1).strokePoints(shape(1), true);
   g.lineStyle(1, 0xb79451, 0.55).strokePoints(shape(7), true);
   ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
@@ -380,7 +390,10 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   const shade = scene.add.graphics();
   shade.fillStyle(0x071017, 0.14).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 39, 420, 60, 0x0b1a29, 0.92);
+  const heading = scene.add.graphics();
+  heading.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0.97, 0.97, 0, 0).fillRect(8, 8, 434, 76);
+  heading.lineStyle(1, 0xd5ad60, 0.6).lineBetween(32, 67, 418, 67);
+  root.add(heading);
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
   // Crop the existing front portrait at the chest; keep a uniform scale so
@@ -394,6 +407,11 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   // Show the head and clasped hands at conversation distance; crop the robe
   // below them instead of shrinking the entire figure into the dialogue area.
   artWindow(scene, root, ELDER_KEY, npc.x, npc.y, npc.width, npc.height, 0);
+  // Dissolve the cropped bust edges into the action area, preserving faces.
+  const foreground = scene.add.graphics();
+  foreground.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(8, 493, 434, 65);
+  foreground.fillStyle(0x07131e, 1).fillRect(8, 558, 434, 234);
+  root.add(foreground);
   requestCard(scene, root, 290, 175, 304, 188);
   const requestBand = scene.add.graphics();
   requestBand.fillStyle(0x102c52, 1).fillRect(146, 93, 288, 41);
@@ -418,6 +436,7 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   const yearText = text(scene, root, 195, 39, "", 22, "#fff4d0", "900");
   bustWindow(scene, root, "kq-hero-warrior", 12, 230, 183, 204);
   artWindow(scene, root, ELDER_KEY, 156, 126, 222, 308, 0);
+  root.add(scene.add.graphics().fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(10, 388, 370, 52));
   requestCard(scene, root, 591, 132, 390, 244);
   panel(scene, root, 591, 45, 366, 50, 0x102c52, 1);
   const requestTitle = text(scene, root, 591, 45, "", 22, "#fff4d5", "900", 338);
