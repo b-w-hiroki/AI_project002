@@ -256,24 +256,40 @@ function button(
   return labelText;
 }
 
+// Restrained metal HUD: shallow bevels distinguish information from action buttons.
+function hudPlate(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
+  const g = scene.add.graphics();
+  const l = x - width / 2, t = y - height / 2;
+  const points = [[l + 6, t], [l + width - 6, t], [l + width, t + 6],
+    [l + width, t + height - 6], [l + width - 6, t + height], [l + 6, t + height],
+    [l, t + height - 6], [l, t + 6]].map(([px, py]) => new Phaser.Math.Vector2(px, py));
+  g.fillStyle(0x07131e, 0.96).fillPoints(points, true);
+  g.fillGradientStyle(0x294252, 0x294252, 0x07131e, 0x07131e, 0.8).fillRect(l + 7, t + 2, width - 14, height - 4);
+  g.lineStyle(1, 0xd5ad60, 0.95).strokePoints(points, true);
+  g.lineStyle(1, 0xffe4a0, 0.35).lineBetween(l + 9, t + 3, l + width - 9, t + 3);
+  root.add(g);
+}
+
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
   cover(scene, root, HOME_BG_KEY);
   const shade = scene.add.graphics();
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 108, 45, 184, 66, 0x0a1b2b, 0.94);
+  hudPlate(scene, root, 108, 45, 184, 66);
   bustWindow(scene, root, "kq-hero-warrior", 22, 18, 52, 54);
   text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
-  panel(scene, root, 322, 31, 224, 38, 0x102c52, 0.96);
+  hudPlate(scene, root, 322, 31, 224, 38);
   text(scene, root, 322, 31, `累計評価 ${loadTotalEvaluation()}`, 20, "#fff2c4", "900").setStroke("#091420", 1);
-  panel(scene, root, 339, 83, 190, 54, 0x102c52, 0.92);
+  hudPlate(scene, root, 339, 83, 190, 54);
   text(scene, root, 339, 74, `最高到達 ${loadBestStage()}年`, 20, "#fff6dd", "900").setStroke("#091420", 1);
   text(scene, root, 339, 97, "王都ルナディス", 18, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 70, 354, 8);
   rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 70, 354, 8);
+  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.28, 0, 0.28, 0).fillRect(15, 112, 20, 334);
+  for (const y of [180, 249, 318, 387]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
   root.add(rail);
   for (const [index, label] of ["案内", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
     const y = 125 + index * 69;
@@ -293,7 +309,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
   fitted(scene, root, HERO_BACK_KEY, 157, 571, 460, 614);
-  panel(scene, root, 186, 581, 314, 38, 0x0758a4, 0.96);
+  hudPlate(scene, root, 186, 581, 314, 38);
   text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
   bustWindow(scene, root, ELDER_KEY, 31, 618, 82, 78);
@@ -306,9 +322,10 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
+  nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.65).fillRect(10, 727, 430, 62);
   nav.lineStyle(2, 0xe2bd6b, 0.82).lineBetween(10, 724, 440, 724);
-  nav.fillStyle(0x102c52, 1).fillRect(18, 734, 68, 48);
-  nav.lineStyle(1, 0xb79451, 0.9).strokeRect(18, 734, 68, 48);
+  nav.fillGradientStyle(0x254b65, 0x254b65, 0x102c52, 0x102c52, 1).fillRect(18, 734, 68, 48);
+  nav.lineStyle(2, 0xe2bd6b, 0.95).lineBetween(24, 785, 80, 785);
   for (const divider of [94, 180, 270, 356]) {
     nav.lineStyle(1, 0xb79451, 0.35).lineBetween(divider, 734, divider, 783);
   }
