@@ -83,4 +83,42 @@ try {
   await sheet.setContent(`<style>body{margin:0;padding:16px;background:#091724;color:#f7e4bb;font:18px sans-serif}main{display:flex;gap:16px}section{width:314px}h2{font-size:20px;margin:0 0 12px}img{width:314px;display:block}</style><main>${patterns.map((src, i) => `<section><h2>${factionLabels[i]}</h2><img src="${src}"></section>`).join('')}</main>`);
   await sheet.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
   await sheet.screenshot({ path: resolve('docs/review/karma-faction-patterns.png') });
+  const requests = await page.evaluate(async () => (await import('/src/logic/karma.ts')).KARMA_REQUESTS);
+  for (const faction of factions) {
+    await page.evaluate(request => {
+      const scene = window.__qaGame.scene.getScene('GameScene');
+      scene.phase = 'karma'; scene.currentRequest = request;
+    }, requests.find(request => request.faction === faction));
+    await capture(`dialogue-${faction}`);
+  }
+  const portraits = await Promise.all(factions.map(faction => data(`docs/review/karma-compact-dialogue-${faction}.png`)));
+  await sheet.setContent(`<style>body{margin:0;padding:16px;background:#091724;color:#f7e4bb;font:18px sans-serif}main{display:flex;gap:16px}section{width:314px}h2{font-size:20px;margin:0 0 12px}img{width:314px;display:block}</style><main>${portraits.map((src, i) => `<section><h2>${['戦士','商人','荒くれ者','魔術師'][i]}</h2><img src="${src}"></section>`).join('')}</main>`);
+  await sheet.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
+  await sheet.screenshot({ path: resolve('docs/review/karma-dialogue-patterns.png') });
+  for (const accepted of [true, false]) {
+    const branch = accepted ? 'accept' : 'decline';
+    const shots = [];
+    for (const request of requests) {
+      await page.evaluate(({ request, accepted }) => {
+        const scene = window.__qaGame.scene.getScene('GameScene');
+        scene.phase = 'karma'; scene.currentRequest = request;
+        scene.onKarmaChoice(accepted);
+      }, { request, accepted });
+      await capture(`${request.id}-${branch}`);
+      shots.push(await data(`docs/review/karma-compact-${request.id}-${branch}.png`));
+    }
+    await sheet.setViewportSize({ width: 1336, height: 1228 });
+    await sheet.setContent(`<style>body{margin:0;padding:16px;background:#091724;color:#f7e4bb;font:16px sans-serif}main{display:grid;grid-template-columns:repeat(4,314px);gap:16px}h2{font-size:17px;margin:0 0 8px}img{width:314px;display:block}</style><main>${shots.map((src, i) => `<section><h2>${requests[i].id} · ${accepted ? '承諾' : '見送り'}</h2><img src="${src}"></section>`).join('')}</main>`);
+    await sheet.locator('img').evaluateAll(images => Promise.all(images.map(img => img.decode())));
+    await sheet.screenshot({ path: resolve(`docs/review/karma-outcomes-${branch}.png`), fullPage: true });
+  }
+  await page.setViewportSize({ width: 800, height: 360 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+  await page.evaluate(() => { const scene = window.__qaGame.scene.getScene('GameScene'); scene.deeds = [{ id: 'request', label: '魔術師の派閥に力を貸した', quality: 4, tag: 'wisdom' }]; });
+  await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').showEncounterPhase());
+  await capture('encounter-landscape');
+  await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').onEncounterChoice('A'));
+  await capture('battle-landscape');
+  await page.waitForFunction(() => window.__qaGame.scene.getScene('GameScene').phase === 'report');
+  await capture('report-landscape');
 } finally { await browser.close(); }

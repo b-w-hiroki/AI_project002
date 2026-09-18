@@ -4,6 +4,9 @@ import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
 import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import type { Encounter } from "./logic/encounter";
+import { DEITIES, type Deity } from "./logic/legend";
+import { OUTCOME_ART, outcomeArtKey } from "./outcomeArt";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -25,6 +28,7 @@ type MockUi = {
   finalRoot: Phaser.GameObjects.Container;
   landscapeTitle?: Phaser.GameObjects.Container;
   landscapeFinal?: Phaser.GameObjects.Container;
+  landscapeJourney?: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
@@ -42,6 +46,11 @@ const BG_KEY = "kq-bg-kingdom-portrait-v2";
 const HOME_BG_KEY = "kq-bg-capital-home-v3";
 const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
+const HERO_DIALOGUE_KEY = "kq-dialogue-hero-v1";
+const REQUESTER_ART = {
+  warrior: "kq-dialogue-warrior-v1", merchant: "kq-dialogue-merchant-v1",
+  outlaw: "kq-dialogue-outlaw-v1", mage: "kq-dialogue-mage-v1",
+};
 const REACTION_BG_KEY = "kq-bg-village-reaction";
 const MAGE_BG_KEY = "kq-bg-mage-study-v1";
 const FACTION_ART = {
@@ -115,6 +124,27 @@ function bustWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key
   const scale = Math.max(width / cropWidth, height / cropHeight);
   image.setCrop(cropX, 0, cropWidth, cropHeight).setScale(scale).setPosition(x - cropX * scale, y);
   root.add(image);
+}
+
+function requesterPortrait(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, thumbnail = false): void {
+  const layer = scene.add.container(0, 0).setName("requester-portrait");
+  root.add(layer);
+  let current = "";
+  root.setData("refreshRequester", (request?: KarmaRequest | null) => {
+    const key = request && request.id !== "village_food" ? REQUESTER_ART[request.faction] : ELDER_KEY;
+    if (key === current) return;
+    current = key;
+    layer.removeAll(true);
+    if (key === ELDER_KEY) {
+      if (thumbnail) bustWindow(scene, layer, key, x, y, width, height);
+      else artWindow(scene, layer, key, x, y, width, height, 0);
+    } else if (thumbnail) {
+      artWindow(scene, layer, key, x, y, width, height, 0);
+    } else {
+      const image = fitted(scene, layer, key, x + width / 2, y + height / 2, width, height);
+      if (image) image.setY(y + height - image.displayHeight / 2);
+    }
+  });
 }
 
 function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
@@ -277,7 +307,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
   hudPlate(scene, root, 108, 45, 184, 66);
-  bustWindow(scene, root, "kq-hero-warrior", 22, 18, 52, 54);
+  artWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0);
   text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 322, 31, 224, 38);
@@ -312,10 +342,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   hudPlate(scene, root, 186, 581, 314, 38);
   text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
-  bustWindow(scene, root, ELDER_KEY, 31, 618, 82, 78);
+  requesterPortrait(scene, root, 31, 618, 82, 78, true);
   const homeRequestTitle = text(scene, root, 260, 629, "", 21, "#3c2a1e", "900");
   const homeRequestBody = text(scene, root, 263, 674, "", 21, "#43382e", "700", 276);
   root.setData("refreshRequest", () => {
+    (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
     homeRequestBody.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
   });
@@ -413,17 +444,11 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   root.add(heading);
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
-  // Crop the existing front portrait at the chest; keep a uniform scale so
-  // the conversation portrait does not imply a full-body depth relationship.
-  if (scene.textures.exists("kq-hero-warrior")) {
-    const portrait = scene.add.image(-55, 328, "kq-hero-warrior").setOrigin(0, 0);
-    portrait.setScale(0.9).setCrop(60, 0, 285, 255);
-    root.add(portrait);
-  }
+  // A dedicated chest-up portrait keeps the player at conversation distance.
+  fitted(scene, root, HERO_DIALOGUE_KEY, 122, 439, 230, 230);
   const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
-  // Show the head and clasped hands at conversation distance; crop the robe
-  // below them instead of shrinking the entire figure into the dialogue area.
-  artWindow(scene, root, ELDER_KEY, npc.x, npc.y, npc.width, npc.height, 0);
+  // Faction portraits share a fixed lane without stretching their proportions.
+  requesterPortrait(scene, root, npc.x, npc.y, npc.width, npc.height);
   // Dissolve the cropped bust edges into the action area, preserving faces.
   const foreground = scene.add.graphics();
   foreground.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(8, 493, 434, 65);
@@ -451,8 +476,8 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   artWindow(scene, root, BG_KEY, 8, 8, 374, 434);
   panel(scene, root, 195, 39, 354, 58, 0x0b1a29, 0.94);
   const yearText = text(scene, root, 195, 39, "", 22, "#fff4d0", "900");
-  bustWindow(scene, root, "kq-hero-warrior", 12, 230, 183, 204);
-  artWindow(scene, root, ELDER_KEY, 156, 126, 222, 308, 0);
+  fitted(scene, root, HERO_DIALOGUE_KEY, 115, 324, 214, 220);
+  requesterPortrait(scene, root, 156, 126, 222, 308);
   root.add(scene.add.graphics().fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(10, 388, 370, 52));
   requestCard(scene, root, 591, 132, 390, 244);
   panel(scene, root, 591, 45, 366, 50, 0x102c52, 1);
@@ -474,13 +499,13 @@ function outcomeArt(scene: Runtime, root: Phaser.GameObjects.Container, x: numbe
   let current = "";
   root.setData("refreshOutcomeArt", () => {
     const outcome = scene.lastOutcome;
-    const key = outcome?.requestId === "village_food"
-      ? scene.lastAccepted ? REACTION_BG_KEY : HOME_BG_KEY
-      : outcome ? FACTION_ART[outcome.faction] : HOME_BG_KEY;
+    const key = outcome ? outcomeArtKey(outcome.requestId, scene.lastAccepted === true) : HOME_BG_KEY;
     if (key === current) return;
     current = key;
     art.removeAll(true);
-    artWindow(scene, art, key, x, y, width, height, Object.values(FACTION_ART).includes(key) ? 0.22 : 0.5);
+    const alignY = key.startsWith("kq-outcome-") ? 0 : key === HOME_BG_KEY || key === REACTION_BG_KEY ? 0.5 : 0.22;
+    const headerInset = key.startsWith("kq-outcome-") && width === 434 && height === 430 ? 36 : 0;
+    artWindow(scene, art, key, x, y + headerInset, width, height - headerInset, alignY);
   });
 }
 
@@ -561,7 +586,17 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   root.add(dim);
   requestCard(scene, root, 225, 400, 422, 756);
   panel(scene, root, 225, 66, 394, 80, 0x102c52, 1);
-  text(scene, root, 225, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
+  const book = scene.add.graphics();
+  for (const side of [-1, 1]) {
+    book.fillStyle(0xe8d49f, 1).fillPoints([
+      new Phaser.Math.Vector2(116, 39), new Phaser.Math.Vector2(116 + side * 23, 34),
+      new Phaser.Math.Vector2(116 + side * 23, 60), new Phaser.Math.Vector2(116, 65),
+    ], true);
+    for (const y of [43, 49, 55]) book.lineStyle(1, 0x715332, 0.7).lineBetween(116 + side * 5, y + 3, 116 + side * 18, y);
+  }
+  book.lineStyle(2, 0xb79451, 1).lineBetween(116, 39, 116, 65);
+  root.add(book);
+  text(scene, root, 244, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
   outcomeArt(scene, root, 45, 140, 124, 154);
   const pageRules = scene.add.graphics();
@@ -585,7 +620,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   cityShade.lineStyle(1, 0xb79451, 0.65).strokeRect(34, 412, 382, 108);
   root.add(cityShade);
   text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
-  bustWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
+  artWindow(scene, root, HERO_DIALOGUE_KEY, 40, 535, 157, 133, 0);
   root.add(scene.add.graphics().fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(40, 643, 157, 25));
   text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
   const stats = [
@@ -618,12 +653,10 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   panel(scene, root, 195, 43, 350, 62, 0x102c52, 0.98);
   text(scene, root, 195, 43, final ? "カイトの能力" : "王都ルナディス", 28, "#fffaf0", "900");
   if (final) {
-    bustWindow(scene, root, "kq-hero-warrior", 38, 85, 310, 215);
+    artWindow(scene, root, HERO_DIALOGUE_KEY, 38, 85, 310, 215, 0);
     requestCard(scene, root, 195, 367, 346, 134);
   } else {
-    fitted(scene, root, HERO_BACK_KEY, 178, 267, 340, 380);
-    panel(scene, root, 195, 399, 350, 66, 0x102c52, 0.96);
-    text(scene, root, 195, 399, "この世界の物語は、\nあなたの選択から。", 23, "#fffaf0", "900");
+    fitted(scene, root, HERO_BACK_KEY, 178, 242, 320, 326);
   }
   const statValues = final ? [
     metricChip(scene, root, 133, 337, "攻撃", "", 0x2e6ba3),
@@ -643,6 +676,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
   ornament(frame, 8, 8, 374, 434);
   root.add(frame);
+  if (!final) buildLandscapeHomeNavigation(scene, root);
   root.setData("refreshOverview", () => {
     if (final) {
       const history = scene.choiceHistory ?? [];
@@ -663,6 +697,139 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   return root;
 }
 
+function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.Container): void {
+  const modal = scene.add.container(0, 0).setName("home-information-wide").setVisible(false);
+  modal.add(scene.add.graphics().fillStyle(0x030a14, 0.88).fillRect(0, 0, 800, 450));
+  modal.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  requestCard(scene, modal, 400, 225, 696, 422);
+  const heading = text(scene, modal, 400, 62, "", 30, "#35281e", "900", 610);
+  const body = text(scene, modal, 400, 208, "", 24, "#43382e", "700", 610);
+  button(scene, modal, 400, 385, 326, 64, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
+  const show = (title: string, value: string) => { heading.setText(title); body.setText(value); modal.setVisible(true); };
+  const items: Array<[string, () => void]> = [
+    ["案内", () => show("冒険の案内", "依頼を聞き、返答を選び、世界の反応を確認します。\n結果の「次へ」で冒険が進みます。\n\n選択は指を離したときに確定します。")],
+    ["ワールド", () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、12年の物語を紡ぎます。\n\n右側の「依頼を聞く」から出発できます。")],
+    ["仲間", () => {
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      show("カイトの能力", `攻撃力 ${stats.atk}  防御力 ${stats.def}\n体力 ${stats.hp}  魔力 ${stats.magic}\n\n依頼への選択が勇者を育てます。`);
+    }],
+    ["図鑑", () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。")],
+    ["持ち物", () => show("持ち物", "持ち物の管理は現在は利用できません。\n\n装備なしで冒険を開始できます。")],
+    ["ガチャ", () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と冒険を通じて成長します。")],
+    ["ショップ", () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。")],
+    ["王都", () => modal.setVisible(false)],
+  ];
+  items.forEach(([label, action], i) => {
+    const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
+    hudPlate(scene, root, x, y, 84, 56);
+    text(scene, root, x, y, label, 19, "#fff3ce", "900").setStroke("#091420", 0);
+    const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+    root.add(hit);
+  });
+  root.add(modal);
+}
+
+function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  artWindow(scene, root, HOME_BG_KEY, 0, 0, 800, 450);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 0.75).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  const encounter = scene.add.container(0, 0), battle = scene.add.container(0, 0), report = scene.add.container(0, 0);
+  root.add([encounter, battle, report]);
+  for (const layer of [encounter, battle]) {
+    fitted(scene, layer, HERO_DIALOGUE_KEY, 195, 249, 362, 362);
+    hudPlate(scene, layer, 195, 47, 352, 64);
+    requestCard(scene, layer, 591, 145, 390, 266);
+  }
+  text(scene, encounter, 195, 47, "道中の出来事", 28);
+  const encounterText = text(scene, encounter, 591, 140, "", 25, "#43382e", "700", 338);
+  const optionA = button(scene, encounter, 591, 322, 382, 72, "", 0x0758a4, () => invoke(scene, "onEncounterChoice", "A"));
+  const optionB = button(scene, encounter, 591, 406, 382, 72, "", 0x981d25, () => invoke(scene, "onEncounterChoice", "B"));
+  text(scene, battle, 195, 47, "勇者の討伐", 28);
+  const battleHeading = text(scene, battle, 591, 59, "", 26, "#35281e", "900", 340);
+  const battleStats = text(scene, battle, 591, 140, "", 24, "#43382e", "700", 340);
+  const battleResult = text(scene, battle, 591, 220, "", 23, "#43382e", "700", 340);
+  const cheerCount = text(scene, battle, 591, 314, "", 22, "#fff3ce", "700", 350);
+  const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
+  button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  text(scene, report, 400, 36, "神様への報告", 30);
+  text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21);
+  requestCard(scene, report, 215, 271, 400, 330);
+  requestCard(scene, report, 609, 240, 366, 270);
+  type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
+  const rows = Array.from({ length: 4 }, (_, i) => {
+    const y = 150 + i * 80;
+    const layer = scene.add.container(0, 0);
+    report.add(layer);
+    const bg = scene.add.graphics(); layer.add(bg);
+    const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
+    const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => {
+      if (!armed || scene.phase !== "report") return;
+      armed = false;
+      (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
+    });
+    layer.add(hit);
+    return { layer, bg, label, y };
+  });
+  for (const [i, god] of (["valor", "mercy"] as const).entries()) {
+    const x = 519 + i * 180;
+    const g = scene.add.graphics(); report.add(g);
+    g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
+    text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
+    const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => {
+      if (!armed || scene.phase !== "report") return;
+      armed = false; Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview");
+    });
+    report.add(hit);
+  }
+  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
+  const submitAction = scene.add.container(0, 0); report.add(submitAction);
+  button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  root.setData("refreshJourney", () => {
+    encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (encounter.visible) {
+      const value = Reflect.get(scene, "currentEncounter") as Encounter | null;
+      encounterText.setText(value?.text ?? ""); optionA.setText(value?.choiceA.label ?? ""); optionB.setText(value?.choiceB.label ?? "");
+    }
+    if (battle.visible) {
+      const group = Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container;
+      const source = (name: string) => (group.getByName(name) as Phaser.GameObjects.Text)?.text ?? "";
+      battleHeading.setText(source("battleHeading")); battleStats.setText(source("battleStats"));
+      battleResult.setText(source("battleResult")); cheerCount.setText(source("cheerCountText"));
+      const enabled = !Reflect.get(scene, "currentBattleResult");
+      cheerAction.setAlpha(enabled ? 1 : 0.45);
+      (cheerAction.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+    if (report.visible) {
+      const source = Reflect.get(scene, "highlightRows") as Row[];
+      rows.forEach(({ layer, bg, label, y }, i) => {
+        const row = source[i]; layer.setVisible(!!row); if (!row) return;
+        label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(29, y - 36, 372, 72);
+        bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
+      });
+      const god = Reflect.get(scene, "deity") as Deity;
+      const count = source.filter(row => row.selected).length;
+      preview.setText(`${DEITIES[god].name}へ報告\n選択 ${count}/2\n${DEITIES[god].wish}`);
+      submitAction.setAlpha(count > 0 ? 1 : 0.45);
+      (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;
+    }
+  });
+  return root;
+}
+
 function build(scene: Runtime): MockUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
@@ -670,7 +837,7 @@ function build(scene: Runtime): MockUi {
   const choice = buildChoice(scene);
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle: buildLandscapeOverview(scene, false), landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true) };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle: buildLandscapeOverview(scene, false), landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -679,6 +846,8 @@ function refresh(scene: Runtime): void {
   const ui = build(scene);
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
+  if (ui.landscapeJourney?.visible) (ui.landscapeJourney.getData("refreshJourney") as () => void)();
   for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {
     const refreshArt = root?.getData("refreshOutcomeArt") as (() => void) | undefined;
     refreshArt?.();
@@ -721,6 +890,9 @@ function refresh(scene: Runtime): void {
   }
   if (scene.phase !== "karma") return;
   const request = scene.currentRequest;
+  for (const root of [ui.choiceRoot, ui.landscapeChoice?.choiceRoot]) {
+    (root?.getData("refreshRequester") as ((request?: KarmaRequest | null) => void) | undefined)?.(request);
+  }
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
   ui.requestTitle.setText(request ? `依頼  ${FACTION_LABEL[request.faction]}` : "新しい依頼");
   ui.requestText.setText(request?.text ?? "王都の民が、あなたの決断を待っています。どうしますか？");
@@ -772,8 +944,10 @@ export function installKarmaConceptArtPass(): void {
       this.load.image(HOME_BG_KEY, `images/${HOME_BG_KEY}.png`);
       this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
       this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
+      for (const key of [HERO_DIALOGUE_KEY, ...Object.values(REQUESTER_ART)]) this.load.image(key, `images/${key}.webp`);
       this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
       for (const key of Object.values(FACTION_ART)) this.load.image(key, `images/${key}.png`);
+      for (const key of new Set(Object.values(OUTCOME_ART).flat().filter(key => key.startsWith("kq-outcome-")))) this.load.image(key, `images/${key}.webp`);
       return result;
     };
   }

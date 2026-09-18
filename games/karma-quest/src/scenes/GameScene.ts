@@ -635,6 +635,7 @@ export class GameScene extends Phaser.Scene {
 
   private showBattlePhase(): void {
     this.phase = "battle";
+    this.currentBattleResult = null;
     this.karmaGroup.setVisible(false);
     this.encounterGroup.setVisible(false);
     this.battleGroup.setVisible(true);
@@ -692,7 +693,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onCheerTap(): void {
-    if (this.phase !== "battle") return;
+    if (this.phase !== "battle" || this.currentBattleResult) return;
     this.cheerCount += 1;
     this.playSound(sfx.buttonTap);
     const cheerCountText = this.battleGroup.getByName(
