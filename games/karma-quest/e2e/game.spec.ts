@@ -487,6 +487,31 @@ test("requester portraits follow every request in home and rotated dialogue", as
       Reflect.set(scene, "phase", "title"); Reflect.set(scene, "homeRequest", request);
     }, request);
     await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
+    await page.setViewportSize({ width: 800, height: 360 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
+    const copyBounds = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      let bounds: { left: number; right: number; top: number; bottom: number } | null = null;
+      const visit = (node: Phaser.GameObjects.GameObject) => {
+        if (node.name === "landscape-home-request-body") {
+          const rect = (node as Phaser.GameObjects.Text).getBounds();
+          bounds = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+        }
+        if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      scene.children.list.forEach(visit);
+      return bounds;
+    });
+    expect(copyBounds).not.toBeNull();
+    expect(copyBounds!.left).toBeGreaterThan(530);
+    expect(copyBounds!.right).toBeLessThan(780);
+    expect(copyBounds!.top).toBeGreaterThan(150);
+    expect(copyBounds!.bottom).toBeLessThan(280);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+    // Canvas resize precedes the scene update which activates portrait input.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     await tapPoint(page, 225, 660);
     await expect.poll(() => phase(page)).toBe("karma");
     await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").children.list.some(child => child.depth >= 2000 && child.depth <= 2002));

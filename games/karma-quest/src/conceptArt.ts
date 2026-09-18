@@ -684,6 +684,13 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
   const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
   const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
+  if (!final) {
+    // Keep the envoy beside the request; reserve independent bounds for the copy.
+    hudPlate(scene, root, 468, 198, 112, 164);
+    requesterPortrait(scene, root, 416, 124, 104, 148, true);
+    heading.setPosition(655, 128).setWordWrapWidth(226, true);
+    body.setName("landscape-home-request-body").setPosition(655, 212).setWordWrapWidth(226, true).setFontSize(22);
+  }
   button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
     () => invoke(scene, "startRun"));
   const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
@@ -701,6 +708,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       const stats = deriveStats(scene.karma ?? initialKarma());
       [stats.atk, stats.def, stats.hp, stats.magic].forEach((value, i) => statValues[i]?.setText(String(value)));
     } else {
+      (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
       status.setText(`最高到達 ${loadBestStage()}年`);
       heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
       body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
