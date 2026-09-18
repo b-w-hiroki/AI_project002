@@ -234,6 +234,7 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const choose = Reflect.get(scene, "onKarmaChoice");
+    Reflect.set(scene, "currentRequest", { id: "mage_stone", faction: "mage", text: "魔法の研究に魔石がほしいのです…", karmaDelta: 5 });
     if (typeof choose === "function") choose.call(scene, true);
   });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-reaction-mock.png", {
@@ -267,7 +268,7 @@ test("declining a request changes the world reaction copy and effects", async ({
     };
     scene.children.list.forEach(visit);
     return labels;
-  })).toEqual(expect.arrayContaining(["支援を見送りました", "大きく低下"]));
+  })).toEqual(expect.arrayContaining(["支援を見送りました", "+1", "変化なし"]));
 });
 
 test("choice explanation follows the current request's actual faction and delta", async ({ page }) => {

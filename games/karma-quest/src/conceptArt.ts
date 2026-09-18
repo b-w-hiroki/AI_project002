@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { deriveStats, initialKarma, FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
+import { requestOutcome } from "./logic/requestOutcome";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -12,6 +13,7 @@ type Runtime = Phaser.Scene & {
   currentRequest?: KarmaRequest | null;
   reactionUntil?: number;
   lastAccepted?: boolean;
+  lastOutcome?: ReturnType<typeof requestOutcome>;
 };
 type MockUi = {
   titleRoot: Phaser.GameObjects.Container;
@@ -408,10 +410,10 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
   const reactionBody = text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
   const reactionQuote = text(scene, root, 225, 558, "「王都は、私たちの希望です」", 17, "#6a4a2a", "700", 350);
   const effectRows = [
-    effectRow(scene, root, 590, 0x2f8c4b, "民の声", "↑", "大きく上昇"),
-    effectRow(scene, root, 620, 0x245e9b, "王国", "↑", "やや上昇"),
-    effectRow(scene, root, 650, 0x7a5899, "教会", "→", "変化なし"),
-    effectRow(scene, root, 680, 0xa32d34, "貴族", "↓", "やや低下"),
+    effectRow(scene, root, 590, 0x245e9b, "戦士", "→", "変化なし"),
+    effectRow(scene, root, 620, 0x2f8c4b, "商人", "→", "変化なし"),
+    effectRow(scene, root, 650, 0xa32d34, "荒くれ", "→", "変化なし"),
+    effectRow(scene, root, 680, 0x7a5899, "魔術師", "→", "変化なし"),
   ];
   button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
   if (!landscape) screenFrame(scene, screen);
@@ -487,6 +489,16 @@ function refresh(scene: Runtime): void {
   const results = accepted ? ["大きく上昇", "やや上昇", "変化なし", "やや低下"] : ["大きく低下", "変化なし", "やや上昇", "やや上昇"];
   ui.reactionArrows.forEach((item, index) => item.setText(arrows[index] ?? "→").setColor((arrows[index] ?? "→") === "↓" ? "#b1262c" : (arrows[index] ?? "→") === "→" ? "#6d685f" : "#16864f"));
   ui.reactionResults.forEach((item, index) => item.setText(results[index] ?? "変化なし"));
+  if (scene.lastOutcome) {
+    const outcome = scene.lastOutcome;
+    ui.reactionTitle.setText(outcome.title).setFontSize(26);
+    ui.reactionBody.setText(outcome.body);
+    ui.reactionQuote.setText(outcome.quote).setFontSize(16);
+    outcome.deltas.forEach((delta, i) => {
+      ui.reactionArrows[i]?.setText(delta > 0 ? "↑" : delta < 0 ? "↓" : "→").setColor(delta > 0 ? "#16864f" : delta < 0 ? "#b1262c" : "#6d685f");
+      ui.reactionResults[i]?.setText(delta === 0 ? "変化なし" : `${delta > 0 ? "+" : ""}${delta}`);
+    });
+  }
   const wide = ui.landscapeReaction;
   if (wide) {
     wide.reactionTitle.setText(ui.reactionTitle.text);
@@ -539,9 +551,13 @@ export function installKarmaConceptArtPass(): void {
   if (originalChoice && !proto.__visualMockChoice) {
     proto.__visualMockChoice = originalChoice;
     proto.onKarmaChoice = function (this: Phaser.Scene, ...args: unknown[]): unknown {
-      const result = originalChoice.apply(this, args);
       const runtime = this as Runtime;
+      if (runtime.phase !== "karma" || !runtime.currentRequest || !runtime.karma) return undefined;
+      const request = { ...runtime.currentRequest };
+      const before = { ...runtime.karma };
+      const result = originalChoice.apply(this, args);
       runtime.lastAccepted = args[0] === true;
+      runtime.lastOutcome = requestOutcome(request, runtime.lastAccepted, before, runtime.karma);
       runtime.reactionUntil = Number.POSITIVE_INFINITY;
       return result;
     };
