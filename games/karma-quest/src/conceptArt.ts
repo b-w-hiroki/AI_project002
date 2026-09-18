@@ -115,10 +115,10 @@ function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key:
   root.add(image);
 }
 
-function bustWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number): void {
+function bustWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number, fraction = 0.42): void {
   if (!scene.textures.exists(key)) return;
   const image = scene.add.image(x, y, key).setOrigin(0);
-  const cropHeight = image.height * 0.42;
+  const cropHeight = image.height * fraction;
   const cropWidth = Math.min(image.width, cropHeight * (width / height));
   const cropX = (image.width - cropWidth) / 2;
   const scale = Math.max(width / cropWidth, height / cropHeight);
@@ -139,7 +139,7 @@ function requesterPortrait(scene: Runtime, root: Phaser.GameObjects.Container, x
       if (thumbnail) bustWindow(scene, layer, key, x, y, width, height);
       else artWindow(scene, layer, key, x, y, width, height, 0);
     } else if (thumbnail) {
-      artWindow(scene, layer, key, x, y, width, height, 0);
+      bustWindow(scene, layer, key, x, y, width, height, 0.6);
     } else {
       const image = fitted(scene, layer, key, x + width / 2, y + height / 2, width, height);
       if (image) image.setY(y + height - image.displayHeight / 2);
@@ -307,7 +307,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
   hudPlate(scene, root, 108, 45, 184, 66);
-  artWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0);
+  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
   text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 322, 31, 224, 38);
@@ -325,10 +325,23 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     const y = 125 + index * 69;
     const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
     if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
-    if (index === 1 || index === 4) {
-      ink.strokeRect(26, y - 12, 26, 25);
-      if (index === 4) ink.lineBetween(39, y - 12, 39, y + 13);
-      else { ink.lineBetween(31, y - 5, 47, y - 5); ink.lineBetween(31, y + 2, 44, y + 2); }
+    if (index === 1) {
+      ink.fillRoundedRect(27, y - 12, 24, 26, 2);
+      ink.lineBetween(24, y - 12, 54, y - 12);
+      ink.lineBetween(24, y + 14, 54, y + 14);
+      ink.fillStyle(0x14222b, 1).fillCircle(39, y - 3, 4);
+      ink.fillTriangle(36, y, 34, y + 8, 39, y + 5);
+      ink.fillTriangle(42, y, 44, y + 8, 39, y + 5);
+    }
+    if (index === 4) {
+      const page = (side: number) => [
+        new Phaser.Math.Vector2(39, y - 8), new Phaser.Math.Vector2(39 + side * 13, y - 12),
+        new Phaser.Math.Vector2(39 + side * 13, y + 10), new Phaser.Math.Vector2(39, y + 14),
+      ];
+      ink.fillPoints(page(-1), true).fillPoints(page(1), true);
+      ink.lineStyle(1, 0x14222b, 1).lineBetween(39, y - 7, 39, y + 12);
+      for (const side of [-1, 1]) for (const dy of [-4, 1, 6])
+        ink.lineBetween(39 + side * 3, y + dy, 39 + side * 10, y + dy - 2);
     }
     if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
     if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
