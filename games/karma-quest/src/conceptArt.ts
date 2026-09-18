@@ -213,7 +213,7 @@ function button(
   paint();
   root.add(g);
   const labelText = text(scene, root, x, detail ? y - 10 : y, label, detail ? 21 : 22, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
-  if (detail) text(scene, root, x, y + 18, detail, 13, "#eadfca", "700", width - 76).setStroke("#091420", 1);
+  if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 18, "#eadfca", "700", width - 76).setStroke("#091420", 0));
   const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
   zone.on("pointerover", () => { if (!processing) paint("focus"); });
@@ -379,10 +379,10 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   requestBand.lineStyle(1, 0xb79451, 1).lineBetween(146, 134, 434, 134);
   root.add(requestBand);
   const requestTitle = text(scene, root, 290, 111, "", 20, "#35281e", "900", 270);
-  const requestText = text(scene, root, 290, 197, "", 20, "#352f29", "700", 270);
+  const requestText = text(scene, root, 290, 197, "", 22, "#352f29", "700", 264).setAlign("left");
   requestTitle.setColor("#fff4d5");
-  const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "村に届け、民の声に応える");
-  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "王都の備蓄を守り、別の道を選ぶ");
+  const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
+  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
   text(scene, root, 225, 766, "「どんな選択にも、意味がある」", 17, "#fff3d0", "700");
   screenFrame(scene, root);
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
@@ -515,6 +515,9 @@ function refresh(scene: Runtime): void {
     mage_book: "禁書を許可する",
   };
   ui.acceptLabel.setText(request ? actionLabels[request.id] ?? "依頼を引き受ける" : "依頼を確認する");
+  const detail = ui.acceptLabel.getData("detailText") as Phaser.GameObjects.Text | undefined;
+  const factionNames = { warrior: "戦士", merchant: "商人", outlaw: "荒くれ", mage: "魔術師" };
+  detail?.setText(request ? `${factionNames[request.faction]}の力 +${request.karmaDelta}・勇者が成長` : "依頼者の力になる");
 }
 
 export function installKarmaConceptArtPass(): void {

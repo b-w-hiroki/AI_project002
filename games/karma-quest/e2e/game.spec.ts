@@ -269,3 +269,25 @@ test("declining a request changes the world reaction copy and effects", async ({
     return labels;
   })).toEqual(expect.arrayContaining(["支援を見送りました", "大きく低下"]));
 });
+
+test("choice explanation follows the current request's actual faction and delta", async ({ page }) => {
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  for (const request of [
+    { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5, expected: "戦士の力 +5・勇者が成長" },
+    { id: "mage_book", faction: "mage", text: "禁書を読む許可がほしい…", karmaDelta: 4, expected: "魔術師の力 +4・勇者が成長" },
+  ]) {
+    await page.evaluate(value => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "currentRequest", value), request);
+    await expect.poll(() => page.evaluate(() => {
+      const labels: string[] = [];
+      const visit = (node: unknown) => {
+        if (!node || typeof node !== "object") return;
+        const item = node as { text?: string; list?: unknown[] };
+        if (item.text) labels.push(item.text);
+        item.list?.forEach(visit);
+      };
+      window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+      return labels;
+    })).toContain(request.expected);
+  }
+});
