@@ -333,6 +333,29 @@ test("reaction waits for Next across rotation and advances only once", async ({ 
   })).toBe(1);
 });
 
+test("landscape dialogue keeps the request through rotation and both actions work", async ({ page }) => {
+  for (const [accepted, width, height] of [[true, 800, 360], [false, 932, 430]] as const) {
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "startRun").call(scene);
+      Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 });
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+    await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+      .filter(child => child.depth >= 2000 && child.depth <= 2002).length)).toBe(0);
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentRequest").id)).toBe("warrior_iron");
+    const box = await page.locator("canvas").boundingBox();
+    expect(box!.height / 450 * 80).toBeGreaterThanOrEqual(52);
+    await tapPoint(page, 591, accepted ? 301 : 397);
+    await expect.poll(() => phase(page)).toBe("reaction");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "karma"))).toEqual(
+      accepted ? { warrior: 5, merchant: 0, outlaw: 0, mage: 0 } : { warrior: 0, merchant: 1, outlaw: 1, mage: 1 });
+  }
+});
+
 test("all request results keep readable text separated on compact phones", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(async () => (await page.locator("canvas").boundingBox())?.width).toBe(314);

@@ -25,6 +25,7 @@ type MockUi = {
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
   acceptLabel: Phaser.GameObjects.Text;
+  landscapeChoice?: Pick<MockUi, "choiceRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel">;
   reactionTitle: Phaser.GameObjects.Text;
   reactionBody: Phaser.GameObjects.Text;
   reactionQuote: Phaser.GameObjects.Text;
@@ -393,6 +394,29 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
 }
 
+function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoice"]> {
+  const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  artWindow(scene, root, BG_KEY, 8, 8, 374, 434);
+  panel(scene, root, 195, 39, 354, 58, 0x0b1a29, 0.94);
+  const yearText = text(scene, root, 195, 39, "", 22, "#fff4d0", "900");
+  bustWindow(scene, root, "kq-hero-warrior", 12, 230, 183, 204);
+  artWindow(scene, root, ELDER_KEY, 156, 126, 222, 308, 0);
+  requestCard(scene, root, 591, 132, 390, 244);
+  panel(scene, root, 591, 45, 366, 50, 0x102c52, 1);
+  const requestTitle = text(scene, root, 591, 45, "", 22, "#fff4d5", "900", 338);
+  const requestText = text(scene, root, 591, 157, "", 24, "#352f29", "700", 338).setAlign("left");
+  const acceptLabel = button(scene, root, 591, 301, 382, 80, "依頼を引き受ける", 0x0758a4,
+    () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
+  button(scene, root, 591, 397, 382, 80, "支援を断る", 0x981d25,
+    () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
+  const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
+  ornament(frame, 8, 8, 374, 434);
+  root.add(frame);
+  return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
+}
+
 function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionQuote" | "reactionArrows" | "reactionResults"> {
   const screen = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   if (landscape) {
@@ -486,7 +510,7 @@ function build(scene: Runtime): MockUi {
   const choice = buildChoice(scene);
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeReaction: buildReaction(scene, true) };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true) };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -497,6 +521,7 @@ function refresh(scene: Runtime): void {
   const portrait = height >= width;
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
+  ui.landscapeChoice?.choiceRoot.setVisible(!portrait && scene.phase === "karma");
   ui.reactionRoot.setVisible(portrait && scene.phase === "reaction");
   ui.landscapeReaction?.reactionRoot.setVisible(!portrait && scene.phase === "reaction");
   for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot]) {
@@ -525,7 +550,7 @@ function refresh(scene: Runtime): void {
     });
     wide.reactionResults.forEach((item, i) => item.setText(ui.reactionResults[i]?.text ?? ""));
   }
-  if (!portrait || scene.phase !== "karma") return;
+  if (scene.phase !== "karma") return;
   const request = scene.currentRequest;
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
   ui.requestTitle.setText(request ? `依頼  ${FACTION_LABEL[request.faction]}` : "新しい依頼");
@@ -545,6 +570,14 @@ function refresh(scene: Runtime): void {
   const detail = ui.acceptLabel.getData("detailText") as Phaser.GameObjects.Text | undefined;
   const factionNames = { warrior: "戦士", merchant: "商人", outlaw: "荒くれ", mage: "魔術師" };
   detail?.setText(request ? `${factionNames[request.faction]}の力 +${request.karmaDelta}・勇者が成長` : "依頼者の力になる");
+  const wideChoice = ui.landscapeChoice;
+  if (wideChoice) {
+    wideChoice.yearText.setText(ui.yearText.text);
+    wideChoice.requestTitle.setText(ui.requestTitle.text);
+    wideChoice.requestText.setText(ui.requestText.text);
+    wideChoice.acceptLabel.setText(ui.acceptLabel.text);
+    (wideChoice.acceptLabel.getData("detailText") as Phaser.GameObjects.Text).setText(detail?.text ?? "");
+  }
 }
 
 export function installKarmaConceptArtPass(): void {
