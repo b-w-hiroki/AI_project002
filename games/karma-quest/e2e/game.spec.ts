@@ -123,6 +123,34 @@ async function useNativePortrait(page: Page) {
   await page.setViewportSize({ width: 456, height: 806 });
 }
 
+test("home navigation opens and closes information without starting a journey behind it", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  const modalVisible = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    for (const child of scene.children.list) {
+      if (!("list" in child)) continue;
+      const modal = (child as Phaser.GameObjects.Container).getByName("home-information") as Phaser.GameObjects.Container | null;
+      if (modal) return modal.visible;
+    }
+    return false;
+  });
+  await tapPoint(page, 225, 758);
+  await expect.poll(modalVisible).toBe(true);
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("title");
+  await expect.poll(modalVisible).toBe(true);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/compact-320-character.png" });
+  await tapPoint(page, 225, 551);
+  await expect.poll(modalVisible).toBe(false);
+  await tapPoint(page, 400, 758);
+  await expect.poll(modalVisible).toBe(true);
+  await tapPoint(page, 225, 551);
+  await expect.poll(modalVisible).toBe(false);
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+});
+
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {

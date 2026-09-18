@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
+import { deriveStats, initialKarma, FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 
@@ -174,6 +174,7 @@ function button(
   fill: number,
   onClick: () => void,
   detail?: string,
+  lockAfterAction = true,
 ): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
   let armed = false;
@@ -223,6 +224,7 @@ function button(
     processing = true;
     paint("processing");
     onClick();
+    if (!lockAfterAction) { processing = false; paint("idle"); return; }
     scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
   });
   zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
@@ -302,8 +304,54 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   }
   screenFrame(scene, root);
   const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
-  start.on("pointerdown", () => invoke(scene, "startRun"));
+  let startArmed = false;
+  start.on("pointerdown", () => { startArmed = true; });
+  start.on("pointerout", () => { startArmed = false; });
+  start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
   root.add(start);
+
+  const modal = scene.add.container(0, 0).setName("home-information").setVisible(false);
+  const veil = scene.add.graphics().fillStyle(0x030a14, 0.84).fillRect(0, 0, 450, 800);
+  const blocker = scene.add.zone(225, 400, 450, 800).setInteractive();
+  modal.add([veil, blocker]);
+  requestCard(scene, modal, 225, 385, 398, 458);
+  const heading = text(scene, modal, 225, 204, "", 30, "#35281e", "900", 340);
+  const body = text(scene, modal, 225, 358, "", 23, "#43382e", "700", 330);
+  button(scene, modal, 225, 551, 326, 80, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
+  const show = (title: string, description: string) => {
+    heading.setText(title);
+    body.setText(description);
+    modal.setVisible(true);
+  };
+  const character = () => {
+    const stats = deriveStats(scene.karma ?? initialKarma());
+    show("カイトの能力", `攻撃力  ${stats.atk}    防御力  ${stats.def}\n体力  ${stats.hp}    魔力  ${stats.magic}\n\n依頼への選択が\n勇者を育てます。`);
+  };
+  const routes = [
+    () => modal.setVisible(false),
+    () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、\n12年の物語を紡ぎます。\n\n王都の依頼カードから出発。"),
+    character,
+    () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と\n冒険を通じて成長します。"),
+    () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
+  ];
+  const addRoute = (x: number, y: number, w: number, h: number, action: () => void) => {
+    const hit = scene.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+    root.add(hit);
+  };
+  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, route));
+  const railRoutes = [
+    () => show("冒険の案内", "依頼カードを押して出発。\n依頼への返答を選び、\n世界の反応を確認します。\n\n選択は指を離したときに確定。"),
+    () => invoke(scene, "startRun"),
+    character,
+    () => show("持ち物", "持ち物の管理は\n現在は利用できません。\n\n装備なしで冒険を開始できます。"),
+    () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
+  ];
+  railRoutes.forEach((route, i) => addRoute(39, 137 + i * 69, 64, 66, route));
+  root.add(modal);
   return root;
 }
 
