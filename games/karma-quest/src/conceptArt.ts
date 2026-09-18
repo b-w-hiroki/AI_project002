@@ -242,18 +242,18 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.add(shade);
   panel(scene, root, 108, 45, 184, 66, 0x0a1b2b, 0.94);
   bustWindow(scene, root, "kq-hero-warrior", 22, 18, 52, 54);
-  text(scene, root, 134, 34, "Lv.12  カイト", 18, "#ffffff", "900").setStroke("#091420", 1);
-  text(scene, root, 134, 60, "旅する剣士", 16, "#fff2c4", "700").setStroke("#091420", 0);
+  text(scene, root, 134, 34, "Lv.12 カイト", 20, "#ffffff", "900").setStroke("#091420", 1);
+  text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   panel(scene, root, 322, 31, 224, 38, 0x102c52, 0.96);
   text(scene, root, 322, 31, "● 2,420    ◆ 180", 20, "#fff2c4", "900").setStroke("#091420", 1);
   panel(scene, root, 339, 83, 190, 54, 0x102c52, 0.92);
   text(scene, root, 339, 74, "1年目　春", 20, "#fff6dd", "900").setStroke("#091420", 1);
-  text(scene, root, 339, 96, "王都ルナディス", 14, "#fff6dd", "700").setStroke("#091420", 0);
+  text(scene, root, 339, 97, "王都ルナディス", 18, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
-  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 54, 354, 8);
-  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 54, 354, 8);
+  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 70, 354, 8);
+  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 70, 354, 8);
   root.add(rail);
-  for (const [index, label] of ["メニュー", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
+  for (const [index, label] of ["案内", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
     const y = 125 + index * 69;
     const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
     if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
@@ -264,19 +264,19 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     }
     if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
     if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
-    root.add(ink);
-    text(scene, root, 39, y + 29, label, index === 0 ? 13 : 18, "#fff3ce", "900").setStroke("#091420", 0);
+    root.add(ink.setX(8));
+    text(scene, root, 47, y + 29, label, 21, "#fff3ce", "900").setStroke("#091420", 0);
   }
   text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
   fitted(scene, root, HERO_BACK_KEY, 157, 571, 460, 614);
-  panel(scene, root, 166, 590, 274, 38, 0x0758a4, 0.96);
-  text(scene, root, 166, 590, "●　新しい依頼が届いています", 14, "#ffffff", "900");
+  panel(scene, root, 186, 581, 314, 38, 0x0758a4, 0.96);
+  text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
   bustWindow(scene, root, ELDER_KEY, 31, 618, 82, 78);
   text(scene, root, 260, 633, "飢える民たち", 21, "#3c2a1e", "900");
-  text(scene, root, 265, 674, "王都周辺で食料が不足。\n民が助けを求めています。", 20, "#43382e", "700", 276);
+  text(scene, root, 265, 674, "王都周辺で食料が不足。\n民が助けを求めています。", 21, "#43382e", "700", 276);
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
@@ -303,7 +303,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
   root.add(icons);
   for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
-    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 17, "#fff0c8", "900").setStroke("#091420", 0);
+    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 19, "#fff0c8", "900").setStroke("#091420", 0);
   }
   screenFrame(scene, root);
   const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
@@ -353,7 +353,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("持ち物", "持ち物の管理は\n現在は利用できません。\n\n装備なしで冒険を開始できます。"),
     () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
   ];
-  railRoutes.forEach((route, i) => addRoute(39, 137 + i * 69, 64, 66, route));
+  railRoutes.forEach((route, i) => addRoute(47, 137 + i * 69, 76, 66, route));
   root.add(modal);
   return root;
 }
