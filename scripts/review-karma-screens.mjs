@@ -16,6 +16,7 @@ try {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.locator('canvas').screenshot({ path: resolve(`docs/review/karma-compact-${name}.png`) });
   };
+  await page.evaluate(() => { window.__qaGame.scene.getScene('GameScene').homeRequest = { id: 'mage_stone', faction: 'mage', text: '魔法の研究に魔石がほしいのです…', karmaDelta: 5 }; });
   await capture('home');
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene('GameScene');

@@ -3,6 +3,7 @@ import { deriveStats, initialKarma, FACTION_LABEL, type KarmaRequest, type Karma
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
+import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -11,6 +12,7 @@ type Runtime = Phaser.Scene & {
   stage?: number;
   karma?: KarmaState;
   currentRequest?: KarmaRequest | null;
+  homeRequest?: KarmaRequest;
   reactionUntil?: number;
   lastAccepted?: boolean;
   lastOutcome?: ReturnType<typeof requestOutcome>;
@@ -243,12 +245,12 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.add(shade);
   panel(scene, root, 108, 45, 184, 66, 0x0a1b2b, 0.94);
   bustWindow(scene, root, "kq-hero-warrior", 22, 18, 52, 54);
-  text(scene, root, 134, 34, "Lv.12 カイト", 20, "#ffffff", "900").setStroke("#091420", 1);
+  text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   panel(scene, root, 322, 31, 224, 38, 0x102c52, 0.96);
-  text(scene, root, 322, 31, "● 2,420    ◆ 180", 20, "#fff2c4", "900").setStroke("#091420", 1);
+  text(scene, root, 322, 31, `累計評価 ${loadTotalEvaluation()}`, 20, "#fff2c4", "900").setStroke("#091420", 1);
   panel(scene, root, 339, 83, 190, 54, 0x102c52, 0.92);
-  text(scene, root, 339, 74, "1年目　春", 20, "#fff6dd", "900").setStroke("#091420", 1);
+  text(scene, root, 339, 74, `最高到達 ${loadBestStage()}年`, 20, "#fff6dd", "900").setStroke("#091420", 1);
   text(scene, root, 339, 97, "王都ルナディス", 18, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 70, 354, 8);
@@ -276,8 +278,12 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
   bustWindow(scene, root, ELDER_KEY, 31, 618, 82, 78);
-  text(scene, root, 260, 633, "飢える民たち", 21, "#3c2a1e", "900");
-  text(scene, root, 265, 674, "王都周辺で食料が不足。\n民が助けを求めています。", 21, "#43382e", "700", 276);
+  const homeRequestTitle = text(scene, root, 260, 629, "", 21, "#3c2a1e", "900");
+  const homeRequestBody = text(scene, root, 263, 674, "", 21, "#43382e", "700", 276);
+  root.setData("refreshRequest", () => {
+    homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+    homeRequestBody.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
+  });
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
@@ -520,6 +526,7 @@ function refresh(scene: Runtime): void {
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
+  if (scene.phase === "title") (ui.titleRoot.getData("refreshRequest") as () => void)();
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
   ui.landscapeChoice?.choiceRoot.setVisible(!portrait && scene.phase === "karma");
   ui.reactionRoot.setVisible(portrait && scene.phase === "reaction");

@@ -154,9 +154,20 @@ test("home navigation opens and closes information without starting a journey be
 
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });
+});
+
+test("home request is the first request and starts without applying karma", async ({ page }) => {
+  const preview = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeRequest"));
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { request: Reflect.get(scene, "currentRequest"), karma: Reflect.get(scene, "karma"), stage: Reflect.get(scene, "stage") };
+  })).toEqual({ request: preview, karma: { warrior: 0, merchant: 0, outlaw: 0, mage: 0 }, stage: 1 });
 });
 
 test("portrait battle keeps the approved visual mock", async ({ page }) => {

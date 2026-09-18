@@ -282,6 +282,8 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private homeRequest: KarmaRequest = rollRequest();
+
   private startRun(): void {
     this.chronicle = [];
     this.legendCounts = { valor: 0, mercy: 0 };
@@ -296,6 +298,7 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.setVisible(false);
     this.finalGroup.setVisible(false);
     this.nextStage();
+    this.homeRequest = rollRequest();
   }
 
   private nextStage(): void {
@@ -409,7 +412,7 @@ export class GameScene extends Phaser.Scene {
     this.karmaGroup.setVisible(true);
 
     this.deeds = [];
-    this.currentRequest = rollRequest();
+    this.currentRequest = this.stage === 1 ? { ...this.homeRequest } : rollRequest();
     this.mandateText.setText(
       `${legendTitle(this.legendCounts.valor, this.legendCounts.mercy)}\n${this.mandate.label}\n勝率への加護 +${Math.round(this.mandate.bonus * 100)}%`,
     );
