@@ -684,6 +684,12 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
   const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
   const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
+  if (final) {
+    heading.setName("landscape-chronicle-title").setY(120).setFontSize(22);
+    hudPlate(scene, root, 474, 216, 120, 138);
+    outcomeArt(scene, root, 418, 151, 112, 130);
+    body.setName("landscape-chronicle-body").setPosition(654, 215).setWordWrapWidth(222, true).setFontSize(22);
+  }
   if (!final) {
     // Keep the envoy beside the request; reserve independent bounds for the copy.
     hudPlate(scene, root, 468, 198, 112, 164);
@@ -701,6 +707,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
     if (final) {
       const history = scene.choiceHistory ?? [];
       const latest = history.at(-1), previous = history.at(-2);
+      (root.getData("refreshOutcomeArt") as () => void)();
       status.setText(`この旅で刻んだ選択：${history.length}件`);
       heading.setText(latest ? `${latest.year}年目 · ${latest.outcome.title}` : "旅の記録");
       body.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");

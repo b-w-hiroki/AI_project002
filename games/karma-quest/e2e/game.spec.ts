@@ -408,10 +408,10 @@ test("all request results keep readable text separated on compact phones", async
       Reflect.set(scene, "currentRequest", request);
       Reflect.get(scene, "onKarmaChoice").call(scene, accepted);
     }, { request, accepted });
-    for (const mode of ["reaction", "wide", "final"]) {
-      if (mode === "wide" || mode === "final") {
-        await page.setViewportSize(mode === "wide" ? { width: 844, height: 390 } : { width: 320, height: 568 });
-        await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(mode === "wide" ? 800 : 450);
+    for (const mode of ["reaction", "wide", "final", "wide-final"]) {
+      if (mode !== "reaction") {
+        await page.setViewportSize(mode === "final" ? { width: 320, height: 568 } : { width: 844, height: 390 });
+        await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(mode === "final" ? 450 : 800);
       }
       if (mode === "final") await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "showFinal").call(window.__qaGame.scene.getScene("GameScene")));
       await expect.poll(() => page.evaluate(({ mode, expectedArt, outcomeKeys }) => {
@@ -426,8 +426,8 @@ test("all request results keep readable text separated on compact phones", async
         };
         scene.children.list.forEach(visit);
         const byName = (name: string) => labels.find(label => label.name === name);
-        const body = byName(mode === "final" ? "chronicleBody" : "reactionBody");
-        const other = byName(mode === "final" ? "chronicleTitle" : "reactionQuote");
+        const body = byName(mode === "wide-final" ? "landscape-chronicle-body" : mode === "final" ? "chronicleBody" : "reactionBody");
+        const other = byName(mode === "wide-final" ? "landscape-chronicle-title" : mode === "final" ? "chronicleTitle" : "reactionQuote");
         if (!body || !other) return false;
         const a = body.getBounds(), b = other.getBounds();
         const canvas = document.querySelector("canvas")!;
@@ -435,11 +435,14 @@ test("all request results keep readable text separated on compact phones", async
         const readable = [body, ...labels.filter(label => label.name.startsWith("stat:"))]
           .every(label => Number.parseFloat(String(label.style.fontSize)) * scale >= 14);
         const separated = a.bottom + 3 <= b.top || b.bottom + 3 <= a.top;
-        const inside = a.left >= 20 && a.right <= canvas.width - 20 && (mode !== "final" || a.bottom <= 303);
+        const inside = a.left >= 20 && a.right <= canvas.width - 20 && (mode !== "final" || a.bottom <= 303)
+          && (mode !== "wide-final" || (a.left >= 540 && a.top >= 145 && a.bottom <= 283));
         const activeArt = artwork.filter(key => outcomeKeys.includes(key));
         return readable && separated && inside && activeArt.length === 1 && activeArt[0] === expectedArt;
       }, { mode, expectedArt: outcomeArtKey(request.id, accepted), outcomeKeys: Object.entries(OUTCOME_ART).filter(([id]) => id !== "village_food").flatMap(([, keys]) => [...keys]) }), { message: `${request.id}, accepted=${accepted}, ${mode}` }).toBe(true);
     }
+    await page.setViewportSize({ width: 320, height: 568 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
   }
 });
 
