@@ -170,6 +170,34 @@ test("home request is the first request and starts without applying karma", asyn
   })).toEqual({ request: preview, karma: { warrior: 0, merchant: 0, outlaw: 0, mage: 0 }, stage: 1 });
 });
 
+test("landscape home and chronicle support starting, rotating, and replaying", async ({ page }) => {
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "mage_stone", faction: "mage", text: "魔法の研究に魔石がほしいのです…", karmaDelta: 5 }));
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await page.locator("canvas").boundingBox())?.height).toBe(382);
+  await tapPoint(page, 591, 397);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+    Reflect.get(scene, "showFinal").call(scene);
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(item => item.getData("refreshOverview") && Reflect.get(item, "visible")) as Phaser.GameObjects.Container;
+    return root?.list.filter(item => "text" in item).map(item => Reflect.get(item, "text"));
+  })).toEqual(expect.arrayContaining(["1年目 · 魔石を与えました", "この旅で刻んだ選択：1件", "9"]));
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length)).toBe(0);
+  await tapPoint(page, 591, 397);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory"))).toEqual([]);
+});
+
 test("portrait battle keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {

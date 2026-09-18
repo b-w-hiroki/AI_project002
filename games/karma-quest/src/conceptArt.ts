@@ -23,6 +23,8 @@ type MockUi = {
   choiceRoot: Phaser.GameObjects.Container;
   reactionRoot: Phaser.GameObjects.Container;
   finalRoot: Phaser.GameObjects.Container;
+  landscapeTitle?: Phaser.GameObjects.Container;
+  landscapeFinal?: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
@@ -509,6 +511,59 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   return root;
 }
 
+function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  artWindow(scene, root, HOME_BG_KEY, 8, 8, 374, 434);
+  panel(scene, root, 195, 43, 350, 62, 0x102c52, 0.98);
+  text(scene, root, 195, 43, final ? "カイトの能力" : "王都ルナディス", 28, "#fffaf0", "900");
+  if (final) {
+    bustWindow(scene, root, "kq-hero-warrior", 38, 85, 310, 215);
+    requestCard(scene, root, 195, 367, 346, 134);
+  } else {
+    fitted(scene, root, HERO_BACK_KEY, 178, 267, 340, 380);
+    panel(scene, root, 195, 399, 350, 66, 0x102c52, 0.96);
+    text(scene, root, 195, 399, "この世界の物語は、\nあなたの選択から。", 23, "#fffaf0", "900");
+  }
+  const statValues = final ? [
+    metricChip(scene, root, 133, 337, "攻撃", "", 0x2e6ba3),
+    metricChip(scene, root, 253, 337, "防御", "", 0xb84a63),
+    metricChip(scene, root, 133, 395, "体力", "", 0x70529a),
+    metricChip(scene, root, 253, 395, "魔力", "", 0xb48727),
+  ] : [];
+  requestCard(scene, root, 591, 176, 390, 336);
+  panel(scene, root, 591, 43, 366, 52, 0x102c52, 1);
+  text(scene, root, 591, 43, final ? "年代記" : "王都に届いた依頼", 28, "#fffaf0", "900");
+  const status = text(scene, root, 591, 86, "", 20, "#43382e", "700", 338);
+  const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
+  const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
+  const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
+  button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
+    () => invoke(scene, "startRun"));
+  const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
+  ornament(frame, 8, 8, 374, 434);
+  root.add(frame);
+  root.setData("refreshOverview", () => {
+    if (final) {
+      const history = scene.choiceHistory ?? [];
+      const latest = history.at(-1), previous = history.at(-2);
+      status.setText(`この旅で刻んだ選択：${history.length}件`);
+      heading.setText(latest ? `${latest.year}年目 · ${latest.outcome.title}` : "旅の記録");
+      body.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
+      footer.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      [stats.atk, stats.def, stats.hp, stats.magic].forEach((value, i) => statValues[i]?.setText(String(value)));
+    } else {
+      status.setText(`最高到達 ${loadBestStage()}年`);
+      heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+      body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
+      footer.setText(`累計評価 ${loadTotalEvaluation()}`);
+    }
+  });
+  return root;
+}
+
 function build(scene: Runtime): MockUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
@@ -516,7 +571,7 @@ function build(scene: Runtime): MockUi {
   const choice = buildChoice(scene);
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true) };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle: buildLandscapeOverview(scene, false), landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true) };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -525,6 +580,10 @@ function refresh(scene: Runtime): void {
   const ui = build(scene);
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  for (const [root, phase] of [[ui.landscapeTitle, "title"], [ui.landscapeFinal, "final"]] as const) {
+    root?.setVisible(!portrait && scene.phase === phase);
+    if (root?.visible) (root.getData("refreshOverview") as () => void)();
+  }
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
   if (scene.phase === "title") (ui.titleRoot.getData("refreshRequest") as () => void)();
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");

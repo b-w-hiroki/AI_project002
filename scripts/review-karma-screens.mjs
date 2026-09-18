@@ -18,6 +18,11 @@ try {
   };
   await page.evaluate(() => { window.__qaGame.scene.getScene('GameScene').homeRequest = { id: 'mage_stone', faction: 'mage', text: '魔法の研究に魔石がほしいのです…', karmaDelta: 5 }; });
   await capture('home');
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+  await capture('home-landscape');
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 450);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene('GameScene');
     scene.startRun();
@@ -35,6 +40,9 @@ try {
   await capture('reaction');
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').showFinal());
   await capture('chronicle');
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+  await capture('chronicle-landscape');
 
   const data = async (path, mime = 'image/png') => `data:${mime};base64,${(await readFile(resolve(path))).toString('base64')}`;
   const mock = await data('docs/review/karma-visual-mock.jpg', 'image/jpeg');
