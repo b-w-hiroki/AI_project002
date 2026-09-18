@@ -7,7 +7,7 @@ import { requestOutcome } from "./logic/requestOutcome";
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
-  phase?: "title" | "karma" | "encounter" | "battle" | "report" | "final" | "transition";
+  phase?: "title" | "karma" | "reaction" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
   karma?: KarmaState;
   currentRequest?: KarmaRequest | null;
@@ -402,7 +402,7 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
     cover(scene, screen, REACTION_BG_KEY);
     requestCard(scene, screen, 225, 49, 414, 72);
   }
-  text(scene, screen, landscape ? 183 : 225, 29, "1年目  春", 18, "#35281e", "800");
+  text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#35281e", "800").setName("reactionYear");
   text(scene, screen, landscape ? 183 : 225, 61, "選択の結果", 30, "#35281e", "900");
   const root = scene.add.container(landscape ? 354 : 0, landscape ? -374 : 0);
   screen.add(root);
@@ -416,7 +416,11 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
     effectRow(scene, root, 650, 0xa32d34, "荒くれ", "→", "変化なし"),
     effectRow(scene, root, 680, 0x7a5899, "魔術師", "→", "変化なし"),
   ];
-  button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
+  button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => {
+    if (scene.phase !== "reaction") return;
+    scene.reactionUntil = 0;
+    invoke(scene, "continueAfterReaction");
+  });
   if (!landscape) screenFrame(scene, screen);
   return {
     reactionRoot: screen,
@@ -490,20 +494,13 @@ function refresh(scene: Runtime): void {
   const portrait = height >= width;
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
-  ui.reactionRoot.setVisible(portrait && (scene.reactionUntil ?? 0) > scene.time.now);
-  ui.landscapeReaction?.reactionRoot.setVisible(!portrait && (scene.reactionUntil ?? 0) > scene.time.now);
+  ui.reactionRoot.setVisible(portrait && scene.phase === "reaction");
+  ui.landscapeReaction?.reactionRoot.setVisible(!portrait && scene.phase === "reaction");
+  for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot]) {
+    (root?.getByName("reactionYear") as Phaser.GameObjects.Text | null)?.setText(`${scene.stage ?? 1}年目  春`);
+  }
   ui.finalRoot.setVisible(portrait && scene.phase === "final");
   if (scene.phase === "final") (ui.finalRoot.getData("refreshChronicle") as () => void)();
-  const accepted = scene.lastAccepted !== false;
-  ui.reactionQuote.setText(accepted ? "「王都は、私たちの希望です」" : "「私たちの声は、届かなかった……」");
-  ui.reactionTitle.setText(accepted ? "食料を支援しました" : "支援を見送りました");
-  ui.reactionBody.setText(accepted
-    ? "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。"
-    : "王都は備蓄を守りましたが、\n村には不安と失望が広がりました。");
-  const arrows = accepted ? ["↑", "↑", "→", "↓"] : ["↓", "→", "↑", "↑"];
-  const results = accepted ? ["大きく上昇", "やや上昇", "変化なし", "やや低下"] : ["大きく低下", "変化なし", "やや上昇", "やや上昇"];
-  ui.reactionArrows.forEach((item, index) => item.setText(arrows[index] ?? "→").setColor((arrows[index] ?? "→") === "↓" ? "#b1262c" : (arrows[index] ?? "→") === "→" ? "#6d685f" : "#16864f"));
-  ui.reactionResults.forEach((item, index) => item.setText(results[index] ?? "変化なし"));
   if (scene.lastOutcome) {
     const outcome = scene.lastOutcome;
     ui.reactionTitle.setText(outcome.title).setFontSize(26);

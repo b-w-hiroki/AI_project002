@@ -292,6 +292,46 @@ test("declining a request changes the world reaction copy and effects", async ({
   })).toEqual(expect.arrayContaining(["支援を見送りました", "+1", "変化なし"]));
 });
 
+test("reaction waits for Next across rotation and advances only once", async ({ page }) => {
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "qaProgressCount", 0);
+    for (const name of ["showEncounterPhase", "showBattlePhase"]) {
+      const original = Reflect.get(scene, name);
+      Reflect.set(scene, name, function () {
+        Reflect.set(scene, "qaProgressCount", Reflect.get(scene, "qaProgressCount") + 1);
+        return original.call(scene);
+      });
+    }
+    Reflect.set(scene, "stage", 7);
+    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+    // A repeated choice must not apply karma or append another record.
+    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+  });
+  await expect.poll(() => phase(page)).toBe("reaction");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  expect(await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { progress: Reflect.get(scene, "qaProgressCount"), records: Reflect.get(scene, "choiceHistory").length };
+  })).toEqual({ progress: 0, records: 1 });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const screen = scene.children.list.find(item => item.visible && "getByName" in item &&
+      (item as Phaser.GameObjects.Container).getByName("reactionYear")) as Phaser.GameObjects.Container;
+    return (screen?.getByName("reactionYear") as Phaser.GameObjects.Text)?.text;
+  })).toBe("7年目  春");
+  await tapPoint(page, 579, 376);
+  await expect.poll(() => phase(page)).toMatch(/^(battle|encounter)$/);
+  expect(await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "continueAfterReaction").call(scene);
+    return Reflect.get(scene, "qaProgressCount");
+  })).toBe(1);
+});
+
 test("choice explanation follows the current request's actual faction and delta", async ({ page }) => {
   await tapPoint(page, 225, 660);
   await expect.poll(() => phase(page)).toBe("karma");

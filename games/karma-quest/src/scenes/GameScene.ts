@@ -63,6 +63,7 @@ const FACTION_ICON_TEXTURE: Record<Faction, string> = {
 };
 
 type Phase =
+  | "reaction"
   | "title"
   | "karma"
   | "encounter"
@@ -461,6 +462,12 @@ export class GameScene extends Phaser.Scene {
         : "wisdom",
     });
 
+    this.phase = "reaction";
+    this.karmaGroup.setVisible(false);
+  }
+
+  private continueAfterReaction(): void {
+    if (this.phase !== "reaction") return;
     this.encounterBonus = 0;
     if (rollEncounterOccurs()) {
       this.showEncounterPhase();
