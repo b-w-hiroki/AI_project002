@@ -2,6 +2,8 @@
 
 内蔵 image_gen 使用。透過PNG、原画像を変形せず描画時に同率拡縮。既存素材は保持。
 
+戦士の現行素材は `kq-dialogue-warrior-v3`。以下のv1は制作履歴として残す。銀髪・深紅のマントへの更新は[識別設計と生成記録](karma-warrior-identity.md)を参照。
+
 ## warrior
 
 保存先: `docs/art-sources/karma/kq-dialogue-warrior-v1.png`

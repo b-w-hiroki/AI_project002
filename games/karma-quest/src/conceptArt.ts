@@ -48,7 +48,7 @@ const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
 const HERO_DIALOGUE_KEY = "kq-dialogue-hero-v1";
 const REQUESTER_ART = {
-  warrior: "kq-dialogue-warrior-v1", merchant: "kq-dialogue-merchant-v1",
+  warrior: "kq-dialogue-warrior-v3", merchant: "kq-dialogue-merchant-v1",
   outlaw: "kq-dialogue-outlaw-v1", mage: "kq-dialogue-mage-v1",
 };
 const REACTION_BG_KEY = "kq-bg-village-reaction";

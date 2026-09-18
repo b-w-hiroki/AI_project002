@@ -486,14 +486,14 @@ test("requester portraits follow every request in home and rotated dialogue", as
       const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.set(scene, "phase", "title"); Reflect.set(scene, "homeRequest", request);
     }, request);
-    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-v1`]);
+    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
     await tapPoint(page, 225, 660);
     await expect.poll(() => phase(page)).toBe("karma");
     await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").children.list.some(child => child.depth >= 2000 && child.depth <= 2002));
-    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-v1`]);
+    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
     await page.setViewportSize({ width: 800, height: 360 });
     await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-v1`]);
+    await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
   }
 });
 

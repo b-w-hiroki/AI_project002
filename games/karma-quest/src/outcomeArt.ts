@@ -1,7 +1,7 @@
 // Explicit story mapping keeps accepted and declined scenes distinct.
 export const OUTCOME_ART: Readonly<Record<string, readonly [string, string]>> = {
-  warrior_iron: ["kq-bg-warrior-forge-v1", "kq-outcome-warrior_iron-decline-v1"],
-  warrior_train: ["kq-outcome-warrior_train-accept-v1", "kq-outcome-warrior_train-decline-v1"],
+  warrior_iron: ["kq-outcome-warrior_iron-accept-v2", "kq-outcome-warrior_iron-decline-v2"],
+  warrior_train: ["kq-outcome-warrior_train-accept-v2", "kq-outcome-warrior_train-decline-v2"],
   merchant_monster: ["kq-bg-merchant-market-v1", "kq-outcome-merchant_monster-decline-v1"],
   merchant_toll: ["kq-outcome-merchant_toll-accept-v1", "kq-outcome-merchant_toll-decline-v1"],
   outlaw_gold: ["kq-bg-outlaw-courtyard-v1", "kq-outcome-outlaw_gold-decline-v1"],

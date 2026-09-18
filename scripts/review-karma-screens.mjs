@@ -90,6 +90,13 @@ try {
       scene.phase = 'karma'; scene.currentRequest = request;
     }, requests.find(request => request.faction === faction));
     await capture(`dialogue-${faction}`);
+    if (faction === 'warrior') {
+      await page.setViewportSize({ width: 800, height: 360 });
+      await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+      await capture('dialogue-warrior-landscape');
+      await page.setViewportSize({ width: 320, height: 568 });
+      await page.waitForFunction(() => document.querySelector('canvas').width === 450);
+    }
   }
   const portraits = await Promise.all(factions.map(faction => data(`docs/review/karma-compact-dialogue-${faction}.png`)));
   await sheet.setContent(`<style>body{margin:0;padding:16px;background:#091724;color:#f7e4bb;font:18px sans-serif}main{display:flex;gap:16px}section{width:314px}h2{font-size:20px;margin:0 0 12px}img{width:314px;display:block}</style><main>${portraits.map((src, i) => `<section><h2>${['戦士','商人','荒くれ者','魔術師'][i]}</h2><img src="${src}"></section>`).join('')}</main>`);

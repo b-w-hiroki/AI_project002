@@ -2,6 +2,8 @@
 
 内蔵 image_gen 使用。新規12枚。承諾側4枚は既存素材を再利用し、8依頼×承諾・拒否の16場面を `src/outcomeArt.ts` に明示。原PNGを保存し、描画は同率拡縮とトリミング。
 
+戦士の4場面は後続のv2に更新済み。以下のv1は制作履歴として残す。銀髪・深紅のマントで統一した現行素材は[識別設計と生成記録](karma-warrior-identity.md)を参照。
+
 ## warrior_iron / decline
 
 保存先: `docs/art-sources/karma/kq-outcome-warrior_iron-decline-v1.png`
