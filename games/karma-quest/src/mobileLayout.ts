@@ -147,7 +147,8 @@ function build(scene: Runtime): LandscapeUi {
 
   panel(scene, title, 260, 238, 440, 300, 0x14251e, 0xc8a45a, 0.9, 20);
   if (scene.textures.exists("kq-hero-warrior")) {
-    const hero = scene.add.image(145, 238, "kq-hero-warrior").setDisplaySize(190, 255);
+    const hero = scene.add.image(145, 238, "kq-hero-warrior");
+    hero.setScale(Math.min(190 / hero.width, 255 / hero.height));
     title.add(hero);
   }
   text(scene, title, 340, 140, "12年の選択で\n自分だけの勇者伝説をつくる", 22, "#fff5dc", "900");
@@ -161,7 +162,8 @@ function build(scene: Runtime): LandscapeUi {
   panel(scene, karma, 238, 246, 420, 330, 0x12231c, 0xc8a45a, 0.9, 18);
   let hero: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(150, 244, "kq-hero-warrior").setDisplaySize(205, 274);
+    hero = scene.add.image(150, 244, "kq-hero-warrior");
+    hero.setScale(Math.min(205 / hero.width, 274 / hero.height));
     karma.add(hero);
   }
   const dominantText = text(scene, karma, 275, 124, "", 11, "#f2d99c", "900");

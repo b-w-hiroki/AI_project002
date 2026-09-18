@@ -360,9 +360,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
 
 function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel"> {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
-  cover(scene, root, BG_KEY, 0xc8b997);
+  cover(scene, root, BG_KEY, 0xe3d6bd);
   const shade = scene.add.graphics();
-  shade.fillStyle(0x071017, 0.24).fillRect(0, 0, 450, 800);
+  shade.fillStyle(0x071017, 0.14).fillRect(0, 0, 450, 800);
   root.add(shade);
   panel(scene, root, 225, 39, 420, 60, 0x0b1a29, 0.92);
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
@@ -375,7 +375,9 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
     root.add(portrait);
   }
   const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
-  fitted(scene, root, ELDER_KEY, npc.x + npc.width / 2, npc.y + npc.height / 2, npc.width, npc.height);
+  // Show the head and clasped hands at conversation distance; crop the robe
+  // below them instead of shrinking the entire figure into the dialogue area.
+  artWindow(scene, root, ELDER_KEY, npc.x, npc.y, npc.width, npc.height, 0);
   requestCard(scene, root, 290, 175, 304, 188);
   const requestBand = scene.add.graphics();
   requestBand.fillStyle(0x102c52, 1).fillRect(146, 93, 288, 41);

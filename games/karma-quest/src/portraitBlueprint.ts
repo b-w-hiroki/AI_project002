@@ -14,7 +14,7 @@ export const PORTRAIT_BLUEPRINT = {
     hud: { x: 15, y: 9, width: 420, height: 60 },
     request: { x: 138, y: 81, width: 304, height: 188 },
     playerPortrait: { x: 0, y: 328, width: 202, height: 229 },
-    npcPortrait: { x: 213, y: 275, width: 224, height: 270 },
+    npcPortrait: { x: 170, y: 275, width: 270, height: 270 },
     accept: { x: 34, y: 558, width: 382, height: 80 },
     decline: { x: 34, y: 654, width: 382, height: 80 },
     tagline: { x: 34, y: 750, width: 382, height: 32 },

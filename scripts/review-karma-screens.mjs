@@ -25,6 +25,11 @@ try {
   // Wait for the existing stage-introduction overlay to finish.
   await page.waitForFunction(() => !window.__qaGame.scene.getScene('GameScene').children.list.some(child => child.depth >= 2000 && child.depth <= 2002));
   await capture('choice');
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 800);
+  await capture('choice-landscape');
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => document.querySelector('canvas').width === 450);
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').onKarmaChoice(true));
   await capture('reaction');
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').showFinal());
