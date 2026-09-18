@@ -546,17 +546,30 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   panel(scene, root, 225, 66, 394, 80, 0x102c52, 1);
   text(scene, root, 225, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
-  requestCard(scene, root, 225, 215, 388, 194);
   outcomeArt(scene, root, 45, 140, 124, 154);
+  const pageRules = scene.add.graphics();
+  pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(43, 138, 128, 158);
+  // One continuous journal page: rules separate entries without nesting cards.
+  for (const y of [119, 315, 402]) {
+    pageRules.lineStyle(1, 0xb79451, 0.55).lineBetween(46, y, 404, y);
+    pageRules.fillStyle(0xb79451, 0.8).fillPoints([
+      new Phaser.Math.Vector2(225, y - 4), new Phaser.Math.Vector2(229, y),
+      new Phaser.Math.Vector2(225, y + 4), new Phaser.Math.Vector2(221, y),
+    ], true);
+  }
+  root.add(pageRules);
   const eventTitle = text(scene, root, 290, 154, "", 22, "#35281e", "900", 226).setName("chronicleTitle");
   const eventBody = text(scene, root, 292, 244, "", 21, "#43382e", "700", 222).setName("chronicleBody");
-  requestCard(scene, root, 225, 362, 388, 86);
   const previousTitle = text(scene, root, 225, 343, "", 21, "#35281e", "900", 350);
   const recordCount = text(scene, root, 225, 381, "", 21, "#43382e", "700", 350);
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
-  panel(scene, root, 225, 492, 382, 54, 0x102c52, 0.9);
+  const cityShade = scene.add.graphics();
+  cityShade.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 0.98, 0.98).fillRect(34, 437, 382, 83);
+  cityShade.lineStyle(1, 0xb79451, 0.65).strokeRect(34, 412, 382, 108);
+  root.add(cityShade);
   text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
   bustWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
+  root.add(scene.add.graphics().fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(40, 643, 157, 25));
   text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
   const stats = [
     metricChip(scene, root, 264, 589, "攻撃", "", 0x2e6ba3),
