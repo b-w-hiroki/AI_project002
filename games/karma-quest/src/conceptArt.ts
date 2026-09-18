@@ -31,6 +31,7 @@ type MockUi = {
 };
 
 const BG_KEY = "kq-bg-kingdom-portrait-v2";
+const HOME_BG_KEY = "kq-bg-capital-home-v3";
 const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
 const REACTION_BG_KEY = "kq-bg-village-reaction";
@@ -230,7 +231,7 @@ function button(
 
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
-  cover(scene, root, BG_KEY);
+  cover(scene, root, HOME_BG_KEY);
   const shade = scene.add.graphics();
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
@@ -261,9 +262,6 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     root.add(ink);
     text(scene, root, 39, y + 29, label, index === 0 ? 13 : 18, "#fff3ce", "900").setStroke("#091420", 0);
   }
-  const copyGround = scene.add.graphics();
-  copyGround.fillGradientStyle(0xfff9e8, 0xfff9e8, 0xfff9e8, 0xfff9e8, 0.84, 0.84, 0.08, 0.08).fillRect(231, 128, 199, 158);
-  root.add(copyGround);
   text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
@@ -284,11 +282,24 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     nav.lineStyle(1, 0xb79451, 0.35).lineBetween(divider, 734, divider, 783);
   }
   root.add(nav);
-  text(scene, root, 52, 758, "◆\n王都", 15, "#ffffff", "900");
-  text(scene, root, 135, 758, "◇\nワールド", 15, "#fff0c8", "900");
-  text(scene, root, 225, 758, "♟\nキャラ", 15, "#fff0c8", "900");
-  text(scene, root, 315, 758, "✦\nガチャ", 15, "#fff0c8", "900");
-  text(scene, root, 400, 758, "▣\nショップ", 15, "#fff0c8", "900");
+  const icons = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
+  icons.fillRect(40, 744, 24, 16).fillRect(40, 738, 5, 8).fillRect(50, 734, 5, 12).fillRect(59, 738, 5, 8);
+  icons.fillStyle(0x102c52, 1).fillRect(49, 749, 6, 11).fillStyle(0xf4dfaa, 1);
+  for (const x of [135, 315]) {
+    icons.strokeCircle(x, 747, 13);
+    icons.fillTriangle(x, 730, x - 5, 749, x + 5, 745);
+    icons.fillTriangle(x, 764, x - 5, 749, x + 5, 745);
+    icons.lineBetween(x - 18, 747, x + 18, 747);
+  }
+  for (const dx of [-11, 0, 11]) {
+    icons.fillCircle(225 + dx, dx === 0 ? 738 : 742, dx === 0 ? 5 : 4);
+    icons.fillRoundedRect(220 + dx, dx === 0 ? 746 : 750, 10, dx === 0 ? 14 : 10, 3);
+  }
+  icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
+  root.add(icons);
+  for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
+    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 17, "#fff0c8", "900").setStroke("#091420", 0);
+  }
   screenFrame(scene, root);
   const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
   start.on("pointerdown", () => invoke(scene, "startRun"));
@@ -466,6 +477,7 @@ export function installKarmaConceptArtPass(): void {
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
       this.load.image(BG_KEY, `images/${BG_KEY}.png`);
+      this.load.image(HOME_BG_KEY, `images/${HOME_BG_KEY}.png`);
       this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
       this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
       this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
