@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
+import { KARMA_REQUESTS } from "../src/logic/karma";
 
 declare global { interface Window { __qaGame: Phaser.Game } }
 
@@ -115,7 +116,7 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
   });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-choice-mock.png", {
     animations: "disabled",
-    maxDiffPixelRatio: 0.035,
+    maxDiffPixelRatio: 0.005,
   });
 });
 
@@ -330,6 +331,50 @@ test("reaction waits for Next across rotation and advances only once", async ({ 
     Reflect.get(scene, "continueAfterReaction").call(scene);
     return Reflect.get(scene, "qaProgressCount");
   })).toBe(1);
+});
+
+test("all request results keep readable text separated on compact phones", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => (await page.locator("canvas").boundingBox())?.width).toBe(314);
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  for (const request of KARMA_REQUESTS) for (const accepted of [true, false]) {
+    await page.evaluate(({ request, accepted }) => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "phase", "karma");
+      Reflect.set(scene, "currentRequest", request);
+      Reflect.get(scene, "onKarmaChoice").call(scene, accepted);
+    }, { request, accepted });
+    for (const mode of ["reaction", "wide", "final"]) {
+      if (mode === "wide" || mode === "final") {
+        await page.setViewportSize(mode === "wide" ? { width: 844, height: 390 } : { width: 320, height: 568 });
+        await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(mode === "wide" ? 800 : 450);
+      }
+      if (mode === "final") await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "showFinal").call(window.__qaGame.scene.getScene("GameScene")));
+      await expect.poll(() => page.evaluate(mode => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const labels: Phaser.GameObjects.Text[] = [];
+        const visit = (node: Phaser.GameObjects.GameObject): void => {
+          if (Reflect.get(node, "visible") === false) return;
+          if ("text" in node) labels.push(node as Phaser.GameObjects.Text);
+          if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+        };
+        scene.children.list.forEach(visit);
+        const byName = (name: string) => labels.find(label => label.name === name);
+        const body = byName(mode === "final" ? "chronicleBody" : "reactionBody");
+        const other = byName(mode === "final" ? "chronicleTitle" : "reactionQuote");
+        if (!body || !other) return false;
+        const a = body.getBounds(), b = other.getBounds();
+        const canvas = document.querySelector("canvas")!;
+        const scale = canvas.getBoundingClientRect().width / canvas.width;
+        const readable = [body, ...labels.filter(label => label.name.startsWith("stat:"))]
+          .every(label => Number.parseFloat(String(label.style.fontSize)) * scale >= 14);
+        const separated = a.bottom + 3 <= b.top || b.bottom + 3 <= a.top;
+        const inside = a.left >= 20 && a.right <= canvas.width - 20 && (mode !== "final" || a.bottom <= 303);
+        return readable && separated && inside;
+      }, mode), { message: `${request.id}, accepted=${accepted}, ${mode}` }).toBe(true);
+    }
+  }
 });
 
 test("choice explanation follows the current request's actual faction and delta", async ({ page }) => {

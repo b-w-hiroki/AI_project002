@@ -83,12 +83,12 @@ function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: numbe
   root.add(g);
 }
 
-function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number): void {
+function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number, alignY = 0.5): void {
   if (!scene.textures.exists(key)) return;
   const image = scene.add.image(x, y, key).setOrigin(0);
   const scale = Math.max(width / image.width, height / image.height);
   const cropWidth = width / scale, cropHeight = height / scale;
-  const cropX = (image.width - cropWidth) / 2, cropY = (image.height - cropHeight) / 2;
+  const cropX = (image.width - cropWidth) / 2, cropY = (image.height - cropHeight) * alignY;
   image.setScale(scale).setPosition(x - cropX * scale, y - cropY * scale);
   image.setCrop(cropX, cropY, cropWidth, cropHeight);
   root.add(image);
@@ -151,19 +151,19 @@ function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: n
   g.fillStyle(color, 1).fillCircle(82, y, 10);
   root.add(g);
   text(scene, root, 82, y, "◆", 11, "#ffffff", "900");
-  text(scene, root, 138, y, label, 17, "#352f29", "900");
+  text(scene, root, 138, y, label, 21, "#352f29", "900");
   const arrowText = text(scene, root, 223, y, arrow, 20, arrow === "↓" ? "#b1262c" : arrow === "→" ? "#6d685f" : "#16864f", "900");
-  const resultText = text(scene, root, 303, y, result, 16, "#352f29", "800");
+  const resultText = text(scene, root, 303, y, result, 21, "#352f29", "800");
   return [arrowText, resultText];
 }
 
 function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
-  g.fillStyle(color, 0.12).fillRoundedRect(x - 47, y - 16, 94, 32, 6);
-  g.lineStyle(1, color, 0.72).strokeRoundedRect(x - 47, y - 16, 94, 32, 6);
+  g.fillStyle(color, 0.12).fillRoundedRect(x - 49, y - 20, 98, 40, 6);
+  g.lineStyle(1, color, 0.72).strokeRoundedRect(x - 49, y - 20, 98, 40, 6);
   root.add(g);
-  text(scene, root, x - 11, y, label, 14, "#43382e", "800");
-  return text(scene, root, x + 30, y, value, 16, "#17663f", "900");
+  text(scene, root, x - 18, y, label, 21, "#43382e", "800").setName(`stat:${label}`);
+  return text(scene, root, x + 29, y, value, 22, "#17663f", "900").setStroke("#17663f", 0).setName(`stat-value:${label}`);
 }
 
 function button(
@@ -215,8 +215,8 @@ function button(
   };
   paint();
   root.add(g);
-  const labelText = text(scene, root, x, detail ? y - 10 : y, label, detail ? 21 : 22, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
-  if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 18, "#eadfca", "700", width - 76).setStroke("#091420", 0));
+  const labelText = text(scene, root, x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
+  if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
   const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
   zone.on("pointerover", () => { if (!processing) paint("focus"); });
@@ -400,21 +400,22 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
     requestCard(scene, screen, 183, 49, 334, 72);
   } else {
     cover(scene, screen, REACTION_BG_KEY);
+    artWindow(scene, screen, REACTION_BG_KEY, 12, 88, 426, 296, 0.5);
     requestCard(scene, screen, 225, 49, 414, 72);
   }
   text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#35281e", "800").setName("reactionYear");
   text(scene, screen, landscape ? 183 : 225, 61, "選択の結果", 30, "#35281e", "900");
   const root = scene.add.container(landscape ? 354 : 0, landscape ? -374 : 0);
   screen.add(root);
-  panel(scene, root, 225, 616, 408, 348, 0xf7efd9, 0.98);
-  const reactionTitle = text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
-  const reactionBody = text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  const reactionQuote = text(scene, root, 225, 558, "「王都は、私たちの希望です」", 17, "#6a4a2a", "700", 350);
+  panel(scene, root, 225, landscape ? 616 : 587, 408, landscape ? 348 : 406, 0xf7efd9, 0.98);
+  const reactionTitle = text(scene, root, 225, landscape ? 470 : 415, "", 28, "#35281e", "900");
+  const reactionBody = text(scene, root, 225, landscape ? 518 : 472, "", 21, "#43382e", "700", 378).setName("reactionBody");
+  const reactionQuote = text(scene, root, 225, landscape ? 558 : 526, "", 18, "#6a4a2a", "700", 370).setName("reactionQuote");
   const effectRows = [
-    effectRow(scene, root, 590, 0x245e9b, "戦士", "→", "変化なし"),
-    effectRow(scene, root, 620, 0x2f8c4b, "商人", "→", "変化なし"),
-    effectRow(scene, root, 650, 0xa32d34, "荒くれ", "→", "変化なし"),
-    effectRow(scene, root, 680, 0x7a5899, "魔術師", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 590 : 565, 0x245e9b, "戦士", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 620 : 603, 0x2f8c4b, "商人", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 650 : 641, 0xa32d34, "荒くれ", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 680 : 679, 0x7a5899, "魔術師", "→", "変化なし"),
   ];
   button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => {
     if (scene.phase !== "reaction") return;
@@ -441,17 +442,17 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   requestCard(scene, root, 225, 400, 422, 756);
   panel(scene, root, 225, 66, 394, 80, 0x102c52, 1);
   text(scene, root, 225, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
-  text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 16, "#fffaf0", "700").setStroke("#091420", 0);
-  requestCard(scene, root, 225, 209, 388, 182);
-  artWindow(scene, root, REACTION_BG_KEY, 45, 141, 132, 140);
-  const eventTitle = text(scene, root, 290, 153, "", 20, "#35281e", "900", 212);
-  const eventBody = text(scene, root, 295, 230, "", 17, "#43382e", "700", 206);
-  requestCard(scene, root, 225, 355, 388, 98);
-  const previousTitle = text(scene, root, 225, 333, "", 20, "#35281e", "900", 350);
-  const recordCount = text(scene, root, 225, 376, "", 18, "#43382e", "700", 340);
+  text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
+  requestCard(scene, root, 225, 215, 388, 194);
+  artWindow(scene, root, REACTION_BG_KEY, 45, 140, 124, 154, 1);
+  const eventTitle = text(scene, root, 290, 154, "", 22, "#35281e", "900", 226).setName("chronicleTitle");
+  const eventBody = text(scene, root, 292, 244, "", 21, "#43382e", "700", 222).setName("chronicleBody");
+  requestCard(scene, root, 225, 362, 388, 86);
+  const previousTitle = text(scene, root, 225, 343, "", 21, "#35281e", "900", 350);
+  const recordCount = text(scene, root, 225, 381, "", 21, "#43382e", "700", 350);
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   panel(scene, root, 225, 492, 382, 54, 0x102c52, 0.9);
-  text(scene, root, 225, 491, "王都ルナディス — 物語の始まる街", 18, "#fffaf0", "900").setStroke("#091420", 1);
+  text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
   bustWindow(scene, root, "kq-hero-warrior", 40, 535, 157, 133);
   text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
   const stats = [
@@ -471,7 +472,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     const values = deriveStats(scene.karma ?? initialKarma());
     [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
   });
-  button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
+  button(scene, root, 225, 719, 360, 80, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
 }
@@ -503,9 +504,9 @@ function refresh(scene: Runtime): void {
   if (scene.phase === "final") (ui.finalRoot.getData("refreshChronicle") as () => void)();
   if (scene.lastOutcome) {
     const outcome = scene.lastOutcome;
-    ui.reactionTitle.setText(outcome.title).setFontSize(26);
+    ui.reactionTitle.setText(outcome.title);
     ui.reactionBody.setText(outcome.body);
-    ui.reactionQuote.setText(outcome.quote).setFontSize(16);
+    ui.reactionQuote.setText(outcome.quote);
     outcome.deltas.forEach((delta, i) => {
       ui.reactionArrows[i]?.setText(delta > 0 ? "↑" : delta < 0 ? "↓" : "→").setColor(delta > 0 ? "#16864f" : delta < 0 ? "#b1262c" : "#6d685f");
       ui.reactionResults[i]?.setText(delta === 0 ? "変化なし" : `${delta > 0 ? "+" : ""}${delta}`);
