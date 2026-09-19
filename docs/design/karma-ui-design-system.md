@@ -22,10 +22,10 @@
 | トークン | 値 | 用途 |
 | --- | --- | --- |
 | surface.underlay | `#050B13` | ボタン外縁の暗い下地 |
-| action.primary.base | `#102C52` | 支援・次へなど主要操作の紺色 |
-| action.primary.light | `#235783` | 紺色の上面光 |
-| action.alternative.base | `#501923` | 拒否・対立する選択のえんじ色 |
-| action.alternative.light | `#80343D` | えんじ色の上面光 |
+| action.primary.base | `#103B69` | 支援・次へなど主要操作の紺色 |
+| action.primary.light | `#1974AF` | 紺色の上面光 |
+| action.alternative.base | `#661D29` | 拒否・対立する選択のえんじ色 |
+| action.alternative.light | `#A63142` | えんじ色の上面光 |
 | surface.shadow | `#0B1425` | 色面下端の陰影 |
 | border.gold | `#B79451` | 外側の金属枠 |
 | border.highlight | `#F4DFAA` | 内側の細い光 |
@@ -37,6 +37,8 @@
 | surface.paper | `#F7EFD9` | 依頼・年代記の情報面 |
 
 青と赤は選択の種類を示し、正解・不正解を意味しない。上昇・低下は矢印と文言も併記し、色だけに依存しない。
+
+2026-09-20調整: 共通金具の端から38設計px以内に細い葉の彫り模様を加える。ボタンの色面は左右均等な縦グラデーションとし、上13pxの弱い反射・下17pxの陰影で厚みを表す。文字幅・操作領域は維持。年代記の本は幅56pxの重ねた表紙・ページと半径31pxの背面円で表現する。実行時のベクター描画なので画像通信は増えない。
 
 ## ボタン仕様
 

@@ -174,6 +174,13 @@ function ornament(g: Phaser.GameObjects.Graphics, x: number, y: number, width: n
     g.lineStyle(2, 0xd5ad60, 1).strokePoints([point(3, 27), point(3, 13), point(13, 13), point(13, 3), point(27, 3)], false);
     g.lineStyle(1, 0xffe4a0, 0.9).strokePoints([point(6, 30), point(6, 17), point(17, 17), point(17, 6), point(30, 6)], false);
     g.fillStyle(0xf2d28b, 1).fillPoints([point(8, 17), point(12, 21), point(16, 17), point(12, 13)], true);
+    // Engraved leaf scrolls remain inside the reserved border, clear of labels.
+    g.lineStyle(1, 0xe8cb83, 0.85).strokePoints([
+      point(32, 5), point(38, 8), point(34, 12), point(26, 10), point(22, 6),
+    ], false);
+    g.lineStyle(1, 0xe8cb83, 0.85).strokePoints([
+      point(5, 32), point(8, 38), point(12, 34), point(10, 26), point(6, 22),
+    ], false);
   }
 }
 
@@ -258,7 +265,14 @@ function button(
     g.fillStyle(0x050b13, 0.95).fillPoints(outline(0), true);
     g.fillStyle(base, 1).fillPoints(outline(4), true);
     const top = state === "pressed" ? base : blue ? 0x1974af : 0xa63142;
-    g.fillGradientStyle(top, base, base, 0x0b1425, 1).fillRect(x - width / 2 + 14, y - height / 2 + 5, width - 28, height - 10);
+    const left = x - width / 2 + 14, upper = y - height / 2 + 5;
+    g.fillGradientStyle(top, top, base, base, 1).fillRect(left, upper, width - 28, height - 10);
+    // Enamel reflection and a recessed lower edge give the metal rim depth.
+    g.fillGradientStyle(0xbdeaff, 0xbdeaff, top, top, 0.22, 0.22, 0, 0)
+      .fillRect(left, upper, width - 28, 13);
+    g.fillGradientStyle(0x071322, 0x071322, 0x071322, 0x071322, 0, 0, 0.6, 0.6)
+      .fillRect(left, y + height / 2 - 22, width - 28, 17);
+    g.lineStyle(4, blue ? 0x2c9dda : 0xcb4b53, 0.2).strokePoints(outline(7), true);
     g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
     g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
     g.lineStyle(1, 0xffedb8, 0.75).lineBetween(x - width / 2 + 22, y - height / 2 + 7, x + width / 2 - 22, y - height / 2 + 7);
@@ -636,14 +650,21 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
 
 function journalEmblem(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number): void {
   const book = scene.add.graphics();
+  book.lineStyle(1, 0xd5ad60, 0.4).strokeCircle(x, y, 31);
   for (const side of [-1, 1]) {
+    const page = (offset: number) => [
+      new Phaser.Math.Vector2(x, y - 16 + offset), new Phaser.Math.Vector2(x + side * 28, y - 22 + offset),
+      new Phaser.Math.Vector2(x + side * 28, y + 12 + offset), new Phaser.Math.Vector2(x, y + 18 + offset),
+    ];
+    book.fillStyle(0x76502b, 1).fillPoints(page(4), true);
+    book.lineStyle(1, 0xf1d38a, 1).strokePoints(page(4), true);
     book.fillStyle(0xe8d49f, 1).fillPoints([
-      new Phaser.Math.Vector2(x, y - 12), new Phaser.Math.Vector2(x + side * 23, y - 17),
-      new Phaser.Math.Vector2(x + side * 23, y + 9), new Phaser.Math.Vector2(x, y + 14),
+      new Phaser.Math.Vector2(x, y - 16), new Phaser.Math.Vector2(x + side * 28, y - 22),
+      new Phaser.Math.Vector2(x + side * 28, y + 12), new Phaser.Math.Vector2(x, y + 18),
     ], true);
-    for (const lineY of [y - 8, y - 2, y + 4]) book.lineStyle(1, 0x715332, 0.7).lineBetween(x + side * 5, lineY + 3, x + side * 18, lineY);
+    for (const lineY of [y - 12, y - 6, y, y + 6]) book.lineStyle(1, 0x715332, 0.7).lineBetween(x + side * 5, lineY + 3, x + side * 23, lineY);
   }
-  book.lineStyle(2, 0xb79451, 1).lineBetween(x, y - 12, x, y + 14);
+  book.lineStyle(2, 0xb79451, 1).lineBetween(x, y - 16, x, y + 18);
   root.add(book);
 }
 
