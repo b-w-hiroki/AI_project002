@@ -591,6 +591,19 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
   };
 }
 
+function journalEmblem(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number): void {
+  const book = scene.add.graphics();
+  for (const side of [-1, 1]) {
+    book.fillStyle(0xe8d49f, 1).fillPoints([
+      new Phaser.Math.Vector2(x, y - 12), new Phaser.Math.Vector2(x + side * 23, y - 17),
+      new Phaser.Math.Vector2(x + side * 23, y + 9), new Phaser.Math.Vector2(x, y + 14),
+    ], true);
+    for (const lineY of [y - 8, y - 2, y + 4]) book.lineStyle(1, 0x715332, 0.7).lineBetween(x + side * 5, lineY + 3, x + side * 18, lineY);
+  }
+  book.lineStyle(2, 0xb79451, 1).lineBetween(x, y - 12, x, y + 14);
+  root.add(book);
+}
+
 function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   cover(scene, root, BG_KEY, 0x8da0a0);
@@ -599,16 +612,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   root.add(dim);
   requestCard(scene, root, 225, 400, 422, 756);
   panel(scene, root, 225, 66, 394, 80, 0x102c52, 1);
-  const book = scene.add.graphics();
-  for (const side of [-1, 1]) {
-    book.fillStyle(0xe8d49f, 1).fillPoints([
-      new Phaser.Math.Vector2(116, 39), new Phaser.Math.Vector2(116 + side * 23, 34),
-      new Phaser.Math.Vector2(116 + side * 23, 60), new Phaser.Math.Vector2(116, 65),
-    ], true);
-    for (const y of [43, 49, 55]) book.lineStyle(1, 0x715332, 0.7).lineBetween(116 + side * 5, y + 3, 116 + side * 18, y);
-  }
-  book.lineStyle(2, 0xb79451, 1).lineBetween(116, 39, 116, 65);
-  root.add(book);
+  journalEmblem(scene, root, 116, 51);
   text(scene, root, 244, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
   outcomeArt(scene, root, 45, 140, 124, 154);
@@ -679,12 +683,14 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   ] : [];
   requestCard(scene, root, 591, 176, 390, 336);
   panel(scene, root, 591, 43, 366, 52, 0x102c52, 1);
-  text(scene, root, 591, 43, final ? "年代記" : "王都に届いた依頼", 28, "#fffaf0", "900");
+  text(scene, root, final ? 611 : 591, 43, final ? "年代記" : "王都に届いた依頼", 28, "#fffaf0", "900");
   const status = text(scene, root, 591, 86, "", 20, "#43382e", "700", 338);
   const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
   const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
   const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
   if (final) {
+    journalEmblem(scene, root, 510, 43);
+    root.add(scene.add.graphics().lineStyle(1, 0xb79451, 0.55).lineBetween(420, 288, 762, 288));
     heading.setName("landscape-chronicle-title").setY(120).setFontSize(22);
     hudPlate(scene, root, 474, 216, 120, 138);
     outcomeArt(scene, root, 418, 151, 112, 130);
