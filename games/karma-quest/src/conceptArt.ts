@@ -55,7 +55,6 @@ const REQUESTER_ART = {
 const REACTION_BG_KEY = "kq-bg-village-reaction";
 const MAGE_BG_KEY = "kq-bg-mage-study-v1";
 const FACTION_ART = {
-  warrior: "kq-bg-warrior-forge-v1",
   merchant: "kq-bg-merchant-market-v1",
   outlaw: "kq-bg-outlaw-courtyard-v1",
   mage: MAGE_BG_KEY,
@@ -393,6 +392,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   }
   icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
   root.add(icons);
+  // Availability is visible before opening the explanatory modal.
+  for (const [x, y] of [[47, 332], [315, 746], [400, 746]] as const) {
+    root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(x - 31, y - 12, 62, 24));
+    text(scene, root, x, y, "未提供", 18, "#d8c9ab", "700").setStroke("#091420", 0);
+  }
   for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 19, "#fff0c8", "900").setStroke("#091420", 0);
   }
@@ -779,7 +783,9 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   items.forEach(([label, action], i) => {
     const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
     hudPlate(scene, root, x, y, 84, 56);
-    text(scene, root, x, y, label, 19, "#fff3ce", "900").setStroke("#091420", 0);
+    const unavailable = ["持ち物", "ガチャ", "ショップ"].includes(label);
+    text(scene, root, x, unavailable ? y - 9 : y, label, 19, "#fff3ce", "900").setStroke("#091420", 0);
+    if (unavailable) text(scene, root, x, y + 14, "未提供", 16, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
     let armed = false;
     hit.on("pointerdown", () => { armed = true; });
@@ -997,14 +1003,14 @@ export function installKarmaConceptArtPass(): void {
     proto.__visualMockPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.image(BG_KEY, `images/${BG_KEY}.png`);
-      this.load.image(HOME_BG_KEY, `images/${HOME_BG_KEY}.png`);
+      this.load.image(BG_KEY, `images/${BG_KEY}.webp`);
+      this.load.image(HOME_BG_KEY, `images/${HOME_BG_KEY}.webp`);
       this.load.image(DIALOGUE_BG_KEY, `images/${DIALOGUE_BG_KEY}.webp`);
-      this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
-      this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
+      this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.webp`);
+      this.load.image(ELDER_KEY, `images/${ELDER_KEY}.webp`);
       for (const key of [HERO_DIALOGUE_KEY, ...Object.values(REQUESTER_ART)]) this.load.image(key, `images/${key}.webp`);
-      this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
-      for (const key of Object.values(FACTION_ART)) this.load.image(key, `images/${key}.png`);
+      this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.webp`);
+      for (const key of Object.values(FACTION_ART)) this.load.image(key, `images/${key}.webp`);
       for (const key of new Set(Object.values(OUTCOME_ART).flat().filter(key => key.startsWith("kq-outcome-")))) this.load.image(key, `images/${key}.webp`);
       return result;
     };
