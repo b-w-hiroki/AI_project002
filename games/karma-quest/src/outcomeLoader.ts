@@ -24,7 +24,7 @@ export function loadOutcome(scene: Phaser.Scene, key: string): Promise<boolean> 
     scene.load.once(event, complete);
     scene.load.on("loaderror", error);
     scene.events.once("shutdown", shutdown);
-    scene.load.image(key, `images/${key}.webp`, { responseType: "blob", timeout: 15000 });
+    scene.load.image(key, `images/delivery/${key}.webp`, { responseType: "blob", timeout: 15000 });
     if (!scene.load.isLoading()) scene.load.start();
   });
   jobs.set(key, job);

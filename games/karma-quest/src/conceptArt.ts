@@ -21,6 +21,8 @@ type Runtime = Phaser.Scene & {
   lastAccepted?: boolean;
   artPending?: boolean;
   artError?: boolean;
+  journeyPending?: boolean;
+  journeyError?: boolean;
   lastOutcome?: ReturnType<typeof requestOutcome>;
   choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
@@ -57,6 +59,17 @@ const REQUESTER_ART = {
 };
 const REACTION_BG_KEY = "kq-bg-village-reaction";
 const uiByScene = new WeakMap<object, MockUi>();
+const homeByScene = new WeakMap<object, { titleRoot: Phaser.GameObjects.Container; landscapeTitle: Phaser.GameObjects.Container }>();
+const JOURNEY_ART = [BG_KEY, DIALOGUE_BG_KEY, ELDER_KEY, ...Object.values(REQUESTER_ART)];
+
+function homeUi(scene: Runtime) {
+  let home = homeByScene.get(scene);
+  if (!home) {
+    home = { titleRoot: buildTitle(scene), landscapeTitle: buildLandscapeOverview(scene, false) };
+    homeByScene.set(scene, home);
+  }
+  return home;
+}
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
   const fn = Reflect.get(scene, key);
@@ -118,9 +131,17 @@ function requesterPortrait(scene: Runtime, root: Phaser.GameObjects.Container, x
   const layer = scene.add.container(0, 0).setName("requester-portrait");
   root.add(layer);
   let current = "";
+  let pending = "", failed = "";
   root.setData("refreshRequester", (request?: KarmaRequest | null) => {
     const key = request && request.id !== "village_food" ? REQUESTER_ART[request.faction] : ELDER_KEY;
     if (key === current) return;
+    if (!scene.textures.exists(key)) {
+      if (pending !== key && failed !== key) {
+        pending = key;
+        void loadOutcome(scene, key).then(ready => { pending = ""; if (!ready) failed = key; });
+      }
+      return;
+    }
     current = key;
     layer.removeAll(true);
     if (key === ELDER_KEY) {
@@ -362,6 +383,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.setData("refreshRequest", () => {
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+    if (scene.journeyPending) homeRequestTitle.setText("旅の準備中…");
+    else if (scene.journeyError) homeRequestTitle.setText("読込失敗・押して再試行");
     homeRequestBody.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
   });
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
@@ -744,6 +767,8 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
       status.setText(`最高到達 ${loadBestStage()}年`);
       heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+      if (scene.journeyPending) heading.setText("旅の準備中…");
+      else if (scene.journeyError) heading.setText("読込失敗・再試行");
       body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
       footer.setText(`累計評価 ${loadTotalEvaluation()}`);
     }
@@ -894,16 +919,25 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
 function build(scene: Runtime): MockUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
-  const titleRoot = buildTitle(scene);
+  const { titleRoot, landscapeTitle } = homeUi(scene);
   const choice = buildChoice(scene);
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle: buildLandscapeOverview(scene, false), landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle, landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
   uiByScene.set(scene, ui);
   return ui;
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.phase === "title" && !uiByScene.has(scene)) {
+    const home = homeUi(scene);
+    const portrait = scene.scale.gameSize.height >= scene.scale.gameSize.width;
+    home.titleRoot.setVisible(portrait);
+    home.landscapeTitle.setVisible(!portrait);
+    (home.titleRoot.getData("refreshRequest") as () => void)();
+    (home.landscapeTitle.getData("refreshOverview") as () => void)();
+    return;
+  }
   const ui = build(scene);
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
@@ -989,8 +1023,15 @@ export function installKarmaConceptArtPass(): void {
   const originalStart = proto.startRun;
   if (originalStart && !proto.__visualMockStart) {
     proto.__visualMockStart = originalStart;
-    proto.startRun = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+    proto.startRun = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
       const runtime = this as Runtime;
+      if (runtime.journeyPending) return undefined;
+      runtime.journeyPending = true;
+      runtime.journeyError = false;
+      const ready = await Promise.all(JOURNEY_ART.map(key => loadOutcome(runtime, key)));
+      runtime.journeyPending = false;
+      if (!runtime.sys.isActive()) return undefined;
+      if (ready.some(value => !value)) { runtime.journeyError = true; return undefined; }
       runtime.choiceHistory = [];
       runtime.lastOutcome = undefined;
       runtime.lastAccepted = undefined;
@@ -1003,12 +1044,12 @@ export function installKarmaConceptArtPass(): void {
     proto.__visualMockPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.image(BG_KEY, `images/${BG_KEY}.webp`);
-      this.load.image(HOME_BG_KEY, `images/${HOME_BG_KEY}.webp`);
-      this.load.image(DIALOGUE_BG_KEY, `images/${DIALOGUE_BG_KEY}.webp`);
-      this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.webp`);
-      this.load.image(ELDER_KEY, `images/${ELDER_KEY}.webp`);
-      for (const key of [HERO_DIALOGUE_KEY, ...Object.values(REQUESTER_ART)]) this.load.image(key, `images/${key}.webp`);
+      this.load.image(HOME_BG_KEY, `images/delivery/${HOME_BG_KEY}.webp`);
+      this.load.image(HERO_BACK_KEY, `images/delivery/${HERO_BACK_KEY}.webp`);
+      this.load.image(HERO_DIALOGUE_KEY, `images/delivery/${HERO_DIALOGUE_KEY}.webp`);
+      const request = (this as Runtime).homeRequest;
+      const requester = request ? REQUESTER_ART[request.faction] : ELDER_KEY;
+      this.load.image(requester, `images/delivery/${requester}.webp`);
       return result;
     };
   }

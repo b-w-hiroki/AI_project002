@@ -16,16 +16,17 @@ try {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.locator('canvas').screenshot({ path: resolve(`docs/review/karma-compact-${name}.png`) });
   };
-  await page.evaluate(() => { window.__qaGame.scene.getScene('GameScene').homeRequest = { id: 'mage_stone', faction: 'mage', text: '魔法の研究に魔石がほしいのです…', karmaDelta: 5 }; });
+  await page.evaluate(async () => { window.__qaGame.scene.getScene('GameScene').homeRequest = { id: 'mage_stone', faction: 'mage', text: '魔法の研究に魔石がほしいのです…', karmaDelta: 5 }; });
+  await page.waitForFunction(() => window.__qaGame.scene.getScene('GameScene').textures.exists('kq-dialogue-mage-v1'));
   await capture('home');
   await page.setViewportSize({ width: 844, height: 390 });
   await page.waitForFunction(() => document.querySelector('canvas').width === 800);
   await capture('home-landscape');
   await page.setViewportSize({ width: 320, height: 568 });
   await page.waitForFunction(() => document.querySelector('canvas').width === 450);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene('GameScene');
-    scene.startRun();
+    await scene.startRun();
     scene.currentRequest = { id: 'mage_stone', faction: 'mage', text: '魔法の研究に魔石がほしいのです…', karmaDelta: 5 };
   });
   // Wait for the existing stage-introduction overlay to finish.
@@ -121,7 +122,7 @@ try {
   }
   await page.setViewportSize({ width: 800, height: 360 });
   await page.waitForFunction(() => document.querySelector('canvas').width === 800);
-  await page.evaluate(() => { const scene = window.__qaGame.scene.getScene('GameScene'); scene.deeds = [{ id: 'request', label: '魔術師の派閥に力を貸した', quality: 4, tag: 'wisdom' }]; });
+  await page.evaluate(async () => { const scene = window.__qaGame.scene.getScene('GameScene'); scene.deeds = [{ id: 'request', label: '魔術師の派閥に力を貸した', quality: 4, tag: 'wisdom' }]; });
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').showEncounterPhase());
   await capture('encounter-landscape');
   await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').onEncounterChoice('A'));

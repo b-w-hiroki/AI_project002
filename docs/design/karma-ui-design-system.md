@@ -125,7 +125,7 @@
 
 人物は4派閥の依頼者と会話用主人公を同じ光・描き込みで統一。結果は依頼×承諾/拒否の16場面へ接続。年代記の見出しにはコード描画の開いた本を追加。横の遭遇・戦闘・報告にも濃紺の操作面と金縁・紙面を適用する。詳細な最新座標は `karma-screen-blueprints.md` を優先する。
 
-原PNGは `docs/art-sources/karma/`、配信は可逆WebP。画素・サイズ・透明度を維持し、画像の読み込み量を抑える。内蔵 image_gen の最終プロンプトは素材台帳に保存する。
+原PNGは `docs/art-sources/karma/`、元の可逆WebPは `public/images/` に保存する。実際の配信は `public/images/delivery/` を使い、大きな画像を非可逆WebPで軽量化する。寸法・縦横比・透明度は維持し、拡縮や引き延ばしは行わない。不透明画素のRGB PSNRは36dB以上とし、画面比較でも確認する（画素同一を意味しない）。再生成は `scripts/prepare-karma-delivery.mjs`、測定結果は `docs/review/karma-delivery-encoding.json`。内蔵 image_gen の最終プロンプトは素材台帳に保存する。
 
 ### 主人公と戦士の識別
 

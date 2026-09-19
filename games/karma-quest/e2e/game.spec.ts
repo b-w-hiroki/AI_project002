@@ -143,10 +143,10 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
   // The responsive controller keeps a 3px edge on each side, so 456x806 renders the
   // 450x800 design canvas at its native size for pixel-level mock comparison.
   await page.setViewportSize({ width: 456, height: 806 });
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const startRun = Reflect.get(scene, "startRun");
-    if (typeof startRun === "function") startRun.call(scene);
+    if (typeof startRun === "function") await startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
@@ -284,7 +284,7 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    Reflect.get(scene, "startRun").call(scene);
+    await Reflect.get(scene, "startRun").call(scene);
     const choose = Reflect.get(scene, "onKarmaChoice");
     Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りない", karmaDelta: 5 });
     await choose.call(scene, true);
@@ -325,10 +325,10 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
 
 test("portrait choice reveals the world reaction scene", async ({ page }) => {
   await useNativePortrait(page);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const startRun = Reflect.get(scene, "startRun");
-    if (typeof startRun === "function") startRun.call(scene);
+    if (typeof startRun === "function") await startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
@@ -348,10 +348,10 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
 
 test("declining a request changes the world reaction copy and effects", async ({ page }) => {
   await useNativePortrait(page);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const startRun = Reflect.get(scene, "startRun");
-    if (typeof startRun === "function") startRun.call(scene);
+    if (typeof startRun === "function") await startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
   await page.evaluate(async () => {
@@ -415,9 +415,9 @@ test("reaction waits for Next across rotation and advances only once", async ({ 
 
 test("landscape dialogue keeps the request through rotation and both actions work", async ({ page }) => {
   for (const [accepted, width, height] of [[true, 800, 360], [false, 932, 430]] as const) {
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
       const scene = window.__qaGame.scene.getScene("GameScene");
-      Reflect.get(scene, "startRun").call(scene);
+      await Reflect.get(scene, "startRun").call(scene);
       Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 });
     });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -701,4 +701,36 @@ test("boot progress survives rotation and clears when assets are ready", async (
   expect(await page.evaluate(() => !!window.__qaGame.scene.getScene("GameScene").children.getByName("boot-progress"))).toBe(false);
   await tapPoint(page, 591, 397);
   await expect.poll(() => phase(page)).toBe("karma");
+});
+
+test("home loads only its artwork and journey preparation retries safely", async ({ page }) => {
+  const initial = await page.evaluate(() => {
+    const images = performance.getEntriesByType("resource").filter(r => r.name.includes("/images/")) as PerformanceResourceTiming[];
+    return { hasDialogue: images.some(r => r.name.includes("kq-bg-dialogue-arcade")), bytes: images.reduce((sum, r) => sum + r.encodedBodySize, 0) };
+  });
+  expect(initial.hasDialogue).toBe(false);
+  expect(initial.bytes).toBeLessThan(2_100_000);
+  let failRequests = true;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/kq-bg-dialogue-arcade-v1.webp", async route => {
+    if (failRequests) { await route.abort(); return; }
+    await gate; await route.continue();
+  });
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyError"))).toBe(true);
+  expect(await phase(page)).toBe("title");
+  failRequests = false;
+  await page.setViewportSize({ width: 800, height: 360 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 591, 397);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyPending"))).toBe(true);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-journey-loading.png" });
+  await tapPoint(page, 591, 397);
+  expect(await phase(page)).toBe("title");
+  release();
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(0);
 });

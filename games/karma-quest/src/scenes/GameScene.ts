@@ -150,11 +150,11 @@ export class GameScene extends Phaser.Scene {
       loading.destroy(true);
     });
     draw();
-    this.load.image(HERO_TEXTURE, `images/${HERO_TEXTURE}.webp`);
+    this.load.image(HERO_TEXTURE, `images/delivery/${HERO_TEXTURE}.webp`);
     for (const faction of FACTIONS) {
       this.load.image(
         FACTION_ICON_TEXTURE[faction],
-        `images/${FACTION_ICON_TEXTURE[faction]}.webp`,
+        `images/delivery/${FACTION_ICON_TEXTURE[faction]}.webp`,
       );
     }
   }

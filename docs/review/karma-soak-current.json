@@ -1,29 +1,30 @@
 {
-  "environment": "One desktop Chromium page, three real twelve-year journeys with rotation and replay; not an hours-long or physical-device test",
+  "environment": "One desktop Chromium page, real twelve-year journeys with rotation and replay; not a physical-device test",
+  "minimumMinutes": 0,
   "samples": [
     {
       "cycle": 1,
-      "elapsedMs": 42479,
-      "objects": 549,
-      "textures": 272,
+      "elapsedMs": 43349,
+      "objects": 553,
+      "textures": 261,
       "history": 12,
-      "jsHeapAfterGC": 27845008
+      "jsHeapAfterGC": 27875840
     },
     {
       "cycle": 2,
-      "elapsedMs": 84462,
-      "objects": 552,
-      "textures": 273,
+      "elapsedMs": 85434,
+      "objects": 550,
+      "textures": 262,
       "history": 12,
-      "jsHeapAfterGC": 28026008
+      "jsHeapAfterGC": 28069412
     },
     {
       "cycle": 3,
-      "elapsedMs": 126043,
-      "objects": 549,
-      "textures": 272,
+      "elapsedMs": 127375,
+      "objects": 553,
+      "textures": 264,
       "history": 12,
-      "jsHeapAfterGC": 28101224
+      "jsHeapAfterGC": 28173360
     }
   ],
   "errors": []
