@@ -26,6 +26,46 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("sound preference is operable in both home layouts and survives reload", async ({ page }) => {
+  await page.addInitScript(() => {
+    Reflect.set(window, "__qaAudioStarts", 0);
+    const original = AudioContext.prototype.createOscillator;
+    AudioContext.prototype.createOscillator = function () {
+      const oscillator = original.call(this);
+      const start = oscillator.start.bind(oscillator);
+      oscillator.start = (when?: number) => {
+        Reflect.set(window, "__qaAudioStarts", Number(Reflect.get(window, "__qaAudioStarts")) + 1);
+        start(when);
+      };
+      return oscillator;
+    };
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await tapPoint(page, 47, 140);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-portrait.png" });
+  await tapPoint(page, 225, 475);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("off");
+  expect(await page.evaluate(() => Reflect.get(window, "__qaAudioStarts"))).toBe(0);
+  await tapPoint(page, 225, 551);
+  await page.setViewportSize({ width: 800, height: 360 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 62, 348);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-landscape.png" });
+  await tapPoint(page, 400, 316);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("on");
+  expect(await page.evaluate(() => Reflect.get(window, "__qaAudioStarts"))).toBeGreaterThan(0);
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "isSoundEnabled").call(window.__qaGame.scene.getScene("GameScene")))).toBe(true);
+  await tapPoint(page, 62, 348);
+  await tapPoint(page, 400, 316);
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "isSoundEnabled").call(window.__qaGame.scene.getScene("GameScene")))).toBe(false);
+});
+
 test("compact phones keep the primary choice readable and tappable", async ({ page }) => {
   for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 375, height: 667 }]) {
     await page.setViewportSize(viewport);

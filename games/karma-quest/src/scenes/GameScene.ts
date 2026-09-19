@@ -191,12 +191,7 @@ export class GameScene extends Phaser.Scene {
       .rectangle(395, 100, 40, 40, 0x000000, 0)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => {
-        this.soundOn = !this.soundOn;
-        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
-        this.soundIcon.destroy();
-        this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
-        this.titleGroup.add(this.soundIcon);
-        this.playSound(sfx.buttonTap);
+        this.toggleSound();
       });
 
     this.titleGroup.add([
@@ -264,6 +259,18 @@ export class GameScene extends Phaser.Scene {
 
   private playSound(fn: () => void): void {
     if (this.soundOn) fn();
+  }
+
+  public isSoundEnabled(): boolean { return this.soundOn; }
+
+  public toggleSound(): boolean {
+    this.soundOn = !this.soundOn;
+    localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+    this.soundIcon.destroy();
+    this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+    this.titleGroup.add(this.soundIcon);
+    this.playSound(sfx.buttonTap);
+    return this.soundOn;
   }
 
   private showTitle(): void {
