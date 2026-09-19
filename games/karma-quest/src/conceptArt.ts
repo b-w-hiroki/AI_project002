@@ -458,7 +458,8 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
   // A dedicated chest-up portrait keeps the player at conversation distance.
-  fitted(scene, root, HERO_DIALOGUE_KEY, 122, 439, 230, 230);
+  const player = PORTRAIT_BLUEPRINT.choice.playerPortrait;
+  fitted(scene, root, HERO_DIALOGUE_KEY, player.x + player.width / 2, player.y + player.height / 2, player.width, player.height);
   const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
   // Faction portraits share a fixed lane without stretching their proportions.
   requesterPortrait(scene, root, npc.x, npc.y, npc.width, npc.height);
@@ -637,7 +638,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   cityShade.lineStyle(1, 0xb79451, 0.65).strokeRect(34, 412, 382, 108);
   root.add(cityShade);
   text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
-  artWindow(scene, root, HERO_DIALOGUE_KEY, 40, 535, 157, 133, 0);
+  bustWindow(scene, root, HERO_DIALOGUE_KEY, 40, 535, 157, 133, 0.6);
   root.add(scene.add.graphics().fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(40, 643, 157, 25));
   text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
   const stats = [
