@@ -103,6 +103,41 @@ async function tapPoint(page: Page, x: number, y: number) {
   await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
 }
 
+test("notch insets and changing browser height preserve choices and touch coordinates", async ({ page }) => {
+  // Chromium env() emulation: this verifies layout, not physical Safari behavior.
+  const cdp = await page.context().newCDPSession(page);
+  await tapPoint(page, 225, 650);
+  await expect.poll(() => phase(page)).toBe("karma");
+  const request = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentRequest").id);
+  for (const sample of [
+    { width: 390, height: 844, top: 59, right: 0, bottom: 34, left: 0 },
+    { width: 390, height: 660, top: 59, right: 0, bottom: 34, left: 0 },
+    { width: 844, height: 390, top: 0, right: 0, bottom: 21, left: 59 },
+    { width: 844, height: 320, top: 0, right: 59, bottom: 21, left: 0 },
+    { width: 390, height: 844, top: 59, right: 0, bottom: 34, left: 0 },
+  ]) {
+    const { width, height, ...insets } = sample;
+    await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets });
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => window.dispatchEvent(new Event("resize")));
+    await expect.poll(async () => {
+      const box = await page.locator("canvas").boundingBox();
+      return !!box && box.x >= insets.left - 1 && box.y >= insets.top - 1
+        && box.x + box.width <= width - insets.right + 1
+        && box.y + box.height <= height - insets.bottom + 1;
+    }).toBe(true);
+    await expect.poll(() => page.locator("canvas").evaluate(node => {
+      const c = node as HTMLCanvasElement, b = c.getBoundingClientRect();
+      return Math.abs(b.width / b.height - c.width / c.height);
+    })).toBeLessThan(0.02);
+    expect(await phase(page)).toBe("karma");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentRequest").id)).toBe(request);
+  }
+  await page.screenshot({ path: "../../docs/review/karma-safe-area-choice.png" });
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => phase(page)).not.toBe("karma");
+});
+
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
 
 async function checkFrame(page: Page, name: string) {
@@ -680,6 +715,37 @@ test("result images load on demand and retry without duplicate choices", async (
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(1);
   expect(await page.evaluate(key => window.__qaGame.textures.exists(key), key)).toBe(true);
   expect(attempts).toBe(failedAttempts + 1);
+});
+
+test("a pending choice completes once after page freeze and resume", async ({ page }) => {
+  const cdp = await page.context().newCDPSession(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let requested = false;
+  await page.route("**/kq-outcome-warrior_iron-accept-v2.webp", async route => {
+    requested = true;
+    await gate;
+    await route.continue();
+  });
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "currentRequest",
+    { id: "warrior_iron", faction: "warrior", text: "鉄が足りない", karmaDelta: 5 }));
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => requested).toBe(true);
+  try {
+    await cdp.send("Page.setWebLifecycleState", { state: "frozen" });
+    release();
+    await page.setViewportSize({ width: 844, height: 390 });
+  } finally {
+    await cdp.send("Page.setWebLifecycleState", { state: "active" });
+  }
+  await expect.poll(() => phase(page)).toBe("reaction");
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(1);
+  await tapPoint(page, 579, 376);
+  await expect.poll(() => phase(page)).toMatch(/^(encounter|battle)$/);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(1);
 });
 
 test("boot progress survives rotation and clears when assets are ready", async ({ page }) => {
