@@ -1,0 +1,351 @@
+{
+  "environment": "One desktop Chromium page, real twelve-year journeys with rotation and replay; not a physical-device test",
+  "minimumMinutes": 30,
+  "samples": [
+    {
+      "cycle": 1,
+      "elapsedMs": 45129,
+      "objects": 549,
+      "textures": 262,
+      "history": 12,
+      "jsHeapAfterGC": 27867044
+    },
+    {
+      "cycle": 2,
+      "elapsedMs": 89537,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28117580
+    },
+    {
+      "cycle": 3,
+      "elapsedMs": 137144,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28217992
+    },
+    {
+      "cycle": 4,
+      "elapsedMs": 185024,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28271308
+    },
+    {
+      "cycle": 5,
+      "elapsedMs": 231735,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28339372
+    },
+    {
+      "cycle": 6,
+      "elapsedMs": 275765,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27725020
+    },
+    {
+      "cycle": 7,
+      "elapsedMs": 318257,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27761224
+    },
+    {
+      "cycle": 8,
+      "elapsedMs": 360884,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27771540
+    },
+    {
+      "cycle": 9,
+      "elapsedMs": 403327,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27796884
+    },
+    {
+      "cycle": 10,
+      "elapsedMs": 445383,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27817980
+    },
+    {
+      "cycle": 11,
+      "elapsedMs": 488645,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27836296
+    },
+    {
+      "cycle": 12,
+      "elapsedMs": 531136,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27775784
+    },
+    {
+      "cycle": 13,
+      "elapsedMs": 572967,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27915348
+    },
+    {
+      "cycle": 14,
+      "elapsedMs": 615082,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27874752
+    },
+    {
+      "cycle": 15,
+      "elapsedMs": 657409,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27854188
+    },
+    {
+      "cycle": 16,
+      "elapsedMs": 699895,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27897992
+    },
+    {
+      "cycle": 17,
+      "elapsedMs": 742178,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27858556
+    },
+    {
+      "cycle": 18,
+      "elapsedMs": 784254,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27874576
+    },
+    {
+      "cycle": 19,
+      "elapsedMs": 825919,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27878732
+    },
+    {
+      "cycle": 20,
+      "elapsedMs": 867615,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27906404
+    },
+    {
+      "cycle": 21,
+      "elapsedMs": 909320,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27880192
+    },
+    {
+      "cycle": 22,
+      "elapsedMs": 951352,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27978968
+    },
+    {
+      "cycle": 23,
+      "elapsedMs": 993184,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27989096
+    },
+    {
+      "cycle": 24,
+      "elapsedMs": 1036194,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28050560
+    },
+    {
+      "cycle": 25,
+      "elapsedMs": 1078103,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28005012
+    },
+    {
+      "cycle": 26,
+      "elapsedMs": 1120891,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28015284
+    },
+    {
+      "cycle": 27,
+      "elapsedMs": 1163161,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28018984
+    },
+    {
+      "cycle": 28,
+      "elapsedMs": 1205175,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27958200
+    },
+    {
+      "cycle": 29,
+      "elapsedMs": 1247340,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28019084
+    },
+    {
+      "cycle": 30,
+      "elapsedMs": 1289672,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28037164
+    },
+    {
+      "cycle": 31,
+      "elapsedMs": 1332007,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28058924
+    },
+    {
+      "cycle": 32,
+      "elapsedMs": 1375019,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27960752
+    },
+    {
+      "cycle": 33,
+      "elapsedMs": 1417064,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 27989324
+    },
+    {
+      "cycle": 34,
+      "elapsedMs": 1459751,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28015692
+    },
+    {
+      "cycle": 35,
+      "elapsedMs": 1502387,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28003152
+    },
+    {
+      "cycle": 36,
+      "elapsedMs": 1544982,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28048900
+    },
+    {
+      "cycle": 37,
+      "elapsedMs": 1587175,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28014904
+    },
+    {
+      "cycle": 38,
+      "elapsedMs": 1628972,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28019940
+    },
+    {
+      "cycle": 39,
+      "elapsedMs": 1671190,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28032456
+    },
+    {
+      "cycle": 40,
+      "elapsedMs": 1713387,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 27995948
+    },
+    {
+      "cycle": 41,
+      "elapsedMs": 1755636,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28074352
+    },
+    {
+      "cycle": 42,
+      "elapsedMs": 1797913,
+      "objects": 552,
+      "textures": 264,
+      "history": 12,
+      "jsHeapAfterGC": 28056528
+    },
+    {
+      "cycle": 43,
+      "elapsedMs": 1840038,
+      "objects": 549,
+      "textures": 263,
+      "history": 12,
+      "jsHeapAfterGC": 28106920
+    }
+  ],
+  "errors": []
+}

@@ -6,7 +6,8 @@ import { requestOutcome } from "./logic/requestOutcome";
 import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
-import { OUTCOME_ART, outcomeArtKey } from "./outcomeArt";
+import { outcomeArtKey } from "./outcomeArt";
+import { loadOutcome } from "./outcomeLoader";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -18,6 +19,8 @@ type Runtime = Phaser.Scene & {
   homeRequest?: KarmaRequest;
   reactionUntil?: number;
   lastAccepted?: boolean;
+  artPending?: boolean;
+  artError?: boolean;
   lastOutcome?: ReturnType<typeof requestOutcome>;
   choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
@@ -53,12 +56,6 @@ const REQUESTER_ART = {
   outlaw: "kq-dialogue-outlaw-v1", mage: "kq-dialogue-mage-v1",
 };
 const REACTION_BG_KEY = "kq-bg-village-reaction";
-const MAGE_BG_KEY = "kq-bg-mage-study-v1";
-const FACTION_ART = {
-  merchant: "kq-bg-merchant-market-v1",
-  outlaw: "kq-bg-outlaw-courtyard-v1",
-  mage: MAGE_BG_KEY,
-};
 const uiByScene = new WeakMap<object, MockUi>();
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
@@ -236,13 +233,14 @@ function button(
   const paint = (state: "idle" | "focus" | "pressed" | "processing" = "idle") => {
     g.clear();
     const blue = fill === 0x0758a4;
-    const base = blue ? 0x102c52 : 0x501923;
+    const base = blue ? 0x103b69 : 0x661d29;
     g.fillStyle(0x050b13, 0.95).fillPoints(outline(0), true);
     g.fillStyle(base, 1).fillPoints(outline(4), true);
-    const top = state === "pressed" ? base : blue ? 0x235783 : 0x80343d;
+    const top = state === "pressed" ? base : blue ? 0x1974af : 0xa63142;
     g.fillGradientStyle(top, base, base, 0x0b1425, 1).fillRect(x - width / 2 + 14, y - height / 2 + 5, width - 28, height - 10);
     g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
     g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
+    g.lineStyle(1, 0xffedb8, 0.75).lineBetween(x - width / 2 + 22, y - height / 2 + 7, x + width / 2 - 22, y - height / 2 + 7);
     g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
     ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
     if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokePoints(outline(8), true);
@@ -958,6 +956,8 @@ function refresh(scene: Runtime): void {
   }
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
   ui.requestTitle.setText(request ? `依頼  ${FACTION_LABEL[request.faction]}` : "新しい依頼");
+  if (scene.artPending) ui.requestTitle.setText("場面を読み込み中…");
+  else if (scene.artError) ui.requestTitle.setText("読込失敗・選択で再試行");
   ui.requestText.setText(request?.text ?? "王都の民が、あなたの決断を待っています。どうしますか？");
   const actionLabels: Record<string, string> = {
     village_food: "食料を支援する",
@@ -1009,18 +1009,27 @@ export function installKarmaConceptArtPass(): void {
       this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.webp`);
       this.load.image(ELDER_KEY, `images/${ELDER_KEY}.webp`);
       for (const key of [HERO_DIALOGUE_KEY, ...Object.values(REQUESTER_ART)]) this.load.image(key, `images/${key}.webp`);
-      this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.webp`);
-      for (const key of Object.values(FACTION_ART)) this.load.image(key, `images/${key}.webp`);
-      for (const key of new Set(Object.values(OUTCOME_ART).flat().filter(key => key.startsWith("kq-outcome-")))) this.load.image(key, `images/${key}.webp`);
       return result;
     };
   }
   const originalChoice = proto.onKarmaChoice;
   if (originalChoice && !proto.__visualMockChoice) {
     proto.__visualMockChoice = originalChoice;
-    proto.onKarmaChoice = function (this: Phaser.Scene, ...args: unknown[]): unknown {
+    proto.onKarmaChoice = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
       const runtime = this as Runtime;
-      if (runtime.phase !== "karma" || !runtime.currentRequest || !runtime.karma) return undefined;
+      if (runtime.phase !== "karma" || !runtime.currentRequest || !runtime.karma || runtime.artPending) return undefined;
+      const selectedRequest = runtime.currentRequest;
+      const selectedStage = runtime.stage;
+      const key = outcomeArtKey(selectedRequest.id, args[0] === true);
+      if (!runtime.textures.exists(key)) {
+        runtime.artPending = true;
+        runtime.artError = false;
+        const ready = await loadOutcome(runtime, key);
+        runtime.artPending = false;
+        if (!runtime.sys.isActive() || runtime.phase !== "karma" || runtime.currentRequest !== selectedRequest || runtime.stage !== selectedStage) return undefined;
+        if (!ready) { runtime.artError = true; return undefined; }
+      }
+      runtime.artError = false;
       const request = { ...runtime.currentRequest };
       const before = { ...runtime.karma };
       const result = originalChoice.apply(this, args);

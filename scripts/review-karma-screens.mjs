@@ -74,7 +74,7 @@ try {
       const scene = window.__qaGame.scene.getScene('GameScene');
       scene.phase = 'karma';
       scene.currentRequest = { id, faction, text: '', karmaDelta: 5 };
-      scene.onKarmaChoice(true);
+      return scene.onKarmaChoice(true);
     }, { faction, id: ids[i] });
     await capture(`result-${faction}`);
   }
@@ -109,7 +109,7 @@ try {
       await page.evaluate(({ request, accepted }) => {
         const scene = window.__qaGame.scene.getScene('GameScene');
         scene.phase = 'karma'; scene.currentRequest = request;
-        scene.onKarmaChoice(accepted);
+        return scene.onKarmaChoice(accepted);
       }, { request, accepted });
       await capture(`${request.id}-${branch}`);
       shots.push(await data(`docs/review/karma-compact-${request.id}-${branch}.png`));

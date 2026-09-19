@@ -12,6 +12,7 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 15177",
     url: "http://localhost:15177",
-    reuseExistingServer: false,
+    // Opt in only for local checks while a separate long-running soak owns Vite.
+    reuseExistingServer: process.env.KARMA_REUSE_SERVER === "1",
   },
 });

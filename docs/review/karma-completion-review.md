@@ -1,5 +1,7 @@
 # Karma Quest UI・素材 実装レビュー（2026-09-18）
 
+最新の追加対応は [段階読み込みと最終確認](karma-deferred-loading-review.md) を参照。以下は過去の工程も含む記録。
+
 最新の残タスク対応・測定・実機項目は [2026-09-19残タスク対応](karma-release-readiness-2026-09-19.md)、画面の仕上げは [最終レビュー](karma-final-polish-2026-09-19.md) を参照。以下は各段階の記録。
 
 ## 今回の5項目

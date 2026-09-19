@@ -3,6 +3,9 @@ import { writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const browser = await chromium.launch();
+const minimumMinutes = Number(process.argv[2] ?? 0);
+if (!Number.isFinite(minimumMinutes) || minimumMinutes < 0) throw new Error('Minutes must be nonnegative');
+const reportPath = minimumMinutes > 0 ? 'docs/review/karma-soak-long.json' : 'docs/review/karma-soak-current.json';
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -22,7 +25,7 @@ try {
   };
   const samples = [], started = Date.now();
   await tap(225, 660);
-  for (let cycle = 0; cycle < 3; cycle++) {
+  for (let cycle = 0; ; cycle++) {
     for (let year = 1; year <= 12; year++) {
       await wait('karma');
       assert.equal(await page.evaluate(() => window.__qaGame.scene.getScene('GameScene').stage), year);
@@ -53,10 +56,11 @@ try {
     assert.equal(state.history, 12);
     samples.push({ cycle: cycle + 1, elapsedMs: Date.now() - started, ...state, jsHeapAfterGC: heap.usedSize });
     console.log(JSON.stringify(samples.at(-1)));
-    if (cycle < 2) { await tap(591, 397); await wait('karma'); }
+    await writeFile(reportPath, JSON.stringify({ environment: 'One desktop Chromium page, real twelve-year journeys with rotation and replay; not a physical-device test', minimumMinutes, samples, errors }, null, 2));
+    if (cycle >= 2 && Date.now() - started >= minimumMinutes * 60000) break;
+    await tap(591, 397); await wait('karma');
   }
-  await writeFile('docs/review/karma-soak-current.json', JSON.stringify({ environment: 'One desktop Chromium page, three real twelve-year journeys with rotation and replay; not an hours-long or physical-device test', samples, errors }, null, 2));
   assert.deepEqual(errors, []);
   // Counts vary with random content. Preserve measurements for review;
-  // three short journeys cannot establish a memory-leak pass/fail threshold.
+  // a fixed count threshold alone cannot establish absence of memory leaks.
 } finally { await browser.close(); }

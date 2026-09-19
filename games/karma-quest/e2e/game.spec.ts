@@ -18,7 +18,7 @@ test.beforeEach(async ({ page }) => {
   });
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
-  await page.waitForFunction(() => !!window.__qaGame);
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
@@ -218,9 +218,9 @@ test("landscape home and chronicle support starting, rotating, and replaying", a
   await expect.poll(async () => (await page.locator("canvas").boundingBox())?.height).toBe(382);
   await tapPoint(page, 591, 397);
   await expect.poll(() => phase(page)).toBe("karma");
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+    await Reflect.get(scene, "onKarmaChoice").call(scene, true);
     Reflect.get(scene, "showFinal").call(scene);
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -282,16 +282,16 @@ test("portrait report keeps the approved visual mock", async ({ page }) => {
 
 test("portrait final keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.get(scene, "startRun").call(scene);
     const choose = Reflect.get(scene, "onKarmaChoice");
     Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りない", karmaDelta: 5 });
-    choose.call(scene, true);
+    await choose.call(scene, true);
     Reflect.set(scene, "stage", 2);
     Reflect.set(scene, "phase", "karma");
     Reflect.set(scene, "currentRequest", { id: "mage_book", faction: "mage", text: "禁書を読みたい", karmaDelta: 4 });
-    choose.call(scene, false);
+    await choose.call(scene, false);
     Reflect.set(scene, "reactionUntil", 0);
     const titleGroup = Reflect.get(scene, "titleGroup") as { setVisible(value: boolean): void };
     titleGroup.setVisible(false);
@@ -333,11 +333,11 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
     .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const choose = Reflect.get(scene, "onKarmaChoice");
     Reflect.set(scene, "currentRequest", { id: "mage_stone", faction: "mage", text: "魔法の研究に魔石がほしいのです…", karmaDelta: 5 });
-    if (typeof choose === "function") choose.call(scene, true);
+    if (typeof choose === "function") await choose.call(scene, true);
   });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-reaction-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.01,
@@ -354,10 +354,10 @@ test("declining a request changes the world reaction copy and effects", async ({
     if (typeof startRun === "function") startRun.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("karma");
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const choose = Reflect.get(scene, "onKarmaChoice");
-    if (typeof choose === "function") choose.call(scene, false);
+    if (typeof choose === "function") await choose.call(scene, false);
   });
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -376,7 +376,7 @@ test("declining a request changes the world reaction copy and effects", async ({
 test("reaction waits for Next across rotation and advances only once", async ({ page }) => {
   await tapPoint(page, 225, 660);
   await expect.poll(() => phase(page)).toBe("karma");
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "qaProgressCount", 0);
     for (const name of ["showEncounterPhase", "showBattlePhase"]) {
@@ -387,9 +387,9 @@ test("reaction waits for Next across rotation and advances only once", async ({ 
       });
     }
     Reflect.set(scene, "stage", 7);
-    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+    await Reflect.get(scene, "onKarmaChoice").call(scene, true);
     // A repeated choice must not apply karma or append another record.
-    Reflect.get(scene, "onKarmaChoice").call(scene, true);
+    await Reflect.get(scene, "onKarmaChoice").call(scene, true);
   });
   await expect.poll(() => phase(page)).toBe("reaction");
   await page.setViewportSize({ width: 844, height: 390 });
@@ -442,11 +442,11 @@ test("all request results keep readable text separated on compact phones", async
   await tapPoint(page, 225, 660);
   await expect.poll(() => phase(page)).toBe("karma");
   for (const request of KARMA_REQUESTS) for (const accepted of [true, false]) {
-    await page.evaluate(({ request, accepted }) => {
+    await page.evaluate(async ({ request, accepted }) => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.set(scene, "phase", "karma");
       Reflect.set(scene, "currentRequest", request);
-      Reflect.get(scene, "onKarmaChoice").call(scene, accepted);
+      await Reflect.get(scene, "onKarmaChoice").call(scene, accepted);
     }, { request, accepted });
     for (const mode of ["reaction", "wide", "final", "wide-final"]) {
       if (mode !== "reaction") {
@@ -637,4 +637,68 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
   }
   await expect.poll(() => phase(page)).toBe("final");
   expect(await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory") as unknown[]).length)).toBe(12);
+});
+
+
+test("result images load on demand and retry without duplicate choices", async ({ page }) => {
+  await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").sys.isActive());
+  expect(await page.evaluate(() => performance.getEntriesByType("resource").filter(r => r.name.includes("kq-outcome-")).length)).toBe(0);
+  const key = "kq-outcome-warrior_iron-accept-v2";
+  let attempts = 0;
+  let failRequests = true;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route(`**/${key}.webp`, async route => {
+    attempts++;
+    if (failRequests) { await route.abort(); return; }
+    await gate;
+    await route.continue();
+  });
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "currentRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りない", karmaDelta: 5 });
+  });
+  await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").children.list.some(child => child.depth >= 2000 && child.depth <= 2002));
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "artError"))).toBe(true);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-loading-error-portrait.png" });
+  expect(await phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(0);
+  const failedAttempts = attempts;
+  failRequests = false;
+  await page.setViewportSize({ width: 800, height: 360 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 591, 301);
+  await expect.poll(() => attempts).toBe(failedAttempts + 1);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-loading-landscape.png" });
+  await tapPoint(page, 591, 397);
+  expect(await phase(page)).toBe("karma");
+  release();
+  await expect.poll(() => phase(page)).toBe("reaction");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(1);
+  expect(await page.evaluate(key => window.__qaGame.textures.exists(key), key)).toBe(true);
+  expect(attempts).toBe(failedAttempts + 1);
+});
+
+test("boot progress survives rotation and clears when assets are ready", async ({ page }) => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/kq-bg-capital-home-v3.webp", async route => {
+    await gate;
+    await route.continue();
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").children.getByName("boot-progress"));
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-boot-progress.png" });
+  await page.setViewportSize({ width: 800, height: 360 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-boot-progress-landscape.png" });
+  release();
+  await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").sys.isActive());
+  expect(await page.evaluate(() => !!window.__qaGame.scene.getScene("GameScene").children.getByName("boot-progress"))).toBe(false);
+  await tapPoint(page, 591, 397);
+  await expect.poll(() => phase(page)).toBe("karma");
 });
