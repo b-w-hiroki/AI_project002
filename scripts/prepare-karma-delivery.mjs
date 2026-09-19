@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 const root = resolve('games/karma-quest/public/images');
 const report = JSON.parse(await readFile('docs/review/karma-performance-after.json', 'utf8'));
 const names = report.runs[0].images.map(item => item.name).filter(name => name.endsWith('.webp'));
+names.push(...['mage_stone', 'merchant_monster', 'outlaw_gold'].map(id => `kq-outcome-${id}-accept-v2.webp`));
 await mkdir(resolve(root, 'delivery'), { recursive: true });
 const browser = await chromium.launch();
 const results = [];

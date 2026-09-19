@@ -288,10 +288,27 @@ function button(
       g.lineBetween(edge, y + height / 2 - 18, edge + side * 6, y + height / 2 - 10);
     }
     g.fillStyle(0xf4e5bd, 0.95).fillTriangle(x + width / 2 - 26, y - 5, x + width / 2 - 26, y + 5, x + width / 2 - 20, y);
+    if (detail) {
+      const ex = x - width / 2 + 34, ey = y - 13;
+      g.lineStyle(1, 0xf4dfaa, 0.9).strokeCircle(ex, ey, 13);
+      if (blue) {
+        // Balanced scales: considering and accepting a request.
+        g.lineStyle(1.5, 0xf4dfaa, 1).lineBetween(ex, ey - 9, ex, ey + 8);
+        g.lineBetween(ex - 8, ey - 5, ex + 8, ey - 5).lineBetween(ex - 5, ey + 8, ex + 5, ey + 8);
+        for (const side of [-1, 1]) g.strokeTriangle(ex + side * 7, ey - 5, ex + side * 7 - 4, ey + 3, ex + side * 7 + 4, ey + 3);
+      } else {
+        // Crown: retaining resources for the other factions.
+        g.fillStyle(0xf4dfaa, 1).fillPoints([
+          new Phaser.Math.Vector2(ex - 8, ey - 4), new Phaser.Math.Vector2(ex - 5, ey + 6),
+          new Phaser.Math.Vector2(ex + 5, ey + 6), new Phaser.Math.Vector2(ex + 8, ey - 4),
+          new Phaser.Math.Vector2(ex + 3, ey), new Phaser.Math.Vector2(ex, ey - 8), new Phaser.Math.Vector2(ex - 3, ey),
+        ], true);
+      }
+    }
   };
   paint();
   root.add(g);
-  const labelText = text(scene, root, x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", width - 70).setStroke("#091420", 1);
+  const labelText = text(scene, root, detail ? x + 12 : x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", detail ? width - 106 : width - 70).setStroke("#091420", 1);
   if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
   const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
@@ -387,7 +404,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
-  fitted(scene, root, HERO_BACK_KEY, 157, 571, 460, 614);
+  fitted(scene, root, HERO_BACK_KEY, 150, 565, 480, 634);
   hudPlate(scene, root, 186, 581, 314, 38);
   text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
@@ -514,14 +531,14 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   foreground.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(8, 493, 434, 65);
   foreground.fillStyle(0x07131e, 1).fillRect(8, 558, 434, 234);
   root.add(foreground);
-  requestCard(scene, root, 290, 175, 304, 188);
+  requestCard(scene, root, 290, 168, 304, 174);
   const requestBand = scene.add.graphics();
-  requestBand.fillStyle(0x102c52, 1).fillRect(146, 93, 288, 41);
-  requestBand.lineStyle(1, 0xb79451, 1).lineBetween(146, 134, 434, 134);
+  requestBand.fillStyle(0xf7efd9, 1).fillTriangle(345, 252, 365, 273, 372, 252);
+  requestBand.lineStyle(1, 0xb79451, 0.8).lineBetween(345, 253, 365, 273).lineBetween(365, 273, 372, 253);
+  requestBand.lineStyle(1, 0xb79451, 0.65).lineBetween(159, 134, 421, 134);
   root.add(requestBand);
   const requestTitle = text(scene, root, 290, 111, "", 20, "#35281e", "900", 270);
-  const requestText = text(scene, root, 290, 197, "", 22, "#352f29", "700", 264).setAlign("left");
-  requestTitle.setColor("#fff4d5");
+  const requestText = text(scene, root, 290, 193, "", 22, "#352f29", "700", 264).setAlign("left");
   const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
   button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
   text(scene, root, 225, 766, "「どんな選択にも、意味がある」", 17, "#fff3d0", "700");
@@ -540,8 +557,8 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   requesterPortrait(scene, root, 156, 126, 222, 308);
   root.add(scene.add.graphics().fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(10, 388, 370, 52));
   requestCard(scene, root, 591, 132, 390, 244);
-  hudPlate(scene, root, 591, 45, 366, 50);
-  const requestTitle = text(scene, root, 591, 45, "", 22, "#fff4d5", "900", 338);
+  root.add(scene.add.graphics().lineStyle(1, 0xb79451, 0.65).lineBetween(420, 72, 762, 72));
+  const requestTitle = text(scene, root, 591, 45, "", 22, "#35281e", "900", 338);
   const requestText = text(scene, root, 591, 157, "", 24, "#352f29", "700", 338).setAlign("left");
   const acceptLabel = button(scene, root, 591, 301, 382, 80, "依頼を引き受ける", 0x0758a4,
     () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
@@ -679,9 +696,9 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   journalEmblem(scene, root, 116, 51);
   text(scene, root, 244, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
   text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
-  outcomeArt(scene, root, 45, 140, 124, 154);
+  outcomeArt(scene, root, 38, 140, 148, 154);
   const pageRules = scene.add.graphics();
-  pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(43, 138, 128, 158);
+  pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(36, 138, 152, 158);
   // One continuous journal page: rules separate entries without nesting cards.
   for (const y of [119, 315, 402]) {
     pageRules.lineStyle(1, 0xb79451, 0.55).lineBetween(46, y, 404, y);
@@ -691,8 +708,8 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     ], true);
   }
   root.add(pageRules);
-  const eventTitle = text(scene, root, 290, 154, "", 22, "#35281e", "900", 226).setName("chronicleTitle");
-  const eventBody = text(scene, root, 292, 244, "", 21, "#43382e", "700", 222).setName("chronicleBody");
+  const eventTitle = text(scene, root, 304, 154, "", 22, "#35281e", "900", 204).setName("chronicleTitle");
+  const eventBody = text(scene, root, 304, 244, "", 21, "#43382e", "700", 200).setAlign("left").setName("chronicleBody");
   const previousTitle = text(scene, root, 225, 343, "", 21, "#35281e", "900", 350);
   const recordCount = text(scene, root, 225, 381, "", 21, "#43382e", "700", 350);
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);

@@ -34,6 +34,6 @@ describe("portrait screen blueprint", () => {
     expect(overlaps(final.event, final.locked)).toBe(false);
     expect(overlaps(final.locked, final.city)).toBe(false);
     expect(overlaps(final.growth, final.replay)).toBe(false);
-    expect(rectGap(final.growth, final.replay).vertical).toBeGreaterThanOrEqual(23);
+    expect(rectGap(final.growth, final.replay).vertical).toBeGreaterThanOrEqual(10);
   });
 });

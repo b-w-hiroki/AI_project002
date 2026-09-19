@@ -352,6 +352,39 @@
       "originalBytes": 1889674,
       "deliveredBytes": 409102,
       "usedOriginal": false
+    },
+    {
+      "name": "kq-outcome-mage_stone-accept-v2.webp",
+      "quality": 0.9,
+      "psnr": 36.18368046767526,
+      "width": 1536,
+      "height": 1024,
+      "alphaChanges": 0,
+      "originalBytes": 2159950,
+      "deliveredBytes": 478468,
+      "usedOriginal": false
+    },
+    {
+      "name": "kq-outcome-merchant_monster-accept-v2.webp",
+      "quality": 0.9,
+      "psnr": 37.54706767048795,
+      "width": 1536,
+      "height": 1024,
+      "alphaChanges": 0,
+      "originalBytes": 2133678,
+      "deliveredBytes": 481826,
+      "usedOriginal": false
+    },
+    {
+      "name": "kq-outcome-outlaw_gold-accept-v2.webp",
+      "quality": 0.9,
+      "psnr": 39.3033715519322,
+      "width": 1536,
+      "height": 1024,
+      "alphaChanges": 0,
+      "originalBytes": 1785782,
+      "deliveredBytes": 353178,
+      "usedOriginal": false
     }
   ]
 }
