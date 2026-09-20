@@ -1,0 +1,437 @@
+{
+  "environment": "Local Vite, desktop Chromium, 390x844, cache disabled; not mobile/network benchmark",
+  "runs": [
+    {
+      "readyObservedMs": 1648,
+      "imageRequests": 34,
+      "imageEncodedBytes": 56864748,
+      "estimatedTextureRGBABytes": 179059872,
+      "images": [
+        {
+          "name": "kq-hero-warrior.png",
+          "bytes": 265763
+        },
+        {
+          "name": "kq-faction-icon-warrior.png",
+          "bytes": 34892
+        },
+        {
+          "name": "kq-faction-icon-merchant.png",
+          "bytes": 35605
+        },
+        {
+          "name": "kq-faction-icon-outlaw.png",
+          "bytes": 34787
+        },
+        {
+          "name": "kq-faction-icon-mage.png",
+          "bytes": 35774
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.png",
+          "bytes": 2130377
+        },
+        {
+          "name": "kq-bg-capital-home-v3.png",
+          "bytes": 2683412
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-hero-warrior-back.png",
+          "bytes": 1344778
+        },
+        {
+          "name": "kq-npc-elder.png",
+          "bytes": 2781839
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-village-reaction.png",
+          "bytes": 3098843
+        },
+        {
+          "name": "kq-bg-warrior-forge-v1.png",
+          "bytes": 2712177
+        },
+        {
+          "name": "kq-bg-merchant-market-v1.png",
+          "bytes": 2902361
+        },
+        {
+          "name": "kq-bg-outlaw-courtyard-v1.png",
+          "bytes": 2644347
+        },
+        {
+          "name": "kq-bg-mage-study-v1.png",
+          "bytes": 2372377
+        },
+        {
+          "name": "kq-outcome-warrior_iron-accept-v2.webp",
+          "bytes": 1885206
+        },
+        {
+          "name": "kq-outcome-warrior_iron-decline-v2.webp",
+          "bytes": 1659578
+        },
+        {
+          "name": "kq-outcome-warrior_train-accept-v2.webp",
+          "bytes": 1899394
+        },
+        {
+          "name": "kq-outcome-warrior_train-decline-v2.webp",
+          "bytes": 1680634
+        },
+        {
+          "name": "kq-outcome-merchant_monster-decline-v1.webp",
+          "bytes": 1900824
+        },
+        {
+          "name": "kq-outcome-merchant_toll-accept-v1.webp",
+          "bytes": 2089364
+        },
+        {
+          "name": "kq-outcome-merchant_toll-decline-v1.webp",
+          "bytes": 1979666
+        },
+        {
+          "name": "kq-outcome-outlaw_gold-decline-v1.webp",
+          "bytes": 1713908
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-accept-v1.webp",
+          "bytes": 1728484
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-decline-v1.webp",
+          "bytes": 1985354
+        },
+        {
+          "name": "kq-outcome-mage_stone-decline-v1.webp",
+          "bytes": 1709686
+        },
+        {
+          "name": "kq-outcome-mage_book-accept-v1.webp",
+          "bytes": 1911970
+        },
+        {
+          "name": "kq-outcome-mage_book-decline-v1.webp",
+          "bytes": 1889674
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 4332
+        }
+      ]
+    },
+    {
+      "readyObservedMs": 1435,
+      "imageRequests": 34,
+      "imageEncodedBytes": 56864748,
+      "estimatedTextureRGBABytes": 179063736,
+      "images": [
+        {
+          "name": "kq-hero-warrior.png",
+          "bytes": 265763
+        },
+        {
+          "name": "kq-faction-icon-warrior.png",
+          "bytes": 34892
+        },
+        {
+          "name": "kq-faction-icon-merchant.png",
+          "bytes": 35605
+        },
+        {
+          "name": "kq-faction-icon-mage.png",
+          "bytes": 35774
+        },
+        {
+          "name": "kq-faction-icon-outlaw.png",
+          "bytes": 34787
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.png",
+          "bytes": 2130377
+        },
+        {
+          "name": "kq-bg-capital-home-v3.png",
+          "bytes": 2683412
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-hero-warrior-back.png",
+          "bytes": 1344778
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-npc-elder.png",
+          "bytes": 2781839
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-village-reaction.png",
+          "bytes": 3098843
+        },
+        {
+          "name": "kq-bg-warrior-forge-v1.png",
+          "bytes": 2712177
+        },
+        {
+          "name": "kq-bg-merchant-market-v1.png",
+          "bytes": 2902361
+        },
+        {
+          "name": "kq-outcome-warrior_iron-accept-v2.webp",
+          "bytes": 1885206
+        },
+        {
+          "name": "kq-bg-outlaw-courtyard-v1.png",
+          "bytes": 2644347
+        },
+        {
+          "name": "kq-bg-mage-study-v1.png",
+          "bytes": 2372377
+        },
+        {
+          "name": "kq-outcome-warrior_iron-decline-v2.webp",
+          "bytes": 1659578
+        },
+        {
+          "name": "kq-outcome-warrior_train-accept-v2.webp",
+          "bytes": 1899394
+        },
+        {
+          "name": "kq-outcome-warrior_train-decline-v2.webp",
+          "bytes": 1680634
+        },
+        {
+          "name": "kq-outcome-merchant_monster-decline-v1.webp",
+          "bytes": 1900824
+        },
+        {
+          "name": "kq-outcome-merchant_toll-accept-v1.webp",
+          "bytes": 2089364
+        },
+        {
+          "name": "kq-outcome-merchant_toll-decline-v1.webp",
+          "bytes": 1979666
+        },
+        {
+          "name": "kq-outcome-outlaw_gold-decline-v1.webp",
+          "bytes": 1713908
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-accept-v1.webp",
+          "bytes": 1728484
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-decline-v1.webp",
+          "bytes": 1985354
+        },
+        {
+          "name": "kq-outcome-mage_stone-decline-v1.webp",
+          "bytes": 1709686
+        },
+        {
+          "name": "kq-outcome-mage_book-accept-v1.webp",
+          "bytes": 1911970
+        },
+        {
+          "name": "kq-outcome-mage_book-decline-v1.webp",
+          "bytes": 1889674
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 4332
+        }
+      ]
+    },
+    {
+      "readyObservedMs": 1426,
+      "imageRequests": 34,
+      "imageEncodedBytes": 56864748,
+      "estimatedTextureRGBABytes": 179059872,
+      "images": [
+        {
+          "name": "kq-hero-warrior.png",
+          "bytes": 265763
+        },
+        {
+          "name": "kq-faction-icon-warrior.png",
+          "bytes": 34892
+        },
+        {
+          "name": "kq-faction-icon-merchant.png",
+          "bytes": 35605
+        },
+        {
+          "name": "kq-faction-icon-outlaw.png",
+          "bytes": 34787
+        },
+        {
+          "name": "kq-faction-icon-mage.png",
+          "bytes": 35774
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.png",
+          "bytes": 2130377
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-bg-capital-home-v3.png",
+          "bytes": 2683412
+        },
+        {
+          "name": "kq-hero-warrior-back.png",
+          "bytes": 1344778
+        },
+        {
+          "name": "kq-npc-elder.png",
+          "bytes": 2781839
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-village-reaction.png",
+          "bytes": 3098843
+        },
+        {
+          "name": "kq-bg-warrior-forge-v1.png",
+          "bytes": 2712177
+        },
+        {
+          "name": "kq-bg-merchant-market-v1.png",
+          "bytes": 2902361
+        },
+        {
+          "name": "kq-bg-outlaw-courtyard-v1.png",
+          "bytes": 2644347
+        },
+        {
+          "name": "kq-bg-mage-study-v1.png",
+          "bytes": 2372377
+        },
+        {
+          "name": "kq-outcome-warrior_iron-accept-v2.webp",
+          "bytes": 1885206
+        },
+        {
+          "name": "kq-outcome-warrior_iron-decline-v2.webp",
+          "bytes": 1659578
+        },
+        {
+          "name": "kq-outcome-warrior_train-accept-v2.webp",
+          "bytes": 1899394
+        },
+        {
+          "name": "kq-outcome-warrior_train-decline-v2.webp",
+          "bytes": 1680634
+        },
+        {
+          "name": "kq-outcome-merchant_monster-decline-v1.webp",
+          "bytes": 1900824
+        },
+        {
+          "name": "kq-outcome-merchant_toll-accept-v1.webp",
+          "bytes": 2089364
+        },
+        {
+          "name": "kq-outcome-merchant_toll-decline-v1.webp",
+          "bytes": 1979666
+        },
+        {
+          "name": "kq-outcome-outlaw_gold-decline-v1.webp",
+          "bytes": 1713908
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-accept-v1.webp",
+          "bytes": 1728484
+        },
+        {
+          "name": "kq-outcome-outlaw_fight-decline-v1.webp",
+          "bytes": 1985354
+        },
+        {
+          "name": "kq-outcome-mage_stone-decline-v1.webp",
+          "bytes": 1709686
+        },
+        {
+          "name": "kq-outcome-mage_book-accept-v1.webp",
+          "bytes": 1911970
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 4332
+        },
+        {
+          "name": "kq-outcome-mage_book-decline-v1.webp",
+          "bytes": 1889674
+        }
+      ]
+    }
+  ]
+}

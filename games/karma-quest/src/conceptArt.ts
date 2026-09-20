@@ -1,32 +1,75 @@
 import Phaser from "phaser";
-import { FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
+import { deriveStats, initialKarma, FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
+import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
+import { requestOutcome } from "./logic/requestOutcome";
+import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import type { Encounter } from "./logic/encounter";
+import { DEITIES, type Deity } from "./logic/legend";
+import { outcomeArtKey } from "./outcomeArt";
+import { loadOutcome } from "./outcomeLoader";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
-  phase?: "title" | "karma" | "encounter" | "battle" | "report" | "final" | "transition";
+  phase?: "title" | "karma" | "reaction" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
   karma?: KarmaState;
   currentRequest?: KarmaRequest | null;
+  homeRequest?: KarmaRequest;
   reactionUntil?: number;
   lastAccepted?: boolean;
+  artPending?: boolean;
+  artError?: boolean;
+  journeyPending?: boolean;
+  journeyError?: boolean;
+  lastOutcome?: ReturnType<typeof requestOutcome>;
+  choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
 type MockUi = {
   titleRoot: Phaser.GameObjects.Container;
   choiceRoot: Phaser.GameObjects.Container;
   reactionRoot: Phaser.GameObjects.Container;
   finalRoot: Phaser.GameObjects.Container;
+  landscapeTitle?: Phaser.GameObjects.Container;
+  landscapeFinal?: Phaser.GameObjects.Container;
+  landscapeJourney?: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
+  acceptLabel: Phaser.GameObjects.Text;
+  landscapeChoice?: Pick<MockUi, "choiceRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel">;
+  reactionTitle: Phaser.GameObjects.Text;
+  reactionBody: Phaser.GameObjects.Text;
+  reactionQuote: Phaser.GameObjects.Text;
+  reactionArrows: Phaser.GameObjects.Text[];
+  reactionResults: Phaser.GameObjects.Text[];
+  landscapeReaction?: Omit<MockUi, "titleRoot" | "choiceRoot" | "finalRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel" | "landscapeReaction">;
 };
 
 const BG_KEY = "kq-bg-kingdom-portrait-v2";
+const HOME_BG_KEY = "kq-bg-capital-home-v3";
 const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
+const HERO_DIALOGUE_KEY = "kq-dialogue-hero-v1";
+const DIALOGUE_BG_KEY = "kq-bg-dialogue-arcade-v1";
+const REQUESTER_ART = {
+  warrior: "kq-dialogue-warrior-v3", merchant: "kq-dialogue-merchant-v1",
+  outlaw: "kq-dialogue-outlaw-v1", mage: "kq-dialogue-mage-v1",
+};
 const REACTION_BG_KEY = "kq-bg-village-reaction";
 const uiByScene = new WeakMap<object, MockUi>();
+const homeByScene = new WeakMap<object, { titleRoot: Phaser.GameObjects.Container; landscapeTitle: Phaser.GameObjects.Container }>();
+const JOURNEY_ART = [BG_KEY, DIALOGUE_BG_KEY, ELDER_KEY, ...Object.values(REQUESTER_ART)];
+
+function homeUi(scene: Runtime) {
+  let home = homeByScene.get(scene);
+  if (!home) {
+    home = { titleRoot: buildTitle(scene), landscapeTitle: buildLandscapeOverview(scene, false) };
+    homeByScene.set(scene, home);
+  }
+  return home;
+}
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
   const fn = Reflect.get(scene, key);
@@ -34,7 +77,7 @@ function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
 }
 
 function text(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, value: string, size: number, color = "#fff8e8", weight = "700", width?: number): Phaser.GameObjects.Text {
-  const darkText = color === "#35281e" || color === "#352f29" || color === "#3c2a1e" || color === "#43382e";
+  const darkText = color === "#35281e" || color === "#352f29" || color === "#3c2a1e" || color === "#43382e" || color === "#6a4a2a";
   const object = scene.add.text(x, y, value, {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif', fontSize: `${size}px`, fontStyle: weight,
     color, align: "center", lineSpacing: 5, wordWrap: width ? { width, useAdvancedWrap: true } : undefined,
@@ -62,13 +105,55 @@ function fitted(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: st
   return image;
 }
 
-function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, fill: number, alpha = 0.94): void {
-  const g = scene.add.graphics();
-  g.fillStyle(0x050909, 0.42).fillRoundedRect(x - width / 2 + 3, y - height / 2 + 5, width, height, 10);
-  g.fillStyle(fill, alpha).fillRoundedRect(x - width / 2, y - height / 2, width, height, 10);
-  g.fillStyle(0xffffff, 0.08).fillRoundedRect(x - width / 2 + 2, y - height / 2 + 2, width - 4, Math.max(7, height * 0.16), 8);
-  g.lineStyle(2, 0xe0bb69, 0.9).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 10);
-  root.add(g);
+function artWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number, alignY = 0.5): void {
+  if (!scene.textures.exists(key)) return;
+  const image = scene.add.image(x, y, key).setOrigin(0);
+  const scale = Math.max(width / image.width, height / image.height);
+  const cropWidth = width / scale, cropHeight = height / scale;
+  const cropX = (image.width - cropWidth) / 2, cropY = (image.height - cropHeight) * alignY;
+  image.setScale(scale).setPosition(x - cropX * scale, y - cropY * scale);
+  image.setCrop(cropX, cropY, cropWidth, cropHeight);
+  root.add(image);
+}
+
+function bustWindow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, x: number, y: number, width: number, height: number, fraction = 0.42): void {
+  if (!scene.textures.exists(key)) return;
+  const image = scene.add.image(x, y, key).setOrigin(0);
+  const cropHeight = image.height * fraction;
+  const cropWidth = Math.min(image.width, cropHeight * (width / height));
+  const cropX = (image.width - cropWidth) / 2;
+  const scale = Math.max(width / cropWidth, height / cropHeight);
+  image.setCrop(cropX, 0, cropWidth, cropHeight).setScale(scale).setPosition(x - cropX * scale, y);
+  root.add(image);
+}
+
+function requesterPortrait(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, thumbnail = false): void {
+  const layer = scene.add.container(0, 0).setName("requester-portrait");
+  root.add(layer);
+  let current = "";
+  let pending = "", failed = "";
+  root.setData("refreshRequester", (request?: KarmaRequest | null) => {
+    const key = request && request.id !== "village_food" ? REQUESTER_ART[request.faction] : ELDER_KEY;
+    if (key === current) return;
+    if (!scene.textures.exists(key)) {
+      if (pending !== key && failed !== key) {
+        pending = key;
+        void loadOutcome(scene, key).then(ready => { pending = ""; if (!ready) failed = key; });
+      }
+      return;
+    }
+    current = key;
+    layer.removeAll(true);
+    if (key === ELDER_KEY) {
+      if (thumbnail) bustWindow(scene, layer, key, x, y, width, height);
+      else artWindow(scene, layer, key, x, y, width, height, 0);
+    } else if (thumbnail) {
+      bustWindow(scene, layer, key, x, y, width, height, 0.6);
+    } else {
+      const image = fitted(scene, layer, key, x + width / 2, y + height / 2, width, height);
+      if (image) image.setY(y + height - image.displayHeight / 2);
+    }
+  });
 }
 
 function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
@@ -76,99 +161,528 @@ function screenFrame(scene: Phaser.Scene, root: Phaser.GameObjects.Container): v
   g.lineStyle(5, 0x09131c, 0.96).strokeRoundedRect(5, 5, 440, 790, 12);
   g.lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 434, 784, 10);
   g.lineStyle(1, 0xffedb4, 0.45).strokeRoundedRect(12, 12, 426, 776, 8);
+  ornament(g, 8, 8, 434, 784);
   root.add(g);
 }
 
-function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number, label: string, fill: number, onClick: () => void): void {
+// Mirrored, inset metalwork keeps the flourish inside the panel's reserved edge.
+function ornament(g: Phaser.GameObjects.Graphics, x: number, y: number, width: number, height: number): void {
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+    const cx = sx < 0 ? x : x + width;
+    const cy = sy < 0 ? y : y + height;
+    const point = (a: number, b: number) => new Phaser.Math.Vector2(cx - sx * a, cy - sy * b);
+    g.lineStyle(2, 0xd5ad60, 1).strokePoints([point(3, 27), point(3, 13), point(13, 13), point(13, 3), point(27, 3)], false);
+    g.lineStyle(1, 0xffe4a0, 0.9).strokePoints([point(6, 30), point(6, 17), point(17, 17), point(17, 6), point(30, 6)], false);
+    g.fillStyle(0xf2d28b, 1).fillPoints([point(8, 17), point(12, 21), point(16, 17), point(12, 13)], true);
+    // Engraved leaf scrolls remain inside the reserved border, clear of labels.
+    g.lineStyle(1, 0xe8cb83, 0.85).strokePoints([
+      point(32, 5), point(38, 8), point(34, 12), point(26, 10), point(22, 6),
+    ], false);
+    g.lineStyle(1, 0xe8cb83, 0.85).strokePoints([
+      point(5, 32), point(8, 38), point(12, 34), point(10, 26), point(6, 22),
+    ], false);
+  }
+}
+
+// Reading surfaces share the button's metalwork, but use quiet parchment
+// instead of an action gradient or directional ornament.
+function requestCard(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
   const g = scene.add.graphics();
-  const paint = (pressed = false) => {
+  const shape = (inset: number) => {
+    const l = x - width / 2 + inset, r = x + width / 2 - inset;
+    const t = y - height / 2 + inset, b = y + height / 2 - inset;
+    return [[l + 8, t], [r - 8, t], [r, t + 8], [r, b - 8],
+      [r - 8, b], [l + 8, b], [l, b - 8], [l, t + 8]]
+      .map(([px, py]) => new Phaser.Math.Vector2(px, py));
+  };
+  g.fillStyle(0x201d1a, 1).fillPoints(shape(0), true);
+  g.fillStyle(0xf7efd9, 1).fillPoints(shape(3), true);
+  const left = x - width / 2 + 10, top = y - height / 2 + 10;
+  const innerWidth = width - 20, innerHeight = height - 20;
+  // Keep the reading area opaque; material lives at the edges, not over ink.
+  g.fillGradientStyle(0xb99552, 0xf7efd9, 0xb99552, 0xf7efd9, 0.23, 0, 0.23, 0).fillRect(left, top, 22, innerHeight);
+  g.fillGradientStyle(0xf7efd9, 0xb99552, 0xf7efd9, 0xb99552, 0, 0.23, 0, 0.23).fillRect(left + innerWidth - 22, top, 22, innerHeight);
+  g.fillGradientStyle(0xfffcf0, 0xfffcf0, 0xfffcf0, 0xfffcf0, 0.55, 0.55, 0, 0).fillRect(left, top, innerWidth, 22);
+  g.fillGradientStyle(0x9d763c, 0x9d763c, 0x9d763c, 0x9d763c, 0, 0, 0.18, 0.18).fillRect(left, top + innerHeight - 18, innerWidth, 18);
+  for (let i = 0; i < Math.floor(width * height / 650); i++) {
+    g.fillStyle(0x795c39, 0.055).fillRect(left + (i * 137) % innerWidth, top + (i * 97) % innerHeight, 1, 1);
+  }
+  g.lineStyle(2, 0xb79451, 1).strokePoints(shape(1), true);
+  g.lineStyle(1, 0xb79451, 0.55).strokePoints(shape(7), true);
+  ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
+  root.add(g);
+}
+
+function effectRow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, y: number, color: number, label: string, arrow: string, result: string): [Phaser.GameObjects.Text, Phaser.GameObjects.Text] {
+  const g = scene.add.graphics();
+  g.lineStyle(1, 0xb79451, 0.26).lineBetween(65, y + 18, 385, y + 18);
+  g.fillStyle(color, 1).fillCircle(82, y, 10);
+  root.add(g);
+  text(scene, root, 82, y, "◆", 11, "#ffffff", "900");
+  text(scene, root, 138, y, label, 21, "#352f29", "900");
+  const arrowText = text(scene, root, 223, y, arrow, 20, arrow === "↓" ? "#b1262c" : arrow === "→" ? "#6d685f" : "#16864f", "900");
+  const resultText = text(scene, root, 303, y, result, 21, "#352f29", "800");
+  return [arrowText, resultText];
+}
+
+function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, label: string, value: string, color: number): Phaser.GameObjects.Text {
+  const g = scene.add.graphics();
+  g.fillStyle(color, 0.12).fillRoundedRect(x - 49, y - 20, 98, 40, 6);
+  g.lineStyle(1, color, 0.72).strokeRoundedRect(x - 49, y - 20, 98, 40, 6);
+  root.add(g);
+  text(scene, root, x - 18, y, label, 21, "#43382e", "800").setName(`stat:${label}`);
+  return text(scene, root, x + 29, y, value, 22, "#17663f", "900").setStroke("#17663f", 0).setName(`stat-value:${label}`);
+}
+
+function button(
+  scene: Runtime,
+  root: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  label: string,
+  fill: number,
+  onClick: () => void,
+  detail?: string,
+  lockAfterAction = true,
+): Phaser.GameObjects.Text {
+  const g = scene.add.graphics();
+  let armed = false;
+  let processing = false;
+  const outline = (inset: number) => {
+    const l = x - width / 2 + inset, r = x + width / 2 - inset;
+    const t = y - height / 2 + inset, b = y + height / 2 - inset;
+    const cut = 9;
+    return [{ x: l + cut, y: t }, { x: r - cut, y: t }, { x: r, y: t + cut },
+      { x: r, y: b - cut }, { x: r - cut, y: b }, { x: l + cut, y: b },
+      { x: l, y: b - cut }, { x: l, y: t + cut }].map(point => new Phaser.Math.Vector2(point.x, point.y));
+  };
+  const paint = (state: "idle" | "focus" | "pressed" | "processing" = "idle") => {
     g.clear();
-    g.fillStyle(0x04070a, 0.5).fillRoundedRect(x - width / 2 + 3, y - height / 2 + 5, width, height, 8);
-    g.fillStyle(pressed ? Phaser.Display.Color.ValueToColor(fill).darken(12).color : fill, 0.98).fillRoundedRect(x - width / 2, y - height / 2, width, height, 8);
-    g.fillStyle(0xffffff, 0.14).fillRoundedRect(x - width / 2 + 2, y - height / 2 + 2, width - 4, height * 0.25, 6);
-    g.lineStyle(2, 0xf0d18a, 0.95).strokeRoundedRect(x - width / 2, y - height / 2, width, height, 8);
+    const blue = fill === 0x0758a4;
+    const base = blue ? 0x103b69 : 0x661d29;
+    g.fillStyle(0x050b13, 0.95).fillPoints(outline(0), true);
+    g.fillStyle(base, 1).fillPoints(outline(4), true);
+    const top = state === "pressed" ? base : blue ? 0x1974af : 0xa63142;
+    const left = x - width / 2 + 14, upper = y - height / 2 + 5;
+    g.fillGradientStyle(top, top, base, base, 1).fillRect(left, upper, width - 28, height - 10);
+    // Enamel reflection and a recessed lower edge give the metal rim depth.
+    g.fillGradientStyle(0xbdeaff, 0xbdeaff, top, top, 0.22, 0.22, 0, 0)
+      .fillRect(left, upper, width - 28, 13);
+    g.fillGradientStyle(0x071322, 0x071322, 0x071322, 0x071322, 0, 0, 0.6, 0.6)
+      .fillRect(left, y + height / 2 - 22, width - 28, 17);
+    g.lineStyle(4, blue ? 0x2c9dda : 0xcb4b53, 0.2).strokePoints(outline(7), true);
+    g.lineStyle(2, 0xb79451, 1).strokePoints(outline(1), true);
+    g.lineStyle(1, 0xf4dfaa, 0.85).strokePoints(outline(5), true);
+    g.lineStyle(1, 0xffedb8, 0.75).lineBetween(x - width / 2 + 22, y - height / 2 + 7, x + width / 2 - 22, y - height / 2 + 7);
+    g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
+    ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
+    if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokePoints(outline(8), true);
+    if (state === "processing") g.fillStyle(0x071017, 0.44).fillPoints(outline(5), true);
+    // Small gold corner flourishes, matching the mock's inset metalwork.
+    for (const side of [-1, 1]) {
+      const edge = x + side * (width / 2 - 13);
+      g.lineStyle(2, 0xe8cb83, 0.9);
+      g.lineBetween(edge, y - height / 2 + 18, edge + side * 6, y - height / 2 + 10);
+      g.lineBetween(edge, y + height / 2 - 18, edge + side * 6, y + height / 2 - 10);
+    }
+    g.fillStyle(0xf4e5bd, 0.95).fillTriangle(x + width / 2 - 26, y - 5, x + width / 2 - 26, y + 5, x + width / 2 - 20, y);
+    if (detail) {
+      const ex = x - width / 2 + 34, ey = y - 13;
+      g.lineStyle(1, 0xf4dfaa, 0.9).strokeCircle(ex, ey, 13);
+      if (blue) {
+        // Balanced scales: considering and accepting a request.
+        g.lineStyle(1.5, 0xf4dfaa, 1).lineBetween(ex, ey - 9, ex, ey + 8);
+        g.lineBetween(ex - 8, ey - 5, ex + 8, ey - 5).lineBetween(ex - 5, ey + 8, ex + 5, ey + 8);
+        for (const side of [-1, 1]) g.strokeTriangle(ex + side * 7, ey - 5, ex + side * 7 - 4, ey + 3, ex + side * 7 + 4, ey + 3);
+      } else {
+        // Crown: retaining resources for the other factions.
+        g.fillStyle(0xf4dfaa, 1).fillPoints([
+          new Phaser.Math.Vector2(ex - 8, ey - 4), new Phaser.Math.Vector2(ex - 5, ey + 6),
+          new Phaser.Math.Vector2(ex + 5, ey + 6), new Phaser.Math.Vector2(ex + 8, ey - 4),
+          new Phaser.Math.Vector2(ex + 3, ey), new Phaser.Math.Vector2(ex, ey - 8), new Phaser.Math.Vector2(ex - 3, ey),
+        ], true);
+      }
+    }
   };
   paint();
   root.add(g);
-  text(scene, root, x, y, label, 21, "#fffaf0", "900", width - 24);
-  const zone = scene.add.zone(x, y, width, height).setInteractive({ useHandCursor: true });
+  const labelText = text(scene, root, detail ? x + 12 : x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", detail ? width - 106 : width - 70).setStroke("#091420", 1);
+  if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
+  const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
-  zone.on("pointerdown", () => { paint(true); onClick(); });
-  zone.on("pointerup", () => paint(false));
-  zone.on("pointerout", () => paint(false));
+  zone.on("pointerover", () => { if (!processing) paint("focus"); });
+  zone.on("pointerdown", () => { if (!processing) { armed = true; paint("pressed"); } });
+  zone.on("pointerup", () => {
+    if (!armed || processing) return;
+    armed = false;
+    processing = true;
+    paint("processing");
+    onClick();
+    if (!lockAfterAction) { processing = false; paint("idle"); return; }
+    scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
+  });
+  zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
+  return labelText;
+}
+
+// Restrained metal HUD: shallow bevels distinguish information from action buttons.
+function hudPlate(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
+  const g = scene.add.graphics();
+  const l = x - width / 2, t = y - height / 2;
+  const points = [[l + 6, t], [l + width - 6, t], [l + width, t + 6],
+    [l + width, t + height - 6], [l + width - 6, t + height], [l + 6, t + height],
+    [l, t + height - 6], [l, t + 6]].map(([px, py]) => new Phaser.Math.Vector2(px, py));
+  g.fillStyle(0x07131e, 0.96).fillPoints(points, true);
+  g.fillGradientStyle(0x294252, 0x294252, 0x07131e, 0x07131e, 0.8).fillRect(l + 7, t + 2, width - 14, height - 4);
+  g.lineStyle(1, 0xd5ad60, 0.95).strokePoints(points, true);
+  g.lineStyle(1, 0xffe4a0, 0.35).lineBetween(l + 9, t + 3, l + width - 9, t + 3);
+  root.add(g);
+}
+
+function soundSetting(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, height: number): Phaser.GameObjects.Container {
+  const control = scene.add.container(0, 0).setVisible(false);
+  root.add(control);
+  const label = button(scene, control, x, y, 248, height, "効果音", 0x0758a4, () => {
+    invoke(scene, "toggleSound");
+    refresh();
+  }, undefined, false);
+  const refresh = () => label.setText(`効果音 ${invoke(scene, "isSoundEnabled") ? "ON" : "OFF"}`);
+  control.setData("refresh", refresh);
+  return control;
 }
 
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
-  cover(scene, root, BG_KEY);
+  cover(scene, root, HOME_BG_KEY);
   const shade = scene.add.graphics();
-  shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.32, 0.32, 0.04, 0.04).fillRect(0, 0, 450, 800);
+  shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 43, 420, 64, 0x0a1b2b, 0.9);
-  text(scene, root, 48, 34, "Lv.12\nカイト", 14, "#ffffff", "900");
-  text(scene, root, 220, 28, "● 2,420     ◆ 180", 15, "#fff2c4", "900");
-  text(scene, root, 374, 29, "1年目　春", 14, "#fff6dd", "900");
+  hudPlate(scene, root, 108, 45, 184, 66);
+  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
+  text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
+  text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
+  hudPlate(scene, root, 322, 31, 224, 38);
+  text(scene, root, 322, 31, `累計評価 ${loadTotalEvaluation()}`, 20, "#fff2c4", "900").setStroke("#091420", 1);
+  hudPlate(scene, root, 339, 83, 190, 54);
+  text(scene, root, 339, 74, `最高到達 ${loadBestStage()}年`, 20, "#fff6dd", "900").setStroke("#091420", 1);
+  text(scene, root, 339, 97, "王都ルナディス", 18, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
-  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 54, 354, 8);
-  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 54, 354, 8);
+  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 70, 354, 8);
+  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 70, 354, 8);
+  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.28, 0, 0.28, 0).fillRect(15, 112, 20, 334);
+  for (const y of [180, 249, 318, 387]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
   root.add(rail);
-  text(scene, root, 39, 140, "☰\nメニュー", 13, "#fff3ce", "900");
-  text(scene, root, 39, 218, "◆\nクエスト", 12, "#fff3ce", "900");
-  text(scene, root, 39, 296, "♟\n仲間", 12, "#fff3ce", "900");
-  text(scene, root, 39, 374, "▣\n持ち物", 12, "#fff3ce", "900");
-  text(scene, root, 39, 434, "▤\n図鑑", 12, "#fff3ce", "900");
-  text(scene, root, 260, 140, "この世界の\n物語は、\nあなたの選択から。", 34, "#ffffff", "900", 350);
-  fitted(scene, root, HERO_BACK_KEY, 246, 430, 300, 410);
-  panel(scene, root, 225, 656, 414, 112, 0xf5ecd3, 0.98);
-  fitted(scene, root, ELDER_KEY, 58, 660, 72, 84);
-  text(scene, root, 238, 633, "飢える民たち", 20, "#3c2a1e", "900");
-  text(scene, root, 240, 674, "王都の周辺で食料が不足しています。\n助けを求める声が届いています。", 15, "#43382e", "700", 320);
+  for (const [index, label] of ["案内", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
+    const y = 125 + index * 69;
+    const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
+    if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
+    if (index === 1) {
+      ink.fillRoundedRect(27, y - 12, 24, 26, 2);
+      ink.lineBetween(24, y - 12, 54, y - 12);
+      ink.lineBetween(24, y + 14, 54, y + 14);
+      ink.fillStyle(0x14222b, 1).fillCircle(39, y - 3, 4);
+      ink.fillTriangle(36, y, 34, y + 8, 39, y + 5);
+      ink.fillTriangle(42, y, 44, y + 8, 39, y + 5);
+    }
+    if (index === 4) {
+      const page = (side: number) => [
+        new Phaser.Math.Vector2(39, y - 8), new Phaser.Math.Vector2(39 + side * 13, y - 12),
+        new Phaser.Math.Vector2(39 + side * 13, y + 10), new Phaser.Math.Vector2(39, y + 14),
+      ];
+      ink.fillPoints(page(-1), true).fillPoints(page(1), true);
+      ink.lineStyle(1, 0x14222b, 1).lineBetween(39, y - 7, 39, y + 12);
+      for (const side of [-1, 1]) for (const dy of [-4, 1, 6])
+        ink.lineBetween(39 + side * 3, y + dy, 39 + side * 10, y + dy - 2);
+    }
+    if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
+    if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
+    root.add(ink.setX(8));
+    text(scene, root, 47, y + 29, label, 21, "#fff3ce", "900").setStroke("#091420", 0);
+  }
+  text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
+  text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
+  // The home mock shows a close foreground hero, with the lower body behind HUD.
+  fitted(scene, root, HERO_BACK_KEY, 150, 565, 480, 634);
+  hudPlate(scene, root, 186, 581, 314, 38);
+  text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
+  requestCard(scene, root, 225, 656, 414, 112);
+  requesterPortrait(scene, root, 31, 618, 82, 78, true);
+  const homeRequestTitle = text(scene, root, 260, 629, "", 21, "#3c2a1e", "900");
+  const homeRequestBody = text(scene, root, 263, 674, "", 21, "#43382e", "700", 276);
+  root.setData("refreshRequest", () => {
+    (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
+    homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+    if (scene.journeyPending) homeRequestTitle.setText("旅の準備中…");
+    else if (scene.journeyError) homeRequestTitle.setText("読込失敗・押して再試行");
+    homeRequestBody.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
+  });
+  text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
+  nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.65).fillRect(10, 727, 430, 62);
   nav.lineStyle(2, 0xe2bd6b, 0.82).lineBetween(10, 724, 440, 724);
+  nav.fillGradientStyle(0x254b65, 0x254b65, 0x102c52, 0x102c52, 1).fillRect(18, 734, 68, 48);
+  nav.lineStyle(2, 0xe2bd6b, 0.95).lineBetween(24, 785, 80, 785);
+  for (const divider of [94, 180, 270, 356]) {
+    nav.lineStyle(1, 0xb79451, 0.35).lineBetween(divider, 734, divider, 783);
+  }
   root.add(nav);
-  text(scene, root, 225, 758, "♜ 王都　◇ ワールド　♞ キャラ　✦ ガチャ　▣ ショップ", 14, "#fff0c8", "900");
+  const icons = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
+  icons.fillRect(40, 744, 24, 16).fillRect(40, 738, 5, 8).fillRect(50, 734, 5, 12).fillRect(59, 738, 5, 8);
+  icons.fillStyle(0x102c52, 1).fillRect(49, 749, 6, 11).fillStyle(0xf4dfaa, 1);
+  for (const x of [135, 315]) {
+    icons.strokeCircle(x, 747, 13);
+    icons.fillTriangle(x, 730, x - 5, 749, x + 5, 745);
+    icons.fillTriangle(x, 764, x - 5, 749, x + 5, 745);
+    icons.lineBetween(x - 18, 747, x + 18, 747);
+  }
+  for (const dx of [-11, 0, 11]) {
+    icons.fillCircle(225 + dx, dx === 0 ? 738 : 742, dx === 0 ? 5 : 4);
+    icons.fillRoundedRect(220 + dx, dx === 0 ? 746 : 750, 10, dx === 0 ? 14 : 10, 3);
+  }
+  icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
+  root.add(icons);
+  // Availability is visible before opening the explanatory modal.
+  for (const [x, y] of [[47, 332], [315, 746], [400, 746]] as const) {
+    root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(x - 31, y - 12, 62, 24));
+    text(scene, root, x, y, "未提供", 18, "#d8c9ab", "700").setStroke("#091420", 0);
+  }
+  for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
+    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 19, "#fff0c8", "900").setStroke("#091420", 0);
+  }
   screenFrame(scene, root);
   const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
-  start.on("pointerdown", () => invoke(scene, "startRun"));
+  let startArmed = false;
+  start.on("pointerdown", () => { startArmed = true; });
+  start.on("pointerout", () => { startArmed = false; });
+  start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
   root.add(start);
+
+  const modal = scene.add.container(0, 0).setName("home-information").setVisible(false);
+  const veil = scene.add.graphics().fillStyle(0x030a14, 0.84).fillRect(0, 0, 450, 800);
+  const blocker = scene.add.zone(225, 400, 450, 800).setInteractive();
+  modal.add([veil, blocker]);
+  requestCard(scene, modal, 225, 385, 398, 458);
+  const heading = text(scene, modal, 225, 204, "", 30, "#35281e", "900", 340);
+  const body = text(scene, modal, 225, 358, "", 23, "#43382e", "700", 330);
+  const sound = soundSetting(scene, modal, 225, 475, 56);
+  button(scene, modal, 225, 551, 326, 80, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
+  const show = (title: string, description: string) => {
+    sound.setVisible(title === "冒険の案内");
+    (sound.getData("refresh") as () => void)();
+    heading.setText(title);
+    body.setText(description);
+    modal.setVisible(true);
+  };
+  const character = () => {
+    const stats = deriveStats(scene.karma ?? initialKarma());
+    show("カイトの能力", `攻撃力  ${stats.atk}    防御力  ${stats.def}\n体力  ${stats.hp}    魔力  ${stats.magic}\n\n依頼への選択が\n勇者を育てます。`);
+  };
+  const routes = [
+    () => modal.setVisible(false),
+    () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、\n12年の物語を紡ぎます。\n\n王都の依頼カードから出発。"),
+    character,
+    () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と\n冒険を通じて成長します。"),
+    () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
+  ];
+  const addRoute = (x: number, y: number, w: number, h: number, action: () => void) => {
+    const hit = scene.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+    root.add(hit);
+  };
+  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, route));
+  const railRoutes = [
+    () => show("冒険の案内", "依頼カードを押して出発。\n依頼への返答を選び、\n世界の反応を確認します。\n\n選択は指を離したときに確定。"),
+    () => invoke(scene, "startRun"),
+    character,
+    () => show("持ち物", "持ち物の管理は\n現在は利用できません。\n\n装備なしで冒険を開始できます。"),
+    () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
+  ];
+  railRoutes.forEach((route, i) => addRoute(47, 137 + i * 69, 76, 66, route));
+  root.add(modal);
   return root;
 }
 
-function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "requestTitle" | "requestText"> {
+function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "requestTitle" | "requestText" | "acceptLabel"> {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
-  cover(scene, root, BG_KEY, 0xc8b997);
+  cover(scene, root, DIALOGUE_BG_KEY);
   const shade = scene.add.graphics();
-  shade.fillStyle(0x071017, 0.24).fillRect(0, 0, 450, 800);
+  shade.fillStyle(0x071017, 0.14).fillRect(0, 0, 450, 800);
   root.add(shade);
-  panel(scene, root, 225, 39, 420, 60, 0x0b1a29, 0.92);
+  const heading = scene.add.graphics();
+  heading.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0.97, 0.97, 0, 0).fillRect(8, 8, 434, 76);
+  heading.lineStyle(1, 0xd5ad60, 0.6).lineBetween(32, 67, 418, 67);
+  root.add(heading);
   const yearText = text(scene, root, 62, 39, "", 16, "#fff4d0", "900");
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
-  fitted(scene, root, HERO_BACK_KEY, 105, 406, 250, 440);
-  fitted(scene, root, ELDER_KEY, 338, 408, 250, 440);
-  panel(scene, root, 308, 187, 272, 224, 0xf7efd9, 0.985);
-  const requestTitle = text(scene, root, 308, 109, "", 20, "#35281e", "900", 234);
-  const requestText = text(scene, root, 308, 194, "", 18, "#352f29", "700", 232);
-  button(scene, root, 225, 598, 382, 80, "⚖　食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true));
-  button(scene, root, 225, 694, 382, 80, "♛　支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false));
+  // A dedicated chest-up portrait keeps the player at conversation distance.
+  const player = PORTRAIT_BLUEPRINT.choice.playerPortrait;
+  fitted(scene, root, HERO_DIALOGUE_KEY, player.x + player.width / 2, player.y + player.height / 2, player.width, player.height);
+  const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
+  // Faction portraits share a fixed lane without stretching their proportions.
+  requesterPortrait(scene, root, npc.x, npc.y, npc.width, npc.height);
+  // Dissolve the cropped bust edges into the action area, preserving faces.
+  const foreground = scene.add.graphics();
+  foreground.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(8, 493, 434, 65);
+  foreground.fillStyle(0x07131e, 1).fillRect(8, 558, 434, 234);
+  root.add(foreground);
+  requestCard(scene, root, 290, 168, 304, 174);
+  const requestBand = scene.add.graphics();
+  requestBand.fillStyle(0xf7efd9, 1).fillTriangle(345, 252, 365, 273, 372, 252);
+  requestBand.lineStyle(1, 0xb79451, 0.8).lineBetween(345, 253, 365, 273).lineBetween(365, 273, 372, 253);
+  requestBand.lineStyle(1, 0xb79451, 0.65).lineBetween(159, 134, 421, 134);
+  root.add(requestBand);
+  const requestTitle = text(scene, root, 290, 111, "", 20, "#35281e", "900", 270);
+  const requestText = text(scene, root, 290, 193, "", 22, "#352f29", "700", 264).setAlign("left");
+  const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
+  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
   text(scene, root, 225, 766, "「どんな選択にも、意味がある」", 17, "#fff3d0", "700");
   screenFrame(scene, root);
-  return { choiceRoot: root, yearText, requestTitle, requestText };
+  return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
 }
 
-function buildReaction(scene: Runtime): Phaser.GameObjects.Container {
-  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
-  cover(scene, root, REACTION_BG_KEY);
-  panel(scene, root, 225, 49, 414, 72, 0xf4e5c5, 0.97);
-  text(scene, root, 225, 29, "1年目  春", 15, "#35281e", "800");
-  text(scene, root, 225, 61, "選択の結果", 30, "#35281e", "900");
-  panel(scene, root, 225, 600, 408, 316, 0xf7efd9, 0.98);
-  text(scene, root, 225, 470, "食料を支援しました", 29, "#35281e", "900");
-  text(scene, root, 225, 524, "王都からの食料が村に届き、\n人々の表情に笑顔が戻りました。", 18, "#43382e", "700", 360);
-  text(scene, root, 225, 612, "民の声　　↑　大きく上昇\n王国　　　↑　やや上昇\n教会　　　→　変化なし\n貴族　　　↓　やや低下", 18, "#352f29", "800", 350);
-  button(scene, root, 225, 718, 328, 58, "次へ", 0x0758a4, () => { scene.reactionUntil = 0; });
-  screenFrame(scene, root);
-  return root;
+function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoice"]> {
+  const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  artWindow(scene, root, DIALOGUE_BG_KEY, 8, 8, 374, 434);
+  hudPlate(scene, root, 195, 39, 354, 58);
+  const yearText = text(scene, root, 195, 39, "", 22, "#fff4d0", "900");
+  fitted(scene, root, HERO_DIALOGUE_KEY, 115, 324, 214, 220);
+  requesterPortrait(scene, root, 156, 126, 222, 308);
+  root.add(scene.add.graphics().fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(10, 388, 370, 52));
+  requestCard(scene, root, 591, 132, 390, 244);
+  root.add(scene.add.graphics().lineStyle(1, 0xb79451, 0.65).lineBetween(420, 72, 762, 72));
+  const requestTitle = text(scene, root, 591, 45, "", 22, "#35281e", "900", 338);
+  const requestText = text(scene, root, 591, 157, "", 24, "#352f29", "700", 338).setAlign("left");
+  const acceptLabel = button(scene, root, 591, 301, 382, 80, "依頼を引き受ける", 0x0758a4,
+    () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
+  button(scene, root, 591, 397, 382, 80, "支援を断る", 0x981d25,
+    () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
+  const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
+  ornament(frame, 8, 8, 374, 434);
+  root.add(frame);
+  return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
+}
+
+function outcomeArt(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, width: number, height: number): void {
+  const art = scene.add.container(0, 0);
+  root.add(art);
+  let current = "";
+  root.setData("refreshOutcomeArt", () => {
+    const outcome = scene.lastOutcome;
+    const key = outcome ? outcomeArtKey(outcome.requestId, scene.lastAccepted === true) : HOME_BG_KEY;
+    if (key === current) return;
+    current = key;
+    art.removeAll(true);
+    const alignY = key.startsWith("kq-outcome-") ? 0 : key === HOME_BG_KEY || key === REACTION_BG_KEY ? 0.5 : 0.22;
+    const headerInset = key.startsWith("kq-outcome-") && width === 434 && height === 430 ? 36 : 0;
+    artWindow(scene, art, key, x, y + headerInset, width, height - headerInset, alignY);
+  });
+}
+
+function resultPaper(scene: Phaser.Scene, root: Phaser.GameObjects.Container, landscape: boolean): void {
+  const top = landscape ? 442 : 384;
+  const g = scene.add.graphics();
+  // A continuous reading surface lets the illustration fade into the page
+  // instead of looking like an image above a separate web card.
+  g.fillStyle(0xf7efd9, 1).fillRect(12, top, 426, 800 - top);
+  if (!landscape) g.fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(12, top - 54, 426, 54);
+  g.fillGradientStyle(0xb99552, 0xf7efd9, 0xb99552, 0xf7efd9, 0.25, 0, 0.25, 0).fillRect(12, top, 28, 800 - top);
+  g.fillGradientStyle(0xf7efd9, 0xb99552, 0xf7efd9, 0xb99552, 0, 0.25, 0, 0.25).fillRect(410, top, 28, 800 - top);
+  // Fixed, low-contrast paper grain; no per-frame random noise or animation.
+  for (let i = 0; i < 460; i++) {
+    const x = 24 + ((i * 137) % 402);
+    const y = top + ((i * 97) % (788 - top));
+    g.fillStyle(i % 2 ? 0x977543 : 0xffffff, 0.055).fillRect(x, y, i % 3 + 1, 1);
+  }
+  const ruleY = landscape ? 445 : 391;
+  g.lineStyle(1, 0xaa8242, 0.7).lineBetween(70, ruleY, 200, ruleY).lineBetween(250, ruleY, 380, ruleY);
+  g.fillStyle(0xb38a44, 0.9).fillPoints([
+    new Phaser.Math.Vector2(225, ruleY - 5), new Phaser.Math.Vector2(232, ruleY),
+    new Phaser.Math.Vector2(225, ruleY + 5), new Phaser.Math.Vector2(218, ruleY),
+  ], true);
+  root.add(g);
+}
+
+function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactionRoot" | "reactionTitle" | "reactionBody" | "reactionQuote" | "reactionArrows" | "reactionResults"> {
+  const screen = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  if (landscape) {
+    const background = scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450);
+    screen.add(background);
+    outcomeArt(scene, screen, 8, 8, 350, 434);
+  } else {
+    screen.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 450, 800));
+    outcomeArt(scene, screen, 8, 8, 434, 430);
+  }
+  const width = landscape ? 350 : 434;
+  const lighting = scene.add.graphics();
+  lighting.fillGradientStyle(0x061522, 0x061522, 0x061522, 0x061522, 0.94, 0.94, 0, 0).fillRect(8, 8, width, 120);
+  lighting.lineStyle(1, 0xe0bb69, 0.8).lineBetween(landscape ? 72 : 114, 84, landscape ? 294 : 336, 84);
+  screen.add(lighting);
+  text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#f4dfaa", "800").setStroke("#091420", 1).setName("reactionYear");
+  const headingX = landscape ? 183 : 225;
+  const banner = scene.add.graphics();
+  const bannerShape = [
+    [headingX - 146, 61], [headingX - 132, 41], [headingX + 132, 41],
+    [headingX + 146, 61], [headingX + 132, 81], [headingX - 132, 81],
+  ].map(([x, y]) => new Phaser.Math.Vector2(x, y));
+  banner.fillStyle(0xa77b36, 1).fillPoints(bannerShape, true);
+  banner.fillGradientStyle(0xf6dda1, 0xf6dda1, 0xc69a53, 0xc69a53, 1).fillRect(headingX - 127, 44, 254, 34);
+  banner.lineStyle(1, 0xffedba, 1).strokePoints(bannerShape, true);
+  screen.add(banner);
+  text(scene, screen, headingX, 61, "選択の結果", 28, "#35281e", "900");
+  const root = scene.add.container(landscape ? 354 : 0, landscape ? -374 : 0);
+  screen.add(root);
+  resultPaper(scene, root, landscape);
+  const reactionTitle = text(scene, root, 225, landscape ? 470 : 415, "", 28, "#35281e", "900");
+  const reactionBody = text(scene, root, 225, landscape ? 518 : 472, "", 21, "#43382e", "700", 378).setName("reactionBody");
+  const reactionQuote = text(scene, root, 225, landscape ? 558 : 526, "", 18, "#6a4a2a", "700", 370).setName("reactionQuote");
+  const effectRows = [
+    effectRow(scene, root, landscape ? 590 : 565, 0x245e9b, "戦士", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 620 : 603, 0x2f8c4b, "商人", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 650 : 641, 0xa32d34, "荒くれ", "→", "変化なし"),
+    effectRow(scene, root, landscape ? 680 : 679, 0x7a5899, "魔術師", "→", "変化なし"),
+  ];
+  button(scene, root, 225, 750, 328, 80, "次へ", 0x0758a4, () => {
+    if (scene.phase !== "reaction") return;
+    scene.reactionUntil = 0;
+    invoke(scene, "continueAfterReaction");
+  });
+  if (!landscape) screenFrame(scene, screen);
+  return {
+    reactionRoot: screen,
+    reactionTitle,
+    reactionBody,
+    reactionQuote,
+    reactionArrows: effectRows.map(([arrow]) => arrow),
+    reactionResults: effectRows.map(([, result]) => result),
+  };
+}
+
+function journalEmblem(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number): void {
+  const book = scene.add.graphics();
+  book.lineStyle(1, 0xd5ad60, 0.4).strokeCircle(x, y, 31);
+  for (const side of [-1, 1]) {
+    const page = (offset: number) => [
+      new Phaser.Math.Vector2(x, y - 16 + offset), new Phaser.Math.Vector2(x + side * 28, y - 22 + offset),
+      new Phaser.Math.Vector2(x + side * 28, y + 12 + offset), new Phaser.Math.Vector2(x, y + 18 + offset),
+    ];
+    book.fillStyle(0x76502b, 1).fillPoints(page(4), true);
+    book.lineStyle(1, 0xf1d38a, 1).strokePoints(page(4), true);
+    book.fillStyle(0xe8d49f, 1).fillPoints([
+      new Phaser.Math.Vector2(x, y - 16), new Phaser.Math.Vector2(x + side * 28, y - 22),
+      new Phaser.Math.Vector2(x + side * 28, y + 12), new Phaser.Math.Vector2(x, y + 18),
+    ], true);
+    for (const lineY of [y - 12, y - 6, y, y + 6]) book.lineStyle(1, 0x715332, 0.7).lineBetween(x + side * 5, lineY + 3, x + side * 23, lineY);
+  }
+  book.lineStyle(2, 0xb79451, 1).lineBetween(x, y - 16, x, y + 18);
+  root.add(book);
 }
 
 function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
@@ -177,72 +691,430 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const dim = scene.add.graphics();
   dim.fillStyle(0x06101a, 0.42).fillRect(0, 0, 450, 800);
   root.add(dim);
-  panel(scene, root, 225, 400, 422, 756, 0xf7efd9, 0.988);
-  text(scene, root, 225, 55, "▤　年代記", 35, "#35281e", "900");
-  text(scene, root, 225, 94, "あなたが紡いだ、この世界の物語", 16, "#43382e", "700");
-  panel(scene, root, 225, 215, 388, 198, 0xfff8e8, 0.99);
-  fitted(scene, root, REACTION_BG_KEY, 112, 210, 160, 158);
-  text(scene, root, 296, 169, "飢える民たち", 21, "#35281e", "900");
-  text(scene, root, 296, 232, "王都の食料を村へ届けた。\n村の人々は救われ、\n王国への信頼が高まった。", 16, "#43382e", "700", 206);
-  panel(scene, root, 225, 376, 388, 110, 0xe4ddcb, 0.99);
-  text(scene, root, 225, 352, "???", 22, "#35281e", "900");
-  text(scene, root, 225, 397, "この選択が、新たな物語への扉を開いた。", 15, "#43382e", "700", 340);
-  fitted(scene, root, "kq-hero-warrior", 122, 584, 188, 242);
-  text(scene, root, 303, 510, "カイト　Lv.12", 23, "#35281e", "900");
-  text(scene, root, 303, 577, "正義 +2　共感 +1\n洞察 +0　カリスマ +1", 17, "#43382e", "800");
-  button(scene, root, 225, 708, 360, 72, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
+  requestCard(scene, root, 225, 400, 422, 756);
+  hudPlate(scene, root, 225, 66, 394, 80);
+  journalEmblem(scene, root, 116, 51);
+  text(scene, root, 244, 51, "年代記", 32, "#fffaf0", "900").setStroke("#091420", 1);
+  text(scene, root, 225, 86, "あなたが紡いだ、この世界の物語", 19, "#fffaf0", "700").setStroke("#091420", 0);
+  outcomeArt(scene, root, 38, 140, 148, 154);
+  const pageRules = scene.add.graphics();
+  pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(36, 138, 152, 158);
+  // One continuous journal page: rules separate entries without nesting cards.
+  for (const y of [119, 315, 402]) {
+    pageRules.lineStyle(1, 0xb79451, 0.55).lineBetween(46, y, 404, y);
+    pageRules.fillStyle(0xb79451, 0.8).fillPoints([
+      new Phaser.Math.Vector2(225, y - 4), new Phaser.Math.Vector2(229, y),
+      new Phaser.Math.Vector2(225, y + 4), new Phaser.Math.Vector2(221, y),
+    ], true);
+  }
+  root.add(pageRules);
+  const eventTitle = text(scene, root, 304, 154, "", 22, "#35281e", "900", 204).setName("chronicleTitle");
+  const eventBody = text(scene, root, 304, 244, "", 21, "#43382e", "700", 200).setAlign("left").setName("chronicleBody");
+  const previousTitle = text(scene, root, 225, 343, "", 21, "#35281e", "900", 350);
+  const recordCount = text(scene, root, 225, 381, "", 21, "#43382e", "700", 350);
+  artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
+  const cityShade = scene.add.graphics();
+  cityShade.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 0.98, 0.98).fillRect(34, 437, 382, 83);
+  cityShade.lineStyle(1, 0xb79451, 0.65).strokeRect(34, 412, 382, 108);
+  root.add(cityShade);
+  text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
+  bustWindow(scene, root, HERO_DIALOGUE_KEY, 40, 535, 157, 133, 0.6);
+  root.add(scene.add.graphics().fillGradientStyle(0xf7efd9, 0xf7efd9, 0xf7efd9, 0xf7efd9, 0, 0, 1, 1).fillRect(40, 643, 157, 25));
+  text(scene, root, 303, 542, "カイトの能力", 23, "#35281e", "900");
+  const stats = [
+    metricChip(scene, root, 264, 589, "攻撃", "", 0x2e6ba3),
+    metricChip(scene, root, 362, 589, "防御", "", 0xb84a63),
+    metricChip(scene, root, 264, 633, "体力", "", 0x70529a),
+    metricChip(scene, root, 362, 633, "魔力", "", 0xb48727),
+  ];
+  root.setData("refreshChronicle", () => {
+    const history = scene.choiceHistory ?? [];
+    const latest = history.at(-1);
+    const previous = history.at(-2);
+    eventTitle.setText(latest ? `${latest.year}年目\n${latest.outcome.title}` : "旅の記録");
+    eventBody.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
+    previousTitle.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
+    recordCount.setText(`この旅で刻んだ選択：${history.length}件`);
+    const values = deriveStats(scene.karma ?? initialKarma());
+    [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
+  });
+  button(scene, root, 225, 719, 360, 80, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
+  return root;
+}
+
+function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  artWindow(scene, root, HOME_BG_KEY, 8, 8, 374, 434);
+  hudPlate(scene, root, 195, 43, 350, 62);
+  text(scene, root, 195, 43, final ? "カイトの能力" : "王都ルナディス", 28, "#fffaf0", "900");
+  if (final) {
+    artWindow(scene, root, HERO_DIALOGUE_KEY, 38, 85, 310, 215, 0);
+    requestCard(scene, root, 195, 367, 346, 134);
+  } else {
+    fitted(scene, root, HERO_BACK_KEY, 178, 242, 320, 326);
+  }
+  const statValues = final ? [
+    metricChip(scene, root, 133, 337, "攻撃", "", 0x2e6ba3),
+    metricChip(scene, root, 253, 337, "防御", "", 0xb84a63),
+    metricChip(scene, root, 133, 395, "体力", "", 0x70529a),
+    metricChip(scene, root, 253, 395, "魔力", "", 0xb48727),
+  ] : [];
+  requestCard(scene, root, 591, 176, 390, 336);
+  hudPlate(scene, root, 591, 43, 366, 52);
+  text(scene, root, final ? 611 : 591, 43, final ? "年代記" : "王都に届いた依頼", 28, "#fffaf0", "900");
+  const status = text(scene, root, 591, 86, "", 20, "#43382e", "700", 338);
+  const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
+  const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
+  const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
+  if (final) {
+    journalEmblem(scene, root, 510, 43);
+    root.add(scene.add.graphics().lineStyle(1, 0xb79451, 0.55).lineBetween(420, 288, 762, 288));
+    heading.setName("landscape-chronicle-title").setY(120).setFontSize(22);
+    hudPlate(scene, root, 474, 216, 120, 138);
+    outcomeArt(scene, root, 418, 151, 112, 130);
+    body.setName("landscape-chronicle-body").setPosition(654, 215).setWordWrapWidth(222, true).setFontSize(22);
+  }
+  if (!final) {
+    // Keep the envoy beside the request; reserve independent bounds for the copy.
+    hudPlate(scene, root, 468, 198, 112, 164);
+    requesterPortrait(scene, root, 416, 124, 104, 148, true);
+    heading.setPosition(655, 128).setWordWrapWidth(226, true);
+    body.setName("landscape-home-request-body").setPosition(655, 212).setWordWrapWidth(226, true).setFontSize(22);
+  }
+  button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
+    () => invoke(scene, "startRun"));
+  const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
+  ornament(frame, 8, 8, 374, 434);
+  root.add(frame);
+  if (!final) buildLandscapeHomeNavigation(scene, root);
+  root.setData("refreshOverview", () => {
+    if (final) {
+      const history = scene.choiceHistory ?? [];
+      const latest = history.at(-1), previous = history.at(-2);
+      (root.getData("refreshOutcomeArt") as () => void)();
+      status.setText(`この旅で刻んだ選択：${history.length}件`);
+      heading.setText(latest ? `${latest.year}年目 · ${latest.outcome.title}` : "旅の記録");
+      body.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
+      footer.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      [stats.atk, stats.def, stats.hp, stats.magic].forEach((value, i) => statValues[i]?.setText(String(value)));
+    } else {
+      (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
+      status.setText(`最高到達 ${loadBestStage()}年`);
+      heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
+      if (scene.journeyPending) heading.setText("旅の準備中…");
+      else if (scene.journeyError) heading.setText("読込失敗・再試行");
+      body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
+      footer.setText(`累計評価 ${loadTotalEvaluation()}`);
+    }
+  });
+  return root;
+}
+
+function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.Container): void {
+  const modal = scene.add.container(0, 0).setName("home-information-wide").setVisible(false);
+  modal.add(scene.add.graphics().fillStyle(0x030a14, 0.88).fillRect(0, 0, 800, 450));
+  modal.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  requestCard(scene, modal, 400, 225, 696, 422);
+  const heading = text(scene, modal, 400, 62, "", 30, "#35281e", "900", 610);
+  const body = text(scene, modal, 400, 208, "", 24, "#43382e", "700", 610);
+  const sound = soundSetting(scene, modal, 400, 316, 56);
+  button(scene, modal, 400, 385, 326, 64, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
+  const show = (title: string, value: string) => {
+    heading.setText(title); body.setText(value); modal.setVisible(true);
+    sound.setVisible(title === "冒険の案内");
+    (sound.getData("refresh") as () => void)();
+  };
+  const items: Array<[string, () => void]> = [
+    ["案内", () => show("冒険の案内", "依頼を聞き、返答を選び、世界の反応を確認します。\n結果の「次へ」で冒険が進みます。\n\n選択は指を離したときに確定します。")],
+    ["ワールド", () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、12年の物語を紡ぎます。\n\n右側の「依頼を聞く」から出発できます。")],
+    ["仲間", () => {
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      show("カイトの能力", `攻撃力 ${stats.atk}  防御力 ${stats.def}\n体力 ${stats.hp}  魔力 ${stats.magic}\n\n依頼への選択が勇者を育てます。`);
+    }],
+    ["図鑑", () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。")],
+    ["持ち物", () => show("持ち物", "持ち物の管理は現在は利用できません。\n\n装備なしで冒険を開始できます。")],
+    ["ガチャ", () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と冒険を通じて成長します。")],
+    ["ショップ", () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。")],
+    ["王都", () => modal.setVisible(false)],
+  ];
+  items.forEach(([label, action], i) => {
+    const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
+    hudPlate(scene, root, x, y, 84, 56);
+    const unavailable = ["持ち物", "ガチャ", "ショップ"].includes(label);
+    text(scene, root, x, unavailable ? y - 9 : y, label, 19, "#fff3ce", "900").setStroke("#091420", 0);
+    if (unavailable) text(scene, root, x, y + 14, "未提供", 16, "#d8c9ab", "700").setStroke("#091420", 0);
+    const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+    root.add(hit);
+  });
+  root.add(modal);
+}
+
+function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  artWindow(scene, root, HOME_BG_KEY, 0, 0, 800, 450);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 0.75).fillRect(0, 0, 800, 450));
+  root.add(scene.add.zone(400, 225, 800, 450).setInteractive());
+  const encounter = scene.add.container(0, 0), battle = scene.add.container(0, 0), report = scene.add.container(0, 0);
+  root.add([encounter, battle, report]);
+  for (const layer of [encounter, battle]) {
+    fitted(scene, layer, HERO_DIALOGUE_KEY, 195, 249, 362, 362);
+    hudPlate(scene, layer, 195, 47, 352, 64);
+    requestCard(scene, layer, 591, 145, 390, 266);
+  }
+  text(scene, encounter, 195, 47, "道中の出来事", 28);
+  const encounterText = text(scene, encounter, 591, 140, "", 25, "#43382e", "700", 338);
+  const optionA = button(scene, encounter, 591, 322, 382, 72, "", 0x0758a4, () => invoke(scene, "onEncounterChoice", "A"));
+  const optionB = button(scene, encounter, 591, 406, 382, 72, "", 0x981d25, () => invoke(scene, "onEncounterChoice", "B"));
+  text(scene, battle, 195, 47, "勇者の討伐", 28);
+  const battleHeading = text(scene, battle, 591, 59, "", 26, "#35281e", "900", 340);
+  const battleStats = text(scene, battle, 591, 140, "", 24, "#43382e", "700", 340);
+  const battleResult = text(scene, battle, 591, 220, "", 23, "#43382e", "700", 340);
+  const cheerCount = text(scene, battle, 591, 314, "", 22, "#fff3ce", "700", 350);
+  const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
+  button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  text(scene, report, 400, 36, "神様への報告", 30);
+  text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21);
+  requestCard(scene, report, 215, 271, 400, 330);
+  requestCard(scene, report, 609, 240, 366, 270);
+  type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
+  const rows = Array.from({ length: 4 }, (_, i) => {
+    const y = 150 + i * 80;
+    const layer = scene.add.container(0, 0);
+    report.add(layer);
+    const bg = scene.add.graphics(); layer.add(bg);
+    const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
+    const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => {
+      if (!armed || scene.phase !== "report") return;
+      armed = false;
+      (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
+    });
+    layer.add(hit);
+    return { layer, bg, label, y };
+  });
+  for (const [i, god] of (["valor", "mercy"] as const).entries()) {
+    const x = 519 + i * 180;
+    const g = scene.add.graphics(); report.add(g);
+    g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
+    text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
+    const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => {
+      if (!armed || scene.phase !== "report") return;
+      armed = false; Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview");
+    });
+    report.add(hit);
+  }
+  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
+  const submitAction = scene.add.container(0, 0); report.add(submitAction);
+  button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  root.setData("refreshJourney", () => {
+    encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (encounter.visible) {
+      const value = Reflect.get(scene, "currentEncounter") as Encounter | null;
+      encounterText.setText(value?.text ?? ""); optionA.setText(value?.choiceA.label ?? ""); optionB.setText(value?.choiceB.label ?? "");
+    }
+    if (battle.visible) {
+      const group = Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container;
+      const source = (name: string) => (group.getByName(name) as Phaser.GameObjects.Text)?.text ?? "";
+      battleHeading.setText(source("battleHeading")); battleStats.setText(source("battleStats"));
+      battleResult.setText(source("battleResult")); cheerCount.setText(source("cheerCountText"));
+      const enabled = !Reflect.get(scene, "currentBattleResult");
+      cheerAction.setAlpha(enabled ? 1 : 0.45);
+      (cheerAction.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+    if (report.visible) {
+      const source = Reflect.get(scene, "highlightRows") as Row[];
+      rows.forEach(({ layer, bg, label, y }, i) => {
+        const row = source[i]; layer.setVisible(!!row); if (!row) return;
+        label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(29, y - 36, 372, 72);
+        bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
+      });
+      const god = Reflect.get(scene, "deity") as Deity;
+      const count = source.filter(row => row.selected).length;
+      preview.setText(`${DEITIES[god].name}へ報告\n選択 ${count}/2\n${DEITIES[god].wish}`);
+      submitAction.setAlpha(count > 0 ? 1 : 0.45);
+      (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;
+    }
+  });
   return root;
 }
 
 function build(scene: Runtime): MockUi {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
-  const titleRoot = buildTitle(scene);
+  const { titleRoot, landscapeTitle } = homeUi(scene);
   const choice = buildChoice(scene);
-  const reactionRoot = buildReaction(scene);
+  const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
-  const ui = { titleRoot, ...choice, reactionRoot, finalRoot };
+  const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle, landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
   uiByScene.set(scene, ui);
   return ui;
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.phase === "title" && !uiByScene.has(scene)) {
+    const home = homeUi(scene);
+    const portrait = scene.scale.gameSize.height >= scene.scale.gameSize.width;
+    home.titleRoot.setVisible(portrait);
+    home.landscapeTitle.setVisible(!portrait);
+    (home.titleRoot.getData("refreshRequest") as () => void)();
+    (home.landscapeTitle.getData("refreshOverview") as () => void)();
+    return;
+  }
   const ui = build(scene);
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
+  if (ui.landscapeJourney?.visible) (ui.landscapeJourney.getData("refreshJourney") as () => void)();
+  for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {
+    const refreshArt = root?.getData("refreshOutcomeArt") as (() => void) | undefined;
+    refreshArt?.();
+  }
+  for (const [root, phase] of [[ui.landscapeTitle, "title"], [ui.landscapeFinal, "final"]] as const) {
+    root?.setVisible(!portrait && scene.phase === phase);
+    if (root?.visible) (root.getData("refreshOverview") as () => void)();
+  }
   ui.titleRoot.setVisible(portrait && scene.phase === "title");
+  if (scene.phase === "title") (ui.titleRoot.getData("refreshRequest") as () => void)();
   ui.choiceRoot.setVisible(portrait && scene.phase === "karma");
-  ui.reactionRoot.setVisible(portrait && (scene.reactionUntil ?? 0) > scene.time.now);
+  ui.landscapeChoice?.choiceRoot.setVisible(!portrait && scene.phase === "karma");
+  ui.reactionRoot.setVisible(portrait && scene.phase === "reaction");
+  ui.landscapeReaction?.reactionRoot.setVisible(!portrait && scene.phase === "reaction");
+  for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot]) {
+    (root?.getByName("reactionYear") as Phaser.GameObjects.Text | null)?.setText(`${scene.stage ?? 1}年目  春`);
+  }
   ui.finalRoot.setVisible(portrait && scene.phase === "final");
-  if (!portrait || scene.phase !== "karma") return;
+  if (scene.phase === "final") (ui.finalRoot.getData("refreshChronicle") as () => void)();
+  if (scene.lastOutcome) {
+    const outcome = scene.lastOutcome;
+    ui.reactionTitle.setText(outcome.title);
+    ui.reactionBody.setText(outcome.body);
+    ui.reactionQuote.setText(outcome.quote);
+    outcome.deltas.forEach((delta, i) => {
+      ui.reactionArrows[i]?.setText(delta > 0 ? "↑" : delta < 0 ? "↓" : "→").setColor(delta > 0 ? "#16864f" : delta < 0 ? "#b1262c" : "#6d685f");
+      ui.reactionResults[i]?.setText(delta === 0 ? "変化なし" : `${delta > 0 ? "+" : ""}${delta}`);
+    });
+  }
+  const wide = ui.landscapeReaction;
+  if (wide) {
+    wide.reactionTitle.setText(ui.reactionTitle.text);
+    wide.reactionBody.setText(ui.reactionBody.text);
+    wide.reactionQuote.setText(ui.reactionQuote.text);
+    wide.reactionArrows.forEach((item, i) => {
+      const source = ui.reactionArrows[i];
+      if (source) item.setText(source.text).setColor(source.style.color as string);
+    });
+    wide.reactionResults.forEach((item, i) => item.setText(ui.reactionResults[i]?.text ?? ""));
+  }
+  if (scene.phase !== "karma") return;
   const request = scene.currentRequest;
+  for (const root of [ui.choiceRoot, ui.landscapeChoice?.choiceRoot]) {
+    (root?.getData("refreshRequester") as ((request?: KarmaRequest | null) => void) | undefined)?.(request);
+  }
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
   ui.requestTitle.setText(request ? `依頼  ${FACTION_LABEL[request.faction]}` : "新しい依頼");
+  if (scene.artPending) ui.requestTitle.setText("場面を読み込み中…");
+  else if (scene.artError) ui.requestTitle.setText("読込失敗・選択で再試行");
   ui.requestText.setText(request?.text ?? "王都の民が、あなたの決断を待っています。どうしますか？");
+  const actionLabels: Record<string, string> = {
+    village_food: "食料を支援する",
+    warrior_iron: "鉄を届ける",
+    warrior_train: "訓練を認める",
+    merchant_monster: "護衛を派遣する",
+    merchant_toll: "通行料を減免する",
+    outlaw_gold: "酒代を与える",
+    outlaw_fight: "挑戦を認める",
+    mage_stone: "魔石を与える",
+    mage_book: "禁書を許可する",
+  };
+  ui.acceptLabel.setText(request ? actionLabels[request.id] ?? "依頼を引き受ける" : "依頼を確認する");
+  const detail = ui.acceptLabel.getData("detailText") as Phaser.GameObjects.Text | undefined;
+  const factionNames = { warrior: "戦士", merchant: "商人", outlaw: "荒くれ", mage: "魔術師" };
+  detail?.setText(request ? `${factionNames[request.faction]}の力 +${request.karmaDelta}・勇者が成長` : "依頼者の力になる");
+  const wideChoice = ui.landscapeChoice;
+  if (wideChoice) {
+    wideChoice.yearText.setText(ui.yearText.text);
+    wideChoice.requestTitle.setText(ui.requestTitle.text);
+    wideChoice.requestText.setText(ui.requestText.text);
+    wideChoice.acceptLabel.setText(ui.acceptLabel.text);
+    (wideChoice.acceptLabel.getData("detailText") as Phaser.GameObjects.Text).setText(detail?.text ?? "");
+  }
 }
 
 export function installKarmaConceptArtPass(): void {
   const proto = GameScene.prototype as unknown as MethodTable;
+  const originalStart = proto.startRun;
+  if (originalStart && !proto.__visualMockStart) {
+    proto.__visualMockStart = originalStart;
+    proto.startRun = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
+      const runtime = this as Runtime;
+      if (runtime.journeyPending) return undefined;
+      runtime.journeyPending = true;
+      runtime.journeyError = false;
+      const ready = await Promise.all(JOURNEY_ART.map(key => loadOutcome(runtime, key)));
+      runtime.journeyPending = false;
+      if (!runtime.sys.isActive()) return undefined;
+      if (ready.some(value => !value)) { runtime.journeyError = true; return undefined; }
+      runtime.choiceHistory = [];
+      runtime.lastOutcome = undefined;
+      runtime.lastAccepted = undefined;
+      runtime.reactionUntil = 0;
+      return originalStart.apply(this, args);
+    };
+  }
   const originalPreload = proto.preload;
   if (!proto.__visualMockPreload) {
     proto.__visualMockPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.image(BG_KEY, `images/${BG_KEY}.png`);
-      this.load.image(HERO_BACK_KEY, `images/${HERO_BACK_KEY}.png`);
-      this.load.image(ELDER_KEY, `images/${ELDER_KEY}.png`);
-      this.load.image(REACTION_BG_KEY, `images/${REACTION_BG_KEY}.png`);
+      this.load.image(HOME_BG_KEY, `images/delivery/${HOME_BG_KEY}.webp`);
+      this.load.image(HERO_BACK_KEY, `images/delivery/${HERO_BACK_KEY}.webp`);
+      this.load.image(HERO_DIALOGUE_KEY, `images/delivery/${HERO_DIALOGUE_KEY}.webp`);
+      const request = (this as Runtime).homeRequest;
+      const requester = request ? REQUESTER_ART[request.faction] : ELDER_KEY;
+      this.load.image(requester, `images/delivery/${requester}.webp`);
       return result;
     };
   }
   const originalChoice = proto.onKarmaChoice;
   if (originalChoice && !proto.__visualMockChoice) {
     proto.__visualMockChoice = originalChoice;
-    proto.onKarmaChoice = function (this: Phaser.Scene, ...args: unknown[]): unknown {
-      const result = originalChoice.apply(this, args);
+    proto.onKarmaChoice = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
       const runtime = this as Runtime;
+      if (runtime.phase !== "karma" || !runtime.currentRequest || !runtime.karma || runtime.artPending) return undefined;
+      const selectedRequest = runtime.currentRequest;
+      const selectedStage = runtime.stage;
+      const key = outcomeArtKey(selectedRequest.id, args[0] === true);
+      if (!runtime.textures.exists(key)) {
+        runtime.artPending = true;
+        runtime.artError = false;
+        const ready = await loadOutcome(runtime, key);
+        runtime.artPending = false;
+        if (!runtime.sys.isActive() || runtime.phase !== "karma" || runtime.currentRequest !== selectedRequest || runtime.stage !== selectedStage) return undefined;
+        if (!ready) { runtime.artError = true; return undefined; }
+      }
+      runtime.artError = false;
+      const request = { ...runtime.currentRequest };
+      const before = { ...runtime.karma };
+      const result = originalChoice.apply(this, args);
       runtime.lastAccepted = args[0] === true;
+      runtime.lastOutcome = requestOutcome(request, runtime.lastAccepted, before, runtime.karma);
+      (runtime.choiceHistory ??= []).push({ year: runtime.stage ?? 1, outcome: runtime.lastOutcome });
       runtime.reactionUntil = Number.POSITIVE_INFINITY;
       return result;
     };

@@ -1,0 +1,227 @@
+{
+  "environment": "Desktop Chromium, 390x844, cache disabled; not a physical-device benchmark",
+  "baseUrl": "http://localhost:15178",
+  "build": "production preview",
+  "network": {
+    "simulatedMbps": 3,
+    "latencyMs": 100
+  },
+  "runs": [
+    {
+      "readyObservedMs": 46088,
+      "imageRequests": 16,
+      "imageEncodedBytes": 16565481,
+      "estimatedTextureRGBABytes": 65837640,
+      "images": [
+        {
+          "name": "kq-hero-warrior.webp",
+          "bytes": 183364
+        },
+        {
+          "name": "kq-faction-icon-warrior.webp",
+          "bytes": 26272
+        },
+        {
+          "name": "kq-faction-icon-outlaw.webp",
+          "bytes": 26290
+        },
+        {
+          "name": "kq-faction-icon-merchant.webp",
+          "bytes": 28014
+        },
+        {
+          "name": "kq-faction-icon-mage.webp",
+          "bytes": 28474
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.webp",
+          "bytes": 1701546
+        },
+        {
+          "name": "kq-hero-warrior-back.webp",
+          "bytes": 924486
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-bg-capital-home-v3.webp",
+          "bytes": 2083908
+        },
+        {
+          "name": "kq-npc-elder.webp",
+          "bytes": 1812428
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 1357
+        }
+      ]
+    },
+    {
+      "readyObservedMs": 45993,
+      "imageRequests": 16,
+      "imageEncodedBytes": 16565481,
+      "estimatedTextureRGBABytes": 65839572,
+      "images": [
+        {
+          "name": "kq-hero-warrior.webp",
+          "bytes": 183364
+        },
+        {
+          "name": "kq-faction-icon-warrior.webp",
+          "bytes": 26272
+        },
+        {
+          "name": "kq-faction-icon-outlaw.webp",
+          "bytes": 26290
+        },
+        {
+          "name": "kq-faction-icon-merchant.webp",
+          "bytes": 28014
+        },
+        {
+          "name": "kq-faction-icon-mage.webp",
+          "bytes": 28474
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.webp",
+          "bytes": 1701546
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-bg-capital-home-v3.webp",
+          "bytes": 2083908
+        },
+        {
+          "name": "kq-hero-warrior-back.webp",
+          "bytes": 924486
+        },
+        {
+          "name": "kq-npc-elder.webp",
+          "bytes": 1812428
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 1357
+        }
+      ]
+    },
+    {
+      "readyObservedMs": 46045,
+      "imageRequests": 16,
+      "imageEncodedBytes": 16565481,
+      "estimatedTextureRGBABytes": 65841504,
+      "images": [
+        {
+          "name": "kq-hero-warrior.webp",
+          "bytes": 183364
+        },
+        {
+          "name": "kq-faction-icon-warrior.webp",
+          "bytes": 26272
+        },
+        {
+          "name": "kq-faction-icon-outlaw.webp",
+          "bytes": 26290
+        },
+        {
+          "name": "kq-faction-icon-merchant.webp",
+          "bytes": 28014
+        },
+        {
+          "name": "kq-faction-icon-mage.webp",
+          "bytes": 28474
+        },
+        {
+          "name": "kq-bg-kingdom-portrait-v2.webp",
+          "bytes": 1701546
+        },
+        {
+          "name": "kq-bg-capital-home-v3.webp",
+          "bytes": 2083908
+        },
+        {
+          "name": "kq-hero-warrior-back.webp",
+          "bytes": 924486
+        },
+        {
+          "name": "kq-npc-elder.webp",
+          "bytes": 1812428
+        },
+        {
+          "name": "kq-bg-dialogue-arcade-v1.webp",
+          "bytes": 1992876
+        },
+        {
+          "name": "kq-dialogue-hero-v1.webp",
+          "bytes": 1524298
+        },
+        {
+          "name": "kq-dialogue-warrior-v3.webp",
+          "bytes": 1683462
+        },
+        {
+          "name": "kq-dialogue-merchant-v1.webp",
+          "bytes": 1432768
+        },
+        {
+          "name": "kq-dialogue-outlaw-v1.webp",
+          "bytes": 1520916
+        },
+        {
+          "name": "kq-dialogue-mage-v1.webp",
+          "bytes": 1595022
+        },
+        {
+          "name": "kq-bg-kingdom-landscape.svg",
+          "bytes": 1357
+        }
+      ]
+    }
+  ]
+}

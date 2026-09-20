@@ -86,22 +86,34 @@ function panel(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: numbe
 
 function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, value: string, action: () => void, accent: number): void {
   const g = scene.add.graphics();
-  const paint = (pressed = false) => {
+  let armed = false;
+  let processing = false;
+  const paint = (state: "idle" | "focus" | "pressed" | "processing" = "idle") => {
     g.clear();
-    const color = pressed ? Phaser.Display.Color.ValueToColor(accent).darken(12).color : accent;
+    const color = state === "pressed" ? Phaser.Display.Color.ValueToColor(accent).darken(12).color : accent;
     g.fillStyle(0x07110d, 0.28).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 13);
     g.fillStyle(color, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 13);
     g.fillStyle(0xffffff, 0.12).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.26, 10);
     g.lineStyle(1.6, 0xf0d394, 0.68).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokeRoundedRect(x - w / 2 + 4, y - h / 2 + 4, w - 8, h - 8, 10);
+    if (state === "processing") g.fillStyle(0x07110d, 0.42).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6, 10);
   };
   paint();
   root.add(g);
   text(scene, root, x, y, value, 15, "#fff7e9", "900");
   const hit = scene.add.zone(x, y, w, Math.max(52, h)).setInteractive({ useHandCursor: true });
   root.add(hit);
-  hit.on("pointerdown", () => { paint(true); action(); });
-  hit.on("pointerup", () => paint(false));
-  hit.on("pointerout", () => paint(false));
+  hit.on("pointerover", () => { if (!processing) paint("focus"); });
+  hit.on("pointerdown", () => { if (!processing) { armed = true; paint("pressed"); } });
+  hit.on("pointerup", () => {
+    if (!armed || processing) return;
+    armed = false;
+    processing = true;
+    paint("processing");
+    action();
+    scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
+  });
+  hit.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
 }
 
 function world(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
@@ -135,7 +147,8 @@ function build(scene: Runtime): LandscapeUi {
 
   panel(scene, title, 260, 238, 440, 300, 0x14251e, 0xc8a45a, 0.9, 20);
   if (scene.textures.exists("kq-hero-warrior")) {
-    const hero = scene.add.image(145, 238, "kq-hero-warrior").setDisplaySize(190, 255);
+    const hero = scene.add.image(145, 238, "kq-hero-warrior");
+    hero.setScale(Math.min(190 / hero.width, 255 / hero.height));
     title.add(hero);
   }
   text(scene, title, 340, 140, "12年の選択で\n自分だけの勇者伝説をつくる", 22, "#fff5dc", "900");
@@ -149,7 +162,8 @@ function build(scene: Runtime): LandscapeUi {
   panel(scene, karma, 238, 246, 420, 330, 0x12231c, 0xc8a45a, 0.9, 18);
   let hero: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(150, 244, "kq-hero-warrior").setDisplaySize(205, 274);
+    hero = scene.add.image(150, 244, "kq-hero-warrior");
+    hero.setScale(Math.min(205 / hero.width, 274 / hero.height));
     karma.add(hero);
   }
   const dominantText = text(scene, karma, 275, 124, "", 11, "#f2d99c", "900");
@@ -205,15 +219,21 @@ function build(scene: Runtime): LandscapeUi {
   return ui;
 }
 
-function targetSize(scene: Runtime, landscape: boolean, specialLandscape: boolean): void {
-  const target = landscape && specialLandscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
+function targetSize(
+  scene: Runtime,
+  landscape: boolean,
+  safe: { safeLeft: number; safeRight: number; safeTop: number; safeBottom: number } | null,
+): void {
+  const target = landscape ? { width: 800, height: 450 } : { width: 450, height: 800 };
   if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
     scene.scale.resize(target.width, target.height);
   }
   const viewport = window.visualViewport;
-  const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
-  // Portrait chrome is hidden for this game; reserve only the 5px top/bottom edge.
-  const availableHeight = (viewport?.height ?? window.innerHeight) - (landscape ? 8 : 10);
+  const edge = landscape ? 8 : 6;
+  const availableWidth = (viewport?.width ?? window.innerWidth) - (safe?.safeLeft ?? 0) - (safe?.safeRight ?? 0) - edge;
+  // Account for notches and mobile browser UI through visualViewport and the
+  // measured safe area, then use the rest of the screen for the design canvas.
+  const availableHeight = (viewport?.height ?? window.innerHeight) - (safe?.safeTop ?? 0) - (safe?.safeBottom ?? 0) - edge;
   const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
   scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
   scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
@@ -229,7 +249,7 @@ function refresh(scene: Runtime): void {
   const layout = getResponsiveLayout(scene as never);
   const physicalLandscape = !!layout && !layout.isPortrait;
   const mobilePhase = scene.phase === "title" || scene.phase === "karma";
-  targetSize(scene, physicalLandscape, mobilePhase);
+  targetSize(scene, physicalLandscape, layout);
 
   const ui = build(scene);
   const active = physicalLandscape && mobilePhase;

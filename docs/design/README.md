@@ -2,6 +2,12 @@
 
 ## Current
 
+Karma Questのモック再現は **[実行手順](karma-execution-plan.md)** を入口とする。王都ホームの縦1画面を完成基準にし、縦の残り3画面、横画面へ順に展開する。この作業中は下記の全作品共通の実装順より本手順を優先する。
+
+Karma QuestのUI造形・配色・部品仕様は **[Karma Quest UIデザイン基準](karma-ui-design-system.md)** を参照。ユーザー指定の金枠ボタンを起点とする最新基準。
+
+Karma Questの画面別座標と重なり防止条件は **[Karma Quest 画面設計図](karma-screen-blueprints.md)** を参照。
+
 画面・体験設計の最新版は **[AI Project 002 — コンセプトアート準拠・再設計](concept-art-redesign.md)** を起点にする。
 
 次の実装フェーズは **[スマホ最適化 + ビジュアル強化 実装指示書](mobile-responsive-visual-implementation.md)** に従い、6作品を縦持ち / 横持ちの両方へ最適化した後、コンセプトアートとの差をアセット単位で詰める。

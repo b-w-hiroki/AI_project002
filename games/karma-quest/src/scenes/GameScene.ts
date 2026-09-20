@@ -63,6 +63,7 @@ const FACTION_ICON_TEXTURE: Record<Faction, string> = {
 };
 
 type Phase =
+  | "reaction"
   | "title"
   | "karma"
   | "encounter"
@@ -120,11 +121,40 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image(HERO_TEXTURE, `images/${HERO_TEXTURE}.png`);
+    const loading = this.add.container(0, 0).setName("boot-progress").setDepth(15000);
+    const plate = this.add.graphics();
+    const title = this.add.text(0, 0, "Karma Quest", {
+      fontFamily: '"Yu Mincho", serif', fontSize: "32px", color: "#f3d898", fontStyle: "bold",
+    }).setOrigin(0.5);
+    const label = this.add.text(0, 0, "", {
+      fontFamily: '"Yu Mincho", serif', fontSize: "20px", color: "#fff3d0",
+    }).setOrigin(0.5);
+    loading.add([plate, title, label]);
+    let progress = 0;
+    const draw = () => {
+      const { width, height } = this.scale.gameSize;
+      const x = width / 2, y = height / 2, barWidth = Math.min(360, width - 64);
+      plate.clear().fillStyle(0x07131e, 1).fillRect(0, 0, width, height);
+      plate.lineStyle(2, 0xd5ad60, 1).strokeRect(x - barWidth / 2, y - 10, barWidth, 20);
+      plate.fillGradientStyle(0x1974af, 0x1974af, 0x103b69, 0x103b69, 1)
+        .fillRect(x - barWidth / 2 + 3, y - 7, (barWidth - 6) * progress, 14);
+      title.setPosition(x, y - 58);
+      label.setPosition(x, y + 42).setText(`冒険の準備中  ${Math.floor(progress * 100)}%`);
+    };
+    const updateProgress = (value: number) => { progress = value; draw(); };
+    this.load.on("progress", updateProgress);
+    this.scale.on("resize", draw);
+    this.load.once("complete", () => {
+      this.load.off("progress", updateProgress);
+      this.scale.off("resize", draw);
+      loading.destroy(true);
+    });
+    draw();
+    this.load.image(HERO_TEXTURE, `images/delivery/${HERO_TEXTURE}.webp`);
     for (const faction of FACTIONS) {
       this.load.image(
         FACTION_ICON_TEXTURE[faction],
-        `images/${FACTION_ICON_TEXTURE[faction]}.png`,
+        `images/delivery/${FACTION_ICON_TEXTURE[faction]}.webp`,
       );
     }
   }
@@ -190,12 +220,7 @@ export class GameScene extends Phaser.Scene {
       .rectangle(395, 100, 40, 40, 0x000000, 0)
       .setInteractive({ useHandCursor: true })
       .on("pointerdown", () => {
-        this.soundOn = !this.soundOn;
-        localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
-        this.soundIcon.destroy();
-        this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
-        this.titleGroup.add(this.soundIcon);
-        this.playSound(sfx.buttonTap);
+        this.toggleSound();
       });
 
     this.titleGroup.add([
@@ -265,6 +290,18 @@ export class GameScene extends Phaser.Scene {
     if (this.soundOn) fn();
   }
 
+  public isSoundEnabled(): boolean { return this.soundOn; }
+
+  public toggleSound(): boolean {
+    this.soundOn = !this.soundOn;
+    localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+    this.soundIcon.destroy();
+    this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
+    this.titleGroup.add(this.soundIcon);
+    this.playSound(sfx.buttonTap);
+    return this.soundOn;
+  }
+
   private showTitle(): void {
     this.phase = "title";
     this.titleGroup.setVisible(true);
@@ -281,6 +318,8 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private homeRequest: KarmaRequest = rollRequest();
+
   private startRun(): void {
     this.chronicle = [];
     this.legendCounts = { valor: 0, mercy: 0 };
@@ -295,6 +334,7 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.setVisible(false);
     this.finalGroup.setVisible(false);
     this.nextStage();
+    this.homeRequest = rollRequest();
   }
 
   private nextStage(): void {
@@ -408,7 +448,7 @@ export class GameScene extends Phaser.Scene {
     this.karmaGroup.setVisible(true);
 
     this.deeds = [];
-    this.currentRequest = rollRequest();
+    this.currentRequest = this.stage === 1 ? { ...this.homeRequest } : rollRequest();
     this.mandateText.setText(
       `${legendTitle(this.legendCounts.valor, this.legendCounts.mercy)}\n${this.mandate.label}\n勝率への加護 +${Math.round(this.mandate.bonus * 100)}%`,
     );
@@ -461,6 +501,12 @@ export class GameScene extends Phaser.Scene {
         : "wisdom",
     });
 
+    this.phase = "reaction";
+    this.karmaGroup.setVisible(false);
+  }
+
+  private continueAfterReaction(): void {
+    if (this.phase !== "reaction") return;
     this.encounterBonus = 0;
     if (rollEncounterOccurs()) {
       this.showEncounterPhase();
@@ -625,6 +671,7 @@ export class GameScene extends Phaser.Scene {
 
   private showBattlePhase(): void {
     this.phase = "battle";
+    this.currentBattleResult = null;
     this.karmaGroup.setVisible(false);
     this.encounterGroup.setVisible(false);
     this.battleGroup.setVisible(true);
@@ -682,7 +729,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onCheerTap(): void {
-    if (this.phase !== "battle") return;
+    if (this.phase !== "battle" || this.currentBattleResult) return;
     this.cheerCount += 1;
     this.playSound(sfx.buttonTap);
     const cheerCountText = this.battleGroup.getByName(
