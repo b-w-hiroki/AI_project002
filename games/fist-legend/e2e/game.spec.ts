@@ -87,8 +87,11 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "gachaGroup").visible)).toBe(true);
   await checkFrame(page, "portrait-gacha");
 
-  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "showTitle").call(window.__qaGame.scene.getScene("GameScene")));
-  await tapVisibleText(page, "バトル開始");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showTitle").call(scene);
+    Reflect.get(scene, "startBattle").call(scene);
+  });
   await expect.poll(() => phase(page)).toBe("battle");
   await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "finishBattle").call(window.__qaGame.scene.getScene("GameScene"), true));
   await expect.poll(() => phase(page)).toBe("result");
