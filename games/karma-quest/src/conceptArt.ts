@@ -363,15 +363,14 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
   text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
-  hudPlate(scene, root, 322, 31, 224, 38);
-  text(scene, root, 322, 31, `累計評価 ${loadTotalEvaluation()}`, 20, "#fff2c4", "900").setStroke("#091420", 1);
-  hudPlate(scene, root, 339, 83, 190, 54);
-  text(scene, root, 339, 74, `最高到達 ${loadBestStage()}年`, 20, "#fff6dd", "900").setStroke("#091420", 1);
-  text(scene, root, 339, 97, "王都ルナディス", 18, "#fff6dd", "700").setStroke("#091420", 0);
+  // Keep progress visible without competing with the hero and request card.
+  hudPlate(scene, root, 332, 40, 204, 48);
+  text(scene, root, 332, 31, `評価 ${loadTotalEvaluation()} · 最高 ${loadBestStage()}年`, 16, "#fff2c4", "900").setStroke("#091420", 1);
+  text(scene, root, 332, 51, "王都ルナディス", 14, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
-  rail.fillStyle(0x08131d, 0.92).fillRoundedRect(12, 104, 70, 354, 8);
-  rail.lineStyle(2, 0xe0bb69, 0.86).strokeRoundedRect(12, 104, 70, 354, 8);
-  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.28, 0, 0.28, 0).fillRect(15, 112, 20, 334);
+  rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 108, 62, 338, 8);
+  rail.lineStyle(1.5, 0xe0bb69, 0.72).strokeRoundedRect(12, 108, 62, 338, 8);
+  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.18, 0, 0.18, 0).fillRect(15, 116, 16, 318);
   for (const y of [180, 249, 318, 387]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
   root.add(rail);
   for (const [index, label] of ["案内", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
@@ -399,7 +398,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
     if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
     root.add(ink.setX(8));
-    text(scene, root, 47, y + 29, label, 21, "#fff3ce", "900").setStroke("#091420", 0);
+    text(scene, root, 47, y + 25, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
   }
   text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
@@ -420,13 +419,13 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   });
   text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
-  nav.fillStyle(0x07131e, 0.96).fillRect(8, 724, 434, 68);
-  nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.65).fillRect(10, 727, 430, 62);
-  nav.lineStyle(2, 0xe2bd6b, 0.82).lineBetween(10, 724, 440, 724);
-  nav.fillGradientStyle(0x254b65, 0x254b65, 0x102c52, 0x102c52, 1).fillRect(18, 734, 68, 48);
-  nav.lineStyle(2, 0xe2bd6b, 0.95).lineBetween(24, 785, 80, 785);
+  nav.fillStyle(0x07131e, 0.9).fillRect(8, 734, 434, 58);
+  nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.48).fillRect(10, 737, 430, 52);
+  nav.lineStyle(1.5, 0xe2bd6b, 0.68).lineBetween(10, 734, 440, 734);
+  nav.fillGradientStyle(0x254b65, 0x254b65, 0x102c52, 0x102c52, 0.82).fillRect(18, 740, 68, 40);
+  nav.lineStyle(1.5, 0xe2bd6b, 0.8).lineBetween(24, 784, 80, 784);
   for (const divider of [94, 180, 270, 356]) {
-    nav.lineStyle(1, 0xb79451, 0.35).lineBetween(divider, 734, divider, 783);
+    nav.lineStyle(1, 0xb79451, 0.24).lineBetween(divider, 740, divider, 783);
   }
   root.add(nav);
   const icons = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
@@ -446,11 +445,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.add(icons);
   // Availability is visible before opening the explanatory modal.
   for (const [x, y] of [[47, 332], [315, 746], [400, 746]] as const) {
-    root.add(scene.add.graphics().fillStyle(0x07131e, 1).fillRect(x - 31, y - 12, 62, 24));
-    text(scene, root, x, y, "未提供", 18, "#d8c9ab", "700").setStroke("#091420", 0);
+    root.add(scene.add.graphics().fillStyle(0x07131e, 0.9).fillRoundedRect(x - 24, y - 9, 48, 18, 4));
+    text(scene, root, x, y, "準備中", 12, "#d8c9ab", "700").setStroke("#091420", 0);
   }
   for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
-    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 19, "#fff0c8", "900").setStroke("#091420", 0);
+    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 16, "#fff0c8", "800").setStroke("#091420", 0);
   }
   screenFrame(scene, root);
   const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
@@ -843,10 +842,10 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   ];
   items.forEach(([label, action], i) => {
     const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
-    hudPlate(scene, root, x, y, 84, 56);
+    hudPlate(scene, root, x, y, 80, 48);
     const unavailable = ["持ち物", "ガチャ", "ショップ"].includes(label);
-    text(scene, root, x, unavailable ? y - 9 : y, label, 19, "#fff3ce", "900").setStroke("#091420", 0);
-    if (unavailable) text(scene, root, x, y + 14, "未提供", 16, "#d8c9ab", "700").setStroke("#091420", 0);
+    text(scene, root, x, unavailable ? y - 7 : y, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
+    if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
     let armed = false;
     hit.on("pointerdown", () => { armed = true; });
