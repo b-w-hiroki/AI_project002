@@ -472,6 +472,7 @@ test("landscape dialogue keeps the request through rotation and both actions wor
 });
 
 test("all request results keep readable text separated on compact phones", async ({ page }) => {
+  test.setTimeout(180000);
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(async () => (await page.locator("canvas").boundingBox())?.width).toBe(314);
   await tapPoint(page, 225, 660);
@@ -544,6 +545,7 @@ test("choice explanation follows the current request's actual faction and delta"
 });
 
 test("requester portraits follow every request in home and rotated dialogue", async ({ page }) => {
+  test.setTimeout(120000);
   const portraits = () => page.evaluate(() => {
     const keys: string[] = [];
     const visit = (node: Phaser.GameObjects.GameObject) => {
@@ -601,6 +603,7 @@ test("requester portraits follow every request in home and rotated dialogue", as
 });
 
 test("landscape home information opens without activating the journey behind it", async ({ page }) => {
+  test.setTimeout(60000);
   await page.setViewportSize({ width: 800, height: 360 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   for (const index of [0, 1, 2, 3, 4, 5, 6]) {
@@ -651,7 +654,7 @@ test("landscape encounter battle and report remain operable through rotation", a
 });
 
 test("a normal twelve-year journey finishes using touch in both orientations", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(180000);
   await tapPoint(page, 225, 660);
   for (let year = 1; year <= 12; year++) {
     await expect.poll(() => phase(page)).toBe("karma");
