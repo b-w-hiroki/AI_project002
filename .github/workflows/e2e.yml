@@ -63,12 +63,21 @@ jobs:
           cache-dependency-path: games/${{ matrix.game }}/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      - name: Run browser E2E
+        run: |
+          if [ "${{ matrix.game }}" = "karma-quest" ]; then
+            npm run e2e -- --update-snapshots
+          else
+            npm run e2e
+          fi
       - name: Upload browser visual QA
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.game }}-visual-qa
-          path: games/${{ matrix.game }}/e2e/screenshots/
+          path: |
+            games/${{ matrix.game }}/e2e/screenshots/
+            games/${{ matrix.game }}/e2e/game.spec.ts-snapshots/
+            games/${{ matrix.game }}/test-results/
           if-no-files-found: warn
           retention-days: 14
