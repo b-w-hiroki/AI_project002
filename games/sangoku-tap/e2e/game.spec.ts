@@ -60,3 +60,39 @@ test("touch opens campaign and starts an expedition after rotation", async ({ pa
   await expect.poll(() => expeditionView(page)).toBe("road");
   await checkFrame(page, "landscape-expedition");
 });
+
+test("management screens keep readable visual hierarchy", async ({ page }) => {
+  const sceneVisible = async (method: string) => page.evaluate(method => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, method).call(scene);
+    return Reflect.get(scene, "phase");
+  }, method);
+
+  await expect(sceneVisible("showGacha")).resolves.toBe("gacha");
+  await checkFrame(page, "portrait-gacha");
+
+  await expect(sceneVisible("showBreeding")).resolves.toBe("breeding");
+  await checkFrame(page, "portrait-breeding");
+
+  await expect(sceneVisible("showRoster")).resolves.toBe("roster");
+  await checkFrame(page, "portrait-roster");
+});
+
+test("expedition result is visually reviewable after a clear", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 700, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const run = Reflect.get(scene, "run") as Record<string, unknown>;
+    Reflect.set(scene, "settled", false);
+    Reflect.set(scene, "run", { ...run, status: "clear", step: 10 });
+    Reflect.get(scene, "settle").call(scene);
+  });
+  await expect.poll(() => expeditionView(page)).toBe("result");
+  await checkFrame(page, "landscape-result");
+});
+
