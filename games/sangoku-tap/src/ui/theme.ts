@@ -163,6 +163,36 @@ export function makeButton(
   };
 }
 
+/** 資源表示などに使う小さな角丸ピル。(x, y) は中心。戻り値のsetTextで表示更新できる */
+export function drawPill(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  label: string,
+): { container: Phaser.GameObjects.Container; setText: (text: string) => void } {
+  const g = scene.add.graphics();
+  g.fillStyle(0x000000, 0.32);
+  g.fillRoundedRect(-w / 2, -h / 2 + 2, w, h, h / 2);
+  g.fillStyle(THEME.panelFill, 0.88);
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+  g.lineStyle(1.5, THEME.panelBorder, 0.85);
+  g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+
+  const text = scene.add
+    .text(0, 0, label, {
+      fontFamily: FONT_FAMILY,
+      fontSize: "13px",
+      fontStyle: "700",
+      color: THEME.textPrimary,
+    })
+    .setOrigin(0.5);
+
+  const container = scene.add.container(x, y, [g, text]).setSize(w, h);
+  return { container, setText: (t: string) => text.setText(t) };
+}
+
 /**
  * スピーカーアイコンをGraphicsで描画する。🔊/🔇絵文字はヘッドレスChromium環境で
  * 潰れて表示されることが判明しているため、オリジナル描画に置き換える。

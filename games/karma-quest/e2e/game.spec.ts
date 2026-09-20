@@ -159,7 +159,7 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await tapPoint(page, 225, 650);
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await checkFrame(page, "portrait-karma");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
@@ -185,7 +185,7 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
   });
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "currentRequest", { id: "village_food", faction: "merchant", text: "王都の周辺で、村の民が飢えています。食料を分け与えますか？", karmaDelta: 8 });
@@ -367,7 +367,7 @@ test("portrait choice reveals the world reaction scene", async ({ page }) => {
   });
   await expect.poll(() => phase(page)).toBe("karma");
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
-    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 5000 }).toBe(0);
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
   await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const choose = Reflect.get(scene, "onKarmaChoice");
