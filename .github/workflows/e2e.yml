@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   checks:
@@ -63,35 +63,12 @@ jobs:
           cache-dependency-path: games/${{ matrix.game }}/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Run browser E2E
-        run: |
-          if [ "${{ matrix.game }}" = "karma-quest" ]; then
-            npm run e2e -- --update-snapshots
-          else
-            npm run e2e
-          fi
-      - name: Commit refreshed Karma Linux snapshots
-        if: always() && matrix.game == 'karma-quest' && github.event_name == 'pull_request'
-        run: |
-          mkdir -p /tmp/karma-linux-snapshots
-          cp e2e/game.spec.ts-snapshots/*-linux.png /tmp/karma-linux-snapshots/
-          git checkout -B "${{ github.head_ref }}" "${{ github.event.pull_request.head.sha }}"
-          cp /tmp/karma-linux-snapshots/* e2e/game.spec.ts-snapshots/
-          git add e2e/game.spec.ts-snapshots/*-linux.png
-          if ! git diff --cached --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "test: refresh Karma Quest Linux visual baselines"
-            git push origin HEAD:"${{ github.head_ref }}"
-          fi
+      - run: npm run e2e
       - name: Upload browser visual QA
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.game }}-visual-qa
-          path: |
-            games/${{ matrix.game }}/e2e/screenshots/
-            games/${{ matrix.game }}/e2e/game.spec.ts-snapshots/
-            games/${{ matrix.game }}/test-results/
+          path: games/${{ matrix.game }}/e2e/screenshots/
           if-no-files-found: warn
           retention-days: 14
