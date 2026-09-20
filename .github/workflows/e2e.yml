@@ -75,8 +75,7 @@ jobs:
         run: |
           mkdir -p /tmp/karma-linux-snapshots
           cp e2e/game.spec.ts-snapshots/*-linux.png /tmp/karma-linux-snapshots/
-          git fetch origin "${{ github.head_ref }}"
-          git checkout -B "${{ github.head_ref }}" "origin/${{ github.head_ref }}"
+          git checkout -B "${{ github.head_ref }}" "${{ github.event.pull_request.head.sha }}"
           cp /tmp/karma-linux-snapshots/* e2e/game.spec.ts-snapshots/
           git add e2e/game.spec.ts-snapshots/*-linux.png
           if ! git diff --cached --quiet; then
