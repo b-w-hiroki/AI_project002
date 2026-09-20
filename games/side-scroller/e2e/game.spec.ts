@@ -104,7 +104,7 @@ test.describe("phone visual QA", () => {
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const state = Reflect.get(scene, "playerState") as Record<string, unknown>;
-      Reflect.set(scene, "playerState", { ...state, hp: 0 });
+      Reflect.set(scene, "playerState", { ...state, health: 0 });
       Reflect.get(scene, "checkStatus").call(scene);
     });
     await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "status"))).toBe("gameover");
