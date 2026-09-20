@@ -1,4 +1,5 @@
 name: Browser E2E
+# Temporary baseline capture; restored to read-only after Karma snapshot refresh.
 
 on:
   pull_request:
