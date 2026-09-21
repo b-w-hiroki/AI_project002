@@ -117,3 +117,20 @@ test("opponent archetypes keep distinct battle identity", async ({ page }) => {
   }
 });
 
+test("victory result shows a knockout finish", async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
+  })).toBe("K.O.");
+  await page.waitForTimeout(260);
+  await checkFrame(page, "portrait-result-ko");
+});
+
