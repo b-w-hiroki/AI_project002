@@ -139,7 +139,7 @@ test("gatekeeper clear uses the dedicated strike cinematic", async ({ page }) =>
     return (Reflect.get(scene, "run") as Record<string, unknown>).status;
   });
   expect(status).toBe("clear");
-  await page.waitForTimeout(230);
+  await page.waitForTimeout(330);
   await page.locator("canvas").screenshot({
     path: "e2e/screenshots/landscape-boss-clear-impact.png",
     animations: "disabled",
