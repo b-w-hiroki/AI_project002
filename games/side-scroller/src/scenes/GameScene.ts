@@ -148,6 +148,9 @@ const ENEMY_AGILE_ART_TEXTURE = "goblin-agile-art";
 const ENEMY_TANK_ART_TEXTURE = "goblin-tank-art";
 /** HUD の描画深度（キャラ/攻撃演出より前面、オーバーレイ 100+ より背面） */
 const HUD_DEPTH = 20;
+/** コンセプト装飾(1770台)より手前、モバイル操作UI(2600+)より奥に戦闘FXをまとめる。 */
+const COMBAT_FX_DEPTH = 1900;
+const COMBAT_FLASH_DEPTH = 1950;
 /** 背景のパララックス係数（カメラより遅く流れる） */
 const BG_SCROLL_FACTOR = 0.4;
 
@@ -378,7 +381,7 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
-    this.bossTell = this.add.graphics().setDepth(3);
+    this.bossTell = this.add.graphics().setDepth(COMBAT_FX_DEPTH);
     this.styleText = this.add
       .text(400, 115, "", {
         fontSize: "15px",
@@ -621,7 +624,7 @@ export class GameScene extends Phaser.Scene {
     this.guardIcon.fillStyle(0xffd166, 0.18);
     this.guardIcon.slice(0, 0, 24, Phaser.Math.DegToRad(-60), Phaser.Math.DegToRad(60), false);
     this.guardIcon.fillPath();
-    this.guardIcon.setDepth(5);
+    this.guardIcon.setDepth(COMBAT_FX_DEPTH);
     this.guardIcon.setVisible(false);
   }
 
@@ -1005,7 +1008,7 @@ export class GameScene extends Phaser.Scene {
       .sprite(this.player.x, this.player.y - 160, "orb")
       .setScale(1.8)
       .setTint(0xd9a7ff)
-      .setDepth(50);
+      .setDepth(COMBAT_FX_DEPTH);
     this.tweens.add({
       targets: icon,
       y: this.player.y - 15,
@@ -1370,7 +1373,7 @@ export class GameScene extends Phaser.Scene {
     const facing = this.playerState.facing;
     const radius = weapon.range * 0.7;
     const g = this.add.graphics({ x: this.player.x + facing * 21, y: this.player.y - 6 });
-    g.setDepth(6);
+    g.setDepth(COMBAT_FX_DEPTH);
     g.lineStyle(5, color, 0.95);
     g.beginPath();
     g.arc(0, 0, radius, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
@@ -1439,7 +1442,7 @@ export class GameScene extends Phaser.Scene {
   private triggerBigAttackEffect(color: number, time: number, range: number, multiplier: number): void {
     this.cameras.main.flash(250, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
     this.cameras.main.shake(200, 0.01);
-    const burst = this.add.circle(this.player.x, this.player.y - 15, 10, color, 0.5);
+    const burst = this.add.circle(this.player.x, this.player.y - 15, 10, color, 0.5).setDepth(COMBAT_FX_DEPTH);
     this.tweens.add({
       targets: burst,
       radius: range,
@@ -1462,7 +1465,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 遠距離武器の飛翔体を発射する */
   private spawnProjectile(): void {
-    const sprite = this.physics.add.sprite(this.player.x, this.player.y - 9, "orb");
+    const sprite = this.physics.add.sprite(this.player.x, this.player.y - 9, "orb").setDepth(COMBAT_FX_DEPTH);
     (sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     sprite.setVelocityX(PROJECTILE_SPEED * this.playerState.facing);
     const projectile: Projectile = {
@@ -1594,7 +1597,7 @@ export class GameScene extends Phaser.Scene {
 
     const sparkColor = enemy.type === "agile" ? 0x63e1e7 : enemy.type === "tank" ? 0xc0a4ff : 0xffd166;
     for (let i = 0; i < 5; i++) {
-      const spark = this.add.circle(enemy.sprite.x, enemy.sprite.y - 10, 3 + (i % 2), sparkColor, 0.85).setDepth(6);
+      const spark = this.add.circle(enemy.sprite.x, enemy.sprite.y - 10, 3 + (i % 2), sparkColor, 0.85).setDepth(COMBAT_FX_DEPTH);
       this.tweens.add({
         targets: spark,
         x: enemy.sprite.x + Phaser.Math.Between(-28, 28),
@@ -1646,7 +1649,7 @@ export class GameScene extends Phaser.Scene {
 
   private playPlayerDamageFx(sourceX: number): void {
     const direction = sourceX >= this.player.x ? 1 : -1;
-    const impact = this.add.graphics({ x: this.player.x, y: this.player.y - 12 }).setDepth(8);
+    const impact = this.add.graphics({ x: this.player.x, y: this.player.y - 12 }).setDepth(COMBAT_FX_DEPTH);
     impact.lineStyle(5, 0xff5f6d, 0.9)
       .lineBetween(-24 * direction, -28, 18 * direction, 18)
       .lineBetween(-14 * direction, -34, 28 * direction, 8);
@@ -1659,7 +1662,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.height,
       0x9d1830,
       0.14,
-    ).setScrollFactor(0).setDepth(50);
+    ).setScrollFactor(0).setDepth(COMBAT_FLASH_DEPTH);
     this.tweens.add({
       targets: impact,
       alpha: 0,
@@ -1682,7 +1685,7 @@ export class GameScene extends Phaser.Scene {
 
   private playGuardBlockFx(): void {
     this.cameras.main.flash(80, 255, 209, 102);
-    const spark = this.add.circle(this.player.x + this.playerState.facing * 24, this.player.y - 9, 10, 0xffd166, 0.6);
+    const spark = this.add.circle(this.player.x + this.playerState.facing * 24, this.player.y - 9, 10, 0xffd166, 0.6).setDepth(COMBAT_FX_DEPTH);
     this.tweens.add({ targets: spark, scale: 1.8, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
   }
 
@@ -1697,7 +1700,7 @@ export class GameScene extends Phaser.Scene {
         i % 2 ? 3 : 8,
         burstColor,
         0.9,
-      ).setDepth(7).setAngle(Phaser.Math.Between(0, 180));
+      ).setDepth(COMBAT_FX_DEPTH).setAngle(Phaser.Math.Between(0, 180));
       this.tweens.add({
         targets: shard,
         x: enemy.sprite.x + Phaser.Math.Between(-55, 55),
@@ -1768,7 +1771,8 @@ export class GameScene extends Phaser.Scene {
         stroke: "#ffffff",
         strokeThickness: 3,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(COMBAT_FX_DEPTH);
     this.tweens.add({
       targets: obj,
       y: y - 50,
