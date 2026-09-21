@@ -1379,6 +1379,10 @@ export class GameScene extends Phaser.Scene {
     g.beginPath();
     g.arc(0, 0, radius, Phaser.Math.DegToRad(-50), Phaser.Math.DegToRad(50));
     g.strokePath();
+    g.lineStyle(2, color, 0.45);
+    g.beginPath();
+    g.arc(0, 0, radius * 0.72, Phaser.Math.DegToRad(-62), Phaser.Math.DegToRad(62));
+    g.strokePath();
     g.setScale(facing === -1 ? -0.5 : 0.5, 1);
     g.setAlpha(0.95);
     this.tweens.add({
@@ -1393,6 +1397,14 @@ export class GameScene extends Phaser.Scene {
     // プレイヤー自身にも一瞬の白フラッシュを入れ、攻撃の手応えを出す（scale/positionは変更しないので
     // しゃがみ演出やArcade物理のvelocity制御と競合しない）
     this.player.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+    this.player.setAngle(facing * -7);
+    this.tweens.killTweensOf(this.player);
+    this.tweens.add({
+      targets: this.player,
+      angle: 0,
+      duration: Math.max(90, weapon.attackWindowMs),
+      ease: "Back.easeOut",
+    });
     this.time.delayedCall(50, () => this.player.clearTint());
   }
 
@@ -1614,6 +1626,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.playerState = damagePlayer(this.playerState, ENEMY_TOUCH_DAMAGE, now);
+    this.playPlayerDamageFx(enemy.sprite.x);
     this.cameras.main.shake(120, 0.006);
     this.tweens.add({
       targets: this.player,
@@ -1621,6 +1634,37 @@ export class GameScene extends Phaser.Scene {
       duration: 80,
       yoyo: true,
       repeat: 4,
+    });
+  }
+
+  private playPlayerDamageFx(sourceX: number): void {
+    const direction = sourceX >= this.player.x ? 1 : -1;
+    const impact = this.add.graphics({ x: this.player.x, y: this.player.y - 12 }).setDepth(8);
+    impact.lineStyle(5, 0xff5f6d, 0.9)
+      .lineBetween(-24 * direction, -28, 18 * direction, 18)
+      .lineBetween(-14 * direction, -34, 28 * direction, 8);
+    impact.lineStyle(2, 0xffffff, 0.85)
+      .lineBetween(-21 * direction, -26, 15 * direction, 14);
+    const vignette = this.add.rectangle(
+      this.cameras.main.midPoint.x,
+      this.cameras.main.midPoint.y,
+      this.cameras.main.width,
+      this.cameras.main.height,
+      0x9d1830,
+      0.14,
+    ).setScrollFactor(0).setDepth(50);
+    this.tweens.add({
+      targets: impact,
+      alpha: 0,
+      scale: 1.7,
+      duration: 220,
+      onComplete: () => impact.destroy(),
+    });
+    this.tweens.add({
+      targets: vignette,
+      alpha: 0,
+      duration: 240,
+      onComplete: () => vignette.destroy(),
     });
   }
 
