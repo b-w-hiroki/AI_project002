@@ -773,6 +773,21 @@ export class ExpeditionScene extends Phaser.Scene {
           delay: 280,
           duration: 400,
         });
+      const finishMark = this.text(
+        225,
+        356,
+        cleared ? "BREAK!" : "REPULSED",
+        cleared ? 42 : 34,
+        cleared ? `#${visual.glow.toString(16).padStart(6, "0")}` : "#ff8b82",
+      ).setStroke("#241920", 7).setAngle(cleared ? -7 : 0).setAlpha(0);
+      this.tweens.add({
+        targets: finishMark,
+        alpha: 1,
+        scale: { from: 1.45, to: 1 },
+        delay: 220,
+        duration: 180,
+        ease: "Back.easeOut",
+      });
       const verdict = this.text(
         225,
         462,
