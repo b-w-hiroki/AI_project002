@@ -95,6 +95,45 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
   });
+  test("visual QA: normal agile and tank use distinct art", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    const keys = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const current = Reflect.get(scene, "enemies") as Array<{ sprite: Phaser.Physics.Arcade.Sprite }>;
+      current.forEach(enemy => {
+        enemy.sprite.setVisible(false);
+        const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
+        body.enable = false;
+      });
+      Reflect.set(scene, "enemies", []);
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      player.setVisible(false);
+      const scrollY = scene.cameras.main.scrollY;
+      scene.cameras.main.stopFollow();
+      scene.cameras.main.setScroll(0, scrollY);
+      const spawn = Reflect.get(scene, "spawnEnemy");
+      const specs = [
+        { type: "normal", health: 3, defense: 0, speedMul: 1 },
+        { type: "agile", health: 2, defense: 0, speedMul: 1.8 },
+        { type: "tank", health: 7, defense: 2, speedMul: 0.6 },
+      ];
+      [250, 390, 530].forEach((x, i) => spawn.call(scene, 2, specs[i], x, i));
+      scene.physics.pause();
+      return (Reflect.get(scene, "enemies") as Array<{ sprite: Phaser.Physics.Arcade.Sprite }>)
+        .map(enemy => enemy.sprite.texture.key);
+    });
+    expect(keys).toEqual(["goblin-art", "goblin-agile-art", "goblin-tank-art"]);
+    await page.waitForTimeout(250);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-enemy-variants-844x390.png",
+      animations: "disabled",
+    });
+  });
+
   test("visual QA: game over hides touch controls", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");
