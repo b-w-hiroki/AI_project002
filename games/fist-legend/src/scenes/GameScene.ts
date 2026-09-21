@@ -95,6 +95,12 @@ const GACHA_CHAR_IMAGE: Readonly<Record<string, string>> = {
 
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
 
+const OPPONENT_VISUAL: Readonly<Record<Opponent, { accent: number; glow: number; label: string }>> = {
+  rush: { accent: 0xe6533f, glow: 0xffad66, label: "猛攻型" },
+  counter: { accent: 0x4ca67a, glow: 0x8ce6bd, label: "反撃型" },
+  charge: { accent: 0x576ccf, glow: 0xaebaff, label: "気功型" },
+};
+
 export class GameScene extends Phaser.Scene {
   private opponent: Opponent = "rush";
   private beat = 0;
@@ -124,6 +130,9 @@ export class GameScene extends Phaser.Scene {
 
   private playerSprite!: FighterSprite;
   private enemySprite!: FighterSprite;
+  private enemyAura!: Phaser.GameObjects.Graphics;
+  private opponentBadge!: Phaser.GameObjects.Text;
+  private resultAccent!: Phaser.GameObjects.Graphics;
   private gachaCharImage: Phaser.GameObjects.Image | null = null;
   private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
@@ -410,8 +419,19 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0);
 
     this.playerSprite = this.buildFighter(180, IMG.hero, 0x3b7fd1);
+    this.enemyAura = this.add.graphics();
     this.enemySprite = this.buildFighter(620, IMG.enemy, 0xd1493b);
     if (this.enemySprite instanceof Phaser.GameObjects.Image) this.enemySprite.setFlipX(true);
+    this.opponentBadge = this.add
+      .text(620, 382, "", {
+        fontSize: "13px",
+        color: "#fff6df",
+        fontStyle: "800",
+        backgroundColor: "#211710",
+        padding: { x: 10, y: 5 },
+      })
+      .setOrigin(0.5)
+      .setAlpha(0.9);
 
     const ougiBg = this.add.graphics();
     ougiBg.fillStyle(0x000000, 0.5);
@@ -501,7 +521,7 @@ export class GameScene extends Phaser.Scene {
       kiBtn.container,
       this.ougiBtn.container,
     ]).setName("legacy-battle-hud");
-    this.battleGroup.add([...(bg ? [bg] : []), this.playerSprite, this.enemySprite, legacyHud]);
+    this.battleGroup.add([...(bg ? [bg] : []), this.enemyAura, this.playerSprite, this.enemySprite, this.opponentBadge, legacyHud]);
   }
 
   /**
@@ -537,6 +557,7 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(false);
     this.battleGroup.setVisible(true);
     this.moveBuffer = [];
+    this.refreshOpponentVisual(true);
     this.refreshTell();
     this.refreshBattleVisual();
   }
@@ -641,6 +662,20 @@ export class GameScene extends Phaser.Scene {
       if (this.phase === "battle") this.accepting = true;
     });
     this.cameras.main.flash(110, 255, 207, 130);
+    this.cameras.main.shake(180, 0.009);
+    for (const radius of [42, 72, 104]) {
+      const ring = this.add.circle(this.enemySprite.x, this.enemySprite.y - 24, radius, 0xffd76a, 0)
+        .setStrokeStyle(4, 0xffd76a, 0.82);
+      this.battleGroup.add(ring);
+      this.tweens.add({
+        targets: ring,
+        scale: 1.65,
+        alpha: 0,
+        duration: 260 + radius,
+        ease: "Cubic.easeOut",
+        onComplete: () => ring.destroy(),
+      });
+    }
     this.battle = applyPlayerOugi(this.battle);
     this.playSound(sfx.ougi);
     this.showClash("advantage", "punch", "punch", "奥義炸裂！");
@@ -686,8 +721,29 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private refreshOpponentVisual(intro = false): void {
+    const visual = OPPONENT_VISUAL[this.opponent];
+    this.enemyAura.clear();
+    this.enemyAura.fillStyle(visual.glow, 0.08).fillEllipse(620, 340, 190, 72);
+    this.enemyAura.lineStyle(3, visual.accent, 0.56).strokeEllipse(620, 340, 168, 60);
+    this.enemyAura.lineStyle(1, 0xffffff, 0.22).strokeEllipse(620, 340, 146, 50);
+    this.opponentBadge
+      .setText(`${visual.label} · ${OPPONENTS.find(o => o.id === this.opponent)?.name ?? ""}`)
+      .setStyle({ backgroundColor: `#${visual.accent.toString(16).padStart(6, "0")}` });
+    if (intro) {
+      this.opponentBadge.setAlpha(0).setScale(0.82);
+      this.tweens.add({ targets: this.opponentBadge, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
+      this.cameras.main.flash(90,
+        (visual.glow >> 16) & 0xff,
+        (visual.glow >> 8) & 0xff,
+        visual.glow & 0xff,
+      );
+    }
+  }
+
   private refreshTell(): void {
     const enemy = OPPONENTS.find((o) => o.id === this.opponent)!;
+    this.refreshOpponentVisual();
     this.tell.setText(`${enemy.name}  ／  ${MOVE_TELL[this.nextEnemyMove]}
 拳 > 気 > 蹴 > 拳`);
     this.tweens.killTweensOf(this.enemySprite);
@@ -816,8 +872,18 @@ export class GameScene extends Phaser.Scene {
         : outcome === "enemyWin"
           ? "敗北…"
           : "引き分け";
-    heading.setText(outcomeLabel);
+    const resultColor = outcome === "playerWin" ? 0xf2b84a : outcome === "enemyWin" ? 0x5f6d87 : 0x9a7fc1;
+    heading.setText(outcomeLabel).setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#d7dfef" : "#e7d8ff");
     stats.setText(`獲得: 豪拳石 +${reward}（所持: ${balance}）`);
+    this.resultAccent.clear();
+    this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
+    this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
+    this.resultAccent.lineStyle(1, 0xffffff, 0.26).lineBetween(305, 198, 495, 198);
+    if (outcome === "playerWin") {
+      this.cameras.main.flash(150, 255, 218, 130);
+      heading.setScale(0.72);
+      this.tweens.add({ targets: heading, scale: 1, duration: 280, ease: "Back.easeOut" });
+    }
 
     this.resultGroup.setVisible(true);
   }
@@ -827,6 +893,7 @@ export class GameScene extends Phaser.Scene {
   private buildResultScreen(): void {
     this.resultGroup = this.add.container(0, 0);
     const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
+    this.resultAccent = this.add.graphics();
 
     const heading = this.add
       .text(400, 220, "", { ...TYPE.h1, color: THEME.textPrimary })
@@ -864,6 +931,7 @@ export class GameScene extends Phaser.Scene {
 
     this.resultGroup.add([
       panel,
+      this.resultAccent,
       heading,
       stats,
       retryBtn.container,

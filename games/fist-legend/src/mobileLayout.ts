@@ -54,6 +54,12 @@ type MobileUi = {
 
 const uiByScene = new WeakMap<object, MobileUi>();
 
+const OPPONENT_ACCENT: Readonly<Record<Opponent, { accent: number; glow: number; label: string }>> = {
+  rush: { accent: 0xe6533f, glow: 0xffad66, label: "猛攻" },
+  counter: { accent: 0x4ca67a, glow: 0x8ce6bd, label: "反撃" },
+  charge: { accent: 0x576ccf, glow: 0xaebaff, label: "気功" },
+};
+
 function text(
   scene: Phaser.Scene,
   x: number,
@@ -291,6 +297,8 @@ function refresh(scene: Runtime): void {
   if (scene.phase === "battle" && scene.battle) {
     positionFighters(scene, portrait);
     const battle = scene.battle;
+    const opponentVisual = OPPONENT_ACCENT[scene.opponent ?? "rush"];
+    const opponentName = OPPONENTS.find(opponent => opponent.id === scene.opponent)?.name ?? OPPONENTS[0]!.name;
     const playerRatio = Phaser.Math.Clamp(battle.playerHp / MAX_HP, 0, 1);
     const enemyRatio = Phaser.Math.Clamp(battle.enemyHp / MAX_HP, 0, 1);
     const gaugeRatio = Phaser.Math.Clamp(battle.playerGauge / OUGI_GAUGE_MAX, 0, 1);
@@ -302,7 +310,9 @@ function refresh(scene: Runtime): void {
     ui.chrome.fillStyle(0xe74d30, 1).fillRoundedRect(18, hpY, width * 0.38 * playerRatio, 12, 6);
     const enemyX = width - 18 - width * 0.38;
     ui.chrome.fillStyle(0x12233c, 1).fillRoundedRect(enemyX, hpY, width * 0.38, 12, 6);
-    ui.chrome.fillStyle(0x489ff0, 1).fillRoundedRect(enemyX + width * 0.38 * (1 - enemyRatio), hpY, width * 0.38 * enemyRatio, 12, 6);
+    ui.chrome.fillStyle(opponentVisual.accent, 1).fillRoundedRect(enemyX + width * 0.38 * (1 - enemyRatio), hpY, width * 0.38 * enemyRatio, 12, 6);
+    ui.chrome.lineStyle(2, opponentVisual.glow, 0.45).strokeRoundedRect(enemyX - 3, hpY - 4, width * 0.38 + 6, 20, 9);
+    ui.chrome.fillStyle(opponentVisual.glow, portrait ? 0.055 : 0.04).fillCircle(portrait ? 225 : 615, portrait ? 270 : 245, portrait ? 116 : 132);
     if (portrait) {
       ui.chrome.fillStyle(0x120a08, 0.95).fillRect(0, 620, 450, 180);
       ui.chrome.lineStyle(1, 0xffd68a, 0.32).lineBetween(0, 620, 450, 620);
@@ -334,7 +344,10 @@ function refresh(scene: Runtime): void {
     }
 
     const remaining = Math.max(0, Math.ceil(scene.timeRemainingSec ?? 0));
-    ui.battleStatus.setPosition(18, portrait ? 18 : 50).setText(`PLAYER ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ENEMY ${battle.enemyHp}/${MAX_HP}`);
+    ui.battleStatus
+      .setPosition(18, portrait ? 18 : 50)
+      .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
+      .setText(`PLAYER ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
     ui.battleTell.setText(`${MOVE_TELL[scene.nextEnemyMove ?? "punch"]}\n拳 > 気 > 蹴 > 拳`);
     ui.battleGauge.setText(gaugeRatio >= 1 ? "奥義 READY" : `奥義 ${Math.round(gaugeRatio * 100)}%  ·  EXCHANGE ${(scene.beat ?? 0) + 1}`);
     return;
