@@ -35,9 +35,18 @@ import {
   addCurrency,
   incrementWinCount,
   loadCurrency,
+  loadTeam,
   loadWinCount,
+  saveTeam,
   spendCurrency,
 } from "../logic/progress";
+import {
+  FIGHTERS,
+  fighterById,
+  teamLabel,
+  toggleTeamMember,
+  type FighterId,
+} from "../logic/team";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -108,6 +117,9 @@ export class GameScene extends Phaser.Scene {
   private tell!: Phaser.GameObjects.Text;
   private opponentHint!: Phaser.GameObjects.Text;
   private selectionButtons: ReturnType<typeof makeButton>[] = [];
+  private teamButtons: ReturnType<typeof makeButton>[] = [];
+  private selectedTeam: FighterId[] = ["ryuga"];
+  private teamSummary!: Phaser.GameObjects.Text;
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
   private timeRemainingSec = ROUND_TIME_SEC;
@@ -121,6 +133,7 @@ export class GameScene extends Phaser.Scene {
   private gachaGroup!: Phaser.GameObjects.Container;
 
   private playerHpFill!: Phaser.GameObjects.Graphics;
+  private playerLabel!: Phaser.GameObjects.Text;
   private enemyHpFill!: Phaser.GameObjects.Graphics;
   private ougiFill!: Phaser.GameObjects.Graphics;
   private ougiBtn!: ReturnType<typeof makeButton>;
@@ -190,6 +203,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x1a1410);
+    this.selectedTeam = loadTeam();
     this.buildTitleScreen();
     this.buildBattleScreen();
     this.tell = this.add
@@ -298,6 +312,33 @@ export class GameScene extends Phaser.Scene {
       { fontSize: "16px" },
     );
 
+    this.teamSummary = this.add
+      .text(400, 448, "", {
+        fontSize: "12px",
+        color: "#ffe5b5",
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    FIGHTERS.forEach((fighter, index) => {
+      const button = makeButton(
+        this,
+        190 + index * 140,
+        474,
+        128,
+        34,
+        fighter.name,
+        () => this.toggleTeamMember(fighter.id),
+        {
+          fontSize: "12px",
+          fillColor: fighter.accent === 0xffffff ? 0x6d3f2f : fighter.accent,
+          borderColor: 0xffe1b0,
+        },
+      );
+      this.teamButtons.push(button);
+      this.titleGroup.add(button.container);
+    });
+
     this.soundIcon = drawSpeakerIcon(this, 770, 29, this.soundOn, 16);
     const soundHit = this.add
       .rectangle(770, 29, 36, 36, 0x000000, 0)
@@ -323,6 +364,7 @@ export class GameScene extends Phaser.Scene {
       rules,
       startBtn.container,
       gachaBtn.container,
+      this.teamSummary,
       this.soundIcon,
       soundHit,
     ]);
@@ -358,6 +400,28 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private toggleTeamMember(id: FighterId): void {
+    const next = toggleTeamMember(this.selectedTeam, id);
+    if (next.join("|") === this.selectedTeam.join("|")) return;
+    this.selectedTeam = saveTeam(next);
+    this.playSound(sfx.buttonTap);
+    this.refreshTeamSelection();
+  }
+
+  private refreshTeamSelection(): void {
+    this.teamSummary?.setText(`編成 ${this.selectedTeam.length}/3 · ${teamLabel(this.selectedTeam)} · 先頭が出場`);
+    this.teamButtons.forEach((button, index) => {
+      const fighter = FIGHTERS[index];
+      button.container.setAlpha(fighter && this.selectedTeam.includes(fighter.id) ? 1 : 0.42);
+    });
+    const leader = fighterById(this.selectedTeam[0] ?? "ryuga");
+    this.playerLabel?.setText(`PLAYER · ${leader.name}`);
+    if (this.playerSprite instanceof Phaser.GameObjects.Image) {
+      if (leader.id === "ryuga") this.playerSprite.clearTint();
+      else this.playerSprite.setTint(leader.accent);
+    }
+  }
+
   private playSound(fn: () => void): void {
     if (this.soundOn) fn();
   }
@@ -376,6 +440,7 @@ export class GameScene extends Phaser.Scene {
     };
     currencyPill.setText(`豪拳石 ${loadCurrency()}`);
     winPill.setText(`勝利 ${loadWinCount()}`);
+    this.refreshTeamSelection();
   }
 
   // ---------- バトル ----------
@@ -398,9 +463,10 @@ export class GameScene extends Phaser.Scene {
     enemyHpBg.fillRoundedRect(460, 30, 300, 18, 6);
     this.enemyHpFill = this.add.graphics();
 
-    const playerLabel = this.add
-      .text(40, 12, "プレイヤー", { ...TYPE.small, color: THEME.textMuted })
-      .setOrigin(0, 0.5);
+    this.playerLabel = this.add
+      .text(40, 12, "PLAYER", { ...TYPE.small, color: THEME.textMuted })
+      .setOrigin(0, 0.5)
+      .setName("player-label");
     const enemyLabel = this.add
       .text(760, 12, "対戦相手", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(1, 0.5);
@@ -510,7 +576,7 @@ export class GameScene extends Phaser.Scene {
       this.playerHpFill,
       enemyHpBg,
       this.enemyHpFill,
-      playerLabel,
+      this.playerLabel,
       enemyLabel,
       this.timerText,
       this.clashText,
@@ -558,6 +624,7 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(false);
     this.battleGroup.setVisible(true);
     this.moveBuffer = [];
+    this.refreshTeamSelection();
     this.refreshOpponentVisual(true);
     this.refreshTell();
     this.refreshBattleVisual();
