@@ -93,6 +93,7 @@ import {
   makeTappable,
 } from "../ui/touch";
 import { cg } from "../platform/crazygames";
+import { sfx } from "../platform/audio";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
 import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
@@ -1318,6 +1319,7 @@ export class GameScene extends Phaser.Scene {
     const next = useSkill(this.playerState, time);
     if (!next) return;
     this.playerState = next;
+    sfx.skill();
     this.cameras.main.flash(150, 127, 209, 255);
     this.dashAttack(SKILL_RANGE, WEAPONS[this.playerState.equippedWeapon].damage * SKILL_DAMAGE_MULTIPLIER, time);
   }
@@ -1341,6 +1343,7 @@ export class GameScene extends Phaser.Scene {
       const next = startAttack(this.playerState, time);
       if (next) {
         this.playerState = next;
+        sfx.slash();
         const weapon = currentWeapon(this.playerState);
         if (weapon.projectile) {
           this.spawnProjectile();
@@ -1537,8 +1540,10 @@ export class GameScene extends Phaser.Scene {
               enemy.sprite.x + 7,
               enemy.sprite.y - 78,
             );
-        } else if (phase === "charge") body.setVelocityX(enemy.bossDir * 330);
-        else body.setVelocityX(0);
+        } else if (phase === "charge") {
+          if (enemy.lastBossPhase !== "charge") sfx.bossCharge();
+          body.setVelocityX(enemy.bossDir * 330);
+        } else body.setVelocityX(0);
         enemy.dir = enemy.bossDir;
         enemy.lastBossPhase = phase;
       } else body.setVelocityX(enemy.dir * 60 * enemy.speedMul);
@@ -1586,6 +1591,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 命中時の演出: 白発光・スパーク・短いノックバック */
   private onEnemyHit(enemy: EnemySprite): void {
+    sfx.hit();
     const dedicatedArt = Object.values(ENEMY_ART_TEXTURE).includes(enemy.sprite.texture.key);
     enemy.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.time.delayedCall(80, () => {
@@ -1636,6 +1642,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.playerState = damagePlayer(this.playerState, ENEMY_TOUCH_DAMAGE, now);
+    sfx.hurt();
     this.playPlayerDamageFx(enemy.sprite.x);
     this.cameras.main.shake(120, 0.006);
     this.tweens.add({
@@ -1684,6 +1691,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playGuardBlockFx(): void {
+    sfx.guard();
     this.cameras.main.flash(80, 255, 209, 102);
     const spark = this.add.circle(this.player.x + this.playerState.facing * 24, this.player.y - 9, 10, 0xffd166, 0.6).setDepth(COMBAT_FX_DEPTH);
     this.tweens.add({ targets: spark, scale: 1.8, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
@@ -1735,6 +1743,7 @@ export class GameScene extends Phaser.Scene {
     if (this.waveEnemiesAlive <= 0 && this.waveActive) {
       this.waveActive = false;
       this.spawnFloatingText(this.player.x, this.player.y - 90, `WAVE ${this.wave} CLEAR!`, "#1f8a63");
+      sfx.waveClear();
       this.cameras.main.flash(200, 127, 209, 255);
       cg.happytime();
       this.time.delayedCall(WAVE_INTERMISSION_MS, () => {
