@@ -537,6 +537,7 @@ export class GameScene extends Phaser.Scene {
     this.gachaGroup.setVisible(false);
     this.battleGroup.setVisible(true);
     this.moveBuffer = [];
+    this.styleOpponentVisual();
     this.refreshTell();
     this.refreshBattleVisual();
   }
@@ -678,12 +679,41 @@ export class GameScene extends Phaser.Scene {
     // 古いtweenが残ったまま新しいtweenを積むと表示が崩れることがあるため、先に停止させる
     this.tweens.killTweensOf(this.clashText);
     this.clashText.setText(text).setAlpha(1);
+    this.clashText.setScale(clash === "advantage" ? 1.16 : clash === "disadvantage" ? 0.94 : 1);
     this.tweens.add({
       targets: this.clashText,
       alpha: 0,
+      scale: 1,
       delay: 500,
       duration: 300,
     });
+    if (clash === "advantage") {
+      this.cameras.main.shake(90, 0.004);
+      const ring = this.add.circle(400, 300, 36, 0xffc94a, 0).setStrokeStyle(4, 0xffc94a, 0.72).setDepth(20);
+      this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 260, onComplete: () => ring.destroy() });
+    }
+  }
+
+  /** 3タイプを同じ立ち絵の色違いだけにせず、構え・スケール・気配で性格を分ける。 */
+  private styleOpponentVisual(): void {
+    const styles: Record<Opponent, { tint: number; scaleX: number; scaleY: number; aura: number }> = {
+      rush: { tint: 0xffc1b6, scaleX: 1.06, scaleY: 1.02, aura: 0xff654f },
+      counter: { tint: 0xc9dcff, scaleX: 0.98, scaleY: 1.04, aura: 0x6aa8ff },
+      charge: { tint: 0xd8c4ff, scaleX: 1.02, scaleY: 1.08, aura: 0x9a68e8 },
+    };
+    const style = styles[this.opponent];
+    this.enemySprite.setScale(style.scaleX, style.scaleY);
+    if (this.enemySprite instanceof Phaser.GameObjects.Image) {
+      this.enemySprite.setTint(style.tint);
+      this.enemySprite.setFlipX(true);
+    }
+    const oldAura = this.battleGroup.getByName("opponent-aura");
+    oldAura?.destroy();
+    const aura = this.add.circle(620, FIGHTER_Y + 5, this.opponent === "charge" ? 72 : 58, style.aura, 0.11)
+      .setStrokeStyle(2, style.aura, 0.35)
+      .setName("opponent-aura");
+    this.battleGroup.addAt(aura, 1);
+    this.tweens.add({ targets: aura, scale: 1.15, alpha: 0.04, duration: 800, yoyo: true, repeat: -1 });
   }
 
   private refreshTell(): void {
@@ -820,6 +850,25 @@ export class GameScene extends Phaser.Scene {
     stats.setText(`獲得: 豪拳石 +${reward}（所持: ${balance}）`);
 
     this.resultGroup.setVisible(true);
+    heading.setScale(0.72).setAlpha(0);
+    this.tweens.add({ targets: heading, scale: 1, alpha: 1, duration: 360, ease: "Back.easeOut" });
+    if (outcome === "playerWin") {
+      this.cameras.main.flash(240, 255, 218, 112);
+      for (let i = 0; i < 10; i++) {
+        const angle = (Math.PI * 2 * i) / 10;
+        const shard = this.add.rectangle(400, 250, 5, 16, i % 2 ? 0xffc94a : 0xff765f, 0.9).setDepth(30).setRotation(angle);
+        this.resultGroup.add(shard);
+        this.tweens.add({
+          targets: shard,
+          x: 400 + Math.cos(angle) * 150,
+          y: 250 + Math.sin(angle) * 100,
+          alpha: 0,
+          angle: shard.angle + 120,
+          duration: 520,
+          onComplete: () => shard.destroy(),
+        });
+      }
+    }
   }
 
   // ---------- 結果 ----------
