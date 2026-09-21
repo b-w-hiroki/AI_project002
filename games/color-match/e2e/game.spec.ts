@@ -70,3 +70,41 @@ test("portrait result keeps the mock hierarchy", async ({ page }) => {
   await expect.poll(() => phase(page)).toBe("result");
   await checkFrame(page, "portrait-result");
 });
+
+test("high-accuracy result shows an S grade in portrait and landscape", async ({ page }) => {
+  await tapPoint(page, 225, 705);
+  await expect.poll(() => phase(page)).toBe("playing");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "results", Array.from({ length: 12 }, (_, index) => ({
+      correct: true,
+      timedOut: false,
+      reactionMs: 620 + index * 8,
+      mode: index % 2 === 0 ? "content" : "color",
+      switched: index % 3 === 0,
+    })));
+    Reflect.set(scene, "turboPoints", 18);
+    Reflect.get(scene, "endSession").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await page.waitForTimeout(280);
+  await checkFrame(page, "portrait-result-grade-s");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await checkFrame(page, "landscape-result-grade-s");
+});
+
+test("landscape FLOW mode gets a visible board aura", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSession").call(scene);
+    Reflect.set(scene, "turboStreak", 5);
+    Reflect.set(scene, "turboPoints", 12);
+  });
+  await expect.poll(() => phase(page)).toBe("playing");
+  await page.waitForTimeout(100);
+  await checkFrame(page, "landscape-flow-aura");
+});
+

@@ -38,6 +38,7 @@ type LandscapeUi = {
   title: Phaser.GameObjects.Container;
   play: Phaser.GameObjects.Container;
   result: Phaser.GameObjects.Container;
+  flowGlow: Phaser.GameObjects.Graphics;
   timerRing: Phaser.GameObjects.Graphics;
   timerText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
@@ -156,6 +157,9 @@ function build(scene: Runtime): LandscapeUi {
   const result = scene.add.container(0, 0);
   root.add([title, play, result]);
 
+  const flowGlow = scene.add.graphics();
+  play.add(flowGlow);
+
   panel(scene, title, 250, 225, 400, 300, 0x164f82, 0x9be9ff, 0.94, 22);
   text(scene, title, 250, 118, "色と文字のズレを見抜け！", 25, "#ffffff", "900");
   text(scene, title, 250, 170, "60秒で判断。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", 14, "#def5ff", "700");
@@ -229,6 +233,7 @@ function build(scene: Runtime): LandscapeUi {
     title,
     play,
     result,
+    flowGlow,
     timerRing,
     timerText,
     scoreText,
@@ -267,6 +272,15 @@ function refresh(scene: Runtime): void {
     const correct = scene.results?.filter((entry) => entry.correct).length ?? 0;
     const score = correct * 100 + (scene.turboPoints ?? 0) * 10;
 
+    ui.flowGlow.clear();
+    if (streak >= TURBO_ENTRY_STREAK) {
+      const pulse = 0.10 + (Math.sin(scene.time.now / 140) + 1) * 0.035;
+      ui.flowGlow.fillStyle(0xff7a3d, pulse).fillRoundedRect(12, 74, 776, 340, 24);
+      ui.flowGlow.lineStyle(5, 0xffd35e, 0.42).strokeRoundedRect(16, 78, 768, 332, 22);
+      ui.flowGlow.fillStyle(0xffe96a, 0.08).fillCircle(225, 225, 128);
+      ui.flowGlow.fillStyle(0xff7a3d, 0.07).fillCircle(650, 240, 150);
+    }
+
     ui.timerRing.clear();
     ui.timerRing.fillStyle(0x113c65, 0.96).fillCircle(88, 115, 48);
     ui.timerRing.lineStyle(8, seconds <= 10 ? 0xff5f78 : 0x65dff7, 0.28).strokeCircle(88, 115, 47);
@@ -286,7 +300,18 @@ function refresh(scene: Runtime): void {
 
   if (scene.phase === "result") {
     const summary = summarizeSession(scene.results ?? []);
-    ui.resultHeading.setText(`SCORE ${summary.score}`);
+    const accuracyPct = Math.round(summary.accuracy * 100);
+    const grade = accuracyPct >= 95 && summary.avgReactionMs <= 900
+      ? "S"
+      : accuracyPct >= 85
+        ? "A"
+        : accuracyPct >= 70
+          ? "B"
+          : "C";
+    ui.flowGlow.clear();
+    ui.resultHeading
+      .setText(`${grade}  ·  SCORE ${summary.score}`)
+      .setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
     ui.resultStats.setText(
       `正答率 ${Math.round(summary.accuracy * 100)}%   ·   平均反応 ${Math.round(summary.avgReactionMs)}ms\n` +
       `TURBO ${scene.turboPoints ?? 0}pt   ·   BEST ${loadBestScore()}   ·   BEST TURBO ${loadBestTurbo()}pt`,
