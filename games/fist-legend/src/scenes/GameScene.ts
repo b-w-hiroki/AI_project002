@@ -336,7 +336,6 @@ export class GameScene extends Phaser.Scene {
         },
       );
       this.teamButtons.push(button);
-      this.titleGroup.add(button.container);
     });
 
     this.soundIcon = drawSpeakerIcon(this, 770, 29, this.soundOn, 16);
@@ -365,6 +364,7 @@ export class GameScene extends Phaser.Scene {
       startBtn.container,
       gachaBtn.container,
       this.teamSummary,
+      ...this.teamButtons.map(button => button.container),
       this.soundIcon,
       soundHit,
     ]);
