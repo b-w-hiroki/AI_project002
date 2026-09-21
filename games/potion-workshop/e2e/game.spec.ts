@@ -1,11 +1,19 @@
 import { expect, test } from "@playwright/test";
+import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
+
+declare global { interface Window { __qaGame: Phaser.Game } }
 
 const SAVE_KEY = "ai_project002_save_v1";
 
 test.beforeEach(async ({ page }) => {
+  await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
+  });
   await page.goto("/");
   await page.locator("canvas").waitFor();
+  await page.waitForFunction(() => !!window.__qaGame);
   await page.waitForTimeout(600);
 });
 
@@ -96,3 +104,53 @@ test("visual QA: brewing shows a magical burst", async ({ page }) => {
   });
 });
 
+
+
+test("prestige opens two town choices and moves to the selected town", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  const initial = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", {
+      ...state,
+      potions: 2_000_000,
+      totalBrewed: 1_000_000,
+      lifetimeBrewed: Math.max(Number(state.lifetimeBrewed ?? 0), 1_000_000),
+      prestigeCount: 0,
+      townIndex: 0,
+    });
+    Reflect.get(scene, "showTownChoice").call(scene);
+    const modal = Reflect.get(scene, "townChoiceModal") as Phaser.GameObjects.Container;
+    const names = modal.list
+      .filter(node => node.type === "Zone" && node.name.startsWith("town-choice-"))
+      .map(node => node.name);
+    return { names, state: Reflect.get(scene, "state") };
+  });
+  expect(initial.names).toEqual(["town-choice-1", "town-choice-2"]);
+
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-town-choice.png",
+    animations: "disabled",
+  });
+
+  const next = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const modal = Reflect.get(scene, "townChoiceModal") as Phaser.GameObjects.Container;
+    const choose = modal.getData("chooseTown") as (townIndex: number) => void;
+    choose(2);
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    return {
+      townIndex: state.townIndex,
+      prestigeCount: state.prestigeCount,
+      essence: state.essence,
+    };
+  });
+  expect(next.townIndex).toBe(2);
+  expect(next.prestigeCount).toBe(1);
+  expect(Number(next.essence)).toBeGreaterThanOrEqual(1);
+
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}"), SAVE_KEY);
+  expect(saved.state.townIndex).toBe(2);
+  expect(saved.state.prestigeCount).toBe(1);
+});

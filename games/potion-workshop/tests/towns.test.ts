@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOWNS, townForPrestige } from "../src/logic/towns";
+import { TOWNS, nextTownChoices, townForPrestige, townForState } from "../src/logic/towns";
 
 describe("townForPrestige", () => {
   it("転生0回目は最初の街", () => {
@@ -24,5 +24,17 @@ describe("townForPrestige", () => {
     const farFuture = townForPrestige(TOWNS.length * 5 + 3);
     expect(farFuture.cycle).toBe(5);
     expect(farFuture.index).toBe(3);
+  });
+
+  it("選択した街indexを現在地として使う", () => {
+    expect(townForState({ townIndex: 4, prestigeCount: 2 }).name).toContain("竜脈の谷");
+  });
+
+  it("次の転生先を2候補から選べる", () => {
+    const [a, b] = nextTownChoices({ townIndex: 0, prestigeCount: 0 });
+    expect(a.index).toBe(1);
+    expect(b.index).toBe(2);
+    expect(a.demandGeneratorId).not.toBeNull();
+    expect(b.contractRewardMultiplier).toBeGreaterThan(a.contractRewardMultiplier);
   });
 });
