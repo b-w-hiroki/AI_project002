@@ -845,9 +845,15 @@ export class ExpeditionScene extends Phaser.Scene {
         const enemy = this.add
           .image(298, 320, "st-boss-gatekeeper")
           .setDisplaySize(281.25, 375)
-          .setTint(region.tint)
+          .setTint(visual.accent)
           .setName("gatekeeper-boss");
         this.root.add(enemy);
+        const badge = this.add.graphics();
+        badge.fillStyle(0x0d121c, 0.9).fillRoundedRect(235, 145, 126, 34, 10);
+        badge.lineStyle(2, visual.accent, 0.9).strokeRoundedRect(235, 145, 126, 34, 10);
+        this.root.add(badge);
+        this.text(298, 162, visual.title, 13, `#${visual.glow.toString(16).padStart(6, "0")}`)
+          .setName("boss-visual-badge");
         this.tweens.add({
           targets: enemy,
           y: 317,
