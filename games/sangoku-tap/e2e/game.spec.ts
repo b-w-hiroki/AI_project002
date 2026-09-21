@@ -146,3 +146,33 @@ test("gatekeeper clear uses the dedicated strike cinematic", async ({ page }) =>
   });
 });
 
+test("small skirmish win shows attack and hit impact", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 700, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+
+  const message = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const run = Reflect.get(scene, "run") as Record<string, unknown>;
+    Reflect.set(scene, "run", { ...run, step: 0, fork: false, status: "active", hp: 100 });
+    Reflect.set(scene, "random", () => 0);
+    Reflect.get(scene, "render").call(scene);
+    Reflect.get(scene, "advance").call(scene);
+    return (Reflect.get(scene, "run") as Record<string, unknown>).message;
+  });
+  expect(String(message)).toContain("小競り合い：勝利");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+    return !!root.getByName("skirmish-impact");
+  })).toBe(true);
+  await page.waitForTimeout(70);
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/landscape-skirmish-impact.png",
+    animations: "disabled",
+  });
+});
+
