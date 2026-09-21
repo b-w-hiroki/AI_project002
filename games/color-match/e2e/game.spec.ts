@@ -108,3 +108,33 @@ test("landscape FLOW mode gets a visible board aura", async ({ page }) => {
   await checkFrame(page, "landscape-flow-aura");
 });
 
+test("20-second weakness practice locks the weak judge and records stats", async ({ page }) => {
+  const state = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startPractice").call(scene);
+    const round = Reflect.get(scene, "currentRound") as { judgeMode: "content" | "color" };
+    return {
+      phase: Reflect.get(scene, "phase"),
+      mode: Reflect.get(scene, "sessionMode"),
+      duration: Reflect.get(scene, "sessionDurationMs"),
+      weak: Reflect.get(scene, "practiceJudgeMode"),
+      roundMode: round.judgeMode,
+    };
+  });
+  expect(state.phase).toBe("playing");
+  expect(state.mode).toBe("practice");
+  expect(state.duration).toBe(20_000);
+  expect(state.roundMode).toBe(state.weak);
+
+  await checkFrame(page, "portrait-practice-weakness");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await checkFrame(page, "landscape-practice-weakness");
+
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("color_match_performance_v1"))).not.toBeNull();
+  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem("color_match_performance_v1") ?? "{}"));
+  expect(stats[state.weak].total).toBeGreaterThanOrEqual(1);
+});
+
