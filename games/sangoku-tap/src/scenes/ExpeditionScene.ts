@@ -773,13 +773,27 @@ export class ExpeditionScene extends Phaser.Scene {
           delay: 280,
           duration: 400,
         });
-      const finishMark = this.text(
-        225,
-        356,
-        cleared ? "BREAK!" : "REPULSED",
-        cleared ? 42 : 34,
-        cleared ? `#${visual.glow.toString(16).padStart(6, "0")}` : "#ff8b82",
-      ).setStroke("#241920", 7).setAngle(cleared ? -7 : 0).setAlpha(0);
+      const viewportWidth = this.scale.gameSize.width;
+      const viewportHeight = this.scale.gameSize.height;
+      const finishMark = this.add
+        .text(
+          viewportWidth / 2,
+          viewportHeight * 0.46,
+          cleared ? "BREAK!" : "REPULSED",
+          {
+            fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
+            fontSize: `${cleared ? 44 : 34}px`,
+            fontStyle: "900",
+            color: cleared ? `#${visual.glow.toString(16).padStart(6, "0")}` : "#ff8b82",
+            stroke: "#241920",
+            strokeThickness: 8,
+          },
+        )
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(5000)
+        .setAngle(cleared ? -7 : 0)
+        .setAlpha(0);
       this.tweens.add({
         targets: finishMark,
         alpha: 1,
@@ -788,6 +802,7 @@ export class ExpeditionScene extends Phaser.Scene {
         duration: 180,
         ease: "Back.easeOut",
       });
+      this.time.delayedCall(900, () => finishMark.destroy());
       const verdict = this.text(
         225,
         462,
