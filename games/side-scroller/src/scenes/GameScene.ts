@@ -451,6 +451,8 @@ export class GameScene extends Phaser.Scene {
   private generateTextures(): void {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
+    this.drawEnemyVariantTexture("goblin-agile", "agile");
+    this.drawEnemyVariantTexture("goblin-tank", "tank");
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
     this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
@@ -545,6 +547,52 @@ export class GameScene extends Phaser.Scene {
     gfx.destroy();
   }
 
+  /** 敏捷型/タンク型を色違いではなくシルエットから見分けられる専用テクスチャにする。 */
+  private drawEnemyVariantTexture(key: string, type: "agile" | "tank"): void {
+    const k = CHAR_SCALE;
+    const w = HUMANOID_BASE.w * k;
+    const h = HUMANOID_BASE.h * k;
+    const gfx = this.make.graphics({ x: 0, y: 0 }, false);
+
+    gfx.fillStyle(0x000000, 0.24);
+    gfx.fillEllipse(w / 2, h - 3 * k, (type === "tank" ? 25 : 17) * k, 6 * k);
+
+    if (type === "agile") {
+      // 細身・前傾・長い耳/スカーフで速度型と一目で分かる。
+      gfx.fillStyle(0x4aa7d8, 1);
+      gfx.fillRoundedRect(9 * k, 17 * k, 13 * k, 19 * k, 4 * k);
+      gfx.fillStyle(0xbfeaff, 1);
+      gfx.fillTriangle(8 * k, 9 * k, 3 * k, 1 * k, 11 * k, 5 * k);
+      gfx.fillTriangle(21 * k, 9 * k, 27 * k, 2 * k, 20 * k, 5 * k);
+      gfx.fillCircle(15 * k, 10 * k, 8 * k);
+      gfx.fillStyle(0x155a86, 1);
+      gfx.fillTriangle(9 * k, 18 * k, 2 * k, 25 * k, 11 * k, 24 * k);
+      gfx.fillRoundedRect(7 * k, 35 * k, 5 * k, 7 * k, 2 * k);
+      gfx.fillRoundedRect(18 * k, 35 * k, 5 * k, 7 * k, 2 * k);
+      gfx.lineStyle(2 * k, 0xe7f8ff, 0.95);
+      gfx.lineBetween(21 * k, 22 * k, 29 * k, 14 * k);
+    } else {
+      // 幅広い鎧・角兜・大盾で耐久型と一目で分かる。
+      gfx.fillStyle(0x56358f, 1);
+      gfx.fillRoundedRect(3 * k, 15 * k, 24 * k, 24 * k, 5 * k);
+      gfx.fillStyle(0xbca7e8, 1);
+      gfx.fillCircle(15 * k, 10 * k, 10 * k);
+      gfx.fillTriangle(7 * k, 5 * k, 3 * k, 0, 11 * k, 4 * k);
+      gfx.fillTriangle(23 * k, 5 * k, 27 * k, 0, 19 * k, 4 * k);
+      gfx.fillStyle(0x33205f, 1);
+      gfx.fillRoundedRect(0, 20 * k, 9 * k, 17 * k, 3 * k);
+      gfx.lineStyle(2 * k, 0xe4d8ff, 0.9);
+      gfx.strokeRoundedRect(0, 20 * k, 9 * k, 17 * k, 3 * k);
+      gfx.fillRoundedRect(6 * k, 37 * k, 7 * k, 5 * k, 2 * k);
+      gfx.fillRoundedRect(17 * k, 37 * k, 7 * k, 5 * k, 2 * k);
+    }
+
+    gfx.fillStyle(0x172033, 1);
+    gfx.fillCircle(18 * k, 10 * k, 1.6 * k);
+    gfx.generateTexture(key, w, h);
+    gfx.destroy();
+  }
+
   /** 固定ゴールへ向かうステージ制から、ウェーブ式サバイバル用の固定サイズアリーナに変更した */
   private buildLevel(): void {
     if (this.textures.exists(ART_BG_KEY)) {
@@ -624,20 +672,23 @@ export class GameScene extends Phaser.Scene {
     x: number,
     index: number,
   ): void {
-    // 通常敵のみイラスト版（ゴブリン）。agile/tank は色ティントで区別する従来のプレースホルダーのまま
     const useArt =
       spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
+    const variantTexture =
+      spec.type === "agile" ? "goblin-agile" : spec.type === "tank" ? "goblin-tank" : null;
     const sprite = this.physics.add.sprite(
       x,
       GROUND_Y - 45,
-      useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin",
+      useArt ? ENEMY_NORMAL_ART_TEXTURE : (variantTexture ?? "goblin"),
     );
     sprite.setCollideWorldBounds(true);
     sprite.setDepth(2);
     const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
     sprite.setSize(ENEMY_BODY.w, ENEMY_BODY.h).setOffset(off.x, off.y);
-    sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
-    if (spec.type === "tank") sprite.setScale(1.4); // ボス/タンク型は一目で分かるよう一回り大きくする
+    // 通常敵のイラストだけは原色を保持。専用テクスチャ側でタイプ色を持つためティントに依存しない。
+    if (!useArt && !variantTexture) sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
+    if (spec.type === "agile") sprite.setScale(0.92, 1.08);
+    if (spec.type === "tank") sprite.setScale(1.42, 1.28);
     this.physics.add.collider(sprite, this.platforms);
 
     const patrolRadius = 80 * spec.speedMul;
@@ -656,11 +707,33 @@ export class GameScene extends Phaser.Scene {
     };
     this.enemies.push(enemy);
 
+    if (enemy.boss) this.addBossAura(enemy);
+    else if (spec.type === "agile") {
+      const streak = this.add.rectangle(sprite.x - 20, sprite.y, 34, 3, 0x9be6ff, 0.45).setDepth(1);
+      this.tweens.add({ targets: streak, alpha: 0, x: streak.x - 28, duration: 420, repeat: -1, onRepeat: () => streak.setPosition(sprite.x - 20, sprite.y) });
+    }
+
     // すり抜けず物理的にぶつかるようにする（overlap のみだと敵の体を通り抜けてしまい、
     // 剣の間合いに留まれず「当たらない」と感じる原因になっていた）
     this.physics.add.collider(this.player, sprite, () =>
       this.onPlayerTouchEnemy(enemy),
     );
+  }
+
+  /** ボスの背後に常時薄いオーラを置き、通常タンクとの格差を出す。 */
+  private addBossAura(enemy: EnemySprite): void {
+    const aura = this.add.circle(enemy.sprite.x, enemy.sprite.y, 52, 0xe0447a, 0.14).setDepth(1);
+    aura.setStrokeStyle(3, 0xffd166, 0.45);
+    this.tweens.add({
+      targets: aura,
+      scale: { from: 0.9, to: 1.18 },
+      alpha: { from: 0.18, to: 0.05 },
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      onUpdate: () => aura.setPosition(enemy.sprite.x, enemy.sprite.y),
+    });
+    enemy.sprite.once(Phaser.GameObjects.Events.DESTROY, () => aura.destroy());
   }
 
   /**
@@ -1607,6 +1680,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onEnemyKilled(_enemy: EnemySprite): void {
+    this.spawnEnemyDefeatFx(_enemy);
     this.playerState = addScore(this.playerState, SCORE_PER_KILL);
     const unlocked = this.playerState.hiougiUnlocked;
     this.playerState = checkHiougiUnlock(this.playerState);
@@ -1625,6 +1699,25 @@ export class GameScene extends Phaser.Scene {
         if (this.status !== "playing") return; // 死亡直後などは次ウェーブを出さない
         this.wave += 1;
         this.spawnWave(this.wave);
+      });
+    }
+  }
+
+  /** 撃破時にタイプ色の破片とリングを出し、静止画でも撃破感が伝わるようにする。 */
+  private spawnEnemyDefeatFx(enemy: EnemySprite): void {
+    const color = enemy.boss ? 0xffd166 : ENEMY_TYPE_TINT[enemy.type];
+    const ring = this.add.circle(enemy.sprite.x, enemy.sprite.y, 12, color, 0).setStrokeStyle(3, color, 0.85).setDepth(6);
+    this.tweens.add({ targets: ring, scale: 2.6, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
+    for (let i = 0; i < 6; i++) {
+      const shard = this.add.rectangle(enemy.sprite.x, enemy.sprite.y, 5, 12, color, 0.9).setDepth(6).setRotation(i * Math.PI / 3);
+      this.tweens.add({
+        targets: shard,
+        x: shard.x + Math.cos(i * Math.PI / 3) * 42,
+        y: shard.y + Math.sin(i * Math.PI / 3) * 34,
+        angle: shard.angle + 100,
+        alpha: 0,
+        duration: 360,
+        onComplete: () => shard.destroy(),
       });
     }
   }
