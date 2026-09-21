@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
-import { contractCost, fulfillContract } from "./logic/contracts";
+import { contractCost, contractReward, demandGenerator, fulfillContract } from "./logic/contracts";
 import {
   GENERATORS,
   PRESTIGE_UNLOCK,
@@ -14,12 +14,11 @@ import {
   generatorCost,
   offlineCapSec,
   offlineExtensionCost,
-  prestige,
   productionPerSec,
   type GameState,
 } from "./logic/economy";
 import { save } from "./logic/save";
-import { townForPrestige } from "./logic/towns";
+import { townForState } from "./logic/towns";
 import { IdleScene } from "./scenes/IdleScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
@@ -271,7 +270,11 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     prestigeText = text(scene, root, mgmtX[2]!, 718, "", 9, "#ead5ff", "900");
     hitButton(scene, root, mgmtX[0]!, 718, 118, 54, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
     hitButton(scene, root, mgmtX[1]!, 718, 118, 54, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
-    hitButton(scene, root, mgmtX[2]!, 718, 118, 54, () => scene.state && updateState(scene, prestige(scene.state)));
+    hitButton(scene, root, mgmtX[2]!, 718, 118, 54, () => {
+      if (!scene.state || essenceOnPrestige(scene.state) <= 0) return;
+      const show = Reflect.get(scene, "showTownChoice");
+      if (typeof show === "function") show.call(scene);
+    });
 
     const prodY = 780;
     GENERATORS.slice(0, 4).forEach((def, i) => {
@@ -309,7 +312,11 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     prestigeText = text(scene, root, 704, 365, "", 9, "#ead5ff", "900");
     hitButton(scene, root, 474, 365, 105, 52, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
     hitButton(scene, root, 590, 365, 105, 52, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
-    hitButton(scene, root, 704, 365, 105, 52, () => scene.state && updateState(scene, prestige(scene.state)));
+    hitButton(scene, root, 704, 365, 105, 52, () => {
+      if (!scene.state || essenceOnPrestige(scene.state) <= 0) return;
+      const show = Reflect.get(scene, "showTownChoice");
+      if (typeof show === "function") show.call(scene);
+    });
 
     panel(scene, root, 400, 426, 760, 42, 0x2f2927, 0xa8895d, 0.9, 12);
     GENERATORS.slice(0, 6).forEach((def, i) => {
@@ -354,12 +361,14 @@ function refresh(scene: Runtime): void {
   const state = scene.state;
   const rec = recommended(state);
   const rate = productionPerSec(state);
-  const town = townForPrestige(state.prestigeCount);
+  const town = townForState(state);
   ui.potionText.setText(`${formatNumber(state.potions)} potions`);
   ui.rateText.setText(`+${formatNumber(rate)}/秒   ·   TAP +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
   ui.essenceText.setText(`Essence ${formatNumber(state.essence)}`);
   ui.reputationText.setText(`REP ${state.reputation}`);
-  ui.townText.setText(`🏘 ${town.name}`);
+  const demandedId = demandGenerator(state);
+  const demandedName = demandedId ? GENERATORS.find(def => def.id === demandedId)?.name ?? demandedId : null;
+  ui.townText.setText(`🏘 ${town.name}${demandedName ? ` · ${demandedName}×1.5` : " · 通常生産"}`);
 
   ui.orderTexts.forEach((node, index) => {
     const done = state.completedContracts.includes(index);

@@ -80,6 +80,8 @@ export interface GameState {
   counts: Record<string, number>; // generatorId -> 所持数
   essence: number; // 転生通貨（永続）
   prestigeCount: number;
+  /** 現在滞在している街の TOWNS index。旧セーブは newGame() 経由で0補完される。 */
+  townIndex: number;
   lifetimeBrewed: number; // 転生を跨いだ累計（実績用、リセットされない）
   totalClicks: number; // 転生を跨いだ累計クリック数
   unlockedAchievements: string[]; // 実績ID（転生を跨いで保持）
@@ -97,6 +99,7 @@ export function newGame(): GameState {
     counts: Object.fromEntries(GENERATORS.map((g) => [g.id, 0])),
     essence: 0,
     prestigeCount: 0,
+    townIndex: 0,
     lifetimeBrewed: 0,
     totalClicks: 0,
     unlockedAchievements: [],
@@ -124,20 +127,26 @@ export function essenceMultiplier(state: GameState): number {
   return 1 + state.essence * ESSENCE_BONUS;
 }
 
-/** 転生: 進行をリセットしてエッセンスを獲得。不可なら null */
-export function prestige(state: GameState): GameState | null {
+/** 選んだ街へ転生する。進行をリセットしてエッセンスを獲得。不可なら null */
+export function prestigeToTown(state: GameState, townIndex: number): GameState | null {
   const gained = essenceOnPrestige(state);
   if (gained <= 0) return null;
   return {
     ...newGame(),
     essence: state.essence + gained,
     prestigeCount: state.prestigeCount + 1,
+    townIndex: Math.max(0, Math.floor(townIndex)),
     lifetimeBrewed: state.lifetimeBrewed,
     totalClicks: state.totalClicks,
     unlockedAchievements: state.unlockedAchievements,
     offlineExtLevel: state.offlineExtLevel,
     offlineCapBonuses: state.offlineCapBonuses,
   };
+}
+
+/** 旧呼び出し互換。明示選択が無い場合は次の街へ順番に進む。 */
+export function prestige(state: GameState): GameState | null {
+  return prestigeToTown(state, state.townIndex + 1);
 }
 
 /** n台目購入時のコスト（所持数 count のとき） */
@@ -152,7 +161,7 @@ export function productionPerSec(state: GameState): number {
       sum +
       g.baseRate *
         (state.counts[g.id] ?? 0) *
-        demandMultiplier(state.prestigeCount, g.id),
+        demandMultiplier(state, g.id),
     0,
   );
   return base * essenceMultiplier(state) * (1 + state.reputation * 0.1);

@@ -1,5 +1,6 @@
 import {
   contractCost,
+  contractReward,
   fulfillContract,
   demandGenerator,
   demandMultiplier,
@@ -24,7 +25,7 @@ import {
   newGame,
   offlineCapSec,
   offlineExtensionCost,
-  prestige,
+  prestigeToTown,
   PRESTIGE_UNLOCK,
   productionPerSec,
   tick,
@@ -40,7 +41,7 @@ import {
   saveAnalytics,
 } from "../logic/analytics";
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
-import { townForPrestige } from "../logic/towns";
+import { nextTownChoices, townForState } from "../logic/towns";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -105,6 +106,7 @@ export class IdleScene extends Phaser.Scene {
   private workshopDecor!: Phaser.GameObjects.Container;
   private workshopSignature = "";
   private contractModal: Phaser.GameObjects.Container | null = null;
+  private townChoiceModal: Phaser.GameObjects.Container | null = null;
   private buyQty = 1; // クリック強化の一括購入数。CLICK_UPGRADE_QUANTITIES のいずれか（Infinity = MAX）
   private qtyButtons: { qty: number; rect: RoundedRect; label: Phaser.GameObjects.Text }[] = [];
   private rows: { id: string; card: GeneratorCard }[] = [];
@@ -406,17 +408,7 @@ export class IdleScene extends Phaser.Scene {
       const gained = essenceOnPrestige(this.state);
       if (gained <= 0) return;
       this.prestigeCard.press();
-      if (!window.confirm(t(this.lang, "prestigeConfirm", { n: formatNumber(gained) }))) return;
-      const next = prestige(this.state);
-      if (next) {
-        this.state = next;
-        save(this.state, localStorage, Date.now());
-        this.analytics = recordPrestige(this.analytics, this.state.prestigeCount);
-        saveAnalytics(this.analytics, localStorage);
-        this.playSound(sfx.prestige);
-        this.cameras.main.flash(600, 217, 167, 255);
-        cg.happytime();
-      }
+      this.showTownChoice();
     });
   }
 
@@ -525,7 +517,7 @@ export class IdleScene extends Phaser.Scene {
    * cycleも合わせて比較する）でガードし、無駄な再描画を避ける。
    */
   private refreshTownGlow(): void {
-    const town = townForPrestige(this.state.prestigeCount);
+    const town = townForState(this.state);
     const key = town.cycle * 1000 + town.index;
     if (key === this.lastTownIndex) return;
     this.lastTownIndex = key;
@@ -758,7 +750,7 @@ export class IdleScene extends Phaser.Scene {
       const cost = generatorCost(def, count);
       row.card.setName(generatorName(this.lang, def.id));
       row.card.setCount(count);
-      row.card.rate.setText(`+${formatNumber(def.baseRate * demandMultiplier(this.state.prestigeCount, def.id))}${t(this.lang, "perSec")}`);
+      row.card.rate.setText(`+${formatNumber(def.baseRate * demandMultiplier(this.state, def.id))}${t(this.lang, "perSec")}`);
       row.card.setCost(formatNumber(cost));
       row.card.setReady(this.state.potions >= cost);
     }
@@ -802,6 +794,189 @@ export class IdleScene extends Phaser.Scene {
   }
 
 
+  private showTownChoice(): void {
+    const gained = essenceOnPrestige(this.state);
+    if (gained <= 0) return;
+    this.townChoiceModal?.destroy(true);
+
+    const choices = nextTownChoices(this.state);
+    const { width, height } = this.scale.gameSize;
+    const desktop = width >= 700 && height >= 650;
+    const portrait = !desktop && height > width;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const layout = desktop
+      ? {
+          panel: { x: 400, y: 374, w: 700, h: 560 },
+          titleY: 132,
+          subY: 178,
+          cards: [
+            { x: 232, y: 380, w: 296, h: 290 },
+            { x: 568, y: 380, w: 296, h: 290 },
+          ],
+          closeY: 650,
+          titleSize: 32,
+          headingSize: 22,
+          descSize: 16,
+        }
+      : portrait
+        ? {
+            panel: { x: centerX, y: centerY, w: Math.min(width - 24, 426), h: Math.min(height - 28, 752) },
+            titleY: 70,
+            subY: 112,
+            cards: [
+              { x: centerX, y: 270, w: Math.min(width - 42, 394), h: 214 },
+              { x: centerX, y: 520, w: Math.min(width - 42, 394), h: 214 },
+            ],
+            closeY: Math.min(height - 54, 746),
+            titleSize: 29,
+            headingSize: 20,
+            descSize: 14,
+          }
+        : {
+            panel: { x: centerX, y: centerY, w: Math.min(width - 24, 770), h: Math.min(height - 18, 432) },
+            titleY: 44,
+            subY: 78,
+            cards: [
+              { x: width * 0.28, y: 235, w: Math.min(width * 0.42, 330), h: 250 },
+              { x: width * 0.72, y: 235, w: Math.min(width * 0.42, 330), h: 250 },
+            ],
+            closeY: height - 32,
+            titleSize: 27,
+            headingSize: 19,
+            descSize: 14,
+          };
+
+    const modal = this.add.container(0, 0).setDepth(7000).setName("town-choice-modal");
+    this.townChoiceModal = modal;
+    const shade = this.add
+      .rectangle(centerX, centerY, width, height, 0x152839, 0.82)
+      .setInteractive();
+    const panel = drawPanel(
+      this,
+      layout.panel.x,
+      layout.panel.y,
+      layout.panel.w,
+      layout.panel.h,
+      {
+        fillColor: 0xf5efe0,
+        fillAlpha: 1,
+        borderColor: 0xc49d55,
+      },
+    );
+    const title = this.add
+      .text(centerX, layout.titleY, "次の街を選ぶ", {
+        fontSize: `${layout.titleSize}px`,
+        color: "#3d332a",
+        fontStyle: "700",
+      })
+      .setOrigin(0.5);
+    const sub = this.add
+      .text(
+        centerX,
+        layout.subY,
+        `転生で Essence +${formatNumber(gained)} · 街ごとに需要と注文報酬が変化`,
+        {
+          fontSize: `${portrait ? 13 : 15}px`,
+          color: "#675848",
+          align: "center",
+          wordWrap: { width: Math.max(280, layout.panel.w - 50), useAdvancedWrap: true },
+        },
+      )
+      .setOrigin(0.5);
+    modal.add([shade, panel, title, sub]);
+
+    const chooseTown = (townIndex: number) => {
+      const next = prestigeToTown(this.state, townIndex);
+      if (!next) return;
+      this.state = next;
+      save(this.state, localStorage, Date.now());
+      this.analytics = recordPrestige(this.analytics, this.state.prestigeCount);
+      saveAnalytics(this.analytics, localStorage);
+      this.playSound(sfx.prestige);
+      this.cameras.main.flash(600, 217, 167, 255);
+      cg.happytime();
+      this.townChoiceModal?.destroy(true);
+      this.townChoiceModal = null;
+      this.lastTownIndex = -1;
+      this.refreshUI();
+    };
+    modal.setData("chooseTown", chooseTown);
+
+    choices.forEach((town, index) => {
+      const cardLayout = layout.cards[index]!;
+      const buttonY = cardLayout.y + (portrait ? 70 : desktop ? 124 : 82);
+      const headingY = cardLayout.y - (portrait ? 62 : desktop ? 95 : 82);
+      const descY = cardLayout.y + (portrait ? -4 : desktop ? -36 : -15);
+      const buttonW = Math.min(cardLayout.w - 56, desktop ? 210 : 240);
+      const buttonH = portrait ? 50 : 50;
+
+      const card = drawPanel(this, cardLayout.x, cardLayout.y, cardLayout.w, cardLayout.h, {
+        fillColor: 0xffffff,
+        fillAlpha: 1,
+        borderColor: town.accent,
+        borderAlpha: 0.95,
+      });
+      const heading = this.add
+        .text(cardLayout.x, headingY, town.name, {
+          fontSize: `${layout.headingSize}px`,
+          color: "#30483e",
+          fontStyle: "700",
+          align: "center",
+          wordWrap: { width: cardLayout.w - 34, useAdvancedWrap: true },
+        })
+        .setOrigin(0.5);
+      const desc = this.add
+        .text(
+          cardLayout.x,
+          descY,
+          `${town.desc}\n\n需要: ${town.demandGeneratorId ? `${generatorName(this.lang, town.demandGeneratorId)} ×1.5` : "通常生産"}\n注文評判: ×${town.contractRewardMultiplier}`,
+          {
+            fontSize: `${layout.descSize}px`,
+            color: "#516157",
+            align: "center",
+            lineSpacing: portrait ? 3 : 5,
+            wordWrap: { width: cardLayout.w - 38, useAdvancedWrap: true },
+          },
+        )
+        .setOrigin(0.5);
+      const buttonBg = this.add.graphics();
+      buttonBg
+        .fillStyle(town.accent, 0.96)
+        .fillRoundedRect(cardLayout.x - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 13);
+      buttonBg
+        .lineStyle(2, 0xffffff, 0.55)
+        .strokeRoundedRect(cardLayout.x - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 13);
+      const label = this.add
+        .text(cardLayout.x, buttonY, "この街へ転生", {
+          fontSize: `${portrait ? 15 : 16}px`,
+          color: "#ffffff",
+          fontStyle: "700",
+        })
+        .setOrigin(0.5);
+      const hit = this.add
+        .zone(cardLayout.x, buttonY, buttonW + 10, buttonH + 8)
+        .setName(`town-choice-${town.index}`)
+        .setInteractive({ useHandCursor: true });
+      hit.on("pointerdown", () => chooseTown(town.index));
+      modal.add([card, heading, desc, buttonBg, label, hit]);
+    });
+
+    const close = this.add
+      .text(centerX, layout.closeY, "今回は戻る", {
+        fontSize: `${portrait ? 15 : 16}px`,
+        color: "#6d6258",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    close.on("pointerdown", () => {
+      this.townChoiceModal?.destroy(true);
+      this.townChoiceModal = null;
+    });
+    modal.add(close);
+  }
+
   private showContracts(): void {
     this.contractModal?.destroy(true);
     const modal = this.add.container(0, 0).setDepth(200);
@@ -824,12 +999,13 @@ export class IdleScene extends Phaser.Scene {
           wordWrap: { width: 610, useAdvancedWrap: true },
         })
         .setOrigin(0.5, 0);
-    const demand =
-      this.state.prestigeCount > 0
-        ? `${generatorName(this.lang, demandGenerator(this.state.prestigeCount))} ×1.5`
-        : ja
-          ? "すべての設備が通常生産"
-          : "Standard production";
+    const demanded = demandGenerator(this.state);
+    const currentTown = townForState(this.state);
+    const demand = demanded
+      ? `${generatorName(this.lang, demanded)} ×1.5 · ${ja ? "注文評判" : "Order rep"} ×${currentTown.contractRewardMultiplier}`
+      : ja
+        ? `すべて通常生産 · 注文評判 ×${currentTown.contractRewardMultiplier}`
+        : `Standard production · Order rep ×${currentTown.contractRewardMultiplier}`;
     modal.add([
       shade,
       panel,
@@ -852,7 +1028,7 @@ export class IdleScene extends Phaser.Scene {
       });
       const label = text(
         y - 30,
-        `${ja ? (i === 0 ? "村人の常備薬" : "商隊へのまとめ納品") : i === 0 ? "Village supplies" : "Caravan shipment"}\n${done ? (ja ? "納品済み" : "Delivered") : `${formatNumber(cost)} ${ja ? "ポーションを納品" : "potions"} · +${i === 0 ? 1 : 3} ${ja ? "評判" : "reputation"}`}`,
+        `${ja ? (i === 0 ? "村人の常備薬" : "商隊へのまとめ納品") : i === 0 ? "Village supplies" : "Caravan shipment"}\n${done ? (ja ? "納品済み" : "Delivered") : `${formatNumber(cost)} ${ja ? "ポーションを納品" : "potions"} · +${contractReward(this.state, i)} ${ja ? "評判" : "reputation"}`}`,
         17,
       );
       const hit = this.add

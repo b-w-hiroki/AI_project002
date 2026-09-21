@@ -444,7 +444,7 @@ function recommendedUpgrade(state: GameState): UpgradeTarget {
         id: generator.id,
         cost,
         label: generator.name,
-        benefit: `+${formatNumber(generator.baseRate * demandMultiplier(state.prestigeCount, generator.id))}/s`,
+        benefit: `+${formatNumber(generator.baseRate * demandMultiplier(state, generator.id))}/s`,
       };
     }
   }
@@ -528,7 +528,7 @@ function refreshConceptUi(scene: IdleRuntime): void {
   const beltDefs = GENERATORS.slice(0, 5);
   beltDefs.forEach((generator, index) => {
     const count = state.counts[generator.id] ?? 0;
-    const nominal = generator.baseRate * count * demandMultiplier(state.prestigeCount, generator.id);
+    const nominal = generator.baseRate * count * demandMultiplier(state, generator.id);
     ui.beltTexts[index]?.setText(`${generator.name}\n×${count}  +${formatNumber(nominal)}/s`);
   });
 

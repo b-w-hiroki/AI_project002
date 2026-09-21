@@ -22,6 +22,7 @@ import {
   OFFLINE_EXT_MAX_LEVEL,
   offlineExtensionCost,
   prestige,
+  prestigeToTown,
   PRESTIGE_UNLOCK,
   productionPerSec,
   setOfflineCapBonus,
@@ -152,6 +153,14 @@ describe("prestige", () => {
     expect(next.counts["apprentice"]).toBe(0);
     expect(next.essence).toBe(5);
     expect(next.prestigeCount).toBe(2);
+    expect(next.townIndex).toBe(1);
+  });
+
+  it("転生先の街を明示選択できる", () => {
+    const s = { ...newGame(), totalBrewed: PRESTIGE_UNLOCK };
+    const next = prestigeToTown(s, 4)!;
+    expect(next.townIndex).toBe(4);
+    expect(next.prestigeCount).toBe(1);
   });
 
   it("エッセンスで生産とクリックが+10%/個される", () => {
