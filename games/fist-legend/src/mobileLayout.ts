@@ -44,6 +44,7 @@ type MobileUi = {
   battleStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
+  resultFinish: Phaser.GameObjects.Text;
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
   resultRetry: Phaser.GameObjects.Container;
@@ -162,9 +163,12 @@ function buildUi(scene: Runtime): MobileUi {
   const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
 
+  const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
+    .setStroke("#3a1a12", 7)
+    .setAngle(-5);
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
   const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
-  resultGroup.add([resultHeading, resultStats]);
+  resultGroup.add([resultFinish, resultHeading, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, "もう一度", 0xa9402d, () => scene.startBattle?.());
   const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, "タイトルへ", 0x334c70, () => scene.showTitle?.());
 
@@ -180,6 +184,7 @@ function buildUi(scene: Runtime): MobileUi {
     battleStatus,
     battleTell,
     battleGauge,
+    resultFinish,
     resultHeading,
     resultStats,
     resultRetry,
@@ -356,6 +361,11 @@ function refresh(scene: Runtime): void {
   if (scene.phase === "result") {
     ui.chrome.fillStyle(0x120907, 0.97).fillRect(0, 0, width, height);
     const outcome = scene.lastOutcome;
+    ui.resultFinish
+      .setPosition(width / 2, portrait ? 205 : 92)
+      .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
+      .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
+      .setScale(portrait ? 1 : 0.72);
     ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? "勝利" : outcome === "enemyWin" ? "敗北" : "引き分け");
     ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`豪拳石 ${loadCurrency()}\n次は相手の構えをさらに読もう`);
     ui.resultRetry.setPosition(width / 2, portrait ? 430 : 292).setScale(portrait ? 1 : 0.86);
