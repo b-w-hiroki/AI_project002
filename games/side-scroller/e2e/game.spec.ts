@@ -134,6 +134,20 @@ test.describe("phone visual QA", () => {
     });
   });
 
+  test("visual QA: attack pose and slash read clearly", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    await page.keyboard.press("x");
+    await page.waitForTimeout(45);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-attack-pose-844x390.png",
+      animations: "disabled",
+    });
+  });
+
   test("visual QA: game over hides touch controls", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");
