@@ -825,6 +825,9 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.run.status !== "active") this.settle();
       else this.render();
       if (this.run.status === "active" && this.run.step === 9) return; // Entrance owns the input lock until it ends.
+      if (this.run.message.startsWith("小競り合い")) {
+        this.playSkirmishResolution(this.run.message.includes("勝利"));
+      }
       const burst = this.text(225, 485, this.run.message, 13, "#fff0d0")
         .setStroke("#273038", 3)
         .setAlign("center");
@@ -834,6 +837,81 @@ export class ExpeditionScene extends Phaser.Scene {
       });
     }
   }
+  private playSkirmishResolution(won: boolean): void {
+    const actors = this.root.getAll("name", "lead-actor");
+    const enemies = this.root.getAll("name", "common-enemy");
+    const color = won ? 0xffd27a : 0xff6d70;
+
+    if (won) {
+      this.tweens.add({
+        targets: actors,
+        x: "+=30",
+        duration: 100,
+        yoyo: true,
+        hold: 90,
+        ease: "Quad.easeOut",
+      });
+      this.tweens.add({
+        targets: enemies,
+        x: "+=22",
+        alpha: 0.45,
+        duration: 120,
+        yoyo: true,
+        hold: 70,
+        ease: "Cubic.easeOut",
+      });
+      this.cameras.main.flash(80, 255, 218, 142);
+    } else {
+      this.tweens.add({
+        targets: enemies,
+        x: "-=28",
+        duration: 100,
+        yoyo: true,
+        hold: 90,
+        ease: "Quad.easeOut",
+      });
+      this.tweens.add({
+        targets: actors,
+        x: "-=18",
+        alpha: 0.55,
+        duration: 120,
+        yoyo: true,
+        hold: 70,
+      });
+      this.cameras.main.flash(100, 180, 55, 62);
+    }
+
+    const impact = this.add.graphics().setName("skirmish-impact");
+    impact.lineStyle(won ? 8 : 6, color, 0.9)
+      .lineBetween(won ? 180 : 382, won ? 405 : 250, won ? 386 : 188, won ? 245 : 412);
+    impact.lineStyle(2, 0xffffff, 0.92)
+      .lineBetween(won ? 170 : 392, won ? 416 : 240, won ? 397 : 176, won ? 234 : 425);
+    impact.setAlpha(0);
+    this.root.add(impact);
+    this.tweens.add({
+      targets: impact,
+      alpha: 1,
+      duration: 55,
+      yoyo: true,
+      hold: 90,
+      onComplete: () => impact.destroy(),
+    });
+
+    const ring = this.add.circle(won ? 332 : 176, won ? 318 : 390, 14, color, 0)
+      .setStrokeStyle(4, color, 0.86)
+      .setName("skirmish-ring");
+    this.root.add(ring);
+    this.tweens.add({
+      targets: ring,
+      scale: 2.8,
+      alpha: 0,
+      duration: 260,
+      ease: "Cubic.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+    this.cameras.main.shake(150, won ? 0.003 : 0.006);
+  }
+
   private renderBossCrest(regionId: RegionId, x: number, y: number): void {
     const visual = REGION_BOSS_VISUAL[regionId];
     const g = this.add.graphics();
