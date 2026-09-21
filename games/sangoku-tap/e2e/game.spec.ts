@@ -96,3 +96,26 @@ test("expedition result is visually reviewable after a clear", async ({ page }) 
   await checkFrame(page, "landscape-result");
 });
 
+test("regional gatekeepers keep distinct chapter identity", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 700, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+
+  for (const region of ["plains", "pass", "citadel"] as const) {
+    const label = await page.evaluate(region => {
+      const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+      const run = Reflect.get(scene, "run") as Record<string, unknown>;
+      Reflect.set(scene, "run", { ...run, regionId: region, step: 9 });
+      Reflect.set(scene, "introRunId", Reflect.get(scene, "run").id);
+      Reflect.get(scene, "render").call(scene);
+      const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+      return (root.getByName("boss-region-label") as Phaser.GameObjects.Text | null)?.text ?? "";
+    }, region);
+    expect(label).toMatch(region === "plains" ? /黎明/ : region === "pass" ? /翠嶺/ : /紅蓮/);
+    await checkFrame(page, `landscape-boss-${region}`);
+  }
+});
+
