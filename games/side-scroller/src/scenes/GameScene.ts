@@ -139,9 +139,13 @@ interface EnemySprite {
 const ART_BG_KEY = "sf-bg-forest";
 const ART_HERO_KEY = "sf-hero-swordsman";
 const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
+const ART_ENEMY_AGILE_KEY = "sf-enemy-agile";
+const ART_ENEMY_TANK_KEY = "sf-enemy-tank";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
 const HERO_ART_TEXTURE = "hero-art";
 const ENEMY_NORMAL_ART_TEXTURE = "goblin-art";
+const ENEMY_AGILE_ART_TEXTURE = "goblin-agile-art";
+const ENEMY_TANK_ART_TEXTURE = "goblin-tank-art";
 /** HUD の描画深度（キャラ/攻撃演出より前面、オーバーレイ 100+ より背面） */
 const HUD_DEPTH = 20;
 /** 背景のパララックス係数（カメラより遅く流れる） */
@@ -174,11 +178,16 @@ const HUMANOID_TEX = { w: HUMANOID_BASE.w * CHAR_SCALE, h: HUMANOID_BASE.h * CHA
 const PLAYER_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, PLAYER_BODY), art: bodyOffsetFor(HERO_ART_SIZE, PLAYER_BODY) };
 const ENEMY_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, ENEMY_BODY), art: bodyOffsetFor(ENEMY_ART_SIZE, ENEMY_BODY) };
 
-/** 敵タイプごとの色ティント。本物の専用スプライトに差し替える前提のプレースホルダー */
+/** 専用アートが読めない場合だけ使うタイプ別フォールバックティント */
 const ENEMY_TYPE_TINT: Readonly<Record<EnemyType, number>> = {
   normal: 0xffffff,
   agile: 0x7fd1ff,
   tank: 0x8a4fd1,
+};
+const ENEMY_ART_TEXTURE: Readonly<Partial<Record<EnemyType, string>>> = {
+  normal: ENEMY_NORMAL_ART_TEXTURE,
+  agile: ENEMY_AGILE_ART_TEXTURE,
+  tank: ENEMY_TANK_ART_TEXTURE,
 };
 
 interface Projectile {
@@ -316,6 +325,8 @@ export class GameScene extends Phaser.Scene {
     this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
     this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
     this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
+    this.load.svg(ART_ENEMY_AGILE_KEY, "images/sf-enemy-agile.svg");
+    this.load.svg(ART_ENEMY_TANK_KEY, "images/sf-enemy-tank.svg");
   }
 
   create(): void {
@@ -454,6 +465,8 @@ export class GameScene extends Phaser.Scene {
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
     this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
+    this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
+    this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -624,20 +637,20 @@ export class GameScene extends Phaser.Scene {
     x: number,
     index: number,
   ): void {
-    // 通常敵のみイラスト版（ゴブリン）。agile/tank は色ティントで区別する従来のプレースホルダーのまま
-    const useArt =
-      spec.type === "normal" && this.textures.exists(ENEMY_NORMAL_ART_TEXTURE);
+    const artTexture = ENEMY_ART_TEXTURE[spec.type];
+    const useArt = !!artTexture && this.textures.exists(artTexture);
     const sprite = this.physics.add.sprite(
       x,
       GROUND_Y - 45,
-      useArt ? ENEMY_NORMAL_ART_TEXTURE : "goblin",
+      useArt ? artTexture! : "goblin",
     );
     sprite.setCollideWorldBounds(true);
     sprite.setDepth(2);
     const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
     sprite.setSize(ENEMY_BODY.w, ENEMY_BODY.h).setOffset(off.x, off.y);
-    sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
-    if (spec.type === "tank") sprite.setScale(1.4); // ボス/タンク型は一目で分かるよう一回り大きくする
+    if (!useArt) sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
+    if (spec.type === "agile") sprite.setScale(0.96);
+    if (spec.type === "tank") sprite.setScale(1.4);
     this.physics.add.collider(sprite, this.platforms);
 
     const patrolRadius = 80 * spec.speedMul;
@@ -1549,16 +1562,32 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** 命中時の演出: 敵を白く発光させてノックバックさせる */
+  /** 命中時の演出: 白発光・スパーク・短いノックバック */
   private onEnemyHit(enemy: EnemySprite): void {
+    const dedicatedArt = Object.values(ENEMY_ART_TEXTURE).includes(enemy.sprite.texture.key);
     enemy.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.time.delayedCall(80, () => {
-      // clearTint ではなく敵タイプの常設ティントに戻す（タイプ別の色分けを保つため）
-      enemy.sprite.setTint(ENEMY_TYPE_TINT[enemy.type]);
-      enemy.sprite.setTintMode(Phaser.TintModes.MULTIPLY);
+      if (dedicatedArt) enemy.sprite.clearTint();
+      else enemy.sprite.setTint(ENEMY_TYPE_TINT[enemy.type]).setTintMode(Phaser.TintModes.MULTIPLY);
     });
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityX(this.playerState.facing * 180);
+
+    const sparkColor = enemy.type === "agile" ? 0x63e1e7 : enemy.type === "tank" ? 0xc0a4ff : 0xffd166;
+    for (let i = 0; i < 5; i++) {
+      const spark = this.add.circle(enemy.sprite.x, enemy.sprite.y - 10, 3 + (i % 2), sparkColor, 0.85).setDepth(6);
+      this.tweens.add({
+        targets: spark,
+        x: enemy.sprite.x + Phaser.Math.Between(-28, 28),
+        y: enemy.sprite.y + Phaser.Math.Between(-42, 18),
+        alpha: 0,
+        scale: 0.3,
+        duration: 180 + i * 18,
+        ease: "Cubic.easeOut",
+        onComplete: () => spark.destroy(),
+      });
+    }
+
     this.tweens.add({
       targets: enemy.sprite,
       scaleX: "*=1.15",
@@ -1606,7 +1635,40 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: spark, scale: 1.8, alpha: 0, duration: 200, onComplete: () => spark.destroy() });
   }
 
-  private onEnemyKilled(_enemy: EnemySprite): void {
+  private onEnemyKilled(enemy: EnemySprite): void {
+    const burstColor = enemy.type === "agile" ? 0x66e6e8 : enemy.type === "tank" ? 0xb69cf4 : 0xffd166;
+    this.cameras.main.shake(enemy.boss ? 150 : 70, enemy.boss ? 0.008 : 0.003);
+    for (let i = 0; i < (enemy.boss ? 12 : 7); i++) {
+      const shard = this.add.rectangle(
+        enemy.sprite.x,
+        enemy.sprite.y - 10,
+        i % 2 ? 7 : 4,
+        i % 2 ? 3 : 8,
+        burstColor,
+        0.9,
+      ).setDepth(7).setAngle(Phaser.Math.Between(0, 180));
+      this.tweens.add({
+        targets: shard,
+        x: enemy.sprite.x + Phaser.Math.Between(-55, 55),
+        y: enemy.sprite.y + Phaser.Math.Between(-65, 20),
+        angle: shard.angle + Phaser.Math.Between(-140, 140),
+        alpha: 0,
+        scale: 0.25,
+        duration: 260 + i * 14,
+        ease: "Quad.easeOut",
+        onComplete: () => shard.destroy(),
+      });
+    }
+    this.tweens.add({
+      targets: enemy.sprite,
+      alpha: 0,
+      angle: enemy.sprite.angle + this.playerState.facing * 14,
+      scaleX: "*=0.7",
+      scaleY: "*=0.7",
+      duration: 150,
+      ease: "Cubic.easeIn",
+    });
+
     this.playerState = addScore(this.playerState, SCORE_PER_KILL);
     const unlocked = this.playerState.hiougiUnlocked;
     this.playerState = checkHiougiUnlock(this.playerState);
