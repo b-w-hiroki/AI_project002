@@ -14,6 +14,7 @@ import {
   WRITING_MODES,
   WRITING_MODE_LABEL,
   WritingMode,
+  generateRound,
   hexForColorId,
   nameForColorId,
   pointsForStreak,
@@ -23,10 +24,15 @@ import {
 import {
   loadBestScore,
   loadBestTurbo,
+  loadPerformanceStats,
   loadWritingMode,
+  metricAccuracy,
+  metricAvgReaction,
+  recordPerformance,
   saveBestScore,
   saveBestTurbo,
   saveWritingMode,
+  weakestJudgeMode,
 } from "../logic/progress";
 import { cg } from "../platform/crazygames";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
@@ -42,6 +48,7 @@ const CARD_HOME_Y = 260;
 const BOX_W = 160;
 const BOX_H = 80;
 const TURBO_COLOR = 0xff7a3d;
+const PRACTICE_MS = 20_000;
 /** 画像アセットのキー（docs/art-assets.md の asset-id と一致させる） */
 const MASCOT_KEY = "cm-mascot";
 const TURBO_BADGE_KEY = "cm-turbo-badge";
@@ -62,6 +69,7 @@ interface ModeButtonView {
 }
 
 type Phase = "title" | "playing" | "result";
+type SessionMode = "challenge" | "practice";
 
 export class GameScene extends Phaser.Scene {
   private phase: Phase = "title";
@@ -69,6 +77,9 @@ export class GameScene extends Phaser.Scene {
   private roundIndex = 0;
   private results: ChallengeResult[] = [];
   private sessionRemaining = CHALLENGE_MS;
+  private sessionDurationMs = CHALLENGE_MS;
+  private sessionMode: SessionMode = "challenge";
+  private practiceJudgeMode: "content" | "color" = "content";
   private previousMode: "content" | "color" | null = null;
   private switched = false;
   private switchHint!: Phaser.GameObjects.Text;
@@ -128,7 +139,9 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "playing") return;
     this.sessionRemaining = Math.max(0, this.sessionRemaining - delta);
     this.progressText.setText(
-      `60秒 CHALLENGE  ·  残り ${Math.ceil(this.sessionRemaining / 1000)}秒  ·  ${this.roundIndex}問`,
+      this.sessionMode === "practice"
+        ? `20秒 弱点練習 · ${this.practiceJudgeMode === "content" ? "文字の意味" : "文字の色"} · 残り ${Math.ceil(this.sessionRemaining / 1000)}秒 · ${this.roundIndex}問`
+        : `60秒 CHALLENGE  ·  残り ${Math.ceil(this.sessionRemaining / 1000)}秒  ·  ${this.roundIndex}問`,
     );
     if (this.sessionRemaining <= 0) {
       if (this.accepting && this.currentRound) {
@@ -148,13 +161,21 @@ export class GameScene extends Phaser.Scene {
       this.endSession();
       return;
     }
-    const elapsed = CHALLENGE_MS - this.sessionRemaining;
-    const until = nextSwitchAt(elapsed) - elapsed;
-    this.switchHint.setText(
-      until <= 2000
-        ? "まもなく、次のカードから判定が切り替わります"
-        : "内容 → 色 → 切り替え。目の前の指示を見よう",
-    );
+    const elapsed = this.sessionDurationMs - this.sessionRemaining;
+    if (this.sessionMode === "practice") {
+      this.switchHint.setText(
+        this.practiceJudgeMode === "content"
+          ? "弱点練習：文字そのものの意味だけに集中"
+          : "弱点練習：文字の見た目の色だけに集中",
+      );
+    } else {
+      const until = nextSwitchAt(elapsed) - elapsed;
+      this.switchHint.setText(
+        until <= 2000
+          ? "まもなく、次のカードから判定が切り替わります"
+          : "内容 → 色 → 切り替え。目の前の指示を見よう",
+      );
+    }
     if (!this.accepting) return;
     this.timeRemainingMs -= delta;
     if (this.timeRemainingMs <= 0) {
@@ -182,7 +203,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         CX,
         260,
-        "60秒で、どこまで判断できる？\n内容 → 色 → 切り替えの順で挑戦。\n指示に合う色の枠まで\nカードをドラッグしてください。\n\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
+        "60秒チャレンジで総合力を測定。\n20秒弱点練習では、過去成績から苦手な判定だけを集中出題。\n指示に合う色の枠までカードをドラッグしてください。\n\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -224,17 +245,29 @@ export class GameScene extends Phaser.Scene {
     const startBtn = makeButton(
       this,
       CX,
-      670,
+      650,
       260,
       52,
-      "スタート",
-      () => this.startSession(),
+      "60秒チャレンジ",
+      () => this.startSession("challenge"),
       {
         fontSize: "16px",
       },
     );
+    const practiceBtn = makeButton(
+      this,
+      CX,
+      716,
+      260,
+      48,
+      "20秒 弱点練習",
+      () => this.startPractice(),
+      {
+        fontSize: "15px",
+      },
+    );
 
-    this.titleGroup.add([best, startBtn.container]);
+    this.titleGroup.add([best, startBtn.container, practiceBtn.container]);
     this.titleGroup.setData("bestText", best);
   }
 
@@ -586,9 +619,17 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
-  private startSession(): void {
+  private startPractice(): void {
+    this.practiceJudgeMode = weakestJudgeMode();
+    this.startSession("practice");
+  }
+
+  private startSession(mode: SessionMode = "challenge"): void {
     this.pendingRound?.remove(false);
-    this.sessionRemaining = CHALLENGE_MS;
+    this.sessionMode = mode;
+    this.sessionDurationMs = mode === "practice" ? PRACTICE_MS : CHALLENGE_MS;
+    this.sessionRemaining = this.sessionDurationMs;
+    if (mode === "practice") this.practiceJudgeMode = weakestJudgeMode();
     this.previousMode = null;
     this.phase = "playing";
     this.level = 0;
@@ -610,7 +651,16 @@ export class GameScene extends Phaser.Scene {
       this.endSession();
       return;
     }
-    const round = challengeRound(CHALLENGE_MS - this.sessionRemaining);
+    const round = this.sessionMode === "practice"
+      ? (() => {
+          const base = generateRound();
+          return {
+            ...base,
+            judgeMode: this.practiceJudgeMode,
+            correctColorId: this.practiceJudgeMode === "content" ? base.promptWord : base.promptInk,
+          };
+        })()
+      : challengeRound(CHALLENGE_MS - this.sessionRemaining);
     this.switched =
       this.previousMode !== null && this.previousMode !== round.judgeMode;
     this.previousMode = round.judgeMode;
@@ -621,7 +671,11 @@ export class GameScene extends Phaser.Scene {
     this.roundIndex += 1;
     this.accepting = true;
 
-    this.progressText.setText(`60秒 CHALLENGE · ${this.roundIndex}問`);
+    this.progressText.setText(
+      this.sessionMode === "practice"
+        ? `20秒 弱点練習 · ${this.practiceJudgeMode === "content" ? "文字の意味" : "文字の色"} · ${this.roundIndex}問`
+        : `60秒 CHALLENGE · ${this.roundIndex}問`,
+    );
     this.judgeModeText.setText(
       round.judgeMode === "content"
         ? "文字の「内容」に合う枠へ\nドラッグ"
@@ -866,8 +920,11 @@ export class GameScene extends Phaser.Scene {
     this.playGroup.setVisible(false);
 
     const summary = summarizeSession(this.results);
-    saveBestScore(summary.score);
-    saveBestTurbo(this.turboPoints);
+    const performance = recordPerformance(this.results);
+    if (this.sessionMode === "challenge") {
+      saveBestScore(summary.score);
+      saveBestTurbo(this.turboPoints);
+    }
     const best = loadBestScore();
     const bestTurbo = loadBestTurbo();
 
@@ -889,7 +946,11 @@ export class GameScene extends Phaser.Scene {
         : accuracyPct >= 70
           ? "B"
           : "C";
-    heading.setText(`${grade}  ·  スコア ${summary.score}`);
+    heading.setText(
+      this.sessionMode === "practice"
+        ? `練習 ${this.practiceJudgeMode === "content" ? "意味" : "色"} · ${grade} · ${summary.score}`
+        : `${grade}  ·  スコア ${summary.score}`,
+    );
     heading.setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
     heading.setScale(0.78);
     this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
@@ -897,10 +958,17 @@ export class GameScene extends Phaser.Scene {
     stats.setText(
       `正答率: ${Math.round(summary.accuracy * 100)}%\n平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
     );
+    const metricText = (key: "content" | "color" | "switch", label: string) => {
+      const metric = performance[key];
+      const accuracy = metric.total ? Math.round(metricAccuracy(metric) * 100) : 0;
+      const reaction = metric.reactionSamples ? Math.round(metricAvgReaction(metric)) : 0;
+      const bars = Math.round(accuracy / 10);
+      return `${label} ${"■".repeat(bars)}${"·".repeat(10 - bars)} ${accuracy}%${reaction ? ` · ${reaction}ms` : ""}`;
+    };
     bestLine
-      .setPosition(CX, 432)
+      .setPosition(CX, 438)
       .setText(
-        `内容 ${accuracyFor(this.results, "content")} ／ 色 ${accuracyFor(this.results, "color")}\n切替直後 ${accuracyFor(this.results, "switch")}\n60秒ベスト ${best} · ターボ ${bestTurbo}pt`,
+        `${metricText("content", "意味")}\n${metricText("color", "色  ")}\n${metricText("switch", "切替")}\n60秒ベスト ${best} · ターボ ${bestTurbo}pt`,
       );
 
     this.resultGroup.setVisible(true);
