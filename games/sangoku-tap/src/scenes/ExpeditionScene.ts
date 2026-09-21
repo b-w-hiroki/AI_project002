@@ -704,6 +704,10 @@ export class ExpeditionScene extends Phaser.Scene {
         hold: 90,
       });
       this.cameras.main.shake(230, 0.004);
+      this.cameras.main.flash(140, 255, 226, 176);
+      const impact = this.add.circle(325, 310, 18, 0xffe8b6, 0).setStrokeStyle(4, 0xffe8b6, 0.9);
+      this.root.add(impact);
+      this.tweens.add({ targets: impact, scale: 3.4, alpha: 0, delay: 180, duration: 320, onComplete: () => impact.destroy() });
       const enemy = this.root.getByName("gatekeeper-boss");
       if (enemy && this.run.status === "clear")
         this.tweens.add({
@@ -746,12 +750,26 @@ export class ExpeditionScene extends Phaser.Scene {
   }
   private renderEnemy(boss: boolean): void {
     if (boss) {
+      // Region-specific staging makes the same gatekeeper art read as three distinct encounters.
+      const region = regionById(this.run?.regionId ?? this.selectedRegion);
+      const bossStyle: Record<RegionId, { tint: number; aura: number; crest: string }> = {
+        plains: { tint: 0xffe2b0, aura: 0xe7bf76, crest: "黎" },
+        pass: { tint: 0xc9f0df, aura: 0x62b79a, crest: "嶺" },
+        citadel: { tint: 0xffc2c8, aura: 0xd95662, crest: "炎" },
+      };
+      const style = bossStyle[region.id];
+      const aura = this.add.circle(298, 325, 116, style.aura, 0.12).setStrokeStyle(3, style.aura, 0.4);
+      this.root.add(aura);
+      this.tweens.add({ targets: aura, scale: 1.1, alpha: 0.04, duration: 1000, yoyo: true, repeat: -1 });
+      const crest = this.text(298, 155, style.crest, 58, "#fff2d2").setAlpha(0.2).setStroke("#241920", 4);
+      crest.setName("region-boss-crest");
       // Boss art dominates the encounter; ally portraits remain in the foreground.
       this.root.add(this.add.ellipse(298, 509, 226, 21, 0x100a13, 0.65));
       if (this.textures.exists("st-boss-gatekeeper")) {
         const enemy = this.add
           .image(298, 320, "st-boss-gatekeeper")
           .setDisplaySize(281.25, 375)
+          .setTint(style.tint)
           .setName("gatekeeper-boss");
         this.root.add(enemy);
         this.tweens.add({
@@ -843,6 +861,12 @@ export class ExpeditionScene extends Phaser.Scene {
     r.troop.ids.forEach((id, i) => this.portrait(id, 110 + i * 115, 287, 140));
     this.text(225, 385, `到達 ${r.step}/10  ／ 兵力 ${r.hp}`, 18);
     this.text(225, 428, `持ち帰り  ${expeditionReward(r)} 銭`, 29, "#f4cb7f");
+    if (r.status === "clear") {
+      const region = regionById(r.regionId);
+      const victoryGlow = this.add.circle(225, 287, 112, region.accent, 0.08).setStrokeStyle(2, region.accent, 0.3);
+      this.root.addAt(victoryGlow, 1);
+      this.tweens.add({ targets: victoryGlow, scale: 1.12, alpha: 0.02, duration: 900, yoyo: true, repeat: -1 });
+    }
     this.text(
       225,
       481,
