@@ -85,3 +85,14 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-workshop.png", animations: "disabled" });
 });
 
+test("visual QA: brewing shows a magical burst", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page)).height).toBe(800);
+  await clickBrew(page);
+  await page.waitForTimeout(90);
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-brew-burst.png",
+    animations: "disabled",
+  });
+});
+

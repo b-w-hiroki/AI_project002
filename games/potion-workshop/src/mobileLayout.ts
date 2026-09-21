@@ -115,6 +115,39 @@ function brew(scene: Runtime, ui: MobileUi): void {
   scene.state = click(scene.state);
   const targets = [ui.hero, ui.cauldron].filter(Boolean) as Phaser.GameObjects.GameObject[];
   if (targets.length) scene.tweens.add({ targets, scaleX: "*=0.95", scaleY: "*=0.95", duration: 70, yoyo: true, ease: "Sine.easeOut" });
+
+  // Tapの瞬間に「錬金が起きた」と読める魔法リングと光粒を出す。
+  const magicColors = [0x78ffd0, 0x8ed8ff, 0xe4b8ff, 0xffdd85];
+  [34, 52, 72].forEach((radius, index) => {
+    const ring = scene.add.circle(ui.brewX, ui.brewY - 8, radius, magicColors[index]!, 0)
+      .setStrokeStyle(index === 0 ? 5 : 3, magicColors[index]!, 0.78 - index * 0.12);
+    ui.root.add(ring);
+    scene.tweens.add({
+      targets: ring,
+      scale: 1.7 + index * 0.12,
+      alpha: 0,
+      duration: 260 + index * 70,
+      ease: "Cubic.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+  });
+  for (let i = 0; i < 10; i++) {
+    const angle = (Math.PI * 2 * i) / 10 + (i % 2 ? 0.18 : 0);
+    const color = magicColors[i % magicColors.length]!;
+    const mote = scene.add.circle(ui.brewX, ui.brewY - 18, i % 3 === 0 ? 5 : 3, color, 0.92);
+    ui.root.add(mote);
+    scene.tweens.add({
+      targets: mote,
+      x: ui.brewX + Math.cos(angle) * (58 + (i % 3) * 16),
+      y: ui.brewY - 28 + Math.sin(angle) * 46 - (i % 2) * 14,
+      alpha: 0,
+      scale: 0.3,
+      duration: 360 + i * 22,
+      ease: "Cubic.easeOut",
+      onComplete: () => mote.destroy(),
+    });
+  }
+
   const popup = scene.add.text(ui.brewX, ui.brewY - 80, `+${formatNumber(gain)}`, {
     fontFamily: '"Hiragino Sans", "Yu Gothic", sans-serif',
     fontSize: "18px",
@@ -124,7 +157,16 @@ function brew(scene: Runtime, ui: MobileUi): void {
     strokeThickness: 4,
   }).setOrigin(0.5).setDepth(6000);
   ui.root.add(popup);
-  scene.tweens.add({ targets: popup, y: popup.y - 36, alpha: 0, duration: 650, onComplete: () => popup.destroy() });
+  popup.setScale(0.72);
+  scene.tweens.add({
+    targets: popup,
+    y: popup.y - 42,
+    alpha: 0,
+    scale: 1.12,
+    duration: 650,
+    ease: "Cubic.easeOut",
+    onComplete: () => popup.destroy(),
+  });
 }
 
 function recommended(state: GameState): { id: string; name: string; cost: number; count: number } {

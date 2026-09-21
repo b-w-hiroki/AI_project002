@@ -681,6 +681,7 @@ export class GameScene extends Phaser.Scene {
 
     const feedbackColor = correct ? 0x3fae6a : 0xd1495b;
     this.drawPromptBg(feedbackColor);
+    this.spawnRoundFeedbackFx(correct, timedOut);
     if (correct) {
       this.tweens.add({
         targets: this.promptCard,
@@ -735,8 +736,77 @@ export class GameScene extends Phaser.Scene {
       if (this.turboStreak === TURBO_ENTRY_STREAK) {
         cg.happytime();
         this.spawnTurboBadge();
+        this.spawnFlowEntryFx();
       }
     }
+  }
+
+  private spawnRoundFeedbackFx(correct: boolean, timedOut: boolean): void {
+    const color = correct ? 0x4de79d : timedOut ? 0x7b7f94 : 0xff6b7c;
+    const centerX = CARD_HOME_X;
+    const centerY = CARD_HOME_Y;
+    const ring = this.add.circle(centerX, centerY, 62, color, 0)
+      .setStrokeStyle(correct ? 6 : 4, color, 0.82)
+      .setDepth(18);
+    this.playGroup.add(ring);
+    this.tweens.add({
+      targets: ring,
+      scale: correct ? 2.1 : 1.55,
+      alpha: 0,
+      duration: correct ? 280 : 220,
+      ease: "Cubic.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+    if (correct) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        const mote = this.add.circle(centerX, centerY, 4, i % 2 ? 0xffd45c : 0x7ae7ff, 0.9).setDepth(18);
+        this.playGroup.add(mote);
+        this.tweens.add({
+          targets: mote,
+          x: centerX + Math.cos(angle) * 92,
+          y: centerY + Math.sin(angle) * 68,
+          alpha: 0,
+          scale: 0.3,
+          duration: 300,
+          onComplete: () => mote.destroy(),
+        });
+      }
+    } else {
+      this.cameras.main.flash(80, 190, 42, 62);
+    }
+  }
+
+  private spawnFlowEntryFx(): void {
+    const width = this.scale.gameSize.width;
+    const height = this.scale.gameSize.height;
+    const wash = this.add.rectangle(width / 2, height / 2, width, height, 0xff7a3d, 0.12)
+      .setScrollFactor(0)
+      .setDepth(17);
+    this.playGroup.add(wash);
+    const label = this.add.text(CX, 238, "FLOW MODE!", {
+      fontSize: "42px",
+      fontStyle: "900",
+      color: "#fff3b0",
+      stroke: "#c53f29",
+      strokeThickness: 8,
+      letterSpacing: 4,
+    }).setOrigin(0.5).setDepth(19).setScale(0.7);
+    this.playGroup.add(label);
+    this.tweens.add({
+      targets: label,
+      scale: 1.16,
+      yoyo: true,
+      duration: 180,
+      hold: 260,
+      onComplete: () => label.destroy(),
+    });
+    this.tweens.add({
+      targets: wash,
+      alpha: 0,
+      duration: 520,
+      onComplete: () => wash.destroy(),
+    });
   }
 
   /**
@@ -811,7 +881,19 @@ export class GameScene extends Phaser.Scene {
       "bestLine",
     ) as Phaser.GameObjects.Text;
 
-    heading.setText(`スコア ${summary.score}`);
+    const accuracyPct = Math.round(summary.accuracy * 100);
+    const grade = accuracyPct >= 95 && summary.avgReactionMs <= 900
+      ? "S"
+      : accuracyPct >= 85
+        ? "A"
+        : accuracyPct >= 70
+          ? "B"
+          : "C";
+    heading.setText(`${grade}  ·  スコア ${summary.score}`);
+    heading.setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
+    heading.setScale(0.78);
+    this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
+    if (grade === "S" || grade === "A") this.cameras.main.flash(120, 255, 222, 110);
     stats.setText(
       `正答率: ${Math.round(summary.accuracy * 100)}%\n平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
     );
