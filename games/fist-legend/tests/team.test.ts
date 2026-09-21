@@ -7,7 +7,7 @@ describe("fighter team", () => {
   });
 
   it("allows up to three unique fighters", () => {
-    let team = ["ryuga"] as const;
+    const team = ["ryuga"] as const;
     let next = toggleTeamMember(team, "renka");
     next = toggleTeamMember(next, "gaku");
     expect(next).toEqual(["ryuga", "renka", "gaku"]);
