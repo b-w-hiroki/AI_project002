@@ -81,3 +81,24 @@ test("touch starts battle and a move advances the beat after rotation", async ({
   await expect.poll(async () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
   await checkFrame(page, "landscape-battle");
 });
+
+test("gacha and result screens are included in visual QA", async ({ page }) => {
+  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "openGacha").call(window.__qaGame.scene.getScene("GameScene")));
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "gachaGroup").visible)).toBe(true);
+  await checkFrame(page, "portrait-gacha");
+
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showTitle").call(scene);
+    Reflect.get(scene, "startBattle").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "finishBattle").call(window.__qaGame.scene.getScene("GameScene"), true));
+  await expect.poll(() => phase(page)).toBe("result");
+  await checkFrame(page, "portrait-result");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await checkFrame(page, "landscape-result");
+});
+

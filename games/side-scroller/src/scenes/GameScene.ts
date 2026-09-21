@@ -256,6 +256,7 @@ export class GameScene extends Phaser.Scene {
   private statusPanel!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
   private restartText!: Phaser.GameObjects.Text;
+  private virtualControls?: Phaser.GameObjects.Container;
 
   private tipsOverlay?: Phaser.GameObjects.Container;
   private tipsVisible = false;
@@ -420,25 +421,27 @@ export class GameScene extends Phaser.Scene {
    * 右下=攻撃・スキル・武器切替・アイテム使用。
    */
   private buildVirtualControls(): void {
-    bindVirtualJoystick(
+    const controls = this.add.container(0, 0).setScrollFactor(0).setDepth(90).setName("virtual-controls");
+    controls.add(bindVirtualJoystick(
       this,
       { x: 0, y: 0, width: 400, height: 600 },
       { left: this.cursors.left, right: this.cursors.right, up: this.cursors.up, down: this.cursors.down },
-    );
+    ));
 
-    bindHeldKey(this, 730, 520, "X", this.attackKey, { radius: 40, color: 0xff6b8a, alpha: 0.5, fontSize: "20px" });
-    bindHeldKey(this, 650, 500, "C", this.skillKey, { radius: 28, color: 0x7fd1ff, alpha: 0.5 });
+    controls.add(bindHeldKey(this, 730, 520, "X", this.attackKey, { radius: 40, color: 0xff6b8a, alpha: 0.5, fontSize: "20px" }));
+    controls.add(bindHeldKey(this, 650, 500, "C", this.skillKey, { radius: 28, color: 0x7fd1ff, alpha: 0.5 }));
 
     WEAPON_KEY_BINDINGS.forEach((_binding, i) => {
       const key = this.weaponKeys[i]?.key;
-      if (key) bindHeldKey(this, 580 + i * 36, 450, `${i + 1}`, key, { radius: 16, fontSize: "13px" });
+      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 450, `${i + 1}`, key, { radius: 16, fontSize: "13px" }));
     });
     ITEM_KEY_BINDINGS.forEach(({ label }, i) => {
       const key = this.itemKeys[i]?.key;
-      if (key) bindHeldKey(this, 580 + i * 36, 410, label, key, { radius: 16, fontSize: "13px", color: 0x7fffb0 });
+      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 410, label, key, { radius: 16, fontSize: "13px", color: 0x7fffb0 }));
     });
 
-    bindHeldKey(this, 770, 24, "?", this.tipsKey, { radius: 18, fontSize: "14px" });
+    controls.add(bindHeldKey(this, 770, 24, "?", this.tipsKey, { radius: 18, fontSize: "14px" }));
+    this.virtualControls = controls;
   }
 
   /**
@@ -1635,6 +1638,7 @@ export class GameScene extends Phaser.Scene {
       this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
       this.restartText.setText(`到達: Wave ${this.wave}  ベスト: Wave ${this.bestWave}\nR キーでリトライ`);
+      this.virtualControls?.setVisible(false);
       this.statusPanel.setVisible(true);
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }

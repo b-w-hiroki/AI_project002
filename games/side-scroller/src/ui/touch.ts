@@ -70,7 +70,7 @@ export function bindHeldKey(
   label: string,
   key: Phaser.Input.Keyboard.Key,
   options: TouchButtonOptions = {},
-): void {
+): Phaser.GameObjects.Container {
   const radius = Math.max(22, options.radius ?? 30);
   const btn = scene.add
     .circle(x, y, radius, options.color ?? 0x2a2a4a, options.alpha ?? 0.55)
@@ -78,11 +78,12 @@ export function bindHeldKey(
     .setDepth(90)
     .setStrokeStyle(1, 0x54547a)
     .setInteractive();
-  scene.add
+  const labelText = scene.add
     .text(x, y, label, { fontSize: options.fontSize ?? "16px", color: "#e8e8fb" })
     .setOrigin(0.5)
     .setScrollFactor(0)
     .setDepth(91);
+  const group = scene.add.container(0, 0, [btn, labelText]).setScrollFactor(0).setDepth(90);
 
   // Key#onUp は isDown/_justDown を無条件でリセットする。タップ操作は touchstart→touchend が
   // 同一フレーム内（Phaserの入力処理はScene#updateより前のPRE_STEPで走る）で処理されることがあり、
@@ -97,6 +98,7 @@ export function bindHeldKey(
   btn.on("pointerup", deferredUp);
   // 指がボタン外に流れた場合も離した扱いにする（押しっぱなし状態が固着するのを防ぐ）
   btn.on("pointerout", deferredUp);
+  return group;
 }
 
 export interface JoystickKeys {
@@ -123,7 +125,7 @@ export function bindVirtualJoystick(
   zoneRect: { x: number; y: number; width: number; height: number },
   keys: JoystickKeys,
   options: JoystickOptions = {},
-): void {
+): Phaser.GameObjects.Container {
   const maxRadius = options.maxRadius ?? 52;
   const deadzone = options.deadzone ?? 14;
 
@@ -202,6 +204,7 @@ export function bindVirtualJoystick(
     if (pointer.id === pointerId) releaseAll();
   });
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, releaseAll);
+  return scene.add.container(0, 0, [inputZone, base, thumb]).setScrollFactor(0).setDepth(85);
 }
 
 /**

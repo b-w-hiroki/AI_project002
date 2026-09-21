@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
+
+declare global { interface Window { __qaGame: Phaser.Game } }
 
 async function canvasPoint(page: Page, x: number, y: number): Promise<{ x: number; y: number }> {
   const canvas = page.locator("canvas");
@@ -28,8 +31,13 @@ async function enterBattleForVisualQa(page: Page): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
+  });
   await page.goto("/");
   await page.locator("canvas").waitFor();
+  await page.waitForFunction(() => !!window.__qaGame);
   await page.waitForTimeout(500); // 初回描画待ち
 });
 
@@ -84,6 +92,29 @@ test.describe("phone visual QA", () => {
     await enterBattleForVisualQa(page);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-landscape-battle-844x390.png",
+      animations: "disabled",
+    });
+  });
+  test("visual QA: game over hides touch controls", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const state = Reflect.get(scene, "playerState") as Record<string, unknown>;
+      Reflect.set(scene, "playerState", { ...state, health: 0 });
+      Reflect.get(scene, "checkStatus").call(scene);
+    });
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "status"))).toBe("gameover");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const controls = Reflect.get(scene, "virtualControls") as Phaser.GameObjects.Container | undefined;
+      return controls?.visible ?? false;
+    })).toBe(false);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-game-over-844x390.png",
       animations: "disabled",
     });
   });

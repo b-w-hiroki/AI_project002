@@ -74,3 +74,14 @@ test("進行状況が localStorage に自動セーブされる", async ({ page }
     )
     .toBeGreaterThanOrEqual(1);
 });
+
+test("portrait and landscape workshop are captured for visual QA", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page)).height).toBe(800);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-workshop.png", animations: "disabled" });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => (await canvasSize(page)).width).toBe(800);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-workshop.png", animations: "disabled" });
+});
+
