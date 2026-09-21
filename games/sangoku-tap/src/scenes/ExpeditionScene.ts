@@ -30,6 +30,17 @@ import {
 } from "../logic/expeditionSave";
 import { effectiveAtk } from "../logic/roster";
 import { REGIONS, regionById, type RegionId } from "../logic/regions";
+
+const REGION_BOSS_VISUAL: Readonly<Record<RegionId, {
+  accent: number;
+  glow: number;
+  title: string;
+  crest: "sun" | "mountain" | "flame";
+}>> = {
+  plains: { accent: 0xe5bd72, glow: 0xf8dc9a, title: "黎明の守将", crest: "sun" },
+  pass: { accent: 0x80c9ae, glow: 0xb5ead4, title: "翠嶺の守将", crest: "mountain" },
+  citadel: { accent: 0xe37d78, glow: 0xffb1a7, title: "紅蓮の守将", crest: "flame" },
+};
 import {
   loadCampaign,
   saveCampaign,
@@ -506,13 +517,16 @@ export class ExpeditionScene extends Phaser.Scene {
         .fillStyle(i <= r.step ? region.accent : 0x526364)
         .fillCircle(26 + i * 39.8, 60, i === r.step ? 5 : 2.5);
     if (boss) {
-      this.text(30, 99, "FINAL ENCOUNTER", 11, "#e5b586")
+      const bossVisual = REGION_BOSS_VISUAL[region.id];
+      this.text(30, 99, "FINAL ENCOUNTER", 11, `#${bossVisual.accent.toString(16).padStart(6, "0")}`)
         .setOrigin(0, 0)
         .setLetterSpacing(2);
-      this.text(30, 130, "関門\n守将", 31, "#fff0d0")
+      this.text(30, 130, bossVisual.title.replace("の", "\n"), 29, "#fff0d0")
         .setOrigin(0, 0)
-        .setLineSpacing(6);
+        .setLineSpacing(6)
+        .setName("boss-region-label");
       this.text(30, 224, region.boss, 12, "#e6bd92").setOrigin(0, 0);
+      this.renderBossCrest(region.id, 91, 265);
     } else {
       this.text(
         225,
@@ -631,15 +645,19 @@ export class ExpeditionScene extends Phaser.Scene {
   private bossEntrance(): void {
     this.introRunId = this.run!.id;
     this.busy = true;
+    const region = regionById(this.run!.regionId);
+    const visual = REGION_BOSS_VISUAL[region.id];
     const curtain = this.add
       .rectangle(225, 310, 450, 466, 0x0d121c, 0.92)
       .setName("boss-intro");
     this.root.add(curtain);
-    const title = this.text(225, 255, "関 門 守 将", 34, "#f8d7a2");
+    const flare = this.add.circle(225, 300, 92, visual.glow, 0.1);
+    this.root.add(flare);
+    const title = this.text(225, 255, visual.title, 34, `#${visual.glow.toString(16).padStart(6, "0")}`);
     const subtitle = this.text(
       225,
       309,
-      regionById(this.run!.regionId).boss,
+      region.boss,
       16,
       "#d5c1a3",
     );
@@ -658,7 +676,7 @@ export class ExpeditionScene extends Phaser.Scene {
       });
     }
     this.tweens.add({
-      targets: [curtain, title, subtitle],
+      targets: [curtain, flare, title, subtitle],
       alpha: 0,
       delay: 420,
       duration: 550,
@@ -744,14 +762,90 @@ export class ExpeditionScene extends Phaser.Scene {
       });
     }
   }
+  private renderBossCrest(regionId: RegionId, x: number, y: number): void {
+    const visual = REGION_BOSS_VISUAL[regionId];
+    const g = this.add.graphics();
+    this.root.add(g);
+    g.fillStyle(0x101921, 0.88).fillCircle(x, y, 34);
+    g.lineStyle(2, visual.accent, 0.88).strokeCircle(x, y, 34);
+    g.lineStyle(1, visual.glow, 0.5).strokeCircle(x, y, 27);
+    g.fillStyle(visual.glow, 0.92);
+    if (visual.crest === "sun") {
+      g.fillCircle(x, y, 10);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        g.lineStyle(3, visual.glow, 0.9).lineBetween(
+          x + Math.cos(a) * 15, y + Math.sin(a) * 15,
+          x + Math.cos(a) * 24, y + Math.sin(a) * 24,
+        );
+      }
+    } else if (visual.crest === "mountain") {
+      g.fillTriangle(x - 22, y + 14, x - 3, y - 14, x + 7, y + 14);
+      g.fillTriangle(x - 4, y + 14, x + 13, y - 8, x + 24, y + 14);
+    } else {
+      g.fillPoints([
+        new Phaser.Math.Vector2(x, y - 24),
+        new Phaser.Math.Vector2(x + 15, y - 5),
+        new Phaser.Math.Vector2(x + 9, y + 17),
+        new Phaser.Math.Vector2(x, y + 24),
+        new Phaser.Math.Vector2(x - 12, y + 12),
+        new Phaser.Math.Vector2(x - 14, y - 6),
+      ], true);
+      g.fillStyle(0x101921, 0.85).fillTriangle(x, y - 7, x + 6, y + 12, x - 7, y + 10);
+    }
+  }
+
+  private renderBossBackdrop(regionId: RegionId, x: number, y: number): void {
+    const visual = REGION_BOSS_VISUAL[regionId];
+    const g = this.add.graphics();
+    this.root.add(g);
+    g.fillStyle(visual.glow, 0.07).fillCircle(x, y, 116);
+    g.lineStyle(5, visual.accent, 0.22).strokeCircle(x, y, 104);
+    g.lineStyle(2, visual.glow, 0.18).strokeCircle(x, y, 84);
+    g.fillStyle(visual.glow, 0.16);
+    if (visual.crest === "sun") {
+      g.fillCircle(x, y, 30);
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        g.lineStyle(6, visual.glow, 0.16).lineBetween(
+          x + Math.cos(a) * 42, y + Math.sin(a) * 42,
+          x + Math.cos(a) * 82, y + Math.sin(a) * 82,
+        );
+      }
+    } else if (visual.crest === "mountain") {
+      g.fillTriangle(x - 84, y + 54, x - 20, y - 58, x + 10, y + 54);
+      g.fillTriangle(x - 8, y + 54, x + 52, y - 36, x + 92, y + 54);
+      g.lineStyle(4, visual.glow, 0.2).lineBetween(x - 106, y + 58, x + 106, y + 58);
+    } else {
+      g.fillPoints([
+        new Phaser.Math.Vector2(x, y - 96),
+        new Phaser.Math.Vector2(x + 50, y - 28),
+        new Phaser.Math.Vector2(x + 36, y + 62),
+        new Phaser.Math.Vector2(x, y + 96),
+        new Phaser.Math.Vector2(x - 52, y + 45),
+        new Phaser.Math.Vector2(x - 58, y - 30),
+      ], true);
+      g.fillStyle(0x0d121c, 0.38).fillTriangle(x, y - 28, x + 25, y + 48, x - 28, y + 42);
+    }
+  }
+
   private renderEnemy(boss: boolean): void {
     if (boss) {
-      // Boss art dominates the encounter; ally portraits remain in the foreground.
+      const region = regionById(this.run?.regionId ?? this.selectedRegion);
+      const visual = REGION_BOSS_VISUAL[region.id];
+      // Region-specific aura/crest makes each gatekeeper read as a different chapter.
+      this.renderBossBackdrop(region.id, 298, 322);
+      const aura = this.add.graphics();
+      aura.fillStyle(visual.glow, 0.1).fillCircle(298, 330, 126);
+      aura.lineStyle(4, visual.accent, 0.42).strokeCircle(298, 330, 112);
+      aura.lineStyle(1, 0xfff2d8, 0.25).strokeCircle(298, 330, 96);
+      this.root.add(aura);
       this.root.add(this.add.ellipse(298, 509, 226, 21, 0x100a13, 0.65));
       if (this.textures.exists("st-boss-gatekeeper")) {
         const enemy = this.add
           .image(298, 320, "st-boss-gatekeeper")
           .setDisplaySize(281.25, 375)
+          .setTint(region.tint)
           .setName("gatekeeper-boss");
         this.root.add(enemy);
         this.tweens.add({
@@ -828,6 +922,15 @@ export class ExpeditionScene extends Phaser.Scene {
   private renderResult(): void {
     const r = this.run!;
     this.panel(225, 375, 404, 550);
+    if (r.status === "clear") {
+      const visual = REGION_BOSS_VISUAL[r.regionId];
+      const victory = this.add.graphics();
+      victory.fillStyle(visual.glow, 0.11).fillEllipse(225, 138, 340, 92);
+      victory.lineStyle(3, visual.accent, 0.72).lineBetween(74, 93, 376, 93);
+      victory.lineStyle(1, 0xffffff, 0.3).lineBetween(112, 100, 338, 100);
+      this.root.add(victory);
+      this.renderBossCrest(r.regionId, 225, 190);
+    }
     this.text(
       225,
       129,
