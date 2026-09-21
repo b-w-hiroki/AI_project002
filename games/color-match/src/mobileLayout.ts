@@ -12,7 +12,13 @@ import {
   type Round,
   type WritingMode,
 } from "./logic/round";
-import { loadBestScore, loadBestTurbo } from "./logic/progress";
+import {
+  loadBestScore,
+  loadBestTurbo,
+  loadPerformanceStats,
+  metricAccuracy,
+  metricAvgReaction,
+} from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
@@ -20,6 +26,9 @@ type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
   phase?: "title" | "playing" | "result";
   sessionRemaining?: number;
+  sessionDurationMs?: number;
+  sessionMode?: "challenge" | "practice";
+  practiceJudgeMode?: "content" | "color";
   currentRound?: Round | null;
   turboStreak?: number;
   turboPoints?: number;
@@ -162,7 +171,7 @@ function build(scene: Runtime): LandscapeUi {
 
   panel(scene, title, 250, 225, 400, 300, 0x164f82, 0x9be9ff, 0.94, 22);
   text(scene, title, 250, 118, "色と文字のズレを見抜け！", 25, "#ffffff", "900");
-  text(scene, title, 250, 170, "60秒で判断。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", 14, "#def5ff", "700");
+  text(scene, title, 250, 170, "60秒で総合力。20秒練習で弱点集中。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", 14, "#def5ff", "700");
   const titleMode = text(scene, title, 250, 244, "", 13, "#fff1a8", "900");
 
   const modeXs = [92, 194, 296, 398];
@@ -173,7 +182,8 @@ function build(scene: Runtime): LandscapeUi {
     title.add(hit);
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
   });
-  button(scene, title, 640, 270, 250, 72, "スタート", () => invoke(scene, "startSession"));
+  button(scene, title, 640, 250, 250, 62, "60秒チャレンジ", () => invoke(scene, "startSession", "challenge"));
+  button(scene, title, 640, 326, 250, 54, "20秒 弱点練習", () => invoke(scene, "startPractice"), 0x4b75d6);
   panel(scene, title, 640, 150, 250, 120, 0xffffff, 0x8ac8f4, 0.94, 18);
   text(scene, title, 640, 128, "BEST", 11, "#2b5b87", "900");
   text(scene, title, 640, 158, `${loadBestScore()} SCORE`, 27, "#ff7a3d", "900");
@@ -263,11 +273,12 @@ function refresh(scene: Runtime): void {
   ui.titleMode.setText(`表記: ${WRITING_MODE_LABEL[scene.writingMode ?? "hiragana"]}`);
 
   if (scene.phase === "playing" && scene.currentRound) {
-    const remaining = Phaser.Math.Clamp(scene.sessionRemaining ?? CHALLENGE_MS, 0, CHALLENGE_MS);
+    const duration = scene.sessionDurationMs ?? CHALLENGE_MS;
+    const remaining = Phaser.Math.Clamp(scene.sessionRemaining ?? duration, 0, duration);
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
-    const ratio = remaining / CHALLENGE_MS;
-    const elapsed = CHALLENGE_MS - remaining;
-    const until = Math.max(0, nextSwitchAt(elapsed) - elapsed);
+    const ratio = remaining / duration;
+    const elapsed = duration - remaining;
+    const until = scene.sessionMode === "practice" ? 0 : Math.max(0, nextSwitchAt(elapsed) - elapsed);
     const streak = scene.turboStreak ?? 0;
     const correct = scene.results?.filter((entry) => entry.correct).length ?? 0;
     const score = correct * 100 + (scene.turboPoints ?? 0) * 10;
@@ -294,7 +305,13 @@ function refresh(scene: Runtime): void {
       .setColor(`#${hexForColorId(scene.currentRound.promptInk).toString(16).padStart(6, "0")}`);
     ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`)
       .setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
-    ui.nextText.setText(until <= 2000 ? "RULE SHIFT まもなく！" : `NEXT RULE ${Math.ceil(until / 1000)}秒  ·  BEST ${loadBestScore()}`);
+    ui.nextText.setText(
+      scene.sessionMode === "practice"
+        ? `WEAK POINT  ${scene.practiceJudgeMode === "color" ? "文字の色" : "文字の意味"} を集中練習`
+        : until <= 2000
+          ? "RULE SHIFT まもなく！"
+          : `NEXT RULE ${Math.ceil(until / 1000)}秒  ·  BEST ${loadBestScore()}`,
+    );
     ui.answers.forEach((answer, i) => answer.text.setText(nameForColorId(COLORS[i]!.id, scene.writingMode ?? "hiragana")));
   }
 
@@ -312,9 +329,16 @@ function refresh(scene: Runtime): void {
     ui.resultHeading
       .setText(`${grade}  ·  SCORE ${summary.score}`)
       .setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
+    const performance = loadPerformanceStats();
+    const metric = (key: "content" | "color" | "switch", label: string) => {
+      const value = performance[key];
+      const accuracy = value.total ? Math.round(metricAccuracy(value) * 100) : 0;
+      const reaction = value.reactionSamples ? Math.round(metricAvgReaction(value)) : 0;
+      return `${label} ${accuracy}%${reaction ? ` / ${reaction}ms` : ""}`;
+    };
     ui.resultStats.setText(
-      `正答率 ${Math.round(summary.accuracy * 100)}%   ·   平均反応 ${Math.round(summary.avgReactionMs)}ms\n` +
-      `TURBO ${scene.turboPoints ?? 0}pt   ·   BEST ${loadBestScore()}   ·   BEST TURBO ${loadBestTurbo()}pt`,
+      `${scene.sessionMode === "practice" ? "20秒弱点練習" : "60秒チャレンジ"} · 正答率 ${Math.round(summary.accuracy * 100)}% · 平均 ${Math.round(summary.avgReactionMs)}ms\n` +
+      `${metric("content", "意味")}   ·   ${metric("color", "色")}   ·   ${metric("switch", "切替")}`,
     );
   }
 }
