@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { deriveStats, initialKarma, FACTION_LABEL, type KarmaRequest, type KarmaState } from "./logic/karma";
+import { deriveStats, dominantFaction, initialKarma, FACTION_LABEL, type Faction, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
@@ -58,6 +58,25 @@ const REQUESTER_ART = {
   outlaw: "kq-dialogue-outlaw-v1", mage: "kq-dialogue-mage-v1",
 };
 const REACTION_BG_KEY = "kq-bg-village-reaction";
+
+const HERO_FACTION_VISUAL: Readonly<Record<Faction, {
+  tint: number;
+  accent: number;
+  glow: number;
+  crest: string;
+  title: string;
+}>> = {
+  warrior: { tint: 0xffe2d6, accent: 0xb54834, glow: 0xffd166, crest: "戦", title: "鋼の盟約" },
+  merchant: { tint: 0xffefc8, accent: 0x258c63, glow: 0xf6d36a, crest: "商", title: "繁栄の盟約" },
+  outlaw: { tint: 0xffd8df, accent: 0x9a3659, glow: 0xff8a69, crest: "荒", title: "自由の盟約" },
+  mage: { tint: 0xddd9ff, accent: 0x6654be, glow: 0x9edfff, crest: "魔", title: "秘術の盟約" },
+};
+type HeroKarmaVisual = {
+  hero?: Phaser.GameObjects.Image;
+  aura: Phaser.GameObjects.Graphics;
+  crest: Phaser.GameObjects.Text;
+  title: Phaser.GameObjects.Text;
+};
 const uiByScene = new WeakMap<object, MockUi>();
 const homeByScene = new WeakMap<object, { titleRoot: Phaser.GameObjects.Container; landscapeTitle: Phaser.GameObjects.Container }>();
 const JOURNEY_ART = [BG_KEY, DIALOGUE_BG_KEY, ELDER_KEY, ...Object.values(REQUESTER_ART)];
@@ -85,6 +104,79 @@ function text(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number
   }).setOrigin(0.5);
   root.add(object);
   return object;
+}
+
+function karmaVisualState(karma: KarmaState): { faction: Faction | null; strength: number } {
+  const values = Object.values(karma);
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  if (max <= 2 || max - min < 3) return { faction: null, strength: 0 };
+  return { faction: dominantFaction(karma), strength: Phaser.Math.Clamp((max - min) / 18, 0.35, 1) };
+}
+
+function registerHeroKarmaVisual(
+  scene: Runtime,
+  root: Phaser.GameObjects.Container,
+  hero: Phaser.GameObjects.Image | undefined,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  badgeX = x,
+  badgeY = y - height * 0.42,
+): void {
+  const aura = scene.add.graphics();
+  const insertAt = Math.max(0, root.length - (hero ? 1 : 0));
+  root.addAt(aura, insertAt);
+  const crest = text(scene, root, badgeX - 52, badgeY, "◇", 15, "#fff3ce", "900")
+    .setName("hero-karma-crest")
+    .setAlpha(0);
+  const title = text(scene, root, badgeX + 12, badgeY, "まだ何色にも染まっていない", 12, "#fff3ce", "900", 126)
+    .setName("hero-karma-badge")
+    .setAlpha(0);
+
+  const visuals = (root.getData("heroKarmaVisuals") as HeroKarmaVisual[] | undefined) ?? [];
+  visuals.push({ hero, aura, crest, title });
+  root.setData("heroKarmaVisuals", visuals);
+  root.setData("heroKarmaBounds", { x, y, width, height });
+}
+
+function refreshHeroKarmaVisual(scene: Runtime, root?: Phaser.GameObjects.Container): void {
+  if (!root) return;
+  const visuals = root.getData("heroKarmaVisuals") as HeroKarmaVisual[] | undefined;
+  if (!visuals?.length) return;
+  const bounds = root.getData("heroKarmaBounds") as { x: number; y: number; width: number; height: number } | undefined;
+  if (!bounds) return;
+
+  const state = karmaVisualState(scene.karma ?? initialKarma());
+  for (const visual of visuals) {
+    visual.aura.clear();
+    if (!state.faction) {
+      visual.hero?.clearTint();
+      visual.crest.setAlpha(0);
+      visual.title.setAlpha(0);
+      continue;
+    }
+    const style = HERO_FACTION_VISUAL[state.faction];
+    visual.hero?.setTint(style.tint);
+    const alpha = 0.07 + state.strength * 0.08;
+    visual.aura.fillStyle(style.glow, alpha).fillEllipse(bounds.x, bounds.y, bounds.width * 0.9, bounds.height * 0.72);
+    visual.aura.lineStyle(3, style.accent, 0.25 + state.strength * 0.3)
+      .strokeEllipse(bounds.x, bounds.y, bounds.width * 0.82, bounds.height * 0.65);
+    visual.aura.lineStyle(1, style.glow, 0.22 + state.strength * 0.25)
+      .strokeEllipse(bounds.x, bounds.y, bounds.width * 0.7, bounds.height * 0.55);
+    visual.crest
+      .setText(style.crest)
+      .setColor(`#${style.glow.toString(16).padStart(6, "0")}`)
+      .setStroke("#091420", 4)
+      .setAlpha(0.96);
+    visual.title
+      .setText(style.title)
+      .setColor("#fff4d0")
+      .setBackgroundColor(`#${style.accent.toString(16).padStart(6, "0")}`)
+      .setPadding(8, 4, 8, 4)
+      .setAlpha(0.92);
+  }
 }
 
 function cover(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, tint?: number): Phaser.GameObjects.Image | undefined {
@@ -403,7 +495,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
-  fitted(scene, root, HERO_BACK_KEY, 150, 565, 480, 634);
+  const homeHero = fitted(scene, root, HERO_BACK_KEY, 150, 565, 480, 634);
+  registerHeroKarmaVisual(scene, root, homeHero, 150, 470, 310, 450, 132, 318);
   hudPlate(scene, root, 186, 581, 314, 38);
   text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 656, 414, 112);
@@ -521,7 +614,8 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   text(scene, root, 282, 39, "選択が、世界をつくる", 20, "#ffffff", "900");
   // A dedicated chest-up portrait keeps the player at conversation distance.
   const player = PORTRAIT_BLUEPRINT.choice.playerPortrait;
-  fitted(scene, root, HERO_DIALOGUE_KEY, player.x + player.width / 2, player.y + player.height / 2, player.width, player.height);
+  const choiceHero = fitted(scene, root, HERO_DIALOGUE_KEY, player.x + player.width / 2, player.y + player.height / 2, player.width, player.height);
+  registerHeroKarmaVisual(scene, root, choiceHero, player.x + player.width / 2, player.y + player.height / 2, player.width, player.height, 98, 108);
   const npc = PORTRAIT_BLUEPRINT.choice.npcPortrait;
   // Faction portraits share a fixed lane without stretching their proportions.
   requesterPortrait(scene, root, npc.x, npc.y, npc.width, npc.height);
@@ -552,7 +646,8 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   artWindow(scene, root, DIALOGUE_BG_KEY, 8, 8, 374, 434);
   hudPlate(scene, root, 195, 39, 354, 58);
   const yearText = text(scene, root, 195, 39, "", 22, "#fff4d0", "900");
-  fitted(scene, root, HERO_DIALOGUE_KEY, 115, 324, 214, 220);
+  const wideHero = fitted(scene, root, HERO_DIALOGUE_KEY, 115, 324, 214, 220);
+  registerHeroKarmaVisual(scene, root, wideHero, 115, 324, 214, 220, 112, 92);
   requesterPortrait(scene, root, 156, 126, 222, 308);
   root.add(scene.add.graphics().fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 1, 1).fillRect(10, 388, 370, 52));
   requestCard(scene, root, 591, 132, 390, 244);
@@ -753,7 +848,8 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
     artWindow(scene, root, HERO_DIALOGUE_KEY, 38, 85, 310, 215, 0);
     requestCard(scene, root, 195, 367, 346, 134);
   } else {
-    fitted(scene, root, HERO_BACK_KEY, 178, 242, 320, 326);
+    const overviewHero = fitted(scene, root, HERO_BACK_KEY, 178, 242, 320, 326);
+    registerHeroKarmaVisual(scene, root, overviewHero, 178, 250, 270, 310, 190, 95);
   }
   const statValues = final ? [
     metricChip(scene, root, 133, 337, "攻撃", "", 0x2e6ba3),
@@ -864,7 +960,8 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const encounter = scene.add.container(0, 0), battle = scene.add.container(0, 0), report = scene.add.container(0, 0);
   root.add([encounter, battle, report]);
   for (const layer of [encounter, battle]) {
-    fitted(scene, layer, HERO_DIALOGUE_KEY, 195, 249, 362, 362);
+    const journeyHero = fitted(scene, layer, HERO_DIALOGUE_KEY, 195, 249, 362, 362);
+    registerHeroKarmaVisual(scene, layer, journeyHero, 195, 249, 300, 330, 196, 92);
     hudPlate(scene, layer, 195, 47, 352, 64);
     requestCard(scene, layer, 591, 145, 390, 266);
   }
@@ -973,9 +1070,26 @@ function refresh(scene: Runtime): void {
     home.landscapeTitle.setVisible(!portrait);
     (home.titleRoot.getData("refreshRequest") as () => void)();
     (home.landscapeTitle.getData("refreshOverview") as () => void)();
+    refreshHeroKarmaVisual(scene, home.titleRoot);
+    refreshHeroKarmaVisual(scene, home.landscapeTitle);
     return;
   }
   const ui = build(scene);
+  const home = homeUi(scene);
+  for (const root of [
+    home.titleRoot,
+    home.landscapeTitle,
+    ui.choiceRoot,
+    ui.landscapeChoice?.choiceRoot,
+    ui.finalRoot,
+    ui.landscapeFinal,
+  ]) refreshHeroKarmaVisual(scene, root);
+  const journey = ui.landscapeJourney;
+  if (journey) {
+    for (const child of journey.list) {
+      if (child instanceof Phaser.GameObjects.Container) refreshHeroKarmaVisual(scene, child);
+    }
+  }
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
   ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
