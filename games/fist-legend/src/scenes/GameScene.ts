@@ -119,6 +119,7 @@ export class GameScene extends Phaser.Scene {
   private selectionButtons: ReturnType<typeof makeButton>[] = [];
   private teamButtons: ReturnType<typeof makeButton>[] = [];
   private selectedTeam: FighterId[] = ["ryuga"];
+  private activeFighterIndex = 0;
   private teamSummary!: Phaser.GameObjects.Text;
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
@@ -137,6 +138,7 @@ export class GameScene extends Phaser.Scene {
   private enemyHpFill!: Phaser.GameObjects.Graphics;
   private ougiFill!: Phaser.GameObjects.Graphics;
   private ougiBtn!: ReturnType<typeof makeButton>;
+  private switchBtn!: ReturnType<typeof makeButton>;
   private timerText!: Phaser.GameObjects.Text;
   private clashText!: Phaser.GameObjects.Text;
   private currencyText!: Phaser.GameObjects.Text;
@@ -414,12 +416,72 @@ export class GameScene extends Phaser.Scene {
       const fighter = FIGHTERS[index];
       button.container.setAlpha(fighter && this.selectedTeam.includes(fighter.id) ? 1 : 0.42);
     });
-    const leader = fighterById(this.selectedTeam[0] ?? "ryuga");
-    this.playerLabel?.setText(`PLAYER · ${leader.name}`);
+    const activeId = this.phase === "battle"
+      ? this.selectedTeam[this.activeFighterIndex] ?? this.selectedTeam[0] ?? "ryuga"
+      : this.selectedTeam[0] ?? "ryuga";
+    const leader = fighterById(activeId);
+    this.playerLabel?.setText(
+      this.phase === "battle"
+        ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+        : `PLAYER · ${leader.name}`,
+    );
     if (this.playerSprite instanceof Phaser.GameObjects.Image) {
       if (leader.id === "ryuga") this.playerSprite.clearTint();
       else this.playerSprite.setTint(leader.accent);
     }
+    this.switchBtn?.setEnabled(this.phase === "battle" && this.selectedTeam.length > 1);
+  }
+
+  private switchFighter(): void {
+    if (this.phase !== "battle" || !this.accepting || this.selectedTeam.length <= 1) return;
+    this.accepting = false;
+    this.activeFighterIndex = (this.activeFighterIndex + 1) % this.selectedTeam.length;
+    const active = fighterById(this.selectedTeam[this.activeFighterIndex] ?? "ryuga");
+    this.refreshTeamSelection();
+    this.playSound(sfx.buttonTap);
+
+    const ring = this.add
+      .circle(this.playerSprite.x, this.playerSprite.y, 54, active.accent, 0)
+      .setStrokeStyle(5, active.accent === 0xffffff ? 0xffd88a : active.accent, 0.86)
+      .setDepth(15);
+    const label = this.add
+      .text(this.playerSprite.x, this.playerSprite.y - 145, `CHANGE!  ${active.name}`, {
+        fontSize: "22px",
+        color: "#fff4d0",
+        fontStyle: "900",
+        stroke: "#2a130e",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setDepth(16)
+      .setScale(0.72);
+    this.battleGroup.add([ring, label]);
+    this.tweens.add({
+      targets: ring,
+      scale: 2.4,
+      alpha: 0,
+      duration: 280,
+      ease: "Cubic.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+    this.tweens.add({
+      targets: label,
+      scale: 1,
+      y: label.y - 18,
+      alpha: { from: 1, to: 0 },
+      duration: 420,
+      ease: "Back.easeOut",
+      onComplete: () => label.destroy(),
+    });
+    this.cameras.main.flash(
+      80,
+      (active.accent >> 16) & 0xff,
+      (active.accent >> 8) & 0xff,
+      active.accent & 0xff,
+    );
+    this.time.delayedCall(260, () => {
+      if (this.phase === "battle") this.accepting = true;
+    });
   }
 
   private playSound(fn: () => void): void {
@@ -569,6 +631,21 @@ export class GameScene extends Phaser.Scene {
     );
     this.ougiBtn.setEnabled(false);
 
+    this.switchBtn = makeButton(
+      this,
+      660,
+      545,
+      120,
+      44,
+      "交代",
+      () => this.switchFighter(),
+      {
+        fontSize: "15px",
+        fillColor: 0x4c4d78,
+      },
+    );
+    this.switchBtn.setEnabled(false);
+
     const legacyHud = this.add.container(0, 0, [
       topShade,
       bottomShade,
@@ -587,6 +664,7 @@ export class GameScene extends Phaser.Scene {
       kickBtn.container,
       kiBtn.container,
       this.ougiBtn.container,
+      this.switchBtn.container,
     ]).setName("legacy-battle-hud");
     this.battleGroup.add([...(bg ? [bg] : []), this.enemyAura, this.playerSprite, this.enemySprite, this.opponentBadge, legacyHud]);
   }
@@ -613,6 +691,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private startBattle(): void {
+    this.activeFighterIndex = 0;
     this.beat = 0;
     this.nextEnemyMove = plannedMove(this.opponent, 0, null);
     this.phase = "battle";
@@ -1234,6 +1313,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (this.phase === "battle" && this.accepting) {
+      if (e.key === "s" || e.key === "S") {
+        this.switchFighter();
+        return;
+      }
       const index = ["1", "2", "3"].indexOf(e.key);
       if (index >= 0) {
         const move = MOVE_ORDER[index];

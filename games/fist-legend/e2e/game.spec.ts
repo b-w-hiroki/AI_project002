@@ -170,3 +170,40 @@ test("three-fighter team persists and leader appears in battle", async ({ page }
   await checkFrame(page, "portrait-team-leader-battle");
 });
 
+test("battle switch cycles through the selected team on touch controls", async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const toggle = Reflect.get(scene, "toggleTeamMember") as (id: "ryuga" | "renka" | "gaku" | "mei") => void;
+    toggle.call(scene, "renka");
+    toggle.call(scene, "gaku");
+    Reflect.get(scene, "startBattle").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "activeFighterIndex"))).toBe(0);
+
+  await tapPoint(page, 225, 715);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      index: Reflect.get(scene, "activeFighterIndex"),
+      label: (Reflect.get(scene, "playerLabel") as Phaser.GameObjects.Text).text,
+    };
+  })).toEqual({ index: 1, label: "PLAYER · 蓮花 [2/3]" });
+  await page.waitForTimeout(300);
+  await checkFrame(page, "portrait-switch-renka");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await page.waitForTimeout(80);
+  await tapPoint(page, 300, 402);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      index: Reflect.get(scene, "activeFighterIndex"),
+      label: (Reflect.get(scene, "playerLabel") as Phaser.GameObjects.Text).text,
+    };
+  })).toEqual({ index: 2, label: "PLAYER · 岳 [3/3]" });
+  await page.waitForTimeout(300);
+  await checkFrame(page, "landscape-switch-gaku");
+});
+

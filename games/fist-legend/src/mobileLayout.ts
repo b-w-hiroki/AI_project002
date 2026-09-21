@@ -16,7 +16,9 @@ type Runtime = Phaser.Scene & {
   resultGroup?: Phaser.GameObjects.Container;
   opponent?: Opponent;
   selectedTeam?: FighterId[];
+  activeFighterIndex?: number;
   toggleTeamMember?: (id: FighterId) => void;
+  switchFighter?: () => void;
   nextEnemyMove?: MoveType;
   beat?: number;
   timeRemainingSec?: number;
@@ -185,6 +187,10 @@ function buildUi(scene: Runtime): MobileUi {
   ougi.setName("mobile-ougi");
   const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
+  const switchButton = button(scene, battleGroup, 225, 715, 76, 44, "交代", 0x505385, () => scene.switchFighter?.());
+  switchButton.setName("mobile-switch").setVisible(false);
+  const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, "交代", 0x505385, () => scene.switchFighter?.());
+  landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
   const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
     .setStroke("#3a1a12", 7)
@@ -356,6 +362,10 @@ function refresh(scene: Runtime): void {
       ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365, 340, 58, 14);
       ui.battleTell.setPosition(225, 394);
       ui.battleGauge.setPosition(225, 90);
+      const canSwitch = (scene.selectedTeam?.length ?? 1) > 1;
+      (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)
+        ?.setPosition(225, 715).setScale(1).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
+      (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)?.setVisible(false);
       const movePositions = [{ x: 120, y: 680 }, { x: 330, y: 680 }, { x: 120, y: 750 }];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
@@ -369,7 +379,11 @@ function refresh(scene: Runtime): void {
       ui.chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
       ui.chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
       ui.battleTell.setPosition(400, 124);
-      ui.battleGauge.setPosition(165, 404);
+      ui.battleGauge.setPosition(130, 404);
+      const canSwitch = (scene.selectedTeam?.length ?? 1) > 1;
+      (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)?.setVisible(false);
+      (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)
+        ?.setPosition(300, 402).setScale(0.86).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
       const moveXs = [410, 520, 630];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
@@ -380,13 +394,17 @@ function refresh(scene: Runtime): void {
     }
 
     const remaining = Math.max(0, Math.ceil(scene.timeRemainingSec ?? 0));
-    const leader = fighterById(scene.selectedTeam?.[0] ?? "ryuga");
+    const team = scene.selectedTeam?.length ? scene.selectedTeam : (["ryuga"] as FighterId[]);
+    const activeIndex = Phaser.Math.Clamp(scene.activeFighterIndex ?? 0, 0, Math.max(0, team.length - 1));
+    const leader = fighterById(team[activeIndex] ?? "ryuga");
     ui.battleStatus
       .setPosition(18, portrait ? 18 : 50)
       .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
-      .setText(`${leader.name} ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+      .setText(`${leader.name} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
     ui.battleTell.setText(`${MOVE_TELL[scene.nextEnemyMove ?? "punch"]}\n拳 > 気 > 蹴 > 拳`);
-    ui.battleGauge.setText(gaugeRatio >= 1 ? "奥義 READY" : `奥義 ${Math.round(gaugeRatio * 100)}%  ·  EXCHANGE ${(scene.beat ?? 0) + 1}`);
+    ui.battleGauge.setText(gaugeRatio >= 1
+      ? `奥義 READY · TEAM ${activeIndex + 1}/${team.length}`
+      : `奥義 ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(scene.beat ?? 0) + 1}`);
     return;
   }
 
