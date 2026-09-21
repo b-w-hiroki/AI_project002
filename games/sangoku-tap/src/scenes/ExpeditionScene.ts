@@ -699,37 +699,79 @@ export class ExpeditionScene extends Phaser.Scene {
     if (boss) {
       // Credit once before the cinematic: a reload during the animation cannot lose rewards.
       this.settle(false);
+      const region = regionById(previous.regionId);
+      const visual = REGION_BOSS_VISUAL[region.id];
+      const cleared = this.run.status === "clear";
       const actors = this.root.getAll("name", "lead-actor");
-      this.tweens.add({
-        targets: actors,
-        x: "+=44",
-        duration: 150,
-        yoyo: true,
-        hold: 160,
-        ease: "Quad.easeOut",
-      });
+      const enemy = this.root.getByName("gatekeeper-boss");
+
+      if (cleared) {
+        this.tweens.add({
+          targets: actors,
+          x: "+=54",
+          duration: 130,
+          yoyo: true,
+          hold: 150,
+          ease: "Quad.easeOut",
+        });
+      } else if (enemy) {
+        this.tweens.add({
+          targets: enemy,
+          x: "-=58",
+          scaleX: "*=1.08",
+          scaleY: "*=1.08",
+          duration: 150,
+          yoyo: true,
+          hold: 120,
+          ease: "Quad.easeIn",
+        });
+        this.cameras.main.flash(130, 176, 48, 48);
+      }
+
       const slash = this.add.graphics();
       this.root.add(slash);
-      slash.lineStyle(9, 0xffe8b6, 0.9).lineBetween(188, 399, 381, 224);
-      slash.lineStyle(3, 0xffffff).lineBetween(175, 412, 394, 211);
+      const slashColor = cleared ? visual.glow : 0xff7168;
+      slash.lineStyle(cleared ? 10 : 7, slashColor, 0.92)
+        .lineBetween(cleared ? 178 : 365, cleared ? 410 : 235, cleared ? 392 : 166, cleared ? 205 : 425);
+      slash.lineStyle(3, 0xffffff, 0.9)
+        .lineBetween(cleared ? 168 : 378, cleared ? 421 : 224, cleared ? 404 : 178, cleared ? 194 : 438);
       slash.setAlpha(0);
       this.tweens.add({
         targets: slash,
         alpha: 1,
-        delay: 150,
-        duration: 80,
+        delay: 140,
+        duration: 70,
         yoyo: true,
-        hold: 90,
+        hold: 100,
       });
-      this.cameras.main.shake(230, 0.004);
-      const enemy = this.root.getByName("gatekeeper-boss");
-      if (enemy && this.run.status === "clear")
+
+      const impact = this.add.circle(
+        cleared ? 322 : 156,
+        cleared ? 300 : 420,
+        20,
+        slashColor,
+        0,
+      ).setStrokeStyle(5, slashColor, 0.85);
+      this.root.add(impact);
+      this.tweens.add({
+        targets: impact,
+        scale: cleared ? 3.8 : 2.8,
+        alpha: 0,
+        delay: 190,
+        duration: 300,
+        ease: "Cubic.easeOut",
+        onComplete: () => impact.destroy(),
+      });
+
+      this.cameras.main.shake(cleared ? 240 : 300, cleared ? 0.005 : 0.008);
+      if (enemy && cleared)
         this.tweens.add({
           targets: enemy,
           alpha: 0.18,
-          x: "+=20",
-          delay: 300,
-          duration: 380,
+          x: "+=24",
+          angle: 4,
+          delay: 280,
+          duration: 400,
         });
       const verdict = this.text(
         225,
