@@ -1,7 +1,10 @@
-/** ゲーム内通貨・戦績の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
+/** ゲーム内通貨・戦績・編成の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
+
+import { normalizeTeam, type FighterId } from "./team";
 
 const CURRENCY_KEY = "fist_legend_currency_v1";
 const WIN_COUNT_KEY = "fist_legend_win_count_v1";
+const TEAM_KEY = "fist_legend_team_v1";
 
 function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
@@ -35,4 +38,21 @@ export function incrementWinCount(): number {
   const next = loadWinCount() + 1;
   localStorage.setItem(WIN_COUNT_KEY, String(next));
   return next;
+}
+
+
+export function loadTeam(): FighterId[] {
+  const raw = localStorage.getItem(TEAM_KEY);
+  if (!raw) return ["ryuga"];
+  try {
+    return normalizeTeam(JSON.parse(raw) as FighterId[]);
+  } catch {
+    return ["ryuga"];
+  }
+}
+
+export function saveTeam(team: readonly FighterId[]): FighterId[] {
+  const normalized = normalizeTeam(team);
+  localStorage.setItem(TEAM_KEY, JSON.stringify(normalized));
+  return normalized;
 }

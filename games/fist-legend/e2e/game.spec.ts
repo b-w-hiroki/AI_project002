@@ -134,3 +134,39 @@ test("victory result shows a knockout finish", async ({ page }) => {
   await checkFrame(page, "portrait-result-ko");
 });
 
+test("three-fighter team persists and leader appears in battle", async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const toggle = Reflect.get(scene, "toggleTeamMember") as (id: "ryuga" | "renka" | "gaku" | "mei") => void;
+
+    toggle.call(scene, "renka");
+    toggle.call(scene, "gaku");
+    toggle.call(scene, "mei"); // max 3: ignored
+    const capped = [...(Reflect.get(scene, "selectedTeam") as string[])];
+
+    toggle.call(scene, "ryuga");
+    toggle.call(scene, "mei");
+    Reflect.get(scene, "showTitle").call(scene);
+    const selected = [...(Reflect.get(scene, "selectedTeam") as string[])];
+    return { capped, selected };
+  });
+
+  expect(result.capped).toEqual(["ryuga", "renka", "gaku"]);
+  expect(result.selected).toEqual(["renka", "gaku", "mei"]);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("fist_legend_team_v1")))
+    .toBe(JSON.stringify(["renka", "gaku", "mei"]));
+
+  await checkFrame(page, "portrait-team-three");
+
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "playerLabel") as Phaser.GameObjects.Text).text;
+  })).toContain("蓮花");
+  await checkFrame(page, "portrait-team-leader-battle");
+});
+
