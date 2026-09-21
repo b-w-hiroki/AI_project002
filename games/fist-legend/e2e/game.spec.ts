@@ -111,6 +111,7 @@ test("opponent archetypes keep distinct battle identity", async ({ page }) => {
       return (Reflect.get(scene, "opponentBadge") as Phaser.GameObjects.Text).text;
     }, opponent);
     expect(badge).toMatch(opponent === "rush" ? /猛攻型/ : opponent === "counter" ? /反撃型/ : /気功型/);
+    await page.waitForTimeout(140);
     await checkFrame(page, `portrait-opponent-${opponent}`);
     await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "showTitle").call(window.__qaGame.scene.getScene("GameScene")));
   }
