@@ -145,7 +145,7 @@ test.describe("phone visual QA", () => {
       const camera = scene.cameras.main;
       const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
       camera.stopFollow();
-      player.setPosition(camera.scrollX + 400, camera.scrollY + 500).setVisible(true);
+      player.setPosition(camera.scrollX + 400, camera.scrollY + 300).setVisible(true);
       Reflect.get(scene, "spawnAttackFx").call(scene, {
         kind: "melee",
         range: 110,
