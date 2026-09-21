@@ -160,6 +160,34 @@ test.describe("phone visual QA", () => {
     });
   });
 
+  test("mobile guard button holds and releases guard state", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const guardPoint = await canvasPoint(page, 268, 756);
+    await page.mouse.move(guardPoint.x, guardPoint.y);
+    await page.mouse.down();
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return {
+        keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
+        guarding: Reflect.get(scene, "guarding") as boolean,
+      };
+    })).toEqual({ keyDown: true, guarding: true });
+
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return {
+        keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
+        guarding: Reflect.get(scene, "guarding") as boolean,
+      };
+    })).toEqual({ keyDown: false, guarding: false });
+  });
+
   test("visual QA: game over hides touch controls", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");
