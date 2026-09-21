@@ -1383,6 +1383,13 @@ export class GameScene extends Phaser.Scene {
     g.beginPath();
     g.arc(0, 0, radius * 0.72, Phaser.Math.DegToRad(-62), Phaser.Math.DegToRad(62));
     g.strokePath();
+    // Arcだけだと背景に溶けやすいので、斬撃の芯を太い白光で一本通す。
+    g.lineStyle(8, 0xffffff, 0.72);
+    g.lineBetween(6, 22, radius * 0.92, -24);
+    g.lineStyle(4, color, 0.92);
+    g.lineBetween(0, 27, radius, -29);
+    g.fillStyle(color, 0.16);
+    g.fillTriangle(2, 35, radius * 0.82, -18, radius * 0.44, 30);
     g.setScale(facing === -1 ? -0.5 : 0.5, 1);
     g.setAlpha(0.95);
     this.tweens.add({
