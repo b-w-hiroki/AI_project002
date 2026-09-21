@@ -5,6 +5,7 @@ import { installFistConceptArtPass } from "./conceptArt";
 import { installFistArtFidelity } from "./artFidelity";
 import { installFistVisualPolish } from "./visualPolish";
 import { installFistMobileLayout } from "./mobileLayout";
+import { installFistHajaMode } from "./hajaMode";
 import { initCrazyGames } from "./platform/crazygames";
 import { GameScene } from "./scenes/GameScene";
 
@@ -13,6 +14,7 @@ installFistConceptArtPass();
 installFistVisualPolish();
 installFistMobileLayout();
 installFistArtFidelity();
+installFistHajaMode();
 
 void initCrazyGames();
 
