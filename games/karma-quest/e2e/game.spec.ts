@@ -200,6 +200,53 @@ async function useNativePortrait(page: Page) {
   await page.setViewportSize({ width: 456, height: 806 });
 }
 
+test("hero appearance follows dominant karma in portrait and landscape", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
+    .filter(child => child.depth >= 2000 && child.depth <= 2002).length), { timeout: 15000 }).toBe(0);
+
+  const activeBadges = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const labels: string[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject, parentVisible: boolean) => {
+      const ownVisible = parentVisible && Reflect.get(node, "visible") !== false;
+      if (node.name === "hero-karma-badge" && ownVisible && Number(Reflect.get(node, "alpha") ?? 1) > 0.5) {
+        labels.push((node as Phaser.GameObjects.Text).text);
+      }
+      if ("list" in node) {
+        (node as Phaser.GameObjects.Container).list.forEach(child => visit(child, ownVisible));
+      }
+    };
+    scene.children.list.forEach(child => visit(child, true));
+    return labels;
+  });
+
+  const variants = [
+    [{ warrior: 12, merchant: 1, outlaw: 0, mage: 0 }, "鋼の盟約"],
+    [{ warrior: 0, merchant: 12, outlaw: 1, mage: 0 }, "繁栄の盟約"],
+    [{ warrior: 0, merchant: 1, outlaw: 12, mage: 0 }, "自由の盟約"],
+    [{ warrior: 0, merchant: 1, outlaw: 0, mage: 12 }, "秘術の盟約"],
+  ] as const;
+
+  for (const [karma, expected] of variants) {
+    await page.evaluate(value => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "karma", value), karma);
+    await expect.poll(activeBadges).toContain(expected);
+  }
+  await checkFrame(page, "portrait-hero-karma-mage");
+
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "karma",
+    { warrior: 0, merchant: 1, outlaw: 12, mage: 0 }));
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(activeBadges).toContain("自由の盟約");
+  await checkFrame(page, "landscape-hero-karma-outlaw");
+});
+
 test("home navigation opens and closes information without starting a journey behind it", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
