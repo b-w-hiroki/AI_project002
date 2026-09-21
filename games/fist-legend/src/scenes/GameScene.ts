@@ -133,6 +133,7 @@ export class GameScene extends Phaser.Scene {
   private enemyAura!: Phaser.GameObjects.Graphics;
   private opponentBadge!: Phaser.GameObjects.Text;
   private resultAccent!: Phaser.GameObjects.Graphics;
+  private resultFinish!: Phaser.GameObjects.Text;
   private gachaCharImage: Phaser.GameObjects.Image | null = null;
   private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
@@ -879,10 +880,41 @@ export class GameScene extends Phaser.Scene {
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
     this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
     this.resultAccent.lineStyle(1, 0xffffff, 0.26).lineBetween(305, 198, 495, 198);
+    this.resultFinish
+      .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
+      .setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#c8d2e8" : "#e3d4ff")
+      .setAlpha(0)
+      .setScale(1.7)
+      .setAngle(outcome === "playerWin" ? -5 : 0);
+    this.tweens.add({
+      targets: this.resultFinish,
+      alpha: 1,
+      scale: 1,
+      duration: 240,
+      ease: "Back.easeOut",
+    });
     if (outcome === "playerWin") {
       this.cameras.main.flash(150, 255, 218, 130);
+      this.cameras.main.shake(120, 0.006);
       heading.setScale(0.72);
       this.tweens.add({ targets: heading, scale: 1, duration: 280, ease: "Back.easeOut" });
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8;
+        const shard = this.add.rectangle(400, 160, 5, 18, i % 2 ? 0xffd76a : 0xff7d63, 0.88)
+          .setDepth(8)
+          .setRotation(angle);
+        this.resultGroup.add(shard);
+        this.tweens.add({
+          targets: shard,
+          x: 400 + Math.cos(angle) * 135,
+          y: 160 + Math.sin(angle) * 74,
+          alpha: 0,
+          angle: shard.angle + 120,
+          duration: 460,
+          ease: "Cubic.easeOut",
+          onComplete: () => shard.destroy(),
+        });
+      }
     }
 
     this.resultGroup.setVisible(true);
@@ -894,6 +926,17 @@ export class GameScene extends Phaser.Scene {
     this.resultGroup = this.add.container(0, 0);
     const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
     this.resultAccent = this.add.graphics();
+    this.resultFinish = this.add
+      .text(400, 150, "", {
+        fontSize: "58px",
+        color: "#ffe3a1",
+        fontStyle: "900",
+        stroke: "#3a1a12",
+        strokeThickness: 8,
+        letterSpacing: 6,
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
 
     const heading = this.add
       .text(400, 220, "", { ...TYPE.h1, color: THEME.textPrimary })
@@ -932,6 +975,7 @@ export class GameScene extends Phaser.Scene {
     this.resultGroup.add([
       panel,
       this.resultAccent,
+      this.resultFinish,
       heading,
       stats,
       retryBtn.container,

@@ -119,3 +119,30 @@ test("regional gatekeepers keep distinct chapter identity", async ({ page }) => 
   }
 });
 
+test("gatekeeper clear uses the dedicated strike cinematic", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 700, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+
+  const status = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const run = Reflect.get(scene, "run") as Record<string, unknown>;
+    const seeded = { ...run, step: 9, fork: false, status: "active", hp: 100 };
+    Reflect.set(scene, "run", seeded);
+    Reflect.set(scene, "introRunId", seeded.id);
+    Reflect.set(scene, "random", () => 0);
+    Reflect.get(scene, "render").call(scene);
+    Reflect.get(scene, "advance").call(scene);
+    return (Reflect.get(scene, "run") as Record<string, unknown>).status;
+  });
+  expect(status).toBe("clear");
+  await page.waitForTimeout(330);
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/landscape-boss-clear-impact.png",
+    animations: "disabled",
+  });
+});
+
