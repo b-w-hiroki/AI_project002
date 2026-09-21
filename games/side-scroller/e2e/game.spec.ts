@@ -140,8 +140,20 @@ test.describe("phone visual QA", () => {
     await page.locator("canvas").waitFor();
     await page.waitForFunction(() => !!window.__qaGame);
     await enterBattleForVisualQa(page);
-    await page.keyboard.press("x");
-    await page.waitForTimeout(45);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const camera = scene.cameras.main;
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      camera.stopFollow();
+      player.setPosition(camera.scrollX + 400, camera.scrollY + 500).setVisible(true);
+      Reflect.get(scene, "spawnAttackFx").call(scene, {
+        kind: "melee",
+        range: 110,
+        attackWindowMs: 220,
+      });
+      scene.physics.pause();
+    });
+    await page.waitForTimeout(35);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-attack-pose-844x390.png",
       animations: "disabled",
