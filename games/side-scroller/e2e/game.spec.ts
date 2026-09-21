@@ -118,4 +118,33 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
   });
+  test("visual QA: enemy variants use distinct silhouettes", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    const textures = await page.evaluate(() => {
+      const game = window.__qaGame;
+      return {
+        agile: game.textures.exists("goblin-agile"),
+        tank: game.textures.exists("goblin-tank"),
+      };
+    });
+    expect(textures).toEqual({ agile: true, tank: true });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const enemies = Reflect.get(scene, "enemies") as Array<{ sprite: Phaser.Physics.Arcade.Sprite }>;
+      enemies.forEach(enemy => enemy.sprite.destroy());
+      Reflect.set(scene, "enemies", []);
+      Reflect.get(scene, "spawnEnemy").call(scene, 2, { type: "agile", health: 2, defense: 0, speedMul: 1.3 }, 560, 0);
+      Reflect.get(scene, "spawnEnemy").call(scene, 2, { type: "tank", health: 5, defense: 1, speedMul: 0.7 }, 700, 1);
+    });
+    await page.waitForTimeout(150);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-enemy-variants-844x390.png",
+      animations: "disabled",
+    });
+  });
+
 });
