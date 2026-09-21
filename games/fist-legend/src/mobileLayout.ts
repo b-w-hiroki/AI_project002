@@ -3,6 +3,7 @@ import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX, type BattleOutcome, type BattleState, type MoveType } from "./logic/battle";
 import { MOVE_TELL, OPPONENTS, type Opponent } from "./logic/opponent";
 import { loadCurrency, loadWinCount } from "./logic/progress";
+import { FIGHTERS, fighterById, teamLabel, type FighterId } from "./logic/team";
 import { GameScene } from "./scenes/GameScene";
 
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
@@ -14,6 +15,8 @@ type Runtime = Phaser.Scene & {
   battleGroup?: Phaser.GameObjects.Container;
   resultGroup?: Phaser.GameObjects.Container;
   opponent?: Opponent;
+  selectedTeam?: FighterId[];
+  toggleTeamMember?: (id: FighterId) => void;
   nextEnemyMove?: MoveType;
   beat?: number;
   timeRemainingSec?: number;
@@ -40,7 +43,9 @@ type MobileUi = {
   resultGroup: Phaser.GameObjects.Container;
   titleStatus: Phaser.GameObjects.Text;
   titleHint: Phaser.GameObjects.Text;
+  teamText: Phaser.GameObjects.Text;
   opponentButtons: Phaser.GameObjects.Container[];
+  teamButtons: Phaser.GameObjects.Container[];
   battleStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
@@ -130,8 +135,9 @@ function buildUi(scene: Runtime): MobileUi {
   const title = text(scene, 225, 118, "覇拳伝", 38, "#ffe1a8");
   const subtitle = text(scene, 225, 170, "拳 > 気 > 蹴 > 拳\n相手の構えを読み、一撃を通せ。", 16, "#f4d4bb");
   const titleStatus = text(scene, 225, 225, "", 14, "#d9c4ad");
-  const titleHint = text(scene, 225, 430, "", 13, "#ffe0a0");
-  titleGroup.add([title, subtitle, titleStatus, titleHint]);
+  const titleHint = text(scene, 225, 444, "", 12, "#ffe0a0");
+  const teamText = text(scene, 225, 474, "", 12, "#ffe6b5");
+  titleGroup.add([title, subtitle, titleStatus, titleHint, teamText]);
 
   const opponentButtons: Phaser.GameObjects.Container[] = [];
   OPPONENTS.forEach((opponent, index) => {
@@ -141,8 +147,25 @@ function buildUi(scene: Runtime): MobileUi {
     });
     opponentButtons.push(b);
   });
-  button(scene, titleGroup, 225, 522, 330, 58, "バトル開始", 0xa9402d, () => scene.startBattle?.());
-  button(scene, titleGroup, 225, 590, 330, 48, "ガチャ", 0x334c70, () => scene.openGacha?.());
+
+  const teamButtons: Phaser.GameObjects.Container[] = [];
+  FIGHTERS.forEach((fighter, index) => {
+    const x = 57 + index * 112;
+    const b = button(
+      scene,
+      titleGroup,
+      x,
+      507,
+      92,
+      34,
+      fighter.name,
+      fighter.id === "ryuga" ? 0x6d3f2f : fighter.accent,
+      () => scene.toggleTeamMember?.(fighter.id),
+    );
+    teamButtons.push(b);
+  });
+  button(scene, titleGroup, 225, 565, 330, 54, "バトル開始", 0xa9402d, () => scene.startBattle?.());
+  button(scene, titleGroup, 225, 630, 330, 46, "ガチャ", 0x334c70, () => scene.openGacha?.());
 
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
   const battleTell = text(scene, 225, 112, "", 16, "#ffe2a8");
@@ -180,7 +203,9 @@ function buildUi(scene: Runtime): MobileUi {
     resultGroup,
     titleStatus,
     titleHint,
+    teamText,
     opponentButtons,
+    teamButtons,
     battleStatus,
     battleTell,
     battleGauge,
@@ -287,10 +312,16 @@ function refresh(scene: Runtime): void {
     ui.chrome.fillStyle(0x140a08, 0.97).fillRect(0, 0, width, height);
     ui.chrome.fillStyle(0x40201a, 0.72).fillRoundedRect(18, 70, width - 36, portrait ? 570 : 340, 24);
     ui.titleStatus.setPosition(width / 2, portrait ? 225 : 120);
-    ui.titleHint.setPosition(width / 2, portrait ? 430 : 324);
+    ui.titleHint.setPosition(width / 2, portrait ? 444 : 324);
+    const team = scene.selectedTeam?.length ? scene.selectedTeam : (["ryuga"] as FighterId[]);
     ui.titleStatus.setText(`豪拳石 ${loadCurrency()}  ·  勝利 ${loadWinCount()}`);
     ui.titleHint.setText(OPPONENTS.find((opponent) => opponent.id === scene.opponent)?.hint ?? OPPONENTS[0]!.hint);
+    ui.teamText.setPosition(width / 2, portrait ? 474 : 350).setText(`TEAM ${team.length}/3 · ${teamLabel(team)} · 先頭が出場`);
     ui.opponentButtons.forEach((b, index) => b.setAlpha(OPPONENTS[index]?.id === scene.opponent ? 1 : 0.62));
+    ui.teamButtons.forEach((b, index) => {
+      const fighter = FIGHTERS[index];
+      b.setAlpha(fighter && team.includes(fighter.id) ? 1 : 0.42);
+    });
     if (!portrait) {
       // 横持ちは既存タイトルを活かし、モバイル専用タイトル面を隠す。
       ui.titleGroup.setVisible(false);
@@ -349,10 +380,11 @@ function refresh(scene: Runtime): void {
     }
 
     const remaining = Math.max(0, Math.ceil(scene.timeRemainingSec ?? 0));
+    const leader = fighterById(scene.selectedTeam?.[0] ?? "ryuga");
     ui.battleStatus
       .setPosition(18, portrait ? 18 : 50)
       .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
-      .setText(`PLAYER ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+      .setText(`${leader.name} ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
     ui.battleTell.setText(`${MOVE_TELL[scene.nextEnemyMove ?? "punch"]}\n拳 > 気 > 蹴 > 拳`);
     ui.battleGauge.setText(gaugeRatio >= 1 ? "奥義 READY" : `奥義 ${Math.round(gaugeRatio * 100)}%  ·  EXCHANGE ${(scene.beat ?? 0) + 1}`);
     return;
