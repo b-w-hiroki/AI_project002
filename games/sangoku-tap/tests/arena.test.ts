@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { arenaSnapshot, arenaTier, armyRating } from "../src/logic/arena";
+import type { Campaign } from "../src/logic/campaign";
 
 describe("asynchronous army ranking", () => {
-  const campaign = { merit: 8, training: 2, cleared: ["plains"] as const };
+  const campaign: Pick<Campaign, "merit" | "training" | "cleared"> = {
+    merit: 8,
+    training: 2,
+    cleared: ["plains"],
+  };
 
   it("combines troop power and campaign progress into a rating", () => {
     const weak = armyRating({ power: 80 }, campaign, 3);
