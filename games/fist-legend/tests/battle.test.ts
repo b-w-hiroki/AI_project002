@@ -49,6 +49,12 @@ describe("multiplierForClash", () => {
     expect(multiplierForClash("advantage")).toBeGreaterThan(multiplierForClash("clash"));
     expect(multiplierForClash("clash")).toBeGreaterThan(multiplierForClash("disadvantage"));
   });
+
+  it("読み勝ちと読み負けの差を2.5倍未満に抑える", () => {
+    const advantage = damageForClash("advantage", () => 0.5);
+    const disadvantage = damageForClash("disadvantage", () => 0.5);
+    expect(advantage / disadvantage).toBeLessThan(2.5);
+  });
 });
 
 describe("damageForClash", () => {
@@ -96,6 +102,22 @@ describe("applyBeat", () => {
     const a = applyBeat(initialBattleState(), "kick", "punch", sequentialRng([0.3, 0.6]));
     const b = applyBeat(initialBattleState(), "kick", "punch", sequentialRng([0.3, 0.6]));
     expect(a).toEqual(b);
+  });
+
+  it("読み負けでも10ビート以内に奥義圏へ届き、逆転余地が残る", () => {
+    let state = initialBattleState();
+    for (let i = 0; i < 10; i++) {
+      state = applyBeat(state, "punch", "kick", () => 0.5).state;
+    }
+    expect(state.playerGauge).toBe(OUGI_GAUGE_MAX);
+  });
+
+  it("読み勝ちは4ビートで奥義圏へ届く", () => {
+    let state = initialBattleState();
+    for (let i = 0; i < 4; i++) {
+      state = applyBeat(state, "kick", "punch", () => 0.5).state;
+    }
+    expect(state.playerGauge).toBe(OUGI_GAUGE_MAX);
   });
 });
 
