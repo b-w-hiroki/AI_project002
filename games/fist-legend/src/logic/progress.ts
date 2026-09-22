@@ -5,6 +5,7 @@ import { normalizeTeam, type FighterId } from "./team";
 const CURRENCY_KEY = "fist_legend_currency_v1";
 const WIN_COUNT_KEY = "fist_legend_win_count_v1";
 const TEAM_KEY = "fist_legend_team_v1";
+const STORY_PROGRESS_KEY = "fist_legend_story_progress_v1";
 
 function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
@@ -55,4 +56,16 @@ export function saveTeam(team: readonly FighterId[]): FighterId[] {
   const normalized = normalizeTeam(team);
   localStorage.setItem(TEAM_KEY, JSON.stringify(normalized));
   return normalized;
+}
+
+
+export function loadStoryProgress(): number {
+  return Math.max(0, Math.floor(loadNumber(STORY_PROGRESS_KEY)));
+}
+
+export function saveStoryProgress(clearedChapters: number): number {
+  const current = loadStoryProgress();
+  const next = Math.max(current, Math.max(0, Math.floor(clearedChapters)));
+  localStorage.setItem(STORY_PROGRESS_KEY, String(next));
+  return next;
 }

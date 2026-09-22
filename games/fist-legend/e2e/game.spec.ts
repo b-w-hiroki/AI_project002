@@ -247,3 +247,68 @@ test("three-battle series advances through all opponents and clears", async ({ p
   await checkFrame(page, "portrait-three-battle-complete");
 });
 
+test("story mode persists cleared chapters and resumes from the next opponent", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("fist_legend_story_progress_v1", "0");
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startStory").call(scene);
+  });
+
+  const storyState = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      phase: Reflect.get(scene, "phase"),
+      opponent: Reflect.get(scene, "opponent"),
+      chapter: Reflect.get(scene, "storyChapterIndex"),
+      progress: Reflect.get(scene, "storyProgress"),
+      active: Reflect.get(scene, "storyActive"),
+      stats: ((Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text)?.text ?? "",
+      stored: Number(localStorage.getItem("fist_legend_story_progress_v1") ?? "0"),
+    };
+  });
+
+  await expect.poll(storyState).toMatchObject({ phase: "battle", opponent: "rush", chapter: 0, progress: 0, active: true });
+
+  // 第一章クリア
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(storyState).toMatchObject({ phase: "result", progress: 1, stored: 1 });
+
+  // タイトルへ戻っても第二章から再開できる。
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showTitle").call(scene);
+    Reflect.get(scene, "startStory").call(scene);
+  });
+  await expect.poll(storyState).toMatchObject({ phase: "battle", opponent: "counter", chapter: 1, progress: 1, active: true });
+
+  // 第二章
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+  });
+  await expect.poll(storyState).toMatchObject({ phase: "battle", opponent: "charge", chapter: 2, progress: 2, stored: 2 });
+
+  // 最終章
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  const complete = await storyState();
+  expect(complete.phase).toBe("result");
+  expect(complete.progress).toBe(3);
+  expect(complete.stored).toBe(3);
+  expect(complete.stats).toContain("物語 COMPLETE");
+  expect(complete.stats).toContain("ボーナス +200");
+  await checkFrame(page, "portrait-story-complete");
+});
+

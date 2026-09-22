@@ -30,8 +30,12 @@ type Runtime = Phaser.Scene & {
   startBattle?: () => void;
   startSingleBattle?: () => void;
   startSeries?: () => void;
+  startStory?: () => void;
   handleResultPrimary?: () => void;
   seriesActive?: boolean;
+  storyActive?: boolean;
+  storyChapterIndex?: number;
+  storyProgress?: number;
   seriesIndex?: number;
   seriesWins?: number;
   showTitle?: () => void;
@@ -172,8 +176,9 @@ function buildUi(scene: Runtime): MobileUi {
     );
     teamButtons.push(b);
   });
-  button(scene, titleGroup, 130, 565, 150, 54, "対戦", 0xa9402d, () => scene.startSingleBattle?.());
-  button(scene, titleGroup, 320, 565, 150, 54, "3連戦", 0x8a6118, () => scene.startSeries?.());
+  button(scene, titleGroup, 82, 565, 118, 54, "対戦", 0xa9402d, () => scene.startSingleBattle?.());
+  button(scene, titleGroup, 225, 565, 118, 54, "3連戦", 0x8a6118, () => scene.startSeries?.());
+  button(scene, titleGroup, 368, 565, 118, 54, "物語", 0x5d3e76, () => scene.startStory?.());
   button(scene, titleGroup, 225, 630, 330, 46, "ガチャ", 0x334c70, () => scene.openGacha?.());
 
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
@@ -424,20 +429,28 @@ function refresh(scene: Runtime): void {
       .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
       .setScale(portrait ? 1 : 0.72);
     ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? "勝利" : outcome === "enemyWin" ? "敗北" : "引き分け");
-    const seriesText = scene.seriesActive
-      ? `3連戦 ${scene.seriesWins ?? 0}/3勝 · ${Math.min(3, (scene.seriesIndex ?? 0) + 1)}/3戦目`
-      : "次は相手の構えをさらに読もう";
-    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`豪拳石 ${loadCurrency()}\n${seriesText}`);
+    const modeText = scene.storyActive
+      ? `物語 ${Math.min(3, (scene.storyChapterIndex ?? 0) + 1)}/3章 · 進行 ${scene.storyProgress ?? 0}/3`
+      : scene.seriesActive
+        ? `3連戦 ${scene.seriesWins ?? 0}/3勝 · ${Math.min(3, (scene.seriesIndex ?? 0) + 1)}/3戦目`
+        : "次は相手の構えをさらに読もう";
+    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`豪拳石 ${loadCurrency()}\n${modeText}`);
     const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
     if (retryLabel) {
       retryLabel.setText(
-        scene.seriesActive
-          ? scene.lastOutcome === "playerWin" && (scene.seriesIndex ?? 0) < 2
-            ? `次の相手へ (${(scene.seriesIndex ?? 0) + 2}/3)`
+        scene.storyActive
+          ? scene.lastOutcome === "playerWin" && (scene.storyChapterIndex ?? 0) < 2
+            ? `次章へ (${(scene.storyChapterIndex ?? 0) + 2}/3)`
             : scene.lastOutcome === "playerWin"
-              ? "もう一度3連戦"
-              : "3連戦を再挑戦"
-          : "もう一度",
+              ? "物語を再演"
+              : "この章を再挑戦"
+          : scene.seriesActive
+            ? scene.lastOutcome === "playerWin" && (scene.seriesIndex ?? 0) < 2
+              ? `次の相手へ (${(scene.seriesIndex ?? 0) + 2}/3)`
+              : scene.lastOutcome === "playerWin"
+                ? "もう一度3連戦"
+                : "3連戦を再挑戦"
+            : "もう一度",
       );
     }
     ui.resultRetry.setPosition(width / 2, portrait ? 430 : 292).setScale(portrait ? 1 : 0.86);
