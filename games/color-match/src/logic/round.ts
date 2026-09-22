@@ -87,9 +87,13 @@ function pick<T>(arr: readonly T[], rng: () => number): T {
  * 内容とインク色が同じ（矛盾しない）ラウンドも一定確率で混ぜ、
  * 「常に矛盾する」ことを学習して即答されるのを防ぐ。
  */
-export function generateRound(rng: () => number = Math.random): Round {
+export function generateRound(
+  rng: () => number = Math.random,
+  congruentRate = 0.25,
+): Round {
   const promptWordColor = pick(COLORS, rng);
-  const promptInkColor = rng() < 0.25 ? promptWordColor : pick(COLORS, rng);
+  const normalizedCongruentRate = Math.min(1, Math.max(0, congruentRate));
+  const promptInkColor = rng() < normalizedCongruentRate ? promptWordColor : pick(COLORS, rng);
   const judgeMode: JudgeMode = rng() < 0.5 ? "content" : "color";
   const correctColorId = judgeMode === "content" ? promptWordColor.id : promptInkColor.id;
 
@@ -101,13 +105,19 @@ export function generateRound(rng: () => number = Math.random): Round {
   };
 }
 
-const BASE_TIME_LIMIT_MS = 4200;
-const MIN_TIME_LIMIT_MS = 1800;
-const TIME_LIMIT_STEP_MS = 150;
+const MIN_TIME_LIMIT_MS = 2000;
 
-/** レベルが上がるほど制限時間が短くなる（タイムアタック的な難化） */
+/**
+ * ラウンド制限時間は段階的に短くする。
+ * 0〜4問: 操作/ルール学習、5〜10問: 判断速度を要求、
+ * 11問以降: 2秒台へ入り終盤だけ緊張感を強める。
+ */
 export function timeLimitMsForLevel(level: number): number {
-  return Math.max(MIN_TIME_LIMIT_MS, BASE_TIME_LIMIT_MS - level * TIME_LIMIT_STEP_MS);
+  const normalized = Math.max(0, Math.floor(level));
+  if (normalized <= 4) return 4200 - normalized * 100;
+  if (normalized <= 10) return 3800 - (normalized - 4) * 120;
+  if (normalized <= 18) return 3080 - (normalized - 10) * 110;
+  return Math.max(MIN_TIME_LIMIT_MS, 2200 - (normalized - 18) * 50);
 }
 
 export function hexForColorId(id: string): number {
