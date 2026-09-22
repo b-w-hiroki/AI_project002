@@ -179,9 +179,10 @@ test("small skirmish win shows attack and hit impact", async ({ page }) => {
 test("campaign shows asynchronous army rating against ghost rivals", async ({ page }) => {
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
-  const rating = await page.evaluate(() => {
+  const readRating = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("ExpeditionScene");
-    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container | undefined;
+    if (!root?.list) return "";
     const labels: string[] = [];
     const visit = (node: Phaser.GameObjects.GameObject) => {
       if (node.type === "Text") labels.push((node as Phaser.GameObjects.Text).text);
@@ -190,8 +191,8 @@ test("campaign shows asynchronous army rating against ghost rivals", async ({ pa
     root.list.forEach(visit);
     return labels.find(value => value.includes("軍勢評点")) ?? "";
   });
-  expect(rating).toContain("軍勢評点");
-  expect(rating).toMatch(/位|首位/);
+  await expect.poll(readRating).toContain("軍勢評点");
+  await expect.poll(readRating).toMatch(/位|首位/);
   await checkFrame(page, "portrait-army-ranking");
 });
 
