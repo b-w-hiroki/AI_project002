@@ -113,8 +113,10 @@ export function newGame(): GameState {
 /** 転生に必要な今周回の累計調合数 */
 export const PRESTIGE_UNLOCK = 1_000_000;
 
-/** エッセンス1個あたりの生産・クリック倍率ボーナス（+10%） */
-export const ESSENCE_BONUS = 0.1;
+/** エッセンス1個あたりの生産・クリック倍率ボーナス（+15%）。
+ * 初回転生を「ほぼ同じ周回」に感じさせず、街需要との組み合わせで明確な加速を作る。
+ */
+export const ESSENCE_BONUS = 0.15;
 
 /** 今転生したら得られるエッセンス数 */
 export function essenceOnPrestige(state: GameState): number {
@@ -122,7 +124,7 @@ export function essenceOnPrestige(state: GameState): number {
   return Math.floor(Math.sqrt(state.totalBrewed / PRESTIGE_UNLOCK));
 }
 
-/** エッセンスによる倍率（1 + 0.1 × essence） */
+/** エッセンスによる倍率（1 + 0.15 × essence） */
 export function essenceMultiplier(state: GameState): number {
   return 1 + state.essence * ESSENCE_BONUS;
 }
