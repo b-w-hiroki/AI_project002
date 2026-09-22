@@ -8,6 +8,7 @@ import {
   returnExpedition,
   expeditionReward,
   victoryChance,
+  rollRegionEvent,
 } from "../src/logic/expedition";
 const owned = { gen_soujin: 1, gen_kohei: 1, gen_ashigaru: 1, gen_suzaku: 1 };
 const troop = buildTroop(
@@ -15,6 +16,11 @@ const troop = buildTroop(
   owned,
   {},
 );
+
+function sequence(values: number[]): () => number {
+  let index = 0;
+  return () => values[index++] ?? values.at(-1) ?? 0;
+}
 describe("遠征の選択と報酬", () => {
   it("未所持・重複を除き3人まで", () =>
     expect(
@@ -68,5 +74,29 @@ describe("遠征の選択と報酬", () => {
   it("空の編成では進めない", () => {
     const r = newExpedition(buildTroop([], owned, {}));
     expect(advanceExpedition(r)).toBe(r);
+  });
+
+  it("地域ごとに固有イベントが異なる", () => {
+    expect(rollRegionEvent("plains", sequence([0.1, 0]))?.id).toBe("merchant_caravan");
+    expect(rollRegionEvent("pass", sequence([0.1, 0.99]))?.id).toBe("rockfall");
+    expect(rollRegionEvent("citadel", sequence([0.1, 0]))?.id).toBe("hidden_store");
+    expect(rollRegionEvent("plains", sequence([0.9]))).toBeNull();
+  });
+
+  it("非戦闘マスの地域イベントが兵力と収穫へ反映される", () => {
+    const r = { ...newExpedition(troop, "pass"), hp: 50 };
+    // 0.99=非戦闘、0.1=イベント発生、0=薬草地
+    const next = advanceExpedition(r, sequence([0.99, 0.1, 0]));
+    expect(next.hp).toBe(64);
+    expect(next.message).toContain("峠の薬草地");
+    expect(next.loot).toBeGreaterThan(0);
+  });
+
+  it("城塞の火計跡は損耗と追加収穫が同時に発生する", () => {
+    const r = { ...newExpedition(troop, "citadel"), hp: 100 };
+    const next = advanceExpedition(r, sequence([0.99, 0.1, 0.99]));
+    expect(next.hp).toBe(88);
+    expect(next.message).toContain("火計跡");
+    expect(next.loot).toBeGreaterThan(0);
   });
 });

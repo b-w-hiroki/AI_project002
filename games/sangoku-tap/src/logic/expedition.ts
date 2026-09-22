@@ -59,6 +59,39 @@ export function buildTroop(
     merchant: 1 + count("商才") * 0.2,
   };
 }
+export interface RegionEvent {
+  id: string;
+  message: string;
+  hpDelta: number;
+  lootBonus: number;
+}
+
+const REGION_EVENTS: Readonly<Record<RegionId, readonly RegionEvent[]>> = {
+  plains: [
+    { id: "merchant_caravan", message: "行商隊と合流。補給品を分けてもらった。", hpDelta: 0, lootBonus: 18 },
+    { id: "village_soup", message: "村の炊き出しで兵が息を整えた。", hpDelta: 10, lootBonus: 0 },
+  ],
+  pass: [
+    { id: "herb_patch", message: "峠の薬草地を発見。傷を手当てした。", hpDelta: 14, lootBonus: 0 },
+    { id: "rockfall", message: "落石に遭遇。荷を守りながら進軍した。", hpDelta: -9, lootBonus: 12 },
+  ],
+  citadel: [
+    { id: "hidden_store", message: "城塞外郭の隠し倉を発見。軍資金を確保。", hpDelta: 0, lootBonus: 30 },
+    { id: "burned_field", message: "火計跡を突破。損耗したが戦利品を回収。", hpDelta: -12, lootBonus: 22 },
+  ],
+};
+
+export function rollRegionEvent(
+  regionId: RegionId,
+  rng: () => number = Math.random,
+): RegionEvent | null {
+  // 非戦闘マスの約35%で地域固有イベント。
+  if (rng() >= 0.35) return null;
+  const events = REGION_EVENTS[regionId];
+  const index = Math.min(events.length - 1, Math.floor(rng() * events.length));
+  return events[index] ?? null;
+}
+
 export type Route = "road" | "mountain";
 export interface Expedition {
   id: string;
@@ -137,18 +170,28 @@ export function advanceExpedition(
           regionById(run.regionId).reward,
       )
     : 0;
+
+  const event = !battle ? rollRegionEvent(run.regionId, rng) : null;
+  const eventHp = event ? event.hpDelta : 0;
+  const nextHp = Math.max(0, Math.min(100, hp + eventHp));
+  const eventLoot = event ? Math.round(event.lootBonus * run.troop.merchant * regionById(run.regionId).reward) : 0;
   const status =
-    hp === 0 ? "defeat" : step === 10 ? (won ? "clear" : "retreat") : "active";
+    nextHp === 0 ? "defeat" : step === 10 ? (won ? "clear" : "retreat") : "active";
+  const baseMessage = battle
+    ? `${step === 10 ? "関門戦" : "小競り合い"}：${won ? "勝利" : "撤退"}。兵力 -${loss}${earned ? ` ／ +${earned} 銭` : ""}`
+    : `街道の財宝を発見。+${earned} 銭`;
+  const eventSuffix = event
+    ? `\n${event.message}${event.hpDelta > 0 ? ` 兵力 +${event.hpDelta}` : event.hpDelta < 0 ? ` 兵力 ${event.hpDelta}` : ""}${eventLoot ? ` ／ +${eventLoot} 銭` : ""}`
+    : "";
+
   return {
     ...run,
     step,
-    hp,
-    loot: run.loot + earned,
+    hp: nextHp,
+    loot: run.loot + earned + eventLoot,
     fork: status === "active" && (step === 3 || step === 7),
     status,
-    message: battle
-      ? `${step === 10 ? "関門戦" : "小競り合い"}：${won ? "勝利" : "撤退"}。兵力 -${loss}${earned ? ` ／ +${earned} 銭` : ""}`
-      : `街道の財宝を発見。+${earned} 銭`,
+    message: baseMessage + eventSuffix,
   };
 }
 export function returnExpedition(run: Expedition): Expedition {
