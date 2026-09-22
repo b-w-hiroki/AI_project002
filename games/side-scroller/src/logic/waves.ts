@@ -25,7 +25,7 @@ export interface WaveComposition {
 
 /** 1ウェーブあたりの敵数の上限。無限に湧きすぎて処理落ちしないためのキャップ */
 const MAX_ENEMIES_PER_WAVE = 10;
-const SWARM_MAX_ENEMIES = 14;
+const SWARM_MAX_ENEMIES = 12;
 
 /** 何ウェーブごとにボス/大量発生を挟むか */
 const BOSS_WAVE_INTERVAL = 5;
@@ -47,12 +47,14 @@ export function isSwarmWave(wave: number): boolean {
 }
 
 function baseEnemyCount(wave: number): number {
-  return Math.min(3 + Math.floor((wave - 1) / 2), MAX_ENEMIES_PER_WAVE);
+  // 序盤のWave5ボス→Wave7大量発生が連続して跳ねすぎないよう、数の増加は3Waveごとにする。
+  return Math.min(3 + Math.floor((wave - 1) / 3), MAX_ENEMIES_PER_WAVE);
 }
 
 function baseEnemyStats(wave: number): { health: number; defense: number } {
   const health = 2 + Math.floor((wave - 1) / 3);
-  const defense = wave >= 4 ? Math.min(Math.floor((wave - 4) / 3) + 1, 5) : 0;
+  // 防御はHPより遅く立ち上げ、序盤を「硬いだけ」にしない。
+  const defense = wave >= 6 ? Math.min(Math.floor((wave - 6) / 4) + 1, 5) : 0;
   return { health, defense };
 }
 
@@ -70,8 +72,18 @@ function jitter(base: number, range: number, rng: () => number): number {
 function rollEnemyType(wave: number, rng: () => number): EnemyType {
   if (wave < 3) return "normal";
   const r = rng();
-  if (r < 0.55) return "normal";
-  if (r < 0.8) return "agile";
+  if (wave < 6) {
+    if (r < 0.7) return "normal";
+    if (r < 0.9) return "agile";
+    return "tank";
+  }
+  if (wave < 10) {
+    if (r < 0.6) return "normal";
+    if (r < 0.85) return "agile";
+    return "tank";
+  }
+  if (r < 0.5) return "normal";
+  if (r < 0.78) return "agile";
   return "tank";
 }
 
@@ -90,13 +102,13 @@ export function rollWaveComposition(wave: number, rng: () => number = Math.rando
   const base = baseEnemyStats(wave);
 
   if (isBossWave(wave)) {
-    const boss = specFor("tank", { health: base.health * 4, defense: base.defense + 2 }, rng);
+    const boss = specFor("tank", { health: base.health * 3, defense: base.defense + 1 }, rng);
     return { kind: "boss", enemies: [boss] };
   }
 
   const swarm = isSwarmWave(wave);
   const count = swarm
-    ? Math.min(baseEnemyCount(wave) + 4, SWARM_MAX_ENEMIES)
+    ? Math.min(baseEnemyCount(wave) + 3, SWARM_MAX_ENEMIES)
     : jitter(baseEnemyCount(wave), 1, rng);
 
   const enemies: EnemySpawnSpec[] = [];
@@ -109,5 +121,6 @@ export function rollWaveComposition(wave: number, rng: () => number = Math.rando
 
 /** ウェーブクリア時に提示するピックアップの数。3ウェーブに1回は多めに出す */
 export function pickupsForWave(wave: number): number {
-  return wave % 3 === 0 ? 2 : 1;
+  // 特殊Waveの直後に最低限立て直せるよう、ボス/大量発生でも2個出す。
+  return wave % 3 === 0 || isBossWave(wave) || isSwarmWave(wave) ? 2 : 1;
 }
