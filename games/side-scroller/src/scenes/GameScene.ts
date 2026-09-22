@@ -93,7 +93,7 @@ import {
   makeTappable,
 } from "../ui/touch";
 import { cg } from "../platform/crazygames";
-import { sfx } from "../platform/audio";
+import { bgm, sfx } from "../platform/audio";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
 import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
@@ -426,6 +426,9 @@ export class GameScene extends Phaser.Scene {
       this.buildVirtualControls();
       buildOrientationWarning(this);
     }
+
+    bgm.startBattle();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => bgm.stop());
   }
 
   /**
@@ -1759,6 +1762,7 @@ export class GameScene extends Phaser.Scene {
     this.status = gameStatus(this.playerState, this.player.x, Number.POSITIVE_INFINITY);
     if (this.status === "gameover" && !this.gameOverHandled) {
       this.gameOverHandled = true;
+      bgm.stop();
       saveBestWave(window.localStorage as unknown as KVStore, this.wave);
       this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
