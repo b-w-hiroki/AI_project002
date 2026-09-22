@@ -1096,7 +1096,7 @@ export class GameScene extends Phaser.Scene {
         : `\n3連戦 ${this.seriesWins}/3勝 · ${this.seriesIndex + 1}/3戦目`
       : "";
     stats.setText(`獲得: 豪拳石 +${reward + seriesBonus}（所持: ${balance}）${seriesLine}`);
-    this.resultPrimaryBtn.label.setText(this.seriesResultLabel());
+    this.resultPrimaryBtn.setLabel(this.seriesResultLabel());
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
     this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
