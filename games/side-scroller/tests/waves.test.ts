@@ -37,10 +37,10 @@ describe("rollWaveComposition", () => {
     expect(comp.enemies[0]!.type).toBe("tank");
   });
 
-  it("大量発生ウェーブは通常より多くの敏捷型が出る", () => {
+  it("大量発生ウェーブは敏捷型中心だが序盤Wave7は8体に抑える", () => {
     const comp = rollWaveComposition(7, sequentialRng([0]));
     expect(comp.kind).toBe("swarm");
-    expect(comp.enemies.length).toBeGreaterThan(3);
+    expect(comp.enemies).toHaveLength(8);
     expect(comp.enemies.every((e) => e.type === "agile")).toBe(true);
   });
 
@@ -56,6 +56,20 @@ describe("rollWaveComposition", () => {
     expect(comp.enemies.every((e) => e.type === "normal")).toBe(true);
   });
 
+  it("Wave3〜5は通常敵を70%主体にしてタンク混入を抑える", () => {
+    const normal = rollWaveComposition(3, sequentialRng([0.5]));
+    expect(normal.enemies.every((e) => e.type === "normal")).toBe(true);
+    const tank = rollWaveComposition(3, sequentialRng([0.95]));
+    expect(tank.enemies.some((e) => e.type === "tank")).toBe(true);
+  });
+
+  it("Wave5ボスは序盤向けに過剰な硬さを持たない", () => {
+    const comp = rollWaveComposition(5, sequentialRng([0.5]));
+    const boss = comp.enemies[0]!;
+    expect(boss.health).toBeLessThanOrEqual(18);
+    expect(boss.defense).toBeLessThanOrEqual(2);
+  });
+
   it("同じrngシードなら再現できる", () => {
     const a = rollWaveComposition(10, sequentialRng([0.3, 0.6, 0.9]));
     const b = rollWaveComposition(10, sequentialRng([0.3, 0.6, 0.9]));
@@ -64,10 +78,11 @@ describe("rollWaveComposition", () => {
 });
 
 describe("pickupsForWave", () => {
-  it("3の倍数ウェーブは2つ、それ以外は1つ", () => {
+  it("3の倍数と特殊Waveは2つ、それ以外は1つ", () => {
     expect(pickupsForWave(1)).toBe(1);
     expect(pickupsForWave(3)).toBe(2);
+    expect(pickupsForWave(5)).toBe(2);
     expect(pickupsForWave(6)).toBe(2);
-    expect(pickupsForWave(7)).toBe(1);
+    expect(pickupsForWave(7)).toBe(2);
   });
 });
