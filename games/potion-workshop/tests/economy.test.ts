@@ -163,15 +163,29 @@ describe("prestige", () => {
     expect(next.prestigeCount).toBe(1);
   });
 
-  it("エッセンスで生産とクリックが+10%/個される", () => {
+  it("エッセンスで生産とクリックが+15%/個される", () => {
     const s = {
       ...newGame(),
       essence: 5,
       counts: { ...newGame().counts, apprentice: 2 }, // base 1/sec
     };
-    expect(essenceMultiplier(s)).toBeCloseTo(1.5);
-    expect(productionPerSec(s)).toBeCloseTo(1.5);
-    expect(click({ ...newGame(), essence: 5 }).potions).toBeCloseTo(1.5);
+    expect(essenceMultiplier(s)).toBeCloseTo(1.75);
+    expect(productionPerSec(s)).toBeCloseTo(1.75);
+    expect(click({ ...newGame(), essence: 5 }).potions).toBeCloseTo(1.75);
+  });
+
+  it("初回転生後は同じ設備構成でも15%以上速くなる", () => {
+    const before = {
+      ...newGame(),
+      counts: { ...newGame().counts, apprentice: 10 },
+    };
+    const after = {
+      ...before,
+      essence: 1,
+      prestigeCount: 1,
+      townIndex: 1,
+    };
+    expect(productionPerSec(after) / productionPerSec(before)).toBeGreaterThanOrEqual(1.15);
   });
 });
 
