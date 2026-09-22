@@ -35,8 +35,10 @@ import {
   addCurrency,
   incrementWinCount,
   loadCurrency,
+  loadStoryProgress,
   loadTeam,
   loadWinCount,
+  saveStoryProgress,
   saveTeam,
   spendCurrency,
 } from "../logic/progress";
@@ -47,6 +49,7 @@ import {
   toggleTeamMember,
   type FighterId,
 } from "../logic/team";
+import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -67,6 +70,7 @@ const WIN_REWARD = 60;
 const DRAW_REWARD = 20;
 const LOSE_REWARD = 10;
 const SERIES_CLEAR_BONUS = 150;
+const STORY_CLEAR_BONUS = 200;
 const SERIES_ORDER: readonly Opponent[] = ["rush", "counter", "charge"] as const;
 
 const MOVE_ORDER: MoveType[] = ["punch", "kick", "ki"];
@@ -126,6 +130,9 @@ export class GameScene extends Phaser.Scene {
   private seriesActive = false;
   private seriesIndex = 0;
   private seriesWins = 0;
+  private storyActive = false;
+  private storyChapterIndex = 0;
+  private storyProgress = 0;
   private resultPrimaryBtn!: ReturnType<typeof makeButton>;
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
@@ -291,26 +298,26 @@ export class GameScene extends Phaser.Scene {
 
     const startBtn = makeButton(
       this,
-      205,
+      145,
       412,
-      190,
+      140,
       54,
-      "対戦開始",
+      "対戦",
       () => {
         this.playSound(sfx.buttonTap);
         this.startSingleBattle();
       },
       {
-        fontSize: "17px",
+        fontSize: "16px",
         fillColor: THEME.accent,
         borderColor: 0xffe1b0,
       },
     );
     const seriesBtn = makeButton(
       this,
-      410,
+      300,
       412,
-      190,
+      140,
       54,
       "3連戦",
       () => {
@@ -318,16 +325,33 @@ export class GameScene extends Phaser.Scene {
         this.startSeries();
       },
       {
-        fontSize: "17px",
+        fontSize: "16px",
         fillColor: 0x7a5210,
         borderColor: 0xffe1b0,
       },
     );
+    const storyBtn = makeButton(
+      this,
+      455,
+      412,
+      140,
+      54,
+      "物語",
+      () => {
+        this.playSound(sfx.buttonTap);
+        this.startStory();
+      },
+      {
+        fontSize: "16px",
+        fillColor: 0x5d3e76,
+        borderColor: 0xe1c8ff,
+      },
+    );
     const gachaBtn = makeButton(
       this,
-      635,
+      640,
       412,
-      150,
+      140,
       54,
       "ガチャ",
       () => {
@@ -388,6 +412,7 @@ export class GameScene extends Phaser.Scene {
       rules,
       startBtn.container,
       seriesBtn.container,
+      storyBtn.container,
       gachaBtn.container,
       this.teamSummary,
       ...this.teamButtons.map(button => button.container),
@@ -516,6 +541,8 @@ export class GameScene extends Phaser.Scene {
     this.seriesActive = false;
     this.seriesIndex = 0;
     this.seriesWins = 0;
+    this.storyActive = false;
+    this.storyChapterIndex = 0;
     this.phase = "title";
     this.titleGroup.setVisible(true);
     this.battleGroup.setVisible(false);
@@ -719,12 +746,14 @@ export class GameScene extends Phaser.Scene {
 
   private startSingleBattle(): void {
     this.seriesActive = false;
+    this.storyActive = false;
     this.seriesIndex = 0;
     this.seriesWins = 0;
     this.startBattle();
   }
 
   private startSeries(): void {
+    this.storyActive = false;
     this.seriesActive = true;
     this.seriesIndex = 0;
     this.seriesWins = 0;
@@ -732,7 +761,30 @@ export class GameScene extends Phaser.Scene {
     this.startBattle();
   }
 
+  private startStory(): void {
+    this.seriesActive = false;
+    this.storyActive = true;
+    this.storyProgress = loadStoryProgress();
+    this.storyChapterIndex = storyStartIndex(this.storyProgress);
+    this.opponent = storyChapterAt(this.storyChapterIndex).opponent;
+    this.startBattle();
+  }
+
   private handleResultPrimary(): void {
+    if (this.storyActive) {
+      if (this.lastOutcome === "playerWin" && this.storyChapterIndex < STORY_CHAPTERS.length - 1) {
+        this.storyChapterIndex += 1;
+        this.opponent = storyChapterAt(this.storyChapterIndex).opponent;
+        this.startBattle();
+        return;
+      }
+      if (this.lastOutcome === "playerWin" && this.storyChapterIndex === STORY_CHAPTERS.length - 1) {
+        this.startStory();
+        return;
+      }
+      this.startBattle();
+      return;
+    }
     if (!this.seriesActive) {
       this.startBattle();
       return;
@@ -746,7 +798,13 @@ export class GameScene extends Phaser.Scene {
     this.startSeries();
   }
 
-  private seriesResultLabel(): string {
+  private resultPrimaryLabel(): string {
+    if (this.storyActive) {
+      if (this.lastOutcome === "playerWin" && this.storyChapterIndex < STORY_CHAPTERS.length - 1) {
+        return `次章へ (${this.storyChapterIndex + 2}/${STORY_CHAPTERS.length})`;
+      }
+      return this.lastOutcome === "playerWin" ? "物語を再演" : "この章を再挑戦";
+    }
     if (!this.seriesActive) return "もう一度あそぶ";
     if (this.lastOutcome === "playerWin" && this.seriesIndex < SERIES_ORDER.length - 1) {
       return `次の相手へ (${this.seriesIndex + 2}/${SERIES_ORDER.length})`;
@@ -1058,12 +1116,17 @@ export class GameScene extends Phaser.Scene {
 
     let reward = LOSE_REWARD;
     let seriesBonus = 0;
+    let storyBonus = 0;
     if (outcome === "playerWin") {
       reward = WIN_REWARD;
       incrementWinCount();
       if (this.seriesActive) {
         this.seriesWins += 1;
         if (this.seriesIndex === SERIES_ORDER.length - 1) seriesBonus = SERIES_CLEAR_BONUS;
+      }
+      if (this.storyActive) {
+        this.storyProgress = saveStoryProgress(this.storyChapterIndex + 1);
+        if (this.storyChapterIndex === STORY_CHAPTERS.length - 1) storyBonus = STORY_CLEAR_BONUS;
       }
       this.playSound(sfx.win);
       cg.happytime();
@@ -1072,7 +1135,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.playSound(sfx.lose);
     }
-    const balance = addCurrency(reward + seriesBonus);
+    const balance = addCurrency(reward + seriesBonus + storyBonus);
 
     this.battleGroup.setVisible(false);
     const heading = this.resultGroup.getByName(
@@ -1095,8 +1158,14 @@ export class GameScene extends Phaser.Scene {
         ? `\n3連戦 COMPLETE · ${this.seriesWins}/3勝 · クリアボーナス +${seriesBonus}`
         : `\n3連戦 ${this.seriesWins}/3勝 · ${this.seriesIndex + 1}/3戦目`
       : "";
-    stats.setText(`獲得: 豪拳石 +${reward + seriesBonus}（所持: ${balance}）${seriesLine}`);
-    this.resultPrimaryBtn.setLabel(this.seriesResultLabel());
+    const chapter = storyChapterAt(this.storyChapterIndex);
+    const storyLine = this.storyActive
+      ? outcome === "playerWin" && this.storyChapterIndex === STORY_CHAPTERS.length - 1
+        ? `\n物語 COMPLETE · ${chapter.clearText} · ボーナス +${storyBonus}`
+        : `\n${chapter.title} · ${outcome === "playerWin" ? chapter.clearText : chapter.intro}`
+      : "";
+    stats.setText(`獲得: 豪拳石 +${reward + seriesBonus + storyBonus}（所持: ${balance}）${seriesLine}${storyLine}`);
+    this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
     this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
