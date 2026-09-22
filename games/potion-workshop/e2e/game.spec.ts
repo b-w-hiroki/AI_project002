@@ -154,3 +154,32 @@ test("prestige opens two town choices and moves to the selected town", async ({ 
   expect(saved.state.townIndex).toBe(2);
   expect(saved.state.prestigeCount).toBe(1);
 });
+
+test("visual QA: all workshop generators have distinct shelf silhouettes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", {
+      ...state,
+      counts: {
+        apprentice: 1,
+        cauldron: 1,
+        garden: 1,
+        golem: 1,
+        portal: 1,
+        observatory: 1,
+        dragon: 1,
+        worldTree: 1,
+      },
+    });
+    Reflect.get(scene, "refreshWorkshopDecor").call(scene);
+  });
+  await page.waitForTimeout(80);
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-workshop-all-equipment.png",
+    animations: "disabled",
+  });
+});
+

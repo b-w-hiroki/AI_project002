@@ -756,6 +756,63 @@ export class IdleScene extends Phaser.Scene {
     }
   }
 
+  private drawWorkshopDecorIcon(
+    id: string,
+    x: number,
+    y: number,
+    color: number,
+  ): Phaser.GameObjects.Graphics {
+    const g = this.add.graphics({ x, y });
+    g.lineStyle(2, 0x5b4638, 0.8);
+    g.fillStyle(color, 0.95);
+
+    switch (id) {
+      case "apprentice":
+        g.fillCircle(0, -7, 5);
+        g.fillRoundedRect(-7, -1, 14, 14, 5);
+        g.lineBetween(-9, 4, -14, 11).lineBetween(9, 4, 14, 11);
+        break;
+      case "garden":
+        g.fillStyle(0x8a684b, 1).fillRoundedRect(-10, 3, 20, 10, 3);
+        g.fillStyle(0x4f9b5a, 1)
+          .fillEllipse(-5, -3, 9, 15)
+          .fillEllipse(4, -6, 9, 17)
+          .fillEllipse(0, -11, 7, 12);
+        break;
+      case "golem":
+        g.fillRoundedRect(-10, -5, 20, 18, 3);
+        g.fillRoundedRect(-7, -15, 14, 10, 3);
+        g.fillStyle(0xe9d36f, 1).fillCircle(-3, -10, 2).fillCircle(3, -10, 2);
+        g.lineStyle(3, 0x5b4638, 0.8).lineBetween(-12, 1, -16, 8).lineBetween(12, 1, 16, 8);
+        break;
+      case "portal":
+        g.lineStyle(5, color, 0.95).strokeCircle(0, -2, 12);
+        g.lineStyle(2, 0xeaf8ff, 0.9).strokeCircle(0, -2, 7);
+        g.fillStyle(0xaadfff, 0.3).fillCircle(0, -2, 6);
+        break;
+      case "observatory":
+        g.fillTriangle(-11, 12, 11, 12, 6, -8);
+        g.fillStyle(0xddd6c4, 1).fillRoundedRect(-7, -14, 14, 8, 2);
+        g.lineStyle(2, 0xf7dc78, 1)
+          .lineBetween(0, -22, 0, -14)
+          .lineBetween(-5, -18, 5, -18);
+        break;
+      case "worldTree":
+        g.fillStyle(0x7a5437, 1).fillRoundedRect(-4, -1, 8, 16, 3);
+        g.fillStyle(0x54a86f, 1)
+          .fillCircle(-6, -8, 9)
+          .fillCircle(6, -9, 9)
+          .fillCircle(0, -15, 10);
+        g.fillStyle(0x7bd6ff, 0.95).fillEllipse(0, -4, 5, 9);
+        break;
+      default:
+        g.fillRoundedRect(-8, -5, 16, 20, 4);
+        g.fillStyle(0xc9b28e).fillRect(-4, -11, 8, 7);
+        break;
+    }
+    return g;
+  }
+
   private refreshWorkshopDecor(): void {
     const signature = JSON.stringify(this.state.counts);
     if (signature === this.workshopSignature) return;
@@ -775,14 +832,13 @@ export class IdleScene extends Phaser.Scene {
           : def.id === "dragon"
             ? "pw-dragon-icon"
             : null;
-      if (key && this.textures.exists(key))
+      if (key && this.textures.exists(key)) {
         this.workshopDecor.add(
           this.add.image(x, 278, key).setDisplaySize(35, 35),
         );
-      else {
+      } else {
         const color = Phaser.Display.Color.HSVToRGB(index / 8, 0.6, 0.8).color;
-        shelf.fillStyle(color).fillRoundedRect(x - 8, 273, 16, 20, 4);
-        shelf.fillStyle(0xc9b28e).fillRect(x - 4, 267, 8, 7);
+        this.workshopDecor.add(this.drawWorkshopDecorIcon(def.id, x, 281, color));
       }
       this.workshopDecor.add(
         this.add
