@@ -25,11 +25,18 @@ export function nextSwitchAt(elapsed: number): number {
     45000 + (Math.floor((elapsed - 45000) / 3000) + 1) * 3000,
   );
 }
+export function congruentRateAt(elapsed: number): number {
+  if (elapsed < 15000) return 0.45;
+  if (elapsed < 30000) return 0.32;
+  if (elapsed < 45000) return 0.24;
+  return 0.16;
+}
+
 export function challengeRound(
   elapsed: number,
   rng: () => number = Math.random,
 ): Round {
-  const round = generateRound(rng);
+  const round = generateRound(rng, congruentRateAt(elapsed));
   const judgeMode = judgeAt(elapsed);
   return {
     ...round,

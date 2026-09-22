@@ -4,6 +4,7 @@ import {
   challengeRound,
   nextSwitchAt,
   accuracyFor,
+  congruentRateAt,
 } from "../src/logic/challenge";
 describe("60秒の段階出題", () => {
   it("境界で段階が変わる", () => {
@@ -25,6 +26,13 @@ describe("60秒の段階出題", () => {
         r.judgeMode === "content" ? r.promptWord : r.promptInk,
       );
     }
+  });
+
+  it("後半ほど同色率が下がり、ストループ矛盾が増える", () => {
+    expect(congruentRateAt(0)).toBe(0.45);
+    expect(congruentRateAt(15000)).toBe(0.32);
+    expect(congruentRateAt(30000)).toBe(0.24);
+    expect(congruentRateAt(45000)).toBe(0.16);
   });
   it("出題なしを0%としない", () =>
     expect(accuracyFor([], "switch")).toBe("— (出題なし)"));
