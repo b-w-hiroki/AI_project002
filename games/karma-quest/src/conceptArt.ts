@@ -3,8 +3,9 @@ import { deriveStats, dominantFaction, initialKarma, FACTION_LABEL, type Faction
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
-import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import { addTotalEvaluation, loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import { formatLeague, leagueSnapshot } from "./logic/league";
+import { advanceRaid, attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
 import { outcomeArtKey } from "./outcomeArt";
@@ -178,6 +179,105 @@ function refreshHeroKarmaVisual(scene: Runtime, root?: Phaser.GameObjects.Contai
       .setPadding(8, 4, 8, 4)
       .setAlpha(0.92);
   }
+}
+
+function buildRaidModal(
+  scene: Runtime,
+  parent: Phaser.GameObjects.Container,
+  portrait: boolean,
+): Phaser.GameObjects.Container {
+  const width = portrait ? 450 : 800;
+  const height = portrait ? 800 : 450;
+  const cx = width / 2;
+  const cy = height / 2;
+  const modal = scene.add.container(0, 0).setName(portrait ? "raid-modal" : "raid-modal-wide").setVisible(false);
+  modal.add(scene.add.graphics().fillStyle(0x020713, 0.9).fillRect(0, 0, width, height));
+  modal.add(scene.add.zone(cx, cy, width, height).setInteractive());
+
+  const panelW = portrait ? 396 : 660;
+  const panelH = portrait ? 560 : 382;
+  requestCard(scene, modal, cx, cy, panelW, panelH);
+  text(scene, modal, cx, portrait ? 152 : 66, "異界の魔王襲来", portrait ? 30 : 28, "#35281e", "900");
+  const boss = text(scene, modal, cx, portrait ? 216 : 118, "", portrait ? 23 : 22, "#5b2334", "900");
+  const detail = text(scene, modal, cx, portrait ? 290 : 184, "", portrait ? 20 : 19, "#43382e", "700", portrait ? 330 : 560);
+  const hpBg = scene.add.graphics();
+  const hpFill = scene.add.graphics();
+  modal.add([hpBg, hpFill]);
+  const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520);
+
+  let lastAction = "";
+  const refresh = () => {
+    const state = loadRaid(localStorage);
+    const stats = deriveStats(scene.karma ?? initialKarma());
+    const preview = raidDamage(stats);
+    const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
+    boss.setText(`異界魔王 Lv.${state.level}  ·  撃破 ${state.defeats}`);
+    detail.setText(
+      `HP ${state.hp} / ${state.maxHp}\n` +
+      `現在の勇者なら 1回 約${preview} ダメージ\n` +
+      `撃破報酬: 評価 +${raidReward(state)}`,
+    );
+    hpBg.clear().fillStyle(0x3a2c31, 1)
+      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
+    hpFill.clear().fillStyle(state.hp <= 0 ? 0xd5ad60 : 0xa93b4c, 1)
+      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
+    actionLabel?.setText(state.hp <= 0 ? `評価 +${raidReward(state)} を受け取る` : "魔王へ攻撃");
+    actionResult.setText(lastAction);
+  };
+
+  const actionLabel = button(
+    scene,
+    modal,
+    cx,
+    portrait ? 510 : 330,
+    portrait ? 326 : 360,
+    portrait ? 72 : 62,
+    "魔王へ攻撃",
+    0x981d25,
+    () => {
+      const state = loadRaid(localStorage);
+      if (state.hp <= 0) {
+        const reward = raidReward(state);
+        addTotalEvaluation(reward);
+        const next = advanceRaid(state);
+        saveRaid(localStorage, next);
+        lastAction = `評価 +${reward} 獲得。Lv.${next.level} が出現！`;
+        scene.cameras.main.flash(180, 232, 196, 102);
+      } else {
+        const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
+        saveRaid(localStorage, result.next);
+        lastAction = result.defeated
+          ? `-${result.damage}  魔王撃破！`
+          : `-${result.damage} ダメージ`;
+        scene.cameras.main.shake(120, 0.004);
+      }
+      refresh();
+    },
+    undefined,
+    false,
+  );
+  button(
+    scene,
+    modal,
+    cx,
+    portrait ? 604 : 397,
+    portrait ? 326 : 260,
+    portrait ? 64 : 52,
+    "王都へ戻る",
+    0x0758a4,
+    () => modal.setVisible(false),
+    undefined,
+    false,
+  );
+
+  modal.setData("refreshRaid", refresh);
+  modal.setData("showRaid", () => {
+    lastAction = "";
+    refresh();
+    modal.setVisible(true);
+  });
+  parent.add(modal);
+  return modal;
 }
 
 function cover(scene: Phaser.Scene, root: Phaser.GameObjects.Container, key: string, tint?: number): Phaser.GameObjects.Image | undefined {
@@ -553,6 +653,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
   root.add(start);
 
+  const raidModal = buildRaidModal(scene, root, true);
   const modal = scene.add.container(0, 0).setName("home-information").setVisible(false);
   const veil = scene.add.graphics().fillStyle(0x030a14, 0.84).fillRect(0, 0, 450, 800);
   const blocker = scene.add.zone(225, 400, 450, 800).setInteractive();
@@ -578,7 +679,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   };
   const routes = [
     () => modal.setVisible(false),
-    () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、\n12年の物語を紡ぎます。\n\n王都の依頼カードから出発。"),
+    () => (raidModal.getData("showRaid") as () => void)(),
     character,
     () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage()))),
     () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
@@ -914,6 +1015,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
 }
 
 function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.Container): void {
+  const raidModal = buildRaidModal(scene, root, false);
   const modal = scene.add.container(0, 0).setName("home-information-wide").setVisible(false);
   modal.add(scene.add.graphics().fillStyle(0x030a14, 0.88).fillRect(0, 0, 800, 450));
   modal.add(scene.add.zone(400, 225, 800, 450).setInteractive());
@@ -934,7 +1036,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   };
   const items: Array<[string, () => void]> = [
     ["案内", () => show("冒険の案内", "依頼を聞き、返答を選び、世界の反応を確認します。\n結果の「次へ」で冒険が進みます。\n\n選択は指を離したときに確定します。")],
-    ["ワールド", () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、12年の物語を紡ぎます。\n\n右側の「依頼を聞く」から出発できます。")],
+    ["ワールド", () => (raidModal.getData("showRaid") as () => void)()],
     ["仲間", () => {
       const stats = deriveStats(scene.karma ?? initialKarma());
       show("カイトの能力", `攻撃力 ${stats.atk}  防御力 ${stats.def}\n体力 ${stats.hp}  魔力 ${stats.magic}\n\n依頼への選択が勇者を育てます。`);

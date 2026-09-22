@@ -321,6 +321,58 @@ test("hero league opens from home in portrait and landscape", async ({ page }) =
   await checkFrame(page, "landscape-hero-league");
 });
 
+test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", JSON.stringify({
+      level: 1,
+      hp: 1,
+      maxHp: 900,
+      defeats: 0,
+    }));
+    localStorage.setItem("karma_quest_total_evaluation_v1", "0");
+  });
+
+  await tapPoint(page, 135, 758);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const modal = scene.children.list
+      .flatMap(node => "list" in node ? (node as Phaser.GameObjects.Container).list : [])
+      .find(node => node.name === "raid-modal") as Phaser.GameObjects.Container | undefined;
+    return modal?.visible ?? false;
+  })).toBe(true);
+  await checkFrame(page, "portrait-solo-raid");
+
+  await tapPoint(page, 225, 510);
+  await expect.poll(() => page.evaluate(() =>
+    JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").hp,
+  )).toBe(0);
+
+  await tapPoint(page, 225, 510);
+  const afterClaim = await page.evaluate(() => ({
+    raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
+    evaluation: Number(localStorage.getItem("karma_quest_total_evaluation_v1") ?? "0"),
+  }));
+  expect(afterClaim.raid.level).toBe(2);
+  expect(afterClaim.raid.defeats).toBe(1);
+  expect(afterClaim.raid.hp).toBe(afterClaim.raid.maxHp);
+  expect(afterClaim.evaluation).toBe(80);
+
+  await tapPoint(page, 225, 604);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 150, 348);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const visit = (node: Phaser.GameObjects.GameObject): boolean => {
+      if (node.name === "raid-modal-wide") return Reflect.get(node, "visible") === true;
+      return "list" in node && (node as Phaser.GameObjects.Container).list.some(visit);
+    };
+    return scene.children.list.some(visit);
+  })).toBe(true);
+  await checkFrame(page, "landscape-solo-raid");
+});
+
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
