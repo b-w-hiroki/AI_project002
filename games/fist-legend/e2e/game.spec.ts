@@ -67,7 +67,7 @@ async function checkFrame(page: Page, name: string) {
 
 test("touch starts battle and a move advances the beat after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapVisibleText(page, "バトル開始");
+  await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
   await checkFrame(page, "portrait-battle");
   await page.setViewportSize({ width: 844, height: 390 });
