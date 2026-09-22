@@ -67,7 +67,7 @@ async function checkFrame(page: Page, name: string) {
 
 test("touch starts battle and a move advances the beat after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapVisibleText(page, "バトル開始");
+  await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
   await checkFrame(page, "portrait-battle");
   await page.setViewportSize({ width: 844, height: 390 });
@@ -205,5 +205,45 @@ test("battle switch cycles through the selected team on touch controls", async (
   })).toEqual({ index: 2, label: "PLAYER · 岳 [3/3]" });
   await page.waitForTimeout(300);
   await checkFrame(page, "landscape-switch-gaku");
+});
+
+test("three-battle series advances through all opponents and clears", async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSeries").call(scene);
+  });
+
+  const state = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      phase: Reflect.get(scene, "phase"),
+      opponent: Reflect.get(scene, "opponent"),
+      seriesIndex: Reflect.get(scene, "seriesIndex"),
+      seriesWins: Reflect.get(scene, "seriesWins"),
+      active: Reflect.get(scene, "seriesActive"),
+      stats: ((Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text)?.text ?? "",
+    };
+  });
+
+  await expect.poll(state).toMatchObject({ phase: "battle", opponent: "rush", seriesIndex: 0, seriesWins: 0, active: true });
+
+  for (const [index, opponent] of ["rush", "counter", "charge"].entries()) {
+    await expect.poll(state).toMatchObject({ phase: "battle", opponent, seriesIndex: index });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+      Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+      Reflect.get(scene, "finishBattle").call(scene, false);
+    });
+    await expect.poll(state).toMatchObject({ phase: "result", seriesWins: index + 1 });
+    if (index < 2) {
+      await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "handleResultPrimary").call(window.__qaGame.scene.getScene("GameScene")));
+    }
+  }
+
+  const complete = await state();
+  expect(complete.stats).toContain("3連戦 COMPLETE");
+  expect(complete.stats).toContain("クリアボーナス +150");
+  await checkFrame(page, "portrait-three-battle-complete");
 });
 

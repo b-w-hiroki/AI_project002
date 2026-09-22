@@ -66,6 +66,8 @@ const BEAT_COOLDOWN_MS = 380;
 const WIN_REWARD = 60;
 const DRAW_REWARD = 20;
 const LOSE_REWARD = 10;
+const SERIES_CLEAR_BONUS = 150;
+const SERIES_ORDER: readonly Opponent[] = ["rush", "counter", "charge"] as const;
 
 const MOVE_ORDER: MoveType[] = ["punch", "kick", "ki"];
 const RARITY_COLOR: Readonly<Record<string, number>> = {
@@ -121,6 +123,10 @@ export class GameScene extends Phaser.Scene {
   private selectedTeam: FighterId[] = ["ryuga"];
   private activeFighterIndex = 0;
   private teamSummary!: Phaser.GameObjects.Text;
+  private seriesActive = false;
+  private seriesIndex = 0;
+  private seriesWins = 0;
+  private resultPrimaryBtn!: ReturnType<typeof makeButton>;
   private phase: Phase = "title";
   private battle: BattleState = initialBattleState();
   private timeRemainingSec = ROUND_TIME_SEC;
@@ -285,26 +291,43 @@ export class GameScene extends Phaser.Scene {
 
     const startBtn = makeButton(
       this,
-      310,
+      205,
       412,
-      400,
+      190,
       54,
       "対戦開始",
       () => {
         this.playSound(sfx.buttonTap);
-        this.startBattle();
+        this.startSingleBattle();
       },
       {
-        fontSize: "18px",
+        fontSize: "17px",
         fillColor: THEME.accent,
+        borderColor: 0xffe1b0,
+      },
+    );
+    const seriesBtn = makeButton(
+      this,
+      410,
+      412,
+      190,
+      54,
+      "3連戦",
+      () => {
+        this.playSound(sfx.buttonTap);
+        this.startSeries();
+      },
+      {
+        fontSize: "17px",
+        fillColor: 0x7a5210,
         borderColor: 0xffe1b0,
       },
     );
     const gachaBtn = makeButton(
       this,
-      620,
+      635,
       412,
-      160,
+      150,
       54,
       "ガチャ",
       () => {
@@ -364,6 +387,7 @@ export class GameScene extends Phaser.Scene {
       dockPanel,
       rules,
       startBtn.container,
+      seriesBtn.container,
       gachaBtn.container,
       this.teamSummary,
       ...this.teamButtons.map(button => button.container),
@@ -489,6 +513,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showTitle(): void {
+    this.seriesActive = false;
+    this.seriesIndex = 0;
+    this.seriesWins = 0;
     this.phase = "title";
     this.titleGroup.setVisible(true);
     this.battleGroup.setVisible(false);
@@ -688,6 +715,43 @@ export class GameScene extends Phaser.Scene {
     g.fillRoundedRect(-30, -55, 60, 110, 10);
     g.setPosition(x, 300);
     return g;
+  }
+
+  private startSingleBattle(): void {
+    this.seriesActive = false;
+    this.seriesIndex = 0;
+    this.seriesWins = 0;
+    this.startBattle();
+  }
+
+  private startSeries(): void {
+    this.seriesActive = true;
+    this.seriesIndex = 0;
+    this.seriesWins = 0;
+    this.opponent = SERIES_ORDER[0]!;
+    this.startBattle();
+  }
+
+  private handleResultPrimary(): void {
+    if (!this.seriesActive) {
+      this.startBattle();
+      return;
+    }
+    if (this.lastOutcome === "playerWin" && this.seriesIndex < SERIES_ORDER.length - 1) {
+      this.seriesIndex += 1;
+      this.opponent = SERIES_ORDER[this.seriesIndex]!;
+      this.startBattle();
+      return;
+    }
+    this.startSeries();
+  }
+
+  private seriesResultLabel(): string {
+    if (!this.seriesActive) return "もう一度あそぶ";
+    if (this.lastOutcome === "playerWin" && this.seriesIndex < SERIES_ORDER.length - 1) {
+      return `次の相手へ (${this.seriesIndex + 2}/${SERIES_ORDER.length})`;
+    }
+    return this.lastOutcome === "playerWin" ? "もう一度3連戦" : "3連戦を再挑戦";
   }
 
   private startBattle(): void {
@@ -993,9 +1057,14 @@ export class GameScene extends Phaser.Scene {
     this.lastOutcome = outcome;
 
     let reward = LOSE_REWARD;
+    let seriesBonus = 0;
     if (outcome === "playerWin") {
       reward = WIN_REWARD;
       incrementWinCount();
+      if (this.seriesActive) {
+        this.seriesWins += 1;
+        if (this.seriesIndex === SERIES_ORDER.length - 1) seriesBonus = SERIES_CLEAR_BONUS;
+      }
       this.playSound(sfx.win);
       cg.happytime();
     } else if (outcome === "draw") {
@@ -1003,7 +1072,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.playSound(sfx.lose);
     }
-    const balance = addCurrency(reward);
+    const balance = addCurrency(reward + seriesBonus);
 
     this.battleGroup.setVisible(false);
     const heading = this.resultGroup.getByName(
@@ -1021,7 +1090,13 @@ export class GameScene extends Phaser.Scene {
           : "引き分け";
     const resultColor = outcome === "playerWin" ? 0xf2b84a : outcome === "enemyWin" ? 0x5f6d87 : 0x9a7fc1;
     heading.setText(outcomeLabel).setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#d7dfef" : "#e7d8ff");
-    stats.setText(`獲得: 豪拳石 +${reward}（所持: ${balance}）`);
+    const seriesLine = this.seriesActive
+      ? outcome === "playerWin" && this.seriesIndex === SERIES_ORDER.length - 1
+        ? `\n3連戦 COMPLETE · ${this.seriesWins}/3勝 · クリアボーナス +${seriesBonus}`
+        : `\n3連戦 ${this.seriesWins}/3勝 · ${this.seriesIndex + 1}/3戦目`
+      : "";
+    stats.setText(`獲得: 豪拳石 +${reward + seriesBonus}（所持: ${balance}）${seriesLine}`);
+    this.resultPrimaryBtn.setLabel(this.seriesResultLabel());
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
     this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
@@ -1093,14 +1168,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("stats");
 
-    const retryBtn = makeButton(
+    this.resultPrimaryBtn = makeButton(
       this,
       400,
       360,
-      200,
+      260,
       48,
-      "もう一度あそぶ (R)",
-      () => this.startBattle(),
+      "もう一度あそぶ",
+      () => this.handleResultPrimary(),
       {
         fontSize: "15px",
       },
@@ -1124,7 +1199,7 @@ export class GameScene extends Phaser.Scene {
       this.resultFinish,
       heading,
       stats,
-      retryBtn.container,
+      this.resultPrimaryBtn.container,
       titleBtn.container,
     ]);
     this.resultGroup.setVisible(false);
@@ -1309,7 +1384,7 @@ export class GameScene extends Phaser.Scene {
 
   private handleKeydown(e: KeyboardEvent): void {
     if (this.phase === "result" && (e.key === "r" || e.key === "R")) {
-      this.startBattle();
+      this.handleResultPrimary();
       return;
     }
     if (this.phase === "battle" && this.accepting) {
