@@ -9,9 +9,10 @@ import {
   type Expedition,
 } from "./logic/expedition";
 import { saveExpedition, saveParty } from "./logic/expeditionSave";
-import { loadCurrency, loadOwnedGenerals } from "./logic/progress";
+import { loadBestDistance, loadCurrency, loadOwnedGenerals } from "./logic/progress";
 import { isUnlocked, type Campaign } from "./logic/campaign";
 import { REGIONS, regionById, type RegionId } from "./logic/regions";
+import { arenaSnapshot, arenaSummary } from "./logic/arena";
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 import { GameScene } from "./scenes/GameScene";
 
@@ -179,6 +180,10 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
   const party = scene.party ?? [];
   party.slice(0, 3).forEach((id, i) => portrait(scene, root, id, 596 + i * 70, 303, 62, 82));
   if (!party.length) label(scene, root, 665, 303, "編成で武将を選ぼう", 11, "#bfae92", "700");
+  const arena = troop ? arenaSnapshot(troop as never, scene.campaign, loadBestDistance()) : null;
+  if (arena) {
+    label(scene, root, 665, 344, arenaSummary(arena), 9, arena.rank <= 3 ? "#f2cf86" : "#bfcdbf", "800");
+  }
 
   button(scene, root, 596, 389, 100, 50, "編成", () => { scene.view = "formation"; invoke(scene, "render"); }, true, 0x3d4b50);
   button(scene, root, 700, 389, 184, 54, "出陣", () => {
@@ -227,7 +232,11 @@ function renderFormation(scene: Runtime, root: Phaser.GameObjects.Container): vo
   label(scene, root, 665, 183, `戦力 ${troop?.power ?? 0}`, 22, "#9fe0b6", "900");
   label(scene, root, 665, 225, "役割", 10, "#d4bd98", "900");
   label(scene, root, 665, 264, (scene.party ?? []).map((id) => ROLES[id] ?? "武将").join(" / ") || "未編成", 11, "#f0dfc0", "800");
-  label(scene, root, 665, 306, "敗走しても\n武将・装備は失わない", 10, "#b9c8be", "700");
+  if (troop) {
+    const arena = arenaSnapshot(troop as never, scene.campaign, loadBestDistance());
+    label(scene, root, 665, 304, arenaSummary(arena), 9, arena.rank <= 3 ? "#f2cf86" : "#bfcdbf", "800");
+  }
+  label(scene, root, 665, 330, "敗走しても武将・装備は失わない", 9, "#b9c8be", "700");
   button(scene, root, 665, 368, 205, 54, "戦略地図へ", () => { scene.view = "camp"; invoke(scene, "render"); }, !!scene.party?.length, 0xa72f22);
 }
 

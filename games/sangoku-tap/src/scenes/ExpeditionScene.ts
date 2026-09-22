@@ -4,6 +4,7 @@ import {
   addCurrency,
   addEquipment,
   loadCurrency,
+  loadBestDistance,
   loadEquippedMap,
   loadOwnedGenerals,
   saveBestDistance,
@@ -29,6 +30,7 @@ import {
   saveExpedition,
 } from "../logic/expeditionSave";
 import { effectiveAtk } from "../logic/roster";
+import { arenaSnapshot, arenaSummary } from "../logic/arena";
 import { REGIONS, regionById, type RegionId } from "../logic/regions";
 
 const REGION_BOSS_VISUAL: Readonly<Record<RegionId, {
@@ -369,6 +371,14 @@ export class ExpeditionScene extends Phaser.Scene {
     });
     if (!this.party.length)
       this.text(225, 484, "編成を開いて、仲間を選ぼう", 17);
+    const arena = arenaSnapshot(troop, this.campaign, loadBestDistance());
+    this.text(
+      225,
+      567,
+      arenaSummary(arena),
+      11,
+      arena.rank <= 3 ? "#f6d27f" : "#c9d8ce",
+    );
     this.button(
       113,
       608,
