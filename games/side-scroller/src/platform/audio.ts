@@ -102,3 +102,87 @@ export const sfx = {
     beep(784, 0.18, "sine", 0.06, 0.18);
   },
 };
+
+type BattleMusic = {
+  master: GainNode;
+  oscillators: OscillatorNode[];
+  lfo: OscillatorNode;
+  lfoGain: GainNode;
+};
+
+let battleMusic: BattleMusic | null = null;
+
+function startBattleMusic(): void {
+  if (battleMusic) return;
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0.001, audioCtx.currentTime);
+  master.gain.exponentialRampToValueAtTime(0.018, audioCtx.currentTime + 0.45);
+  master.connect(audioCtx.destination);
+
+  const low = audioCtx.createOscillator();
+  low.type = "triangle";
+  low.frequency.value = 82.41; // E2
+
+  const fifth = audioCtx.createOscillator();
+  fifth.type = "sine";
+  fifth.frequency.value = 123.47; // B2
+
+  const high = audioCtx.createOscillator();
+  high.type = "triangle";
+  high.frequency.value = 164.81; // E3
+
+  const lowGain = audioCtx.createGain();
+  lowGain.gain.value = 0.78;
+  const fifthGain = audioCtx.createGain();
+  fifthGain.gain.value = 0.34;
+  const highGain = audioCtx.createGain();
+  highGain.gain.value = 0.2;
+
+  low.connect(lowGain).connect(master);
+  fifth.connect(fifthGain).connect(master);
+  high.connect(highGain).connect(master);
+
+  const lfo = audioCtx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.14;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 0.004;
+  lfo.connect(lfoGain).connect(master.gain);
+
+  low.start();
+  fifth.start();
+  high.start();
+  lfo.start();
+
+  battleMusic = {
+    master,
+    oscillators: [low, fifth, high],
+    lfo,
+    lfoGain,
+  };
+}
+
+function stopBattleMusic(): void {
+  const music = battleMusic;
+  if (!music) return;
+  battleMusic = null;
+  const audioCtx = getContext();
+  if (!audioCtx) return;
+
+  const stopAt = audioCtx.currentTime + 0.3;
+  music.master.gain.cancelScheduledValues(audioCtx.currentTime);
+  music.master.gain.setValueAtTime(Math.max(0.001, music.master.gain.value), audioCtx.currentTime);
+  music.master.gain.exponentialRampToValueAtTime(0.001, stopAt);
+  for (const osc of music.oscillators) osc.stop(stopAt + 0.02);
+  music.lfo.stop(stopAt + 0.02);
+}
+
+export const bgm = {
+  startBattle: startBattleMusic,
+  stop: stopBattleMusic,
+  isActive: (): boolean => battleMusic !== null,
+};
+
