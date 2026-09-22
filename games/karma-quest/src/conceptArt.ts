@@ -4,6 +4,7 @@ import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
 import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import { formatLeague, leagueSnapshot } from "./logic/league";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
 import { outcomeArtKey } from "./outcomeArt";
@@ -537,11 +538,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
   root.add(icons);
   // Availability is visible before opening the explanatory modal.
-  for (const [x, y] of [[47, 332], [315, 746], [400, 746]] as const) {
+  for (const [x, y] of [[47, 332], [400, 746]] as const) {
     root.add(scene.add.graphics().fillStyle(0x07131e, 0.9).fillRoundedRect(x - 24, y - 9, 48, 18, 4));
     text(scene, root, x, y, "準備中", 12, "#d8c9ab", "700").setStroke("#091420", 0);
   }
-  for (const [i, label] of ["王都", "ワールド", "キャラ", "ガチャ", "ショップ"].entries()) {
+  for (const [i, label] of ["王都", "ワールド", "キャラ", "リーグ", "ショップ"].entries()) {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 16, "#fff0c8", "800").setStroke("#091420", 0);
   }
   screenFrame(scene, root);
@@ -565,7 +566,10 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     sound.setVisible(title === "冒険の案内");
     (sound.getData("refresh") as () => void)();
     heading.setText(title);
-    body.setText(description);
+    body
+      .setFontSize(title === "勇者リーグ" ? 17 : 23)
+      .setLineSpacing(title === "勇者リーグ" ? 2 : 5)
+      .setText(description);
     modal.setVisible(true);
   };
   const character = () => {
@@ -576,7 +580,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => modal.setVisible(false),
     () => show("王都ルナディス", "依頼を選び、勇者を送り出す。\n戦果を神々へ報告し、\n12年の物語を紡ぎます。\n\n王都の依頼カードから出発。"),
     character,
-    () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と\n冒険を通じて成長します。"),
+    () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage()))),
     () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
   ];
   const addRoute = (x: number, y: number, w: number, h: number, action: () => void) => {
@@ -919,7 +923,12 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   const sound = soundSetting(scene, modal, 400, 316, 56);
   button(scene, modal, 400, 385, 326, 64, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
   const show = (title: string, value: string) => {
-    heading.setText(title); body.setText(value); modal.setVisible(true);
+    heading.setText(title);
+    body
+      .setFontSize(title === "勇者リーグ" ? 19 : 24)
+      .setLineSpacing(title === "勇者リーグ" ? 2 : 5)
+      .setText(value);
+    modal.setVisible(true);
     sound.setVisible(title === "冒険の案内");
     (sound.getData("refresh") as () => void)();
   };
@@ -932,14 +941,14 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     }],
     ["図鑑", () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。")],
     ["持ち物", () => show("持ち物", "持ち物の管理は現在は利用できません。\n\n装備なしで冒険を開始できます。")],
-    ["ガチャ", () => show("ガチャ", "現在は利用できません。\n\n勇者は依頼への選択と冒険を通じて成長します。")],
+    ["リーグ", () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage())))],
     ["ショップ", () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。")],
     ["王都", () => modal.setVisible(false)],
   ];
   items.forEach(([label, action], i) => {
     const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
     hudPlate(scene, root, x, y, 80, 48);
-    const unavailable = ["持ち物", "ガチャ", "ショップ"].includes(label);
+    const unavailable = ["持ち物", "ショップ"].includes(label);
     text(scene, root, x, unavailable ? y - 7 : y, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
     if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });

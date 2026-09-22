@@ -275,6 +275,52 @@ test("home navigation opens and closes information without starting a journey be
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
+test("hero league opens from home in portrait and landscape", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_evaluation_v1", "1000");
+    localStorage.setItem("karma_quest_best_stage_v1", "8");
+  });
+
+  await tapPoint(page, 315, 758);
+  const readLeague = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let heading = "";
+    let body = "";
+    const visit = (node: Phaser.GameObjects.GameObject, visible: boolean) => {
+      const ownVisible = visible && Reflect.get(node, "visible") !== false;
+      if (!ownVisible) return;
+      if (node.type === "Text") {
+        const value = (node as Phaser.GameObjects.Text).text;
+        if (value === "勇者リーグ") heading = value;
+        if (value.includes("LEAGUE") && value.includes("Rating")) body = value;
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(child => visit(child, ownVisible));
+    };
+    scene.children.list.forEach(child => visit(child, true));
+    return { heading, body };
+  });
+  await expect.poll(readLeague).toMatchObject({ heading: "勇者リーグ" });
+  const portraitLeague = await readLeague();
+  expect(portraitLeague.body).toContain("Gold LEAGUE");
+  expect(portraitLeague.body).toContain("あなた / カイト");
+  await checkFrame(page, "portrait-hero-league");
+
+  await tapPoint(page, 225, 551);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 150, 407);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(child =>
+      child instanceof Phaser.GameObjects.Container && child.getByName("home-information-wide"),
+    ) as Phaser.GameObjects.Container | undefined;
+    const modal = root?.getByName("home-information-wide") as Phaser.GameObjects.Container | null;
+    return modal?.visible ?? false;
+  })).toBe(true);
+  await checkFrame(page, "landscape-hero-league");
+});
+
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
