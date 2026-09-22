@@ -206,7 +206,6 @@ function buildRaidModal(
   const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520);
 
   let lastAction = "";
-  let actionLabel!: Phaser.GameObjects.Text;
   const refresh = () => {
     const state = loadRaid(localStorage);
     const stats = deriveStats(scene.karma ?? initialKarma());
@@ -226,7 +225,7 @@ function buildRaidModal(
     actionResult.setText(lastAction);
   };
 
-  actionLabel = button(
+  const actionLabel = button(
     scene,
     modal,
     cx,
