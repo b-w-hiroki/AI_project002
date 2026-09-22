@@ -19,10 +19,19 @@ function sequentialRng(values: number[]): () => number {
 }
 
 describe("timeLimitMsForLevel", () => {
-  it("レベルが上がるほど制限時間が短くなり、下限で頭打ちになる", () => {
+  it("序盤は緩やか、中盤から加速し、終盤は2秒で下限になる", () => {
     expect(timeLimitMsForLevel(0)).toBe(4200);
-    expect(timeLimitMsForLevel(4)).toBe(3600);
-    expect(timeLimitMsForLevel(100)).toBe(1800);
+    expect(timeLimitMsForLevel(4)).toBe(3800);
+    expect(timeLimitMsForLevel(10)).toBe(3080);
+    expect(timeLimitMsForLevel(18)).toBe(2200);
+    expect(timeLimitMsForLevel(100)).toBe(2000);
+  });
+
+  it("レベルが上がっても制限時間が逆に増えない", () => {
+    const values = Array.from({ length: 40 }, (_, level) => timeLimitMsForLevel(level));
+    values.slice(1).forEach((value, index) => {
+      expect(value).toBeLessThanOrEqual(values[index]!);
+    });
   });
 });
 
