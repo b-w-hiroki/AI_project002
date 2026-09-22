@@ -30,8 +30,8 @@ export function resolveClash(player: MoveType, enemy: MoveType): ClashResult {
 }
 
 const BASE_DAMAGE = 10;
-const ADVANTAGE_MULTIPLIER = 1.6;
-const DISADVANTAGE_MULTIPLIER = 0.5;
+const ADVANTAGE_MULTIPLIER = 1.5;
+const DISADVANTAGE_MULTIPLIER = 0.65;
 const CLASH_MULTIPLIER = 0.9;
 
 /** 相性に応じたダメージ倍率 */
@@ -120,12 +120,12 @@ export function applyBeat(
   const playerGauge = Math.min(
     OUGI_GAUGE_MAX,
     state.playerGauge +
-      (clash === "advantage" ? 32 : clash === "clash" ? 14 : 8),
+      (clash === "advantage" ? 28 : clash === "clash" ? 14 : 10),
   );
   const enemyGauge = Math.min(
     OUGI_GAUGE_MAX,
     state.enemyGauge +
-      (clash === "disadvantage" ? 32 : clash === "clash" ? 14 : 8),
+      (clash === "disadvantage" ? 28 : clash === "clash" ? 14 : 10),
   );
 
   return {
