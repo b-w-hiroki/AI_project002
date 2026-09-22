@@ -100,3 +100,41 @@ describe("遠征の選択と報酬", () => {
     expect(next.loot).toBeGreaterThan(0);
   });
 });
+
+describe("遠征バランス帯", () => {
+  it("標準編成の平原序盤は75〜85%で安定する", () => {
+    const chance = victoryChance(newExpedition(troop, "plains"));
+    expect(chance).toBeGreaterThanOrEqual(0.75);
+    expect(chance).toBeLessThanOrEqual(0.85);
+  });
+
+  it("標準編成の城塞関門は40〜55%で強化余地を残す", () => {
+    const run = { ...newExpedition(troop, "citadel"), step: 9 };
+    const chance = victoryChance(run);
+    expect(chance).toBeGreaterThanOrEqual(0.4);
+    expect(chance).toBeLessThanOrEqual(0.55);
+  });
+
+  it("軍師なしの山道は街道より危険になる", () => {
+    const road = { ...newExpedition(troop, "pass"), route: "road" as const };
+    const mountain = { ...road, route: "mountain" as const };
+    expect(victoryChance(mountain)).toBeLessThan(victoryChance(road));
+  });
+
+  it("軍師を入れると山道の勝率補正がリスクを上回る", () => {
+    const strategistOwned = {
+      gen_soujin: 1,
+      gen_suzaku: 1,
+      gen_ashigaru: 1,
+    };
+    const strategistTroop = buildTroop(
+      ["gen_soujin", "gen_suzaku", "gen_ashigaru"],
+      strategistOwned,
+      {},
+    );
+    const road = { ...newExpedition(strategistTroop, "pass"), route: "road" as const };
+    const mountain = { ...road, route: "mountain" as const };
+    expect(victoryChance(mountain)).toBeGreaterThan(victoryChance(road));
+  });
+});
+
