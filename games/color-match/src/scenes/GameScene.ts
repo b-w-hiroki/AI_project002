@@ -35,6 +35,7 @@ import {
   weakestJudgeMode,
 } from "../logic/progress";
 import { cg } from "../platform/crazygames";
+import { sfx } from "../platform/audio";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -736,6 +737,8 @@ export class GameScene extends Phaser.Scene {
     const feedbackColor = correct ? 0x3fae6a : 0xd1495b;
     this.drawPromptBg(feedbackColor);
     this.spawnRoundFeedbackFx(correct, timedOut);
+    if (correct) sfx.correct();
+    else sfx.miss();
     if (correct) {
       this.tweens.add({
         targets: this.promptCard,
@@ -766,6 +769,7 @@ export class GameScene extends Phaser.Scene {
       if (this.turboStreak >= TURBO_ENTRY_STREAK) {
         this.turboText.setVisible(false);
         this.turboHudBadge?.setVisible(false);
+        sfx.flowBreak();
       }
       this.turboStreak = 0;
       return;
@@ -789,8 +793,11 @@ export class GameScene extends Phaser.Scene {
       this.turboHudBadge?.setVisible(true);
       if (this.turboStreak === TURBO_ENTRY_STREAK) {
         cg.happytime();
+        sfx.flowEnter();
         this.spawnTurboBadge();
         this.spawnFlowEntryFx();
+      } else {
+        sfx.flowPulse(this.turboStreak);
       }
     }
   }
