@@ -4,6 +4,12 @@
 
 公開URL: https://b-w-hiroki.github.io/AI_project002/
 
+> [!IMPORTANT]
+> CrazyGamesは Issue #150 の完了後に提出する。
+> 2026-09時点の公式要件では英語ローカライズ、Landscape/Portrait/Squareの3種カバー、
+> Landscape/Portraitの15〜20秒プレビュー動画が必要。
+> PLiCy向けHTML5 ZIPは `game-release-packages` artifactで自動生成済み。
+
 ---
 
 ## 1. ポーション工房 / Potion Workshop
@@ -219,8 +225,13 @@
 
 - [x] `src/platform/crazygames.ts` で SDK 初期化・`gameplayStart`/`happytime` 呼び出し済み（全6作）
 - [x] 非独占（他ポータルにも同時公開可能）
-- [x] サムネイル画像（1200×630、各ゲームのアクセントカラーで生成）
-- [ ] `npm run build` の `dist/` を各ゲームごとにzip化してアップロード（投稿時に実施）
+- [x] 投稿ZIP自動生成（PR #147 / #149）
+- [x] Chromium Browser E2E / WebKit Smoke
+- [ ] 英語ローカライズ（Issue #150）
+- [ ] CrazyGames主要iframeサイズで最終QA（Issue #150）
+- [ ] 3種カバー: 1920×1080 / 800×1200 / 800×800（Issue #150）
+- [ ] 15〜20秒プレビュー動画: landscape + portrait（Issue #150）
+- [ ] Developer Portal Previewで初期download size / SDK / localeを確認
 - [ ] CrazyGames 開発者アカウント作成（人間の作業）
 
 ## PLiCy投稿の準備（全6作共通）
