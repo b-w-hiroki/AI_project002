@@ -32,7 +32,7 @@ import {
 import { effectiveAtk } from "../logic/roster";
 import { arenaSnapshot, arenaSummary } from "../logic/arena";
 import { REGIONS, regionById, type RegionId } from "../logic/regions";
-import { detectLang, expeditionMessage, generalName, regionText, roleName, tr, type Lang } from "../logic/i18n";
+import { detectLang, generalName, regionText, roleName, tr, type Lang } from "../logic/i18n";
 
 const REGION_BOSS_VISUAL: Readonly<Record<RegionId, {
   accent: number;
@@ -482,7 +482,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.text(
         x + 22,
         y - 13,
-        `${roleName(this.lang, ROLES[g.id])} · ${has ? effectiveAtk(g, eq) : tr(this.lang, "未所持", "Not Owned")}`,
+        `${roleName(this.lang, ROLES[g.id] ?? "武将")} · ${has ? effectiveAtk(g, eq) : tr(this.lang, "未所持", "Not Owned")}`,
         13,
         "#dfbd7d",
       );
