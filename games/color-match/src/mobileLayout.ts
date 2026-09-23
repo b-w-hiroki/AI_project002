@@ -171,8 +171,17 @@ function build(scene: Runtime): LandscapeUi {
   play.add(flowGlow);
 
   panel(scene, title, 250, 225, 400, 300, 0x164f82, 0x9be9ff, 0.94, 22);
-  text(scene, title, 250, 118, tr(scene.lang ?? "en", "色と文字のズレを見抜け！", "Spot the mismatch between word and color!"), 25, "#ffffff", "900");
-  text(scene, title, 250, 170, tr(scene.lang ?? "en", "60秒で総合力。20秒練習で弱点集中。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", "60 seconds tests overall skill. 20-second practice targets your weakness.\nFollow WORD MEANING or INK COLOR\nand tap the correct card."), 14, "#def5ff", "700");
+  text(
+    scene,
+    title,
+    250,
+    scene.lang === "ja" ? 118 : 112,
+    tr(scene.lang ?? "en", "色と文字のズレを見抜け！", "Spot the mismatch\nbetween word and color!"),
+    scene.lang === "ja" ? 25 : 22,
+    "#ffffff",
+    "900",
+  ).setName("marketing-title");
+  text(scene, title, 250, 180, tr(scene.lang ?? "en", "60秒で総合力。20秒練習で弱点集中。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", "60 seconds tests overall skill. 20-second practice targets your weakness.\nFollow WORD MEANING or INK COLOR\nand tap the correct card."), 14, "#def5ff", "700");
   const titleMode = text(scene, title, 250, 244, "", 13, "#fff1a8", "900");
 
   const modeXs = [92, 194, 296, 398];
