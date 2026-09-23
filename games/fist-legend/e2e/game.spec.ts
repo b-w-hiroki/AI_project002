@@ -24,6 +24,31 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
+
+  const labels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return collect(scene.children.list);
+  });
+  expect(labels).toContain("Fist Legend");
+  expect(labels).toContain("Battle");
+  expect(labels).toContain("Gauntlet");
+  expect(labels).toContain("Story");
+  expect(labels).toContain("Gacha");
+  expect(labels).toContain("Ryuga");
+});
+
+
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;
