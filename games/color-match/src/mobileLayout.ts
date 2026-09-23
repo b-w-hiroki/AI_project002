@@ -178,7 +178,7 @@ function build(scene: Runtime): LandscapeUi {
   const modeXs = [92, 194, 296, 398];
   WRITING_MODES.forEach((mode, i) => {
     panel(scene, title, modeXs[i]!, 292, 92, 46, 0x193b66, 0xffffff, 0.9, 12);
-    text(scene, title, modeXs[i]!, 292, WRITING_MODE_LABEL[mode], 11, "#ffffff", "800");
+    text(scene, title, modeXs[i]!, 292, writingModeLabel(scene.lang ?? "en", mode), 11, "#ffffff", "800");
     const hit = scene.add.zone(modeXs[i]!, 292, 96, 52).setInteractive({ useHandCursor: true });
     title.add(hit);
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
