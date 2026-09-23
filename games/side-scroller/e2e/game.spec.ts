@@ -25,9 +25,14 @@ async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
 
 async function enterBattleForVisualQa(page: Page): Promise<void> {
   // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
-  // ここでは LoadoutScene のステージ開始だけを実端末同様の touch 入力で押す。
+  // LoadoutScene の開始ボタンを押したあと、GameScene と player の生成完了まで待つ。
   await tapGamePoint(page, 400, 545);
-  await page.waitForTimeout(900);
+  await expect.poll(() => page.evaluate(() => {
+    const game = window.__qaGame;
+    if (!game.scene.isActive("GameScene")) return false;
+    const scene = game.scene.getScene("GameScene");
+    return !!Reflect.get(scene, "player");
+  }), { timeout: 8_000, intervals: [100, 200, 400] }).toBe(true);
 }
 
 test.beforeEach(async ({ page }) => {
