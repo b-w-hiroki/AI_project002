@@ -9,6 +9,7 @@ import {
 import { saveExpedition } from "./logic/expeditionSave";
 import { loadCurrency } from "./logic/progress";
 import { regionById, type RegionId } from "./logic/regions";
+import { generalName, regionText, tr, type Lang } from "./logic/i18n";
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 
 type CampaignLike = {
@@ -27,6 +28,7 @@ type ExpeditionRuntime = Phaser.Scene & {
   view?: "camp" | "formation" | "road" | "result";
   run: Expedition | null;
   selectedRegion?: RegionId;
+  lang?: Lang;
   campaign?: CampaignLike;
   party?: string[];
   settled?: boolean;
@@ -152,7 +154,8 @@ function buildCampaignChrome(scene: ExpeditionRuntime): void {
 
   // A slim lacquer navigation rail makes the screen read as a strategy game rather than stacked web cards.
   addPanel(scene, root, 34, 370, 58, 486, 0x11171b, 0x9b7444, 0.98, 16);
-  const nav = ["遠征", "武将", "編成", "任務", "商店"];
+  const lang = scene.lang ?? "en";
+  const nav = lang === "ja" ? ["遠征", "武将", "編成", "任務", "商店"] : ["Expedition", "Generals", "Formation", "Missions", "Shop"];
   nav.forEach((label, i) => {
     const y = 205 + i * 78;
     const selected = i === 0;
@@ -163,11 +166,11 @@ function buildCampaignChrome(scene: ExpeditionRuntime): void {
       root.add(mark);
     }
     addText(scene, root, 34, y, label, 11, selected ? "#fff0cf" : "#b9a98f", selected ? "900" : "700");
-    if (label === "武将" || label === "編成") {
+    if (label === (lang === "ja" ? "武将" : "Generals") || label === (lang === "ja" ? "編成" : "Formation")) {
       const hit = scene.add.zone(34, y, 52, 52).setInteractive({ useHandCursor: true });
       root.add(hit);
       hit.on("pointerdown", () => {
-        if (label === "武将") scene.scene.start("GameScene");
+        if (label === (lang === "ja" ? "武将" : "Generals")) scene.scene.start("GameScene");
         else {
           scene.view = "formation";
           invoke(scene, "render");
@@ -178,16 +181,16 @@ function buildCampaignChrome(scene: ExpeditionRuntime): void {
 
   // Chapter plate floats over the map and gives the selected destination a strong focal point.
   addPanel(scene, root, 248, 119, 322, 62, 0x10191d, region.accent, 0.93, 12);
-  addText(scene, root, 110, 108, `第${Math.min(3, campaign.cleared.length + 1)}章`, 11, "#d5b675", "900").setOrigin(0, 0.5);
+  addText(scene, root, 110, 108, `${tr(lang, "第", "Chapter ")}${Math.min(3, campaign.cleared.length + 1)}${tr(lang, "章", "")}`, 11, "#d5b675", "900").setOrigin(0, 0.5);
   addText(scene, root, 248, 120, `${region.name}  —  ${region.boss}`, 18, "#fff0d1", "900");
-  addText(scene, root, 388, 108, `攻略 ${campaign.cleared.length}/3`, 10, "#d9c39a", "800").setOrigin(1, 0.5);
-  addText(scene, root, 388, 132, `功績 ${campaign.merit}  ·  ${loadCurrency()} 銭`, 10, "#d9c39a", "800").setOrigin(1, 0.5);
+  addText(scene, root, 388, 108, `${tr(lang, "攻略", "Cleared")} ${campaign.cleared.length}/3`, 10, "#d9c39a", "800").setOrigin(1, 0.5);
+  addText(scene, root, 388, 132, `${tr(lang, "功績", "Merit")} ${campaign.merit} · ${loadCurrency()} ${tr(lang, "銭", "Coins")}`, 10, "#d9c39a", "800").setOrigin(1, 0.5);
 
   // Cover the legacy lower stack and replace it with a single expedition dock.
   const blocker = scene.add.rectangle(225, 682, 450, 236, 0x0b1115, 0.985).setInteractive();
   root.add(blocker);
   addPanel(scene, root, 225, 680, 426, 210, 0x141d21, 0xc5a46e, 0.98, 18);
-  addText(scene, root, 28, 598, "遠征部隊", 12, "#d6ba83", "900").setOrigin(0, 0.5);
+  addText(scene, root, 28, 598, tr(lang, "遠征部隊", "Expedition Squad"), 12, "#d6ba83", "900").setOrigin(0, 0.5);
 
   const party = scene.party ?? [];
   party.slice(0, 3).forEach((id, i) => {
@@ -197,25 +200,25 @@ function buildCampaignChrome(scene: ExpeditionRuntime): void {
     ring.lineStyle(i === 0 ? 2.5 : 1.4, i === 0 ? 0xe0b66f : 0x84928b, 0.9).strokeCircle(x, 634, 25);
     root.add(ring);
     const general = GENERAL_POOL.find((g) => g.id === id);
-    addText(scene, root, x, 630, general?.name.slice(0, 2) ?? "兵", 13, "#f7e7c4", "900");
-    addText(scene, root, x, 667, i === 0 ? "主将" : "同行", 9, i === 0 ? "#e3bd75" : "#99aaa2", "800");
+    addText(scene, root, x, 630, general ? generalName(lang, general.id, general.name) : tr(lang, "兵", "Unit"), 13, "#f7e7c4", "900");
+    addText(scene, root, x, 667, i === 0 ? tr(lang, "主将", "Leader") : tr(lang, "同行", "Ally"), 9, i === 0 ? "#e3bd75" : "#99aaa2", "800");
   });
-  if (!party.length) addText(scene, root, 130, 638, "編成を選ぼう", 13, "#a89e8f", "700");
+  if (!party.length) addText(scene, root, 130, 638, tr(lang, "編成を選ぼう", "Choose a Formation"), 13, "#a89e8f", "700");
 
-  addText(scene, root, 282, 608, "戦力", 9, "#a9bbb2", "800").setOrigin(0, 0.5);
+  addText(scene, root, 282, 608, tr(lang, "戦力", "Power"), 9, "#a9bbb2", "800").setOrigin(0, 0.5);
   addText(scene, root, 282, 629, `${troop?.power ?? 0}`, 22, "#fff0d1", "900").setOrigin(0, 0.5);
-  addText(scene, root, 360, 608, "勝率", 9, "#a9bbb2", "800").setOrigin(0, 0.5);
+  addText(scene, root, 360, 608, tr(lang, "勝率", "Win Chance"), 9, "#a9bbb2", "800").setOrigin(0, 0.5);
   addText(scene, root, 360, 629, `${win}%`, 22, win >= 70 ? "#9ad7b6" : win >= 45 ? "#e3c67f" : "#df8d79", "900").setOrigin(0, 0.5);
 
   addPanel(scene, root, 310, 671, 222, 44, 0x1e2b2d, region.accent, 0.96, 10);
-  addText(scene, root, 216, 660, "踏破報酬", 9, "#b7c2b7", "800").setOrigin(0, 0.5);
-  addText(scene, root, 216, 678, `銭 ×${region.reward.toFixed(1)}  ·  功績+5  ·  Rare装備`, 11, "#f0cc88", "800").setOrigin(0, 0.5);
+  addText(scene, root, 216, 660, tr(lang, "踏破報酬", "Clear Reward"), 9, "#b7c2b7", "800").setOrigin(0, 0.5);
+  addText(scene, root, 216, 678, `${tr(lang, "銭", "Coins")} ×${region.reward.toFixed(1)} · ${tr(lang, "功績", "Merit")} +5 · Rare ${tr(lang, "装備", "Gear")}`, 11, "#f0cc88", "800").setOrigin(0, 0.5);
 
-  addButton(scene, root, 105, 732, 142, 48, "編成を変更", () => {
+  addButton(scene, root, 105, 732, 142, 48, tr(lang, "編成を変更", "Change Formation"), () => {
     scene.view = "formation";
     invoke(scene, "render");
   }, true, 0x43565a);
-  addButton(scene, root, 314, 732, 214, 52, `${region.name}へ 出陣`, () => {
+  addButton(scene, root, 314, 732, 214, 52, `${regionText(lang, region).name} · ${tr(lang, "出陣", "Sortie")}`, () => {
     if (!troop || !canSortie) return;
     scene.run = newExpedition(troop as never, scene.selectedRegion!);
     saveExpedition(scene.run);
@@ -224,7 +227,7 @@ function buildCampaignChrome(scene: ExpeditionRuntime): void {
     invoke(scene, "render");
   }, canSortie, 0xa64232);
 
-  addText(scene, root, 225, 776, "進軍中はいつでも帰還可能  ·  敗走時は今回の収穫を半分確保", 9, "#8fa099", "700");
+  addText(scene, root, 225, 776, tr(lang, "進軍中はいつでも帰還可能  ·  敗走時は今回の収穫を半分確保", "Return anytime · Defeat secures half of this run"), 9, "#8fa099", "700");
 }
 
 function ensureRoadHud(scene: ExpeditionRuntime): RoadHud {
@@ -269,7 +272,7 @@ function refreshRoadHud(scene: ExpeditionRuntime): void {
   hud.frame.fillRoundedRect(133, 25, 184, 26, 10);
   hud.frame.lineStyle(1.2, boss ? 0xe2a566 : 0xc5a46e, boss ? 0.9 : 0.55);
   hud.frame.strokeRoundedRect(133, 25, 184, 26, 10);
-  hud.status.setText(`${next}  ·  WIN ${win}%  ·  ${run.loot}/${secured}銭`);
+  hud.status.setText(`${next} · WIN ${win}% · ${run.loot}/${secured} ${tr(scene.lang ?? "en", "銭", "Coins")}`);
   hud.status.setColor(boss ? "#ffe0aa" : "#f7ddae");
 }
 
@@ -277,7 +280,7 @@ function playBossIntro(scene: ExpeditionRuntime): void {
   const topBar = scene.add.rectangle(225, 88, 450, 24, 0x090a0d, 0).setScrollFactor(0).setDepth(180);
   const bottomBar = scene.add.rectangle(225, 532, 450, 24, 0x090a0d, 0).setScrollFactor(0).setDepth(180);
   const label = scene.add
-    .text(225, 88, "決　戦", {
+    .text(225, 88, tr(scene.lang ?? "en", "決　戦", "FINAL BATTLE"), {
       fontFamily: "serif",
       fontSize: "14px",
       fontStyle: "700",
@@ -302,7 +305,7 @@ function playBossResolution(scene: ExpeditionRuntime, cleared: boolean): void {
   const color = cleared ? 0xffd98a : 0xd8685b;
   const slash = scene.add.rectangle(225, 316, 560, cleared ? 7 : 4, color, 0.95).setRotation(cleared ? -0.35 : 0.24).setScrollFactor(0).setDepth(220).setScale(0.08, 1);
   const label = scene.add
-    .text(225, 270, cleared ? "関 門 突 破" : "敗　走", {
+    .text(225, 270, cleared ? tr(scene.lang ?? "en", "関 門 突 破", "GATE CLEARED") : tr(scene.lang ?? "en", "敗　走", "DEFEAT"), {
       fontFamily: "serif",
       fontSize: cleared ? "28px" : "24px",
       fontStyle: "700",
