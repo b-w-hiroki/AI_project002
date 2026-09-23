@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import {
   FACTIONS,
-  FACTION_LABEL,
   deriveStats,
   dominantFaction,
   type Faction,
@@ -274,7 +273,7 @@ function refresh(scene: Runtime): void {
     const ratio = Phaser.Math.Clamp(karma[faction] / max, 0, 1);
     ui.bars.fillStyle(0x59645d, 0.72).fillRoundedRect(585, y - 3, 118, 7, 4);
     ui.bars.fillStyle(FACTION_COLORS[faction], 0.98).fillRoundedRect(585, y - 3, 118 * ratio, 7, 4);
-    ui.factionTexts[i]?.setText(`${FACTION_SHORT[faction]} ${karma[faction]}`);
+    ui.factionTexts[i]?.setText(`${factionShort(scene.lang ?? "en", faction)} ${karma[faction]}`);
   });
 
   if (ui.hero) {
