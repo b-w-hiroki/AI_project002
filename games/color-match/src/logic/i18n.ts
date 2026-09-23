@@ -82,6 +82,10 @@ export function t(lang: Lang, key: StringKey): string {
   return STRINGS[lang][key];
 }
 
+export function tr(lang: Lang, ja: string, en: string): string {
+  return lang === "ja" ? ja : en;
+}
+
 export function writingModeLabel(lang: Lang, mode: "hiragana" | "katakana" | "kanji" | "english"): string {
   if (lang === "ja") {
     return {
