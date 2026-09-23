@@ -252,7 +252,7 @@ function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
   if (!run) return;
   const region = regionById(run.regionId);
   const boss = run.step === 9;
-  header(scene, root, region.name, `${tr(scene.lang ?? "en", "進軍", "Advance")} ${run.step}/10 — ${boss ? "FINAL ENCOUNTER" : run.route === "mountain" ? tr(scene.lang ?? "en", "山道", "Mountain") : tr(scene.lang ?? "en", tr(scene.lang ?? "en", "街道", "Road"), "Road")}`);
+  header(scene, root, regionText(scene.lang ?? "en", region).name, `${tr(scene.lang ?? "en", "進軍", "Advance")} ${run.step}/10 — ${boss ? "FINAL ENCOUNTER" : run.route === "mountain" ? tr(scene.lang ?? "en", "山道", "Mountain") : tr(scene.lang ?? "en", "街道", "Road")}`);
 
   const stageShade = scene.add.graphics();
   stageShade.fillStyle(0x0c1012, 0.16).fillRect(0, 64, 535, 386);
@@ -290,7 +290,7 @@ function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
   label(scene, root, 665, 203, `${tr(scene.lang ?? "en", "次戦勝率", "Next Win Chance")} ${Math.round(victoryChance(run) * 100)}%`, 16, "#b9e0c7", "900");
 
   if (run.fork) {
-    button(scene, root, 612, 265, 102, 52, "街道", () => invoke(scene, "route", "road"), true, 0x4a5960);
+    button(scene, root, 612, 265, 102, 52, tr(scene.lang ?? "en", "街道", "Road"), () => invoke(scene, "route", "road"), true, 0x4a5960);
     button(scene, root, 718, 265, 102, 52, tr(scene.lang ?? "en", "山道 ×1.7", "Mountain ×1.7"), () => invoke(scene, "route", "mountain"), true, 0x78502f);
   } else {
     button(scene, root, 665, 267, 205, 56, boss ? tr(scene.lang ?? "en", "守将に挑む", "Challenge Guardian") : tr(scene.lang ?? "en", "進軍する", "Advance"), () => invoke(scene, "advance"), true, boss ? 0xa72f22 : 0x536b55);
@@ -315,7 +315,7 @@ function renderResult(scene: Runtime, root: Phaser.GameObjects.Container): void 
   label(scene, root, 665, 151, `${run.loot} ${tr(scene.lang ?? "en", "銭", "Coins")}`, 30, "#f4cb7f", "900");
   label(scene, root, 665, 198, run.status === "clear" ? tr(scene.lang ?? "en", "Rare装備 +1", "Rare Gear +1") : run.status !== "defeat" && run.step >= 3 ? tr(scene.lang ?? "en", "Common装備 +1", "Common Gear +1") : tr(scene.lang ?? "en", "装備報酬なし", "No Gear Reward"), 12, "#f1dfc0", "800");
   label(scene, root, 665, 234, `${tr(scene.lang ?? "en", "功績", "Merit")} +${scene.earnedMerit ?? 0}`, 16, "#9cdbc3", "900");
-  button(scene, root, 665, 298, 205, 54, "戦略地図へ", () => {
+  button(scene, root, 665, 298, 205, 54, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => {
     const next = REGIONS.find((r) => isUnlocked(scene.campaign!, r.id) && !scene.campaign!.cleared.includes(r.id));
     scene.view = "camp";
     scene.run = null;
