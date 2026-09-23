@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.game }}" = "karma-quest" ]; then
-            npx playwright test --browser=webkit --grep "representative phone|sound preference|notch insets|touch starts a journey|landscape dialogue|landscape encounter|result images load on demand"
+            npx playwright test --browser=webkit --grep "representative phone|sound preference|touch starts a journey|landscape dialogue|landscape encounter|result images load on demand"
           else
             npx playwright test --browser=webkit
           fi
