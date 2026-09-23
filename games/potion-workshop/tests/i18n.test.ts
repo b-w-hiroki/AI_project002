@@ -36,3 +36,12 @@ describe("detectLang / toggleLang", () => {
     expect(toggleLang("en")).toBe("ja");
   });
 });
+
+
+describe("CrazyGames locale priority", () => {
+  it("prefers SDK locale over browser locale while query override stays highest", () => {
+    expect(detectLang("en-US", "", "ja-JP")).toBe("ja");
+    expect(detectLang("ja-JP", "", "en-US")).toBe("en");
+    expect(detectLang("ja-JP", "?lang=ja", "en-US")).toBe("ja");
+  });
+});

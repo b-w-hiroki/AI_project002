@@ -17,7 +17,7 @@ installKarmaArtFidelity();
 installKarmaKingdomBackground();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
-void initCrazyGames();
+await initCrazyGames();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
