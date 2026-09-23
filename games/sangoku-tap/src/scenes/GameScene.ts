@@ -36,6 +36,7 @@ import {
   unequipGeneral,
 } from "../logic/roster";
 import { cg } from "../platform/crazygames";
+import { detectLang, generalName, tr, type Lang } from "../logic/i18n";
 import {
   drawPanel,
   drawPill,
@@ -83,6 +84,7 @@ interface RosterRow {
 }
 
 export class GameScene extends Phaser.Scene {
+  readonly lang: Lang = detectLang();
   private phase: Phase = "title";
   private distance = 0;
 
@@ -166,14 +168,14 @@ export class GameScene extends Phaser.Scene {
     topBar.fillStyle(0x000000, 0.4);
     topBar.fillRect(0, 0, 450, 78);
     const title = this.add
-      .text(24, 39, "三国ポチポチ", { ...TYPE.h2, fontSize: "20px", color: THEME.textPrimary })
+      .text(24, 39, tr(this.lang, "三国ポチポチ", "Sangoku Tap"), { ...TYPE.h2, fontSize: "20px", color: THEME.textPrimary })
       .setOrigin(0, 0.5);
     const coinPill = drawPill(this, 288, 39, 76, 32, "");
     const bestPill = drawPill(this, 368, 39, 76, 32, "");
 
     // タグライン: イラストの上に直接乗せ、既存の詳細ルールは省いてモックの「一言」構成に寄せる
     const tagline = this.add
-      .text(CX, 128, "乱世を駆け、英雄を集めよ", {
+      .text(CX, 128, tr(this.lang, "乱世を駆け、英雄を集めよ", "March through chaos. Gather heroes."), {
         ...TYPE.h2,
         fontSize: "18px",
         color: THEME.textPrimary,
@@ -195,7 +197,7 @@ export class GameScene extends Phaser.Scene {
       635,
       370,
       58,
-      "戦略地図・遠征へ",
+      tr(this.lang, "戦略地図・遠征へ", "Strategy Map / Expedition"),
       () => {
         this.playSound(sfx.tap);
         this.scene.start("ExpeditionScene");
@@ -214,7 +216,7 @@ export class GameScene extends Phaser.Scene {
       710,
       subBtnW,
       46,
-      "武将ガチャ",
+      tr(this.lang, "武将ガチャ", "General Gacha"),
       () => {
         this.playSound(sfx.tap);
         this.showGacha();
@@ -227,7 +229,7 @@ export class GameScene extends Phaser.Scene {
       710,
       subBtnW,
       46,
-      "装備合成",
+      tr(this.lang, "装備合成", "Equipment Fusion"),
       () => {
         this.playSound(sfx.tap);
         this.showBreeding();
@@ -240,7 +242,7 @@ export class GameScene extends Phaser.Scene {
       710,
       subBtnW,
       46,
-      "武将一覧",
+      tr(this.lang, "武将一覧", "Generals"),
       () => {
         this.playSound(sfx.tap);
         this.showRoster();
@@ -323,8 +325,8 @@ export class GameScene extends Phaser.Scene {
     const bestPill = this.titleGroup.getData("bestPill") as {
       setText: (t: string) => void;
     };
-    coinPill.setText(`銭 ${loadCurrency()}`);
-    bestPill.setText(`最高 ${loadBestDistance()}`);
+    coinPill.setText(`${tr(this.lang, "銭", "Coins")} ${loadCurrency()}`);
+    bestPill.setText(`${tr(this.lang, "最高", "Best")} ${loadBestDistance()}`);
   }
 
   // ---------- クエスト（タップ進撃） ----------
@@ -352,7 +354,7 @@ export class GameScene extends Phaser.Scene {
       .setName("distanceText");
 
     const eventText = this.add
-      .text(CX, 260, "タップして進撃しよう！", {
+      .text(CX, 260, tr(this.lang, "タップして進撃しよう！", "Tap to advance!"), {
         ...TYPE.body,
         color: THEME.textPrimary,
         align: "center",
@@ -378,7 +380,7 @@ export class GameScene extends Phaser.Scene {
       470,
       220,
       220,
-      "進撃\nTAP!",
+      tr(this.lang, "進撃\nTAP!", "ADVANCE\nTAP!"),
       () => this.onTapAdvance(),
       {
         fontSize: "22px",
@@ -392,7 +394,7 @@ export class GameScene extends Phaser.Scene {
       660,
       260,
       48,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -425,7 +427,7 @@ export class GameScene extends Phaser.Scene {
     const rewardText = this.questGroup.getByName(
       "rewardText",
     ) as Phaser.GameObjects.Text;
-    eventText.setText("タップして進撃しよう！");
+    eventText.setText(tr(this.lang, "タップして進撃しよう！", "Tap to advance!"));
     rewardText.setText("");
   }
 
@@ -458,9 +460,9 @@ export class GameScene extends Phaser.Scene {
     eventText.setText(event.message);
     rewardText.setText(
       event.reward > 0
-        ? `+${event.reward} コイン`
+        ? `+${event.reward} ${tr(this.lang, "コイン", "Coins")}`
         : event.won === false
-          ? "報酬なし…"
+          ? tr(this.lang, "報酬なし…", "No reward...")
           : "",
     );
     rewardText.setColor(
@@ -477,8 +479,8 @@ export class GameScene extends Phaser.Scene {
     const distanceText = this.questGroup.getByName(
       "distanceText",
     ) as Phaser.GameObjects.Text;
-    currencyText.setText(`所持コイン: ${loadCurrency()}`);
-    distanceText.setText(`進撃距離 ${this.distance}`);
+    currencyText.setText(`${tr(this.lang, "所持コイン", "Coins")}: ${loadCurrency()}`);
+    distanceText.setText(`${tr(this.lang, "進撃距離", "Distance")} ${this.distance}`);
   }
 
   // ---------- 武将ガチャ ----------
@@ -491,10 +493,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     const heading = this.add
-      .text(CX, 125, "武将ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 125, tr(this.lang, "武将ガチャ", "General Gacha"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(CX, 162, `1回 ${GACHA_COST} コイン`, {
+      .text(CX, 162, `${tr(this.lang, "1回", "1 Pull")} · ${GACHA_COST} ${tr(this.lang, "コイン", "Coins")}`, {
         ...TYPE.body,
         color: THEME.textMuted,
       })
@@ -523,7 +525,7 @@ export class GameScene extends Phaser.Scene {
       580,
       260,
       52,
-      "引く",
+      tr(this.lang, "引く", "Draw"),
       () => this.rollGacha(),
       { fontSize: "16px" },
     );
@@ -533,7 +535,7 @@ export class GameScene extends Phaser.Scene {
       650,
       260,
       48,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -607,7 +609,7 @@ export class GameScene extends Phaser.Scene {
     }
     // フォールバック: 頭文字＋レアリティ
     const initial = this.add
-      .text(0, -16, general.name.charAt(0), {
+      .text(0, -16, generalName(this.lang, general.id, general.name).charAt(0), {
         ...TYPE.h1,
         fontSize: "64px",
         color: hexToCss(color),
@@ -636,7 +638,7 @@ export class GameScene extends Phaser.Scene {
     const balanceText = this.gachaGroup.getByName(
       "gachaBalance",
     ) as Phaser.GameObjects.Text;
-    balanceText.setText(`所持コイン: ${loadCurrency()}`);
+    balanceText.setText(`${tr(this.lang, "所持コイン", "Coins")}: ${loadCurrency()}`);
   }
 
   private rollGacha(): void {
@@ -645,7 +647,7 @@ export class GameScene extends Phaser.Scene {
       "gachaResult",
     ) as Phaser.GameObjects.Text;
     if (!canAffordGacha(balance)) {
-      resultText.setText("コインが足りません…").setColor(THEME.textMuted);
+      resultText.setText(tr(this.lang, "コインが足りません…", "Not enough Coins.")).setColor(THEME.textMuted);
       return;
     }
     spendCurrency(GACHA_COST);
@@ -654,7 +656,7 @@ export class GameScene extends Phaser.Scene {
     const isRare = general.rarity === "SSR" || general.rarity === "SR";
     this.playSound(isRare ? sfx.gachaRare : sfx.gachaDraw);
     resultText
-      .setText(`【${general.rarity}】${general.name}\nATK ${general.atk}`)
+      .setText(`【${general.rarity}】${generalName(this.lang, general.id, general.name)}\nATK ${general.atk}`)
       .setColor(hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff));
     this.tweens.add({
       targets: resultText,
@@ -691,10 +693,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     const heading = this.add
-      .text(CX, 110, "装備合成", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, tr(this.lang, "装備合成", "Equipment Fusion"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
-      .text(CX, 145, `未装着の親装備2個を消費して合成（${BREED_COST}コイン）`, {
+      .text(CX, 145, `${tr(this.lang, "未装着の親装備2個を消費して合成", "Fuse two unequipped parent items")} (${BREED_COST} ${tr(this.lang, "コイン", "Coins")})`, {
         ...TYPE.small,
         color: THEME.textMuted,
         align: "center",
@@ -703,11 +705,11 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const labelA = this.add
-      .text(CX, 200, "親装備A", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 200, tr(this.lang, "親装備A", "Parent Gear A"), { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.buildRaritySelector(230, "A");
     const labelB = this.add
-      .text(CX, 300, "親装備B", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 300, tr(this.lang, "親装備B", "Parent Gear B"), { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.buildRaritySelector(330, "B");
 
@@ -738,7 +740,7 @@ export class GameScene extends Phaser.Scene {
       590,
       260,
       52,
-      "合成する",
+      tr(this.lang, "合成する", "Fuse"),
       () => this.onBreed(),
       { fontSize: "16px" },
     );
@@ -748,7 +750,7 @@ export class GameScene extends Phaser.Scene {
       655,
       260,
       48,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -826,7 +828,7 @@ export class GameScene extends Phaser.Scene {
       "rateText",
     ) as Phaser.GameObjects.Text;
     rateText.setText(
-      `排出率: Common ${rates.Common}% / Rare ${rates.Rare}% / Epic ${rates.Epic}%`,
+      `${tr(this.lang, "排出率", "Rates")}: Common ${rates.Common}% / Rare ${rates.Rare}% / Epic ${rates.Epic}%`,
     );
   }
 
@@ -848,7 +850,7 @@ export class GameScene extends Phaser.Scene {
     const balanceText = this.breedingGroup.getByName(
       "breedBalance",
     ) as Phaser.GameObjects.Text;
-    balanceText.setText(`所持コイン: ${loadCurrency()}`);
+    balanceText.setText(`${tr(this.lang, "所持コイン", "Coins")}: ${loadCurrency()}`);
   }
 
   private refreshBreedInventory(): void {
@@ -857,7 +859,7 @@ export class GameScene extends Phaser.Scene {
     ) as Phaser.GameObjects.Text;
     const inv = loadEquipmentInventory();
     inventoryText.setText(
-      `所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
+      `${tr(this.lang, "所持装備", "Owned Gear")}: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
     );
   }
 
@@ -867,7 +869,7 @@ export class GameScene extends Phaser.Scene {
       "breedResult",
     ) as Phaser.GameObjects.Text;
     if (balance < BREED_COST) {
-      resultText.setText("コインが足りません…").setColor(THEME.textMuted);
+      resultText.setText(tr(this.lang, "コインが足りません…", "Not enough Coins.")).setColor(THEME.textMuted);
       return;
     }
     const inventory = loadEquipmentInventory();
@@ -876,7 +878,7 @@ export class GameScene extends Phaser.Scene {
       inventory[this.breedB] < 1
     ) {
       resultText
-        .setText("未装着の親装備が2個必要です")
+        .setText(tr(this.lang, "未装着の親装備が2個必要です", "Two unequipped parent items are required"))
         .setColor(THEME.textMuted);
       return;
     }
@@ -887,7 +889,7 @@ export class GameScene extends Phaser.Scene {
     addEquipment(rarity);
     this.playSound(sfx.breed);
     resultText
-      .setText(`【${rarity}】装備を入手！`)
+      .setText(`${rarity} ${tr(this.lang, "装備を入手！", "gear obtained!")}`)
       .setColor(hexToCss(RARITY_COLOR[rarity] ?? 0xffffff));
     this.tweens.add({
       targets: resultText,
@@ -909,13 +911,13 @@ export class GameScene extends Phaser.Scene {
     });
 
     const heading = this.add
-      .text(CX, 90, "武将一覧・装備", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 90, tr(this.lang, "武将一覧・装備", "Generals / Equipment"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
       .text(
         CX,
         125,
-        "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）",
+        tr(this.lang, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", "Tap a general to cycle gear\nNone → Common → Rare → Epic"),
         {
           ...TYPE.small,
           color: THEME.textMuted,
@@ -935,7 +937,7 @@ export class GameScene extends Phaser.Scene {
       690,
       260,
       48,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -966,7 +968,7 @@ export class GameScene extends Phaser.Scene {
     ) as Phaser.GameObjects.Text;
     const inv = loadEquipmentInventory();
     inventoryText.setText(
-      `所持装備: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
+      `${tr(this.lang, "所持装備", "Owned Gear")}: Common ${inv.Common} / Rare ${inv.Rare} / Epic ${inv.Epic}`,
     );
 
     for (const row of this.rosterRows) row.container.destroy();
@@ -1007,7 +1009,7 @@ export class GameScene extends Phaser.Scene {
 
       const count = owned[general.id] ?? 0;
       const nameText = this.add
-        .text(textX, -14, `【${general.rarity}】${general.name}`, {
+        .text(textX, -14, `【${general.rarity}】${generalName(this.lang, general.id, general.name)}`, {
           ...TYPE.body,
           color: has
             ? hexToCss(RARITY_COLOR[general.rarity] ?? 0xffffff)
@@ -1019,8 +1021,8 @@ export class GameScene extends Phaser.Scene {
           textX,
           14,
           has
-            ? `所持×${count}  ATK ${effectiveAtk(general, equipped)}  装備:${equipped[general.id] ?? "なし"}`
-            : "未所持",
+            ? `${tr(this.lang, "所持", "Owned")}×${count}  ATK ${effectiveAtk(general, equipped)}  ${tr(this.lang, "装備", "Gear")}:${equipped[general.id] ?? tr(this.lang, "なし", "None")}`
+            : tr(this.lang, "未所持", "Not Owned"),
           { ...TYPE.small, color: THEME.textMuted },
         )
         .setOrigin(0, 0.5);
