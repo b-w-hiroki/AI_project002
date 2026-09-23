@@ -112,13 +112,28 @@ test("regional gatekeepers keep distinct chapter identity", async ({ page }) => 
       Reflect.set(scene, "introRunId", Reflect.get(scene, "run").id);
       Reflect.get(scene, "render").call(scene);
       const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+      const findNamed = (
+        nodes: Phaser.GameObjects.GameObject[],
+        name: string,
+      ): Phaser.GameObjects.GameObject | null => {
+        for (const node of nodes) {
+          if (node.name === name) return node;
+          if (node.type === "Container") {
+            const found = findNamed((node as Phaser.GameObjects.Container).list, name);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
       return {
         label: (root.getByName("boss-region-label") as Phaser.GameObjects.Text | null)?.text ?? "",
         texture: (root.getByName("gatekeeper-boss") as Phaser.GameObjects.Image | null)?.texture.key ?? "",
+        mobileTexture: (findNamed(scene.children.list, "mobile-region-boss") as Phaser.GameObjects.Image | null)?.texture.key ?? "",
       };
     }, region);
     expect(boss.label).toMatch(region === "plains" ? /黎明/ : region === "pass" ? /翠嶺/ : /紅蓮/);
     expect(boss.texture).toBe(`st-boss-${region}`);
+    expect(boss.mobileTexture).toBe(`st-boss-${region}`);
     await checkFrame(page, `landscape-boss-${region}`);
   }
 });
