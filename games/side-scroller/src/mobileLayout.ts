@@ -4,7 +4,7 @@ import { OUGI_GAUGE_MAX, type PlayerState } from "./logic/combat";
 import { bossPhase } from "./logic/style";
 import { fakeKeyEvent } from "./ui/touch";
 import { GameScene } from "./scenes/GameScene";
-import { combatStyleLabel, tr, weaponLabel, type Lang } from "./logic/i18n";
+import { tr, type Lang } from "./logic/i18n";
 
 type BossEnemy = {
   boss: boolean;
