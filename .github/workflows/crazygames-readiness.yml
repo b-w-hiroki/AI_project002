@@ -1,0 +1,115 @@
+name: CrazyGames Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crazygames-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game:
+          - color-match
+          - fist-legend
+          - karma-quest
+          - potion-workshop
+          - sangoku-tap
+          - side-scroller
+    defaults:
+      run:
+        working-directory: games/${{ matrix.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: games/${{ matrix.game }}/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Reject portal-incompatible browser UI
+        shell: bash
+        run: |
+          if grep -R -n -E 'requestFullscreen|webkitRequestFullscreen|window\.open\(|target=["'\'' ]?_blank|cross[- ]promotion' src index.html; then
+            echo "Forbidden/portal-risk UI API found."
+            exit 1
+          fi
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/${{ matrix.game }}-preview.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/${{ matrix.game }}-preview.log
+          exit 1
+      - name: Measure initial download
+        env:
+          GAME: ${{ matrix.game }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import { chromium } from "@playwright/test";
+
+          const game = process.env.GAME;
+          const origin = "http://127.0.0.1:4173";
+          const browser = await chromium.launch();
+          const page = await browser.newPage({ viewport: { width: 907, height: 510 } });
+          const responses = [];
+          page.on("response", async (response) => {
+            if (!response.url().startsWith(origin)) return;
+            try {
+              const body = await response.body();
+              responses.push({
+                url: response.url().slice(origin.length) || "/",
+                status: response.status(),
+                bytes: body.byteLength,
+              });
+            } catch {
+              responses.push({
+                url: response.url().slice(origin.length) || "/",
+                status: response.status(),
+                bytes: 0,
+              });
+            }
+          });
+
+          await page.goto(`${origin}/?lang=en`, { waitUntil: "networkidle" });
+          await page.waitForTimeout(1800);
+          const totalBytes = responses.reduce((sum, item) => sum + item.bytes, 0);
+          const totalMb = totalBytes / 1024 / 1024;
+          const unique = [...new Map(responses.map((item) => [item.url, item])).values()]
+            .sort((a, b) => b.bytes - a.bytes);
+          const uniqueBytes = unique.reduce((sum, item) => sum + item.bytes, 0);
+          const uniqueMb = uniqueBytes / 1024 / 1024;
+          const result = {
+            game,
+            measuredAt: new Date().toISOString(),
+            viewport: "907x510",
+            responseBytes: totalBytes,
+            responseMb: Number(totalMb.toFixed(2)),
+            uniqueBytes,
+            uniqueMb: Number(uniqueMb.toFixed(2)),
+            crazyGames50Mb: uniqueMb <= 50,
+            mobileHome20Mb: uniqueMb <= 20,
+            largestResources: unique.slice(0, 15),
+          };
+          fs.writeFileSync("crazygames-readiness.json", JSON.stringify(result, null, 2));
+          console.log(JSON.stringify(result, null, 2));
+          await browser.close();
+          NODE
+      - name: Upload readiness report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.game }}-crazygames-readiness
+          path: games/${{ matrix.game }}/crazygames-readiness.json
+          retention-days: 30
