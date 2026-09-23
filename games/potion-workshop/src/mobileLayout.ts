@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
-import { contractCost, contractReward, demandGenerator, fulfillContract } from "./logic/contracts";
+import { contractCost, demandGenerator, fulfillContract } from "./logic/contracts";
 import {
   GENERATORS,
   PRESTIGE_UNLOCK,
@@ -18,12 +18,13 @@ import {
   type GameState,
 } from "./logic/economy";
 import { save } from "./logic/save";
+import { generatorName, t, townName, type Lang } from "./logic/i18n";
 import { townForState } from "./logic/towns";
 import { IdleScene } from "./scenes/IdleScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
-type Runtime = Phaser.Scene & { state?: GameState };
+type Runtime = Phaser.Scene & { state?: GameState; lang?: Lang };
 
 type MobileUi = {
   root: Phaser.GameObjects.Container;
@@ -193,8 +194,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const blocker = scene.add.zone(width / 2, height / 2, width, height).setInteractive();
   root.add(blocker);
 
-  text(scene, root, 22, 26, "ポーション工房", portrait ? 25 : 27, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
-  text(scene, root, 24, 52, "Potion Workshop — 錬金術師と工房を育てる", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
+  const lang = scene.lang ?? "en";
+  text(scene, root, 22, 26, t(lang, "title"), portrait ? 25 : 27, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
+  text(scene, root, 24, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
 
   const potionText = text(scene, root, portrait ? 340 : 545, 25, "", portrait ? 15 : 16, "#fff2cd", "900");
   const essenceText = text(scene, root, portrait ? 340 : 665, 49, "", 10, "#e3c4ff", "900");
@@ -224,7 +226,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   glow.fillStyle(0x7de6b0, 0.16).fillCircle(brewX, brewY, portrait ? 90 : 100);
   glow.lineStyle(2, 0xd5ffd8, 0.48).strokeCircle(brewX, brewY, portrait ? 82 : 92);
   root.add(glow);
-  text(scene, root, brewX, brewY + (portrait ? 92 : 99), "ポーション製造", 13, "#fff8df", "900");
+  text(scene, root, brewX, brewY + (portrait ? 92 : 99), lang === "ja" ? "ポーション製造" : "BREW POTION", 13, "#fff8df", "900");
   text(scene, root, brewX, brewY + (portrait ? 112 : 119), "TAP!", 18, "#9dffd0", "900");
   hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
 
@@ -241,7 +243,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
 
   if (portrait) {
     panel(scene, root, 225, 562, 420, 112, 0x423124, 0xd4b36e, 0.92, 15);
-    text(scene, root, 38, 522, "本日の依頼", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
+    text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
       addButtonChrome(scene, root, x, 564, 190, 66, index === 0 ? 0x3e765d : 0x4c6e8c);
@@ -256,7 +258,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     panel(scene, root, 225, 655, 420, 62, 0x3c2d25, 0xd4b36e, 0.92, 14);
     recommendationText = text(scene, root, 178, 655, "", 11, "#fff2d6", "900");
     addButtonChrome(scene, root, 370, 655, 90, 42, 0x2e8f65);
-    text(scene, root, 370, 655, "強化", 11, "#ffffff", "900");
+    text(scene, root, 370, 655, lang === "ja" ? "強化" : "UPGRADE", 11, "#ffffff", "900");
     hitButton(scene, root, 370, 655, 90, 48, () => {
       if (!scene.state) return;
       const rec = recommended(scene.state);
@@ -284,7 +286,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     });
   } else {
     panel(scene, root, 588, 170, 388, 190, 0x423124, 0xd4b36e, 0.93, 16);
-    text(scene, root, 420, 95, "本日の依頼", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
+    text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const y = 132 + index * 68;
       addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x3e765d : 0x4c6e8c);
@@ -299,7 +301,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     panel(scene, root, 588, 292, 388, 70, 0x3c2d25, 0xd4b36e, 0.93, 14);
     recommendationText = text(scene, root, 535, 292, "", 11, "#fff2d6", "900");
     addButtonChrome(scene, root, 720, 292, 90, 44, 0x2e8f65);
-    text(scene, root, 720, 292, "強化", 11, "#ffffff", "900");
+    text(scene, root, 720, 292, lang === "ja" ? "強化" : "UPGRADE", 11, "#ffffff", "900");
     hitButton(scene, root, 720, 292, 90, 50, () => {
       if (!scene.state) return;
       const rec = recommended(scene.state);
@@ -359,37 +361,41 @@ function refresh(scene: Runtime): void {
   if (!ui || ui.orientation !== orientation) ui = build(scene, orientation);
 
   const state = scene.state;
+  const lang = scene.lang ?? "en";
   const rec = recommended(state);
   const rate = productionPerSec(state);
   const town = townForState(state);
   ui.potionText.setText(`${formatNumber(state.potions)} potions`);
-  ui.rateText.setText(`+${formatNumber(rate)}/秒   ·   TAP +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
+  ui.rateText.setText(`+${formatNumber(rate)}${lang === "ja" ? "/秒" : "/sec"}   ·   TAP +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
   ui.essenceText.setText(`Essence ${formatNumber(state.essence)}`);
   ui.reputationText.setText(`REP ${state.reputation}`);
   const demandedId = demandGenerator(state);
   const demandedName = demandedId ? GENERATORS.find(def => def.id === demandedId)?.name ?? demandedId : null;
-  ui.townText.setText(`🏘 ${town.name}${demandedName ? ` · ${demandedName}×1.5` : " · 通常生産"}`);
+  ui.townText.setText(`🏘 ${townName(lang, town.index, town.cycle, town.name)}${demandedName ? ` · ${generatorName(lang, demandedId!)}×1.5` : lang === "ja" ? " · 通常生産" : " · Standard production"}`);
 
   ui.orderTexts.forEach((node, index) => {
     const done = state.completedContracts.includes(index);
     const cost = contractCost(state, index);
+    const orderName = lang === "ja"
+      ? (index === 0 ? "常備薬" : "商隊納品")
+      : (index === 0 ? "Village supplies" : "Caravan shipment");
     node.setText(done
-      ? `${index === 0 ? "常備薬" : "商隊納品"}\n納品済み ✓`
-      : `${index === 0 ? "常備薬" : "商隊納品"}  ${formatNumber(cost)}\n+${index === 0 ? 1 : 3} 評判`);
+      ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
+      : `${orderName}  ${formatNumber(cost)}\n+${index === 0 ? 1 : 3} ${lang === "ja" ? "評判" : "REP"}`);
     node.setAlpha(done ? 0.55 : 1);
   });
 
-  ui.recommendationText.setText(`おすすめ  ${rec.name} Lv.${rec.count}\n次 ${formatNumber(rec.cost)}`);
+  ui.recommendationText.setText(`${lang === "ja" ? "おすすめ" : "Recommended"}  ${generatorName(lang, rec.id)} Lv.${rec.count}\n${lang === "ja" ? "次" : "Next"} ${formatNumber(rec.cost)}`);
   const clickCost = (() => {
     const next = buyClickUpgrades({ ...state, potions: Number.MAX_SAFE_INTEGER }, 1);
     if (!next) return 0;
     return Math.max(0, state.potions - (buyClickUpgrades(state, 1)?.potions ?? state.potions));
   })();
-  ui.clickUpgradeText.setText(`TAP強化\nLv.${state.clickPower}${clickCost > 0 ? ` ${formatNumber(clickCost)}` : ""}`);
+  ui.clickUpgradeText.setText(`${lang === "ja" ? "TAP強化" : "TAP POWER"}\nLv.${state.clickPower}${clickCost > 0 ? ` ${formatNumber(clickCost)}` : ""}`);
   const offlineCost = offlineExtensionCost(state);
-  ui.offlineText.setText(`放置 ${Math.round(offlineCapSec(state) / 3600)}h\n${offlineCost === null ? "MAX" : `${offlineCost} Essence`}`);
+  ui.offlineText.setText(`${lang === "ja" ? "放置" : "Offline"} ${Math.round(offlineCapSec(state) / 3600)}h\n${offlineCost === null ? "MAX" : `${offlineCost} Essence`}`);
   const essenceGain = essenceOnPrestige(state);
-  ui.prestigeText.setText(`転生\n${essenceGain > 0 ? `+${essenceGain} Essence` : `${Math.floor((state.totalBrewed / PRESTIGE_UNLOCK) * 100)}%`}`);
+  ui.prestigeText.setText(`${lang === "ja" ? "転生" : "ASCEND"}\n${essenceGain > 0 ? `+${essenceGain} Essence` : `${Math.floor((state.totalBrewed / PRESTIGE_UNLOCK) * 100)}%`}`);
 
   ui.prestigeBar.clear();
   const ratio = Phaser.Math.Clamp(state.totalBrewed / PRESTIGE_UNLOCK, 0, 1);
@@ -402,7 +408,8 @@ function refresh(scene: Runtime): void {
   const defs = GENERATORS.slice(0, ui.productionTexts.length);
   ui.productionTexts.forEach((node, i) => {
     const def = defs[i]!;
-    node.setText(`${def.name.replace("錬金術師", "錬金")}\n×${state.counts[def.id] ?? 0}`);
+    const localized = generatorName(lang, def.id);
+    node.setText(`${lang === "ja" ? localized.replace("錬金術師", "錬金") : localized}\n×${state.counts[def.id] ?? 0}`);
   });
 }
 

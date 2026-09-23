@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectLang, generatorName, t, toggleLang } from "../src/logic/i18n";
+import { detectLang, generatorName, t, toggleLang, townDesc, townName } from "../src/logic/i18n";
 
 describe("t", () => {
   it("言語ごとの文言を返す", () => {
@@ -43,5 +43,14 @@ describe("CrazyGames locale priority", () => {
     expect(detectLang("en-US", "", "ja-JP")).toBe("ja");
     expect(detectLang("ja-JP", "", "en-US")).toBe("en");
     expect(detectLang("ja-JP", "?lang=ja", "en-US")).toBe("ja");
+  });
+});
+
+
+describe("town localization", () => {
+  it("translates town names and descriptions without changing indexes", () => {
+    expect(townName("en", 1, 0, "水辺の街オルシャ")).toBe("Orsha, City by the Water");
+    expect(townName("en", 1, 1, "水辺の街オルシャ（2周目）")).toBe("Orsha, City by the Water (Cycle 2)");
+    expect(townDesc("en", 1, "運河沿いに市場が並ぶ街")).toContain("canal");
   });
 });

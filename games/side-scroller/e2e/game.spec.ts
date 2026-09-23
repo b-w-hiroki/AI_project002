@@ -51,7 +51,7 @@ test.describe("English localization", () => {
   test("English fallback localizes loadout and battle HUD", async ({ page }) => {
     await page.goto("/?lang=en");
     await page.waitForFunction(() => !!window.__qaGame);
-    const loadoutLabels = await page.evaluate(() => {
+    await expect.poll(async () => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("LoadoutScene");
       const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
         for (const node of nodes) {
@@ -60,11 +60,11 @@ test.describe("English localization", () => {
         }
         return out;
       };
-      return collect(scene.children.list);
-    });
-    expect(loadoutLabels.some(label => label.includes("Blade Woods"))).toBe(true);
-    expect(loadoutLabels.some(label => label.includes("Loadout"))).toBe(true);
-    expect(loadoutLabels).toContain("▶ Start Run");
+      const labels = collect(scene.children.list);
+      return labels.some(label => label.includes("Blade Woods"))
+        && labels.some(label => label.includes("Loadout"))
+        && labels.includes("▶ Start Run");
+    })).toBe(true);
 
     await page.goto("/?visualqa=battle&lang=en");
     await page.waitForFunction(() => !!window.__qaGame);

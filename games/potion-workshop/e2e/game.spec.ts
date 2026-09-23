@@ -21,6 +21,57 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English locale covers responsive workshop and town choice", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+
+  const responsiveLabels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return {
+      lang: Reflect.get(scene, "lang"),
+      labels: collect(scene.children.list),
+    };
+  });
+  expect(responsiveLabels.lang).toBe("en");
+  expect(responsiveLabels.labels).toContain("Potion Workshop");
+  expect(responsiveLabels.labels).toContain("BREW POTION");
+  expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
+  expect(responsiveLabels.labels).toContain("UPGRADE");
+
+  const modalLabels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", {
+      ...state,
+      potions: 2_000_000,
+      totalBrewed: 1_000_000,
+      lifetimeBrewed: Math.max(Number(state.lifetimeBrewed ?? 0), 1_000_000),
+      prestigeCount: 0,
+      townIndex: 0,
+    });
+    Reflect.get(scene, "showTownChoice").call(scene);
+    const modal = Reflect.get(scene, "townChoiceModal") as Phaser.GameObjects.Container;
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return collect(modal.list);
+  });
+  expect(modalLabels).toContain("Choose Your Next Town");
+  expect(modalLabels.some(label => label.includes("Orsha, City by the Water"))).toBe(true);
+  expect(modalLabels.some(label => label.includes("Ascend to This Town"))).toBe(true);
+});
+
 async function canvasSize(page: import("@playwright/test").Page): Promise<{ width: number; height: number }> {
   return page.locator("canvas").evaluate((canvas) => ({
     width: (canvas as HTMLCanvasElement).width,
