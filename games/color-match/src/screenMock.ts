@@ -6,6 +6,7 @@ import { loadBestScore, loadBestTurbo } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
 
 type Runtime = Phaser.Scene & {
+  lang?: "ja" | "en";
   phase?: "title" | "playing" | "result";
   writingMode?: WritingMode;
   results?: ChallengeResult[];
@@ -113,6 +114,10 @@ function build(scene: Runtime): MockUi {
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.lang === "en") {
+    uiByScene.get(scene)?.root.setVisible(false);
+    return;
+  }
   const ui = build(scene);
   const layout = getResponsiveLayout(scene as never);
   const portrait = !layout || layout.isPortrait;

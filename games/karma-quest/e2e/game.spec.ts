@@ -26,6 +26,34 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English responsive UI contains no Japanese", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto("/?lang=en");
+  await page.locator("canvas").waitFor();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await page.waitForTimeout(700);
+  const scene = await page.evaluate(() => window.__qaGame.scene.getScene("GameScene").scene.key);
+  expect(scene).toBe("GameScene");
+  const visibleText = await page.evaluate(() => {
+    const scenes = window.__qaGame.scene.getScenes(true);
+    const collect = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+      out: string[] = [],
+    ): string[] => {
+      for (const node of nodes) {
+        const visible = parentVisible && ("visible" in node ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible) : true);
+        if (!visible) continue;
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, visible, out);
+      }
+      return out;
+    };
+    return scenes.flatMap(scene => collect(scene.children.list));
+  });
+  expect(visibleText.join("\n")).not.toMatch(/[ぁ-んァ-ヶ一-龠]/);
+});
+
 test("English fallback localizes the title and first request flow", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);

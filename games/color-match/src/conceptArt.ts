@@ -10,10 +10,12 @@ import {
 } from "./logic/round";
 import { loadBestScore } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
+import { tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
+  lang?: Lang;
   phase?: "title" | "playing" | "result";
   sessionRemaining?: number;
   currentRound?: Round | null;
@@ -129,8 +131,8 @@ function build(scene: Runtime): ArcadeUi {
   const root = scene.add.container(0, 0).setDepth(1800).setVisible(false);
   makeSky(scene, root);
 
-  text(scene, root, 20, 28, "カラーマッチ", 29, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#235bc4", 6);
-  text(scene, root, 22, 57, "Color Match — 色と文字の反射神経", 9, "#eef9ff", "800").setOrigin(0, 0.5);
+  text(scene, root, 20, 28, tr(scene.lang ?? "en", "カラーマッチ", "Color Match"), 29, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#235bc4", 6);
+  text(scene, root, 22, 57, tr(scene.lang ?? "en", "Color Match — 色と文字の反射神経", "Color Match — Reflex Arcade"), 9, "#eef9ff", "800").setOrigin(0, 0.5);
 
   panel(scene, root, 352, 42, 160, 54, 0x153e6a, 0xffd463, 0.96, 12);
   text(scene, root, 352, 29, "SCORE", 9, "#d8ecff", "900");
@@ -142,9 +144,9 @@ function build(scene: Runtime): ArcadeUi {
   text(scene, root, 70, 119, "TIME", 9, "#d7f3ff", "900");
 
   panel(scene, root, 270, 151, 280, 100, 0x144f82, 0x8ce5ff, 0.96, 15);
-  text(scene, root, 270, 122, "お題", 10, "#d8f5ff", "900");
+  text(scene, root, 270, 122, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#d8f5ff", "900");
   const ruleText = text(scene, root, 270, 149, "", 18, "#ffffff", "900");
-  text(scene, root, 270, 178, "正しい色カードをタップ！", 10, "#d7f2ff", "800");
+  text(scene, root, 270, 178, tr(scene.lang ?? "en", "正しい色カードをタップ！", "Tap the correct color card!"), 10, "#d7f2ff", "800");
 
   panel(scene, root, 225, 278, 250, 112, 0xffffff, 0x8ac8f4, 0.97, 16);
   const promptText = text(scene, root, 225, 278, "", 46, "#273d5b", "900");
@@ -220,11 +222,11 @@ function refresh(scene: Runtime): void {
   ui.timerText.setText(String(secs));
   ui.timerText.setColor(danger ? "#ffd0d8" : "#ffffff");
   ui.scoreText.setText(String(score).padStart(4, "0"));
-  ui.ruleText.setText(round.judgeMode === "color" ? "『文字の色』を見る" : "『文字の意味』を見る");
+  ui.ruleText.setText(round.judgeMode === "color" ? tr(scene.lang ?? "en", "『文字の色』を見る", "Watch INK COLOR") : tr(scene.lang ?? "en", "『文字の意味』を見る", "Watch WORD MEANING"));
   ui.promptText.setText(nameForColorId(round.promptWord, mode)).setColor(`#${hexForColorId(round.promptInk).toString(16).padStart(6, "0")}`);
   ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`);
   ui.chainText.setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
-  ui.nextText.setText(until <= 2000 ? "ルール切替まもなく！" : `次のルールまで ${Math.ceil(until / 1000)}秒  ·  BEST ${loadBestScore()}`);
+  ui.nextText.setText(until <= 2000 ? tr(scene.lang ?? "en", "ルール切替まもなく！", "RULE SHIFT SOON!") : `${tr(scene.lang ?? "en", "次のルールまで", "NEXT RULE IN")} ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`);
   ui.cards.forEach((card, i) => card.label.setText(nameForColorId(COLORS[i]!.id, mode)));
 }
 

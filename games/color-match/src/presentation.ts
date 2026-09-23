@@ -3,6 +3,7 @@ import { CHALLENGE_MS, challengeRound, nextSwitchAt } from "./logic/challenge";
 import { TURBO_ENTRY_STREAK } from "./logic/round";
 import { loadBestScore } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
+import { tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -11,6 +12,7 @@ type TargetBoxLike = {
   container: Phaser.GameObjects.Container;
 };
 type ColorScene = Phaser.Scene & {
+  lang?: Lang;
   phase?: "title" | "playing" | "result";
   switched?: boolean;
   currentRound?: { judgeMode?: "content" | "color" };
@@ -200,11 +202,11 @@ function refreshArcadeHud(scene: ColorScene): void {
   hud.timeText.setText(String(seconds).padStart(2, "0")).setColor(finalTen ? "#d9493d" : "#22334e");
   hud.scoreText.setText(`SCORE ${String(score).padStart(3, "0")}`);
   hud.bestText.setText(`BEST ${String(loadBestScore()).padStart(3, "0")}  ·  Q${scene.roundIndex ?? 0}`);
-  hud.ruleText.setText(mode === "color" ? "文字の『色』を見る" : "文字の『意味』を見る");
+  hud.ruleText.setText(mode === "color" ? tr(scene.lang ?? "en", "文字の『色』を見る", "Watch the INK COLOR") : tr(scene.lang ?? "en", "文字の『意味』を見る", "Watch the WORD MEANING"));
   hud.chainText.setText(streak > 0 ? `×${streak}` : "×0");
   hud.flowText.setText(flow ? "FLOW / TURBO" : `CHAIN  ·  ${streak}/${TURBO_ENTRY_STREAK}`);
   hud.nextText.setText(until <= 1500 ? "RULE SHIFT!" : `NEXT RULE  ${Math.ceil(until / 1000)}s`);
-  hud.nextModeText.setText(`次は ${nextMode === "color" ? "文字の『色』" : "文字の『意味』"}  ·  MAX CHAIN ${maxChain}`);
+  hud.nextModeText.setText(`${tr(scene.lang ?? "en", "次は", "NEXT")} ${nextMode === "color" ? tr(scene.lang ?? "en", "文字の『色』", "INK COLOR") : tr(scene.lang ?? "en", "文字の『意味』", "WORD MEANING")} · MAX CHAIN ${maxChain}`);
 
   if (hud.mascot) {
     hud.mascot.setTint(flow ? 0xffd0b5 : 0xffffff);
@@ -224,13 +226,13 @@ function attachTapTargets(scene: ColorScene): void {
   }
 }
 
-function showRuleShift(scene: Phaser.Scene, mode: "content" | "color"): void {
+function showRuleShift(scene: ColorScene, mode: "content" | "color"): void {
   const band = scene.add.graphics().setDepth(2000).setAlpha(0);
   band.fillStyle(mode === "color" ? 0x4f6ee0 : 0x3a9a73, 0.96).fillRoundedRect(25, 278, 400, 170, 22);
   band.lineStyle(3, 0xffffff, 0.75).strokeRoundedRect(25, 278, 400, 170, 22);
   const kicker = scene.add.text(225, 315, "RULE SHIFT", { fontSize: "17px", fontStyle: "900", color: "#ffffff", letterSpacing: 2 }).setOrigin(0.5).setDepth(2001).setAlpha(0);
-  const title = scene.add.text(225, 365, mode === "color" ? "文字の『色』を見る" : "文字の『意味』を見る", { fontSize: "29px", fontStyle: "900", color: "#ffffff", stroke: "#26344a", strokeThickness: 5, align: "center" }).setOrigin(0.5).setDepth(2001).setAlpha(0).setScale(0.85);
-  const sub = scene.add.text(225, 414, "切り替えを見抜いて CHAIN をつなげ", { fontSize: "13px", fontStyle: "700", color: "#f6f6f6" }).setOrigin(0.5).setDepth(2001).setAlpha(0);
+  const title = scene.add.text(225, 365, mode === "color" ? tr(scene.lang ?? "en", "文字の『色』を見る", "Watch the INK COLOR") : tr(scene.lang ?? "en", "文字の『意味』を見る", "Watch the WORD MEANING"), { fontSize: "29px", fontStyle: "900", color: "#ffffff", stroke: "#26344a", strokeThickness: 5, align: "center" }).setOrigin(0.5).setDepth(2001).setAlpha(0).setScale(0.85);
+  const sub = scene.add.text(225, 414, tr(scene.lang ?? "en", "切り替えを見抜いて CHAIN をつなげ", "Spot the switch and keep the CHAIN alive"), { fontSize: "13px", fontStyle: "700", color: "#f6f6f6" }).setOrigin(0.5).setDepth(2001).setAlpha(0);
   scene.cameras.main.flash(90, 255, 255, 255, false);
   scene.tweens.add({ targets: [band, kicker, title, sub], alpha: 1, duration: 130 });
   scene.tweens.add({ targets: title, scale: 1, duration: 190, ease: "Back.Out" });

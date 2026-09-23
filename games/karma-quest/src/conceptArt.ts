@@ -14,6 +14,7 @@ import { loadOutcome } from "./outcomeLoader";
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
+  lang?: "ja" | "en";
   phase?: "title" | "karma" | "reaction" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
   karma?: KarmaState;
@@ -1174,6 +1175,23 @@ function build(scene: Runtime): MockUi {
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.lang === "en") {
+    const ui = uiByScene.get(scene);
+    if (ui) {
+      for (const root of [
+        ui.titleRoot,
+        ui.landscapeTitle,
+        ui.choiceRoot,
+        ui.landscapeChoice?.choiceRoot,
+        ui.reactionRoot,
+        ui.landscapeReaction?.reactionRoot,
+        ui.finalRoot,
+        ui.landscapeFinal,
+        ui.landscapeJourney,
+      ]) root?.setVisible(false);
+    }
+    return;
+  }
   if (scene.phase === "title" && !uiByScene.has(scene)) {
     const home = homeUi(scene);
     const portrait = scene.scale.gameSize.height >= scene.scale.gameSize.width;
@@ -1287,6 +1305,7 @@ export function installKarmaConceptArtPass(): void {
     proto.__visualMockStart = originalStart;
     proto.startRun = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
       const runtime = this as Runtime;
+      if (runtime.lang === "en") return originalStart.apply(this, args);
       if (runtime.journeyPending) return undefined;
       runtime.journeyPending = true;
       runtime.journeyError = false;
@@ -1320,6 +1339,7 @@ export function installKarmaConceptArtPass(): void {
     proto.__visualMockChoice = originalChoice;
     proto.onKarmaChoice = async function (this: Phaser.Scene, ...args: unknown[]): Promise<unknown> {
       const runtime = this as Runtime;
+      if (runtime.lang === "en") return originalChoice.apply(this, args);
       if (runtime.phase !== "karma" || !runtime.currentRequest || !runtime.karma || runtime.artPending) return undefined;
       const selectedRequest = runtime.currentRequest;
       const selectedStage = runtime.stage;
