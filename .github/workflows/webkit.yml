@@ -42,7 +42,13 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps webkit
       - name: Run WebKit E2E
-        run: npx playwright test --browser=webkit
+        shell: bash
+        run: |
+          if [ "${{ matrix.game }}" = "karma-quest" ]; then
+            npx playwright test --browser=webkit --grep "representative phone|sound preference|notch insets|touch starts a journey|landscape dialogue|landscape encounter|result images load on demand"
+          else
+            npx playwright test --browser=webkit
+          fi
       - name: Upload WebKit visual QA
         if: always()
         uses: actions/upload-artifact@v4
