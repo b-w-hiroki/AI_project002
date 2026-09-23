@@ -2,7 +2,6 @@ import {
   DEITIES,
   scoreDeeds,
   nextMandate,
-  legendTitle,
   type Deed,
   type Deity,
 } from "../logic/legend";
@@ -15,7 +14,6 @@ import {
   rollEncounterOccurs,
 } from "../logic/encounter";
 import {
-  FACTION_LABEL,
   FACTIONS,
   Faction,
   KarmaRequest,
