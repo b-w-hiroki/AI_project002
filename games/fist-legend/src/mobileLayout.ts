@@ -1,9 +1,19 @@
 import Phaser from "phaser";
 import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX, type BattleOutcome, type BattleState, type MoveType } from "./logic/battle";
-import { MOVE_TELL, OPPONENTS, type Opponent } from "./logic/opponent";
+import { OPPONENTS, type Opponent } from "./logic/opponent";
 import { loadCurrency, loadWinCount } from "./logic/progress";
-import { FIGHTERS, fighterById, teamLabel, type FighterId } from "./logic/team";
+import { FIGHTERS, fighterById, type FighterId } from "./logic/team";
+import {
+  detectLang,
+  fighterName,
+  moveLabel,
+  moveTell,
+  opponentHint,
+  opponentName as localizedOpponentName,
+  opponentType,
+  tr,
+} from "./logic/i18n";
 import { GameScene } from "./scenes/GameScene";
 
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
@@ -72,10 +82,10 @@ type MobileUi = {
 
 const uiByScene = new WeakMap<object, MobileUi>();
 
-const OPPONENT_ACCENT: Readonly<Record<Opponent, { accent: number; glow: number; label: string }>> = {
-  rush: { accent: 0xe6533f, glow: 0xffad66, label: "猛攻" },
-  counter: { accent: 0x4ca67a, glow: 0x8ce6bd, label: "反撃" },
-  charge: { accent: 0x576ccf, glow: 0xaebaff, label: "気功" },
+const OPPONENT_ACCENT: Readonly<Record<Opponent, { accent: number; glow: number }>> = {
+  rush: { accent: 0xe6533f, glow: 0xffad66 },
+  counter: { accent: 0x4ca67a, glow: 0x8ce6bd },
+  charge: { accent: 0x576ccf, glow: 0xaebaff },
 };
 
 function text(
@@ -133,6 +143,7 @@ function hideLegacyOrientationWarning(scene: Phaser.Scene): void {
 }
 
 function buildUi(scene: Runtime): MobileUi {
+  const lang = detectLang();
   const cached = uiByScene.get(scene);
   if (cached) return cached;
 
@@ -144,8 +155,8 @@ function buildUi(scene: Runtime): MobileUi {
     .container(0, 0, [chrome, titleGroup, battleGroup, resultGroup])
     .setDepth(2800);
 
-  const title = text(scene, 225, 118, "覇拳伝", 38, "#ffe1a8");
-  const subtitle = text(scene, 225, 170, "拳 > 気 > 蹴 > 拳\n相手の構えを読み、一撃を通せ。", 16, "#f4d4bb");
+  const title = text(scene, 225, 118, tr(lang, "覇拳伝", "Fist Legend"), 38, "#ffe1a8");
+  const subtitle = text(scene, 225, 170, `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}\n${tr(lang, "相手の構えを読み、一撃を通せ。", "Read the stance. Land the decisive hit.")}`, 16, "#f4d4bb");
   const titleStatus = text(scene, 225, 225, "", 14, "#d9c4ad");
   const titleHint = text(scene, 225, 444, "", 12, "#ffe0a0");
   const teamText = text(scene, 225, 474, "", 12, "#ffe6b5");
@@ -153,9 +164,9 @@ function buildUi(scene: Runtime): MobileUi {
 
   const opponentButtons: Phaser.GameObjects.Container[] = [];
   OPPONENTS.forEach((opponent, index) => {
-    const b = button(scene, titleGroup, 225, 292 + index * 58, 330, 46, opponent.name, 0x4d2b26, () => {
+    const b = button(scene, titleGroup, 225, 292 + index * 58, 330, 46, localizedOpponentName(lang, opponent.id), 0x4d2b26, () => {
       scene.opponent = opponent.id;
-      titleHint.setText(opponent.hint);
+      titleHint.setText(opponentHint(lang, opponent.id));
     });
     opponentButtons.push(b);
   });
@@ -170,16 +181,16 @@ function buildUi(scene: Runtime): MobileUi {
       507,
       92,
       34,
-      fighter.name,
+      fighterName(lang, fighter.id),
       fighter.id === "ryuga" ? 0x6d3f2f : fighter.accent,
       () => scene.toggleTeamMember?.(fighter.id),
     );
     teamButtons.push(b);
   });
-  button(scene, titleGroup, 82, 565, 118, 54, "対戦", 0xa9402d, () => scene.startSingleBattle?.());
-  button(scene, titleGroup, 225, 565, 118, 54, "3連戦", 0x8a6118, () => scene.startSeries?.());
-  button(scene, titleGroup, 368, 565, 118, 54, "物語", 0x5d3e76, () => scene.startStory?.());
-  button(scene, titleGroup, 225, 630, 330, 46, "ガチャ", 0x334c70, () => scene.openGacha?.());
+  button(scene, titleGroup, 82, 565, 118, 54, tr(lang, "対戦", "Battle"), 0xa9402d, () => scene.startSingleBattle?.());
+  button(scene, titleGroup, 225, 565, 118, 54, tr(lang, "3連戦", "Gauntlet"), 0x8a6118, () => scene.startSeries?.());
+  button(scene, titleGroup, 368, 565, 118, 54, tr(lang, "物語", "Story"), 0x5d3e76, () => scene.startStory?.());
+  button(scene, titleGroup, 225, 630, 330, 46, tr(lang, "ガチャ", "Gacha"), 0x334c70, () => scene.openGacha?.());
 
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
   const battleTell = text(scene, 225, 112, "", 16, "#ffe2a8");
@@ -187,21 +198,21 @@ function buildUi(scene: Runtime): MobileUi {
   battleGroup.add([battleStatus, battleTell, battleGauge]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
-    { move: "punch", label: "拳", color: 0xb8412f },
-    { move: "kick", label: "蹴", color: 0x2f7d58 },
-    { move: "ki", label: "気", color: 0x315d91 },
+    { move: "punch", label: moveLabel(lang, "punch"), color: 0xb8412f },
+    { move: "kick", label: moveLabel(lang, "kick"), color: 0x2f7d58 },
+    { move: "ki", label: moveLabel(lang, "ki"), color: 0x315d91 },
   ];
   moveButtons.forEach(({ move, label, color }, index) => {
     const b = button(scene, battleGroup, 92 + index * 133, 690, 110, 62, label, color, () => scene.onPlayerMove?.(move));
     b.setName(`mobile-move-${move}`);
   });
-  const ougi = button(scene, battleGroup, 225, 764, 350, 56, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
+  const ougi = button(scene, battleGroup, 225, 764, 350, 56, tr(lang, "奥義", "SPECIAL"), 0x9b7119, () => scene.onPlayerOugi?.());
   ougi.setName("mobile-ougi");
-  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, "奥義", 0x9b7119, () => scene.onPlayerOugi?.());
+  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, () => scene.onPlayerOugi?.());
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
-  const switchButton = button(scene, battleGroup, 225, 715, 76, 44, "交代", 0x505385, () => scene.switchFighter?.());
+  const switchButton = button(scene, battleGroup, 225, 715, 76, 44, tr(lang, "交代", "SWITCH"), 0x505385, () => scene.switchFighter?.());
   switchButton.setName("mobile-switch").setVisible(false);
-  const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, "交代", 0x505385, () => scene.switchFighter?.());
+  const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, tr(lang, "交代", "SWITCH"), 0x505385, () => scene.switchFighter?.());
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
   const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
@@ -210,8 +221,8 @@ function buildUi(scene: Runtime): MobileUi {
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
   const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
   resultGroup.add([resultFinish, resultHeading, resultStats]);
-  const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, "もう一度", 0xa9402d, () => scene.handleResultPrimary?.());
-  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, "タイトルへ", 0x334c70, () => scene.showTitle?.());
+  const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, () => scene.handleResultPrimary?.());
+  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, () => scene.showTitle?.());
 
   const ui: MobileUi = {
     root,
@@ -303,6 +314,7 @@ function positionFighters(scene: Runtime, portrait: boolean): void {
 }
 
 function refresh(scene: Runtime): void {
+  const lang = detectLang();
   const ui = buildUi(scene);
   if (!ui.phone) return;
 
@@ -332,9 +344,9 @@ function refresh(scene: Runtime): void {
     ui.titleStatus.setPosition(width / 2, portrait ? 225 : 120);
     ui.titleHint.setPosition(width / 2, portrait ? 444 : 324);
     const team = scene.selectedTeam?.length ? scene.selectedTeam : (["ryuga"] as FighterId[]);
-    ui.titleStatus.setText(`豪拳石 ${loadCurrency()}  ·  勝利 ${loadWinCount()}`);
-    ui.titleHint.setText(OPPONENTS.find((opponent) => opponent.id === scene.opponent)?.hint ?? OPPONENTS[0]!.hint);
-    ui.teamText.setPosition(width / 2, portrait ? 474 : 350).setText(`TEAM ${team.length}/3 · ${teamLabel(team)} · 先頭が出場`);
+    ui.titleStatus.setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()} · ${tr(lang, "勝利", "Wins")} ${loadWinCount()}`);
+    ui.titleHint.setText(opponentHint(lang, scene.opponent ?? "rush"));
+    ui.teamText.setPosition(width / 2, portrait ? 474 : 350).setText(`TEAM ${team.length}/3 · ${team.map(id => fighterName(lang, id)).join(" / ")} · ${tr(lang, "先頭が出場", "leader starts")}`);
     ui.opponentButtons.forEach((b, index) => b.setAlpha(OPPONENTS[index]?.id === scene.opponent ? 1 : 0.62));
     ui.teamButtons.forEach((b, index) => {
       const fighter = FIGHTERS[index];
@@ -352,7 +364,7 @@ function refresh(scene: Runtime): void {
     positionFighters(scene, portrait);
     const battle = scene.battle;
     const opponentVisual = OPPONENT_ACCENT[scene.opponent ?? "rush"];
-    const opponentName = OPPONENTS.find(opponent => opponent.id === scene.opponent)?.name ?? OPPONENTS[0]!.name;
+    const opponentName = localizedOpponentName(lang, scene.opponent ?? "rush");
     const playerRatio = Phaser.Math.Clamp(battle.playerHp / MAX_HP, 0, 1);
     const enemyRatio = Phaser.Math.Clamp(battle.enemyHp / MAX_HP, 0, 1);
     const gaugeRatio = Phaser.Math.Clamp(battle.playerGauge / OUGI_GAUGE_MAX, 0, 1);
@@ -412,11 +424,11 @@ function refresh(scene: Runtime): void {
     ui.battleStatus
       .setPosition(18, portrait ? 18 : 50)
       .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
-      .setText(`${leader.name} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentVisual.label}・${opponentName} ${battle.enemyHp}/${MAX_HP}`);
-    ui.battleTell.setText(`${MOVE_TELL[scene.nextEnemyMove ?? "punch"]}\n拳 > 気 > 蹴 > 拳`);
+      .setText(`${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, scene.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+    ui.battleTell.setText(`${moveTell(lang, scene.nextEnemyMove ?? "punch")}\n${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}`);
     ui.battleGauge.setText(gaugeRatio >= 1
-      ? `奥義 READY · TEAM ${activeIndex + 1}/${team.length}`
-      : `奥義 ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(scene.beat ?? 0) + 1}`);
+      ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
+      : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(scene.beat ?? 0) + 1}`);
     return;
   }
 
@@ -428,29 +440,29 @@ function refresh(scene: Runtime): void {
       .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
       .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
       .setScale(portrait ? 1 : 0.72);
-    ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? "勝利" : outcome === "enemyWin" ? "敗北" : "引き分け");
+    ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
     const modeText = scene.storyActive
-      ? `物語 ${Math.min(3, (scene.storyChapterIndex ?? 0) + 1)}/3章 · 進行 ${scene.storyProgress ?? 0}/3`
+      ? `${tr(lang, "物語", "Story")} ${Math.min(3, (scene.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${scene.storyProgress ?? 0}/3`
       : scene.seriesActive
-        ? `3連戦 ${scene.seriesWins ?? 0}/3勝 · ${Math.min(3, (scene.seriesIndex ?? 0) + 1)}/3戦目`
-        : "次は相手の構えをさらに読もう";
-    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`豪拳石 ${loadCurrency()}\n${modeText}`);
+        ? `${tr(lang, "3連戦", "Gauntlet")} ${scene.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (scene.seriesIndex ?? 0) + 1)}/3`
+        : tr(lang, "次は相手の構えをさらに読もう", "Read the rival's stance even more carefully next time.");
+    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()}\n${modeText}`);
     const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
     if (retryLabel) {
       retryLabel.setText(
         scene.storyActive
           ? scene.lastOutcome === "playerWin" && (scene.storyChapterIndex ?? 0) < 2
-            ? `次章へ (${(scene.storyChapterIndex ?? 0) + 2}/3)`
+            ? `${tr(lang, "次章へ", "Next Chapter")} (${(scene.storyChapterIndex ?? 0) + 2}/3)`
             : scene.lastOutcome === "playerWin"
-              ? "物語を再演"
-              : "この章を再挑戦"
+              ? tr(lang, "物語を再演", "Replay Story")
+              : tr(lang, "この章を再挑戦", "Retry Chapter")
           : scene.seriesActive
             ? scene.lastOutcome === "playerWin" && (scene.seriesIndex ?? 0) < 2
-              ? `次の相手へ (${(scene.seriesIndex ?? 0) + 2}/3)`
+              ? `${tr(lang, "次の相手へ", "Next Rival")} (${(scene.seriesIndex ?? 0) + 2}/3)`
               : scene.lastOutcome === "playerWin"
-                ? "もう一度3連戦"
-                : "3連戦を再挑戦"
-            : "もう一度",
+                ? tr(lang, "もう一度3連戦", "Replay Gauntlet")
+                : tr(lang, "3連戦を再挑戦", "Retry Gauntlet")
+            : tr(lang, "もう一度", "Play Again"),
       );
     }
     ui.resultRetry.setPosition(width / 2, portrait ? 430 : 292).setScale(portrait ? 1 : 0.86);
