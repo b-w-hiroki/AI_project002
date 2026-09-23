@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="512" viewBox="0 0 384 512">
+<defs>
+  <linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f6df9b"/><stop offset="1" stop-color="#b77a2e"/></linearGradient>
+  <linearGradient id="cloth" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff2c0"/><stop offset="1" stop-color="#c88f3b"/></linearGradient>
+</defs>
+<circle cx="192" cy="104" r="72" fill="#f6cf93" opacity=".17"/>
+<g opacity=".75" stroke="#f7d87b" fill="none">
+  <circle cx="192" cy="104" r="58" stroke-width="8"/>
+  <path d="M192 22v28M192 158v28M110 104h28M246 104h28M134 46l20 20M230 142l20 20M250 46l-20 20M154 142l-20 20" stroke-width="7" stroke-linecap="round"/>
+</g>
+<ellipse cx="197" cy="474" rx="116" ry="22" fill="#1a1112" opacity=".35"/>
+<path d="M129 158c25-38 101-39 128 1l25 139-170 2z" fill="url(#armor)" stroke="#6f431c" stroke-width="12" stroke-linejoin="round"/>
+<path d="M145 169 91 239l33 30 62-72z" fill="#d7a24d" stroke="#6f431c" stroke-width="12" stroke-linejoin="round"/>
+<path d="m242 172 61 58-29 35-70-59z" fill="#e4b258" stroke="#6f431c" stroke-width="12" stroke-linejoin="round"/>
+<circle cx="193" cy="123" r="54" fill="#f0c39a"/>
+<path d="M140 117c7-65 96-79 115-12l-18 34-37-17-31 18z" fill="#493323"/>
+<path d="M139 113c9-59 98-69 112-6l-17 15-36-14-34 18z" fill="#a86d2c"/>
+<path d="M133 111h120l-15-34-44-14-45 17z" fill="#c58d38" stroke="#6f431c" stroke-width="8" stroke-linejoin="round"/>
+<path d="m192 48 16 29-16 21-16-21z" fill="#f5d36b"/>
+<circle cx="209" cy="127" r="6" fill="#2e241b"/>
+<path d="M173 147c12 8 27 8 40 0" stroke="#835239" stroke-width="6" fill="none" stroke-linecap="round"/>
+<path d="M133 299 97 451h66l45-148z" fill="#765128"/>
+<path d="m213 299 20 151h67l-44-153z" fill="#5c3d20"/>
+<path d="M303 228 342 84" stroke="#5b3e24" stroke-width="18" stroke-linecap="round"/>
+<path d="M307 218 349 75" stroke="#f6e0a2" stroke-width="9" stroke-linecap="round"/>
+<path d="m349 75 15 30-30-4z" fill="#f6e0a2"/>
+<path d="m107 305-19-58 55 23z" fill="url(#cloth)" stroke="#8b5c2d" stroke-width="8" stroke-linejoin="round"/>
+</svg>

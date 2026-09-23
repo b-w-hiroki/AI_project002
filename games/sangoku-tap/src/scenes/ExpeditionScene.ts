@@ -43,6 +43,11 @@ const REGION_BOSS_VISUAL: Readonly<Record<RegionId, {
   pass: { accent: 0x80c9ae, glow: 0xb5ead4, title: "翠嶺の守将", crest: "mountain" },
   citadel: { accent: 0xe37d78, glow: 0xffb1a7, title: "紅蓮の守将", crest: "flame" },
 };
+const REGION_BOSS_ART: Readonly<Record<RegionId, string>> = {
+  plains: "st-boss-plains",
+  pass: "st-boss-pass",
+  citadel: "st-boss-citadel",
+};
 import {
   loadCampaign,
   saveCampaign,
@@ -85,6 +90,8 @@ export class ExpeditionScene extends Phaser.Scene {
       ...Object.values(ART),
     ])
       if (!this.textures.exists(key)) this.load.image(key, `images/${key}.png`);
+    for (const key of Object.values(REGION_BOSS_ART))
+      if (!this.textures.exists(key)) this.load.svg(key, `images/${key}.svg`);
   }
   create(): void {
     ensureStarter();
@@ -161,6 +168,14 @@ export class ExpeditionScene extends Phaser.Scene {
     });
   }
   private portrait(id: string, x: number, y: number, h: number): void {
+    if (this.view === "camp" || this.view === "formation") {
+      const role = ROLES[id];
+      const accent = role === "守将" ? 0x6fa6ad : role === "商才" ? 0xc9a05e : 0x8e82bb;
+      const frame = this.add.graphics();
+      frame.fillStyle(0x141723, 0.7).fillRoundedRect(x - h * 0.4, y - h * 0.52, h * 0.8, h * 1.04, 10);
+      frame.lineStyle(2, accent, 0.72).strokeRoundedRect(x - h * 0.4, y - h * 0.52, h * 0.8, h * 1.04, 10);
+      this.root.add(frame);
+    }
     this.root.add(
       this.add.ellipse(x, y + h / 2 - 3, h * 0.65, 13, 0x100d16, 0.4),
     );
@@ -1001,12 +1016,14 @@ export class ExpeditionScene extends Phaser.Scene {
       aura.lineStyle(1, 0xfff2d8, 0.25).strokeCircle(298, 330, 96);
       this.root.add(aura);
       this.root.add(this.add.ellipse(298, 509, 226, 21, 0x100a13, 0.65));
-      if (this.textures.exists("st-boss-gatekeeper")) {
+      const dedicatedBossArt = REGION_BOSS_ART[region.id];
+      if (this.textures.exists(dedicatedBossArt) || this.textures.exists("st-boss-gatekeeper")) {
+        const useDedicated = this.textures.exists(dedicatedBossArt);
         const enemy = this.add
-          .image(298, 320, "st-boss-gatekeeper")
+          .image(298, 320, useDedicated ? dedicatedBossArt : "st-boss-gatekeeper")
           .setDisplaySize(281.25, 375)
-          .setTint(visual.accent)
           .setName("gatekeeper-boss");
+        if (!useDedicated) enemy.setTint(visual.accent);
         this.root.add(enemy);
         const badge = this.add.graphics();
         badge.fillStyle(0x0d121c, 0.9).fillRoundedRect(235, 145, 126, 34, 10);

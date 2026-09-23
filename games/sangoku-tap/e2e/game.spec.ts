@@ -105,16 +105,35 @@ test("regional gatekeepers keep distinct chapter identity", async ({ page }) => 
   await expect.poll(() => expeditionView(page)).toBe("road");
 
   for (const region of ["plains", "pass", "citadel"] as const) {
-    const label = await page.evaluate(region => {
+    const boss = await page.evaluate(region => {
       const scene = window.__qaGame.scene.getScene("ExpeditionScene");
       const run = Reflect.get(scene, "run") as Record<string, unknown>;
       Reflect.set(scene, "run", { ...run, regionId: region, step: 9 });
       Reflect.set(scene, "introRunId", Reflect.get(scene, "run").id);
       Reflect.get(scene, "render").call(scene);
       const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
-      return (root.getByName("boss-region-label") as Phaser.GameObjects.Text | null)?.text ?? "";
+      const findNamed = (
+        nodes: Phaser.GameObjects.GameObject[],
+        name: string,
+      ): Phaser.GameObjects.GameObject | null => {
+        for (const node of nodes) {
+          if (node.name === name) return node;
+          if (node.type === "Container") {
+            const found = findNamed((node as Phaser.GameObjects.Container).list, name);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return {
+        label: (root.getByName("boss-region-label") as Phaser.GameObjects.Text | null)?.text ?? "",
+        texture: (root.getByName("gatekeeper-boss") as Phaser.GameObjects.Image | null)?.texture.key ?? "",
+        mobileTexture: (findNamed(scene.children.list, "mobile-region-boss") as Phaser.GameObjects.Image | null)?.texture.key ?? "",
+      };
     }, region);
-    expect(label).toMatch(region === "plains" ? /黎明/ : region === "pass" ? /翠嶺/ : /紅蓮/);
+    expect(boss.label).toMatch(region === "plains" ? /黎明/ : region === "pass" ? /翠嶺/ : /紅蓮/);
+    expect(boss.texture).toBe(`st-boss-${region}`);
+    expect(boss.mobileTexture).toBe(`st-boss-${region}`);
     await checkFrame(page, `landscape-boss-${region}`);
   }
 });

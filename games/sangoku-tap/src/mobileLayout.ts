@@ -39,6 +39,11 @@ const ART: Record<string, string> = {
   gen_kohei: "st-general-kohei",
   gen_ashigaru: "st-general-ashigaru",
 };
+const REGION_BOSS_ART: Readonly<Record<RegionId, string>> = {
+  plains: "st-boss-plains",
+  pass: "st-boss-pass",
+  citadel: "st-boss-citadel",
+};
 
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
   const fn = Reflect.get(scene, key);
@@ -259,8 +264,14 @@ function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
       root.add(img);
     }
   });
-  if (boss && scene.textures.exists("st-boss-gatekeeper")) {
-    const enemy = scene.add.image(420, 230, "st-boss-gatekeeper").setDisplaySize(215, 285).setFlipX(true);
+  const bossArt = REGION_BOSS_ART[region.id];
+  if (boss && (scene.textures.exists(bossArt) || scene.textures.exists("st-boss-gatekeeper"))) {
+    const dedicated = scene.textures.exists(bossArt);
+    const enemy = scene.add
+      .image(420, 230, dedicated ? bossArt : "st-boss-gatekeeper")
+      .setDisplaySize(215, 285)
+      .setName("mobile-region-boss");
+    if (!dedicated) enemy.setFlipX(true).setTint(region.accent);
     root.add(enemy);
     label(scene, root, 420, 389, region.boss, 14, "#ffd1b9", "900");
   } else if (scene.textures.exists("st-general-ashigaru")) {

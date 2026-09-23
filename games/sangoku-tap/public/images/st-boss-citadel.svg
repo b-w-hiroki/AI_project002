@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="384" height="512" viewBox="0 0 384 512">
+<defs>
+  <linearGradient id="armor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5b2730"/><stop offset=".55" stop-color="#8d3236"/><stop offset="1" stop-color="#2e1c25"/></linearGradient>
+  <linearGradient id="fire" x1="0" y1="1" x2="0" y2="0"><stop stop-color="#e74d3c"/><stop offset=".55" stop-color="#ff9d52"/><stop offset="1" stop-color="#ffe283"/></linearGradient>
+</defs>
+<path d="M52 193h280v86H52z" fill="#4b1c20" opacity=".16"/>
+<path d="M74 191v-64h38v64M145 191v-82h44v82M219 191v-70h42v70M292 191v-56h31v56" fill="#4b1c20" opacity=".23"/>
+<ellipse cx="193" cy="476" rx="118" ry="22" fill="#12090b" opacity=".4"/>
+<path d="M115 167c35-35 123-33 157 5l31 151-211 2z" fill="url(#armor)" stroke="#24151b" stroke-width="14" stroke-linejoin="round"/>
+<path d="m122 179-70 70 37 41 82-77z" fill="#6a2931" stroke="#24151b" stroke-width="13" stroke-linejoin="round"/>
+<path d="m264 181 76 54-27 47-92-55z" fill="#742c32" stroke="#24151b" stroke-width="13" stroke-linejoin="round"/>
+<circle cx="193" cy="120" r="56" fill="#e6b896"/>
+<path d="M138 112c4-69 105-82 118-7l-20 37-43-19-35 18z" fill="#24171b"/>
+<path d="M135 112h123l-10-46-54-22-49 22z" fill="#3c1d25" stroke="#1c1116" stroke-width="10" stroke-linejoin="round"/>
+<path d="m192 43 20 26-20 26-21-26z" fill="#b6413b"/>
+<path d="m146 105 46-22 50 23" fill="none" stroke="#d45c4f" stroke-width="8" stroke-linecap="round"/>
+<circle cx="211" cy="124" r="6" fill="#2a1718"/>
+<path d="M168 150c17 8 34 7 49-2" stroke="#7c4b3d" stroke-width="6" fill="none" stroke-linecap="round"/>
+<path d="m119 318-17 137h74l31-137z" fill="#321c24"/>
+<path d="m211 318 25 137h73l-48-139z" fill="#251820"/>
+<path d="M324 237 343 93" stroke="#1f1519" stroke-width="20" stroke-linecap="round"/>
+<path d="m343 90 22 28-27 10z" fill="#bd4d42"/>
+<path d="M82 340c12-38 31-53 24-82 28 24 37 46 26 78 23-21 32-43 31-66 26 34 31 66 8 96z" fill="url(#fire)" opacity=".78"/>
+<path d="M287 341c-7-32 4-56 31-82-2 29 8 49 24 69 9-24 21-39 34-49 0 42-12 70-37 91z" fill="url(#fire)" opacity=".72"/>
+</svg>
