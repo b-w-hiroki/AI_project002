@@ -26,6 +26,39 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English fallback localizes the title and first request flow", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  const labels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return collect(scene.children.list);
+  });
+  expect(labels).toContain("Karma Quest");
+  expect(labels).toContain("Begin Journey");
+
+  await tapPoint(page, 225, 650);
+  await expect.poll(() => phase(page)).toBe("karma");
+  const state = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const karmaGroup = Reflect.get(scene, "karmaGroup") as Phaser.GameObjects.Container;
+    return {
+      lang: Reflect.get(scene, "lang"),
+      request: (karmaGroup.getByName("requestText") as Phaser.GameObjects.Text).text,
+      faction: (karmaGroup.getByName("factionLabel") as Phaser.GameObjects.Text).text,
+    };
+  });
+  expect(state.lang).toBe("en");
+  expect(state.request).not.toMatch(/[ぁ-んァ-ヶ一-龠]/);
+  expect(state.faction).toMatch(/Faction/);
+});
+
 test("sound preference is operable in both home layouts and survives reload", async ({ page }) => {
   await page.addInitScript(() => {
     Reflect.set(window, "__qaAudioStarts", 0);
