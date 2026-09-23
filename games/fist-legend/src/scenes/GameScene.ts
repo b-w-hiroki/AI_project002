@@ -130,10 +130,10 @@ const GACHA_CHAR_IMAGE: Readonly<Record<string, string>> = {
 
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
 
-const OPPONENT_VISUAL: Readonly<Record<Opponent, { accent: number; glow: number; label: string }>> = {
-  rush: { accent: 0xe6533f, glow: 0xffad66, label: "猛攻型" },
-  counter: { accent: 0x4ca67a, glow: 0x8ce6bd, label: "反撃型" },
-  charge: { accent: 0x576ccf, glow: 0xaebaff, label: "気功型" },
+const OPPONENT_VISUAL: Readonly<Record<Opponent, { accent: number; glow: number }>> = {
+  rush: { accent: 0xe6533f, glow: 0xffad66 },
+  counter: { accent: 0x4ca67a, glow: 0x8ce6bd },
+  charge: { accent: 0x576ccf, glow: 0xaebaff },
 };
 
 export class GameScene extends Phaser.Scene {
