@@ -96,7 +96,7 @@ import { cg } from "../platform/crazygames";
 import { bgm, sfx } from "../platform/audio";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
-import { detectLang, tr, weaponLabel, type Lang } from "../logic/i18n";
+import { detectLang, itemName, stageBuffText, tr, weaponLabel, type Lang } from "../logic/i18n";
 import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
 
 const GROUND_Y = 520;
@@ -1100,7 +1100,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (pickup.kind === "armor") {
       this.playerState = gainArmor(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, "🛡️ 防具+1", "#7fd1ff");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, tr(this.lang, "🛡️ 防具+1", "🛡️ Armor +1"), "#7fd1ff");
       return;
     }
     if (pickup.kind === "stageBuff") {
@@ -1110,7 +1110,7 @@ export class GameScene extends Phaser.Scene {
     // item: 所持数を増やすだけ。使用は対応するキー（Z/V/B）で行う
     if (pickup.itemId) {
       this.items = { ...this.items, [pickup.itemId]: (this.items[pickup.itemId] ?? 0) + 1 };
-      const name = findItemDef(pickup.itemId)?.name ?? pickup.itemId;
+      const name = itemName(this.lang, pickup.itemId, findItemDef(pickup.itemId)?.name ?? pickup.itemId);
       this.spawnFloatingText(this.player.x, this.player.y - 60, `📦 ${name}+1`, "#7fffb0");
     }
   }
@@ -1121,7 +1121,7 @@ export class GameScene extends Phaser.Scene {
       if (!Phaser.Input.Keyboard.JustDown(key)) continue;
       const consumed = useItem(this.items, itemId);
       if (!consumed) {
-        this.spawnFloatingText(this.player.x, this.player.y - 60, "所持していない", "#ff6b8a");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, tr(this.lang, "所持していない", "Not owned"), "#ff6b8a");
         continue;
       }
       this.items = consumed;
@@ -1130,16 +1130,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyItemEffect(itemId: string, time: number): void {
-    const name = findItemDef(itemId)?.name ?? itemId;
+    const name = itemName(this.lang, itemId, findItemDef(itemId)?.name ?? itemId);
     if (itemId === "potion") {
       this.playerState = healPlayer(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, `❤️ ${name}使用`, "#ff6b8a");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `${name} ${tr(this.lang, "使用", "used")} ❤️`, "#ff6b8a");
       return;
     }
     const buffKind: BuffKind | null = itemId === "power_charm" ? "power" : itemId === "haste_charm" ? "haste" : null;
     if (buffKind) {
       this.playerState = applyBuff(this.playerState, buffKind, time, ITEM_BUFF_DURATION_MS);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, `✨ ${name}使用`, "#ffd166");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `${name} ${tr(this.lang, "使用", "used")} ✨`, "#ffd166");
     }
   }
 
@@ -1156,7 +1156,7 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
+      .text(400, 190, tr(this.lang, "✨ ステージバフ — 1つ選択", "✨ STAGE BUFF — Choose One"), { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
@@ -1193,7 +1193,8 @@ export class GameScene extends Phaser.Scene {
   private openStageBuffOverlay(): void {
     this.currentStageBuffOptions = rollStageBuffOptions(3);
     this.currentStageBuffOptions.forEach((option, i) => {
-      this.stageBuffOverlayTexts[i]?.setText(`${option.label}\n${option.desc}`);
+      const localized = stageBuffText(this.lang, option.kind, option.label, option.desc);
+      this.stageBuffOverlayTexts[i]?.setText(`${localized.label}\n${localized.desc}`);
     });
     this.stageBuffOverlayVisible = true;
     this.physics.pause();
@@ -1962,7 +1963,7 @@ export class GameScene extends Phaser.Scene {
 
     this.itemsText.setText(
       this.itemKeys
-        .map(({ itemId, label }) => `${label}:${findItemDef(itemId)?.name ?? itemId}×${this.items[itemId] ?? 0}`)
+        .map(({ itemId, label }) => `${label}:${itemName(this.lang, itemId, findItemDef(itemId)?.name ?? itemId)}×${this.items[itemId] ?? 0}`)
         .join(" "),
     );
   }
