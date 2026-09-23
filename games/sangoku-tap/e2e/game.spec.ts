@@ -27,7 +27,7 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
 test("English fallback localizes home and campaign", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
-  const homeLabels = await page.evaluate(() => {
+  const homeLabels = await expect.poll(async () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
       for (const node of nodes) {
@@ -37,10 +37,7 @@ test("English fallback localizes home and campaign", async ({ page }) => {
       return out;
     };
     return collect(scene.children.list);
-  });
-  expect(homeLabels).toContain("Sangoku Tap");
-  expect(homeLabels).toContain("General Gacha");
-  expect(homeLabels).toContain("Equipment Fusion");
+  })).toEqual(expect.arrayContaining(["Sangoku Tap", "General Gacha", "Equipment Fusion"]));
 
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
