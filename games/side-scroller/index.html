@@ -60,10 +60,25 @@
     </style>
   </head>
   <body>
-    <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る">← GAME LAB</a>
-    <div class="game-rail game-rail--top" aria-hidden="true"><span class="status-dot"></span><span class="rail-kicker">HUNT</span><span class="rail-title">剣戟の森</span></div>
+    <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る" data-ja-aria="ゲーム一覧へ戻る" data-en-aria="Back to game list">← GAME LAB</a>
+    <div class="game-rail game-rail--top" aria-hidden="true"><span class="status-dot"></span><span class="rail-kicker">HUNT</span><span class="rail-title" data-ja="剣戟の森" data-en="Blade Woods">剣戟の森</span></div>
     <div id="game"></div>
-    <div class="game-rail game-rail--bottom" aria-hidden="true"><span class="rail-kicker">MISSION</span><span>予兆を読み、回避して反撃せよ</span></div>
+    <div class="game-rail game-rail--bottom" aria-hidden="true"><span class="rail-kicker">MISSION</span><span data-ja="予兆を読み、回避して反撃せよ" data-en="Read the tell, dodge, and counterattack">予兆を読み、回避して反撃せよ</span></div>
+    <script>
+      (() => {
+        const forced = new URLSearchParams(location.search).get("lang");
+        const lang = forced === "ja" || forced === "en"
+          ? forced
+          : (navigator.language || "en").toLowerCase().startsWith("ja") ? "ja" : "en";
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-ja][data-en]").forEach((node) => {
+          node.textContent = node.getAttribute(lang === "ja" ? "data-ja" : "data-en");
+        });
+        document.querySelectorAll("[data-ja-aria][data-en-aria]").forEach((node) => {
+          node.setAttribute("aria-label", node.getAttribute(lang === "ja" ? "data-ja-aria" : "data-en-aria") || "");
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
