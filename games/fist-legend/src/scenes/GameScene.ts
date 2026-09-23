@@ -1,6 +1,5 @@
 import {
   OPPONENTS,
-  MOVE_TELL,
   plannedMove,
   type Opponent,
 } from "../logic/opponent";
@@ -11,7 +10,6 @@ import {
   ClashResult,
   MAX_HP,
   MoveType,
-  MOVE_LABEL,
   OUGI_GAUGE_MAX,
   applyBeat,
   applyHiddenCommand,
@@ -46,7 +44,6 @@ import {
   FIGHTERS,
   fighterById,
   fighterMoveMultiplier,
-  teamLabel,
   toggleTeamMember,
   type FighterId,
 } from "../logic/team";
@@ -675,7 +672,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "拳",
+      moveLabel(this.lang, "punch"),
       () => this.onPlayerMove("punch"),
       {
         fontSize: "22px",
@@ -688,7 +685,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "蹴",
+      moveLabel(this.lang, "kick"),
       () => this.onPlayerMove("kick"),
       {
         fontSize: "22px",
@@ -701,7 +698,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "気",
+      moveLabel(this.lang, "ki"),
       () => this.onPlayerMove("ki"),
       {
         fontSize: "22px",
@@ -1026,12 +1023,12 @@ export class GameScene extends Phaser.Scene {
   ): void {
     const text =
       overrideText ??
-      `${MOVE_LABEL[playerMove]} vs ${MOVE_LABEL[enemyMove]} ー ${
+      `${moveLabel(this.lang, playerMove)} vs ${moveLabel(this.lang, enemyMove)} — ${
         clash === "advantage"
-          ? "有利！"
+          ? tr(this.lang, "有利！", "ADVANTAGE!")
           : clash === "disadvantage"
-            ? "不利…"
-            : "相殺！"
+            ? tr(this.lang, "不利…", "DISADVANTAGE")
+            : tr(this.lang, "相殺！", "CLASH!")
       }`;
     // 同一フレーム内でshowClashが2回呼ばれる場合（通常技の直後に隠しコマンドが発動する等）、
     // 古いtweenが残ったまま新しいtweenを積むと表示が崩れることがあるため、先に停止させる
@@ -1066,10 +1063,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshTell(): void {
-    const enemy = OPPONENTS.find((o) => o.id === this.opponent)!;
     this.refreshOpponentVisual();
-    this.tell.setText(`${enemy.name}  ／  ${MOVE_TELL[this.nextEnemyMove]}
-拳 > 気 > 蹴 > 拳`);
+    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
+${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     this.tweens.add({
@@ -1210,14 +1206,14 @@ export class GameScene extends Phaser.Scene {
     heading.setText(outcomeLabel).setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#d7dfef" : "#e7d8ff");
     const seriesLine = this.seriesActive
       ? outcome === "playerWin" && this.seriesIndex === SERIES_ORDER.length - 1
-        ? `\n3連戦 COMPLETE · ${this.seriesWins}/3勝 · クリアボーナス +${seriesBonus}`
-        : `\n3連戦 ${this.seriesWins}/3勝 · ${this.seriesIndex + 1}/3戦目`
+        ? `\n${tr(this.lang, "3連戦", "GAUNTLET")} COMPLETE · ${this.seriesWins}/3 ${tr(this.lang, "勝", "wins")} · ${tr(this.lang, "クリアボーナス", "Clear Bonus")} +${seriesBonus}`
+        : `\n${tr(this.lang, "3連戦", "GAUNTLET")} ${this.seriesWins}/3 ${tr(this.lang, "勝", "wins")} · ${this.seriesIndex + 1}/3`
       : "";
     const chapter = storyChapterAt(this.storyChapterIndex);
     const storyLine = this.storyActive
       ? outcome === "playerWin" && this.storyChapterIndex === STORY_CHAPTERS.length - 1
-        ? `\n物語 COMPLETE · ${chapter.clearText} · ボーナス +${storyBonus}`
-        : `\n${chapter.title} · ${outcome === "playerWin" ? chapter.clearText : chapter.intro}`
+        ? `\n${tr(this.lang, "物語", "STORY")} COMPLETE · ${storyClear(this.lang, chapter.id, chapter.clearText)} · ${tr(this.lang, "ボーナス", "Bonus")} +${storyBonus}`
+        : `\n${storyTitle(this.lang, chapter.id, chapter.title)} · ${outcome === "playerWin" ? storyClear(this.lang, chapter.id, chapter.clearText) : storyIntro(this.lang, chapter.id, chapter.intro)}`
       : "";
     stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
@@ -1405,7 +1401,7 @@ export class GameScene extends Phaser.Scene {
       437,
       260,
       40,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
