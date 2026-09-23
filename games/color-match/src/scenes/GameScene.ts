@@ -129,7 +129,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0xfdf6e3);
     this.lang = detectLang();
     document.documentElement.lang = this.lang;
-    this.writingMode = loadWritingMode();
+    this.writingMode = loadWritingMode(this.lang === "en" ? "english" : "hiragana");
     this.buildTitleScreen();
     this.buildPlayScreen();
     this.buildResultScreen();
