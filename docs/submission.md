@@ -39,6 +39,8 @@
 - 日本語/英語 完全対応
 - サウンドON/OFF切り替え
 - セーブデータのエクスポート/インポート（JSON）
+- 転生時の街選択と街ごとの需要設備/評判補正
+- 8設備の個別シルエットと調合演出
 
 ---
 
@@ -69,7 +71,9 @@
 - 武器種別（近接/中距離/遠距離）の即時切替
 - スキル・奥義・秘奥義（コマンド入力対応）
 - 武器/防具のレア度・強化・進化システム
-- モバイル対応（仮想スティック＋タッチボタン）
+- モバイル対応（仮想スティック＋攻撃/ガードのタッチ操作）
+- agile / tankなど役割別の専用敵アート
+- 攻撃・被弾時の専用主人公スプライト、戦闘SE/BGM
 
 ---
 
@@ -100,6 +104,9 @@
 - ターボモード（連続正解ボーナス）
 - 表記モード4種（ひらがな/カタカナ/漢字/English）
 - ベストスコア・ベストターボの永続化
+- 内容/色/切替直後の正答率・平均反応時間を記録
+- 20秒の弱点練習モード
+- FLOW連動の軽量Web Audioフィードバック
 
 ---
 
@@ -110,16 +117,16 @@
 - 公開URL: https://b-w-hiroki.github.io/AI_project002/fist-legend/
 
 ### 紹介文（日本語）
-> 拳・蹴・気の3ボタンで応酬する格闘バトル。じゃんけん相性で威力が変わり、
-> 攻撃を当てるほど溜まる奥義ゲージで大技を放て。拳→拳→拳→気の隠しコマンド
-> 技も存在する。バトルで貯めた通貨で武将ガチャを回し、豪華なキャラクターを
-> 集めよう。
+> 拳・蹴・気の3ボタンで読み合う格闘バトル。竜牙・蓮花・岳・冥から最大3人を
+> 編成し、戦闘中に交代しながら得意技を使い分けよう。奥義、隠しコマンド、
+> 剛/柔/瞬の覇者モード、3連戦、3章ストーリーも搭載。
+> キャラクターごとの専用立ち絵とシルエットで、編成と切替の違いが見た目にも伝わる。
 
 ### Description (English)
-> A fighting game fought with three moves — punch, kick, and ki — each with a
-> rock-paper-scissors-style advantage. Land hits to fill your special gauge for a
-> finishing move, or land a hidden command combo. Spend your winnings on gacha
-> pulls to collect fighters.
+> A fighting game built around punch, kick, and ki matchups. Build a team of up
+> to three fighters from Ryuga, Renka, Gaku, and Mei, then switch characters
+> during battle to use their specialties. Includes special moves, hidden commands,
+> three Haja power modes, a three-fight series, and a three-chapter story mode.
 
 ### カテゴリ / タグ候補
 - Fighting, Action, Arcade
@@ -130,6 +137,10 @@
 - 隠しコマンド技（拳→拳→拳→気）
 - ガチャ（SSR/SR/R/N、実課金なしのゲーム内通貨制）
 - 効果音・ダメージ数値ポップアップ演出
+- 竜牙 / 蓮花 / 岳 / 冥の最大3人編成と戦闘中交代
+- キャラ別専用立ち絵と得意技補正
+- 覇者モード（剛 / 柔 / 瞬）
+- 3連戦 / 3章ストーリーモード
 
 ---
 
@@ -163,6 +174,10 @@
 - 「おうえん」ボタンで勝率をわずかに後押し
 - 良い場面だけを選んで報告する神様への報告パート
 - 12年サイクルの育成ループ
+- カルマ傾向に応じた勇者の外見・称号変化
+- 軍神 / 慈愛神を選ぶ報告と翌年への加護・試練
+- 勇者リーグ（非同期スコア競争）
+- 異界の魔王襲来（ソロレイドMVP）
 
 ---
 
@@ -173,17 +188,16 @@
 - 公開URL: https://b-w-hiroki.github.io/AI_project002/sangoku-tap/
 
 ### 紹介文（日本語）
-> タップして部隊を進撃させよう。宝箱・出会い・小競り合いがランダムに発生する
-> タップRPG。貯めたコインで武将ガチャを回し、集めた武将には装備合成
-> （ブリーディング）で作った装備を装着してステータスを強化できる。
-> 装備合成の排出率はレアリティの組み合わせごとに細かく設定されており、
-> 狙った装備を掘り当てる楽しみがある。
+> 3人の武将を編成し、平原・峠・城塞の3地域を遠征するタップRPG。
+> 道中では補給・薬草・落石・隠し倉など地域固有イベントが発生し、
+> 装備・鍛錬・役割の組み合わせが戦力、勝率、損耗、収穫へ反映される。
+> 各地域の最後には専用アートの守将が待ち受け、軍勢ランキングで自己ベストにも挑める。
 
 ### Description (English)
-> Tap to advance your troops through random encounters, treasure finds, and
-> skirmishes. Spend your coins on general gacha pulls, then breed equipment and
-> gear up your generals to boost their stats. Equipment breeding odds vary
-> precisely by rarity combination — chase the drop you want.
+> Build a three-general squad and march through three distinct regions: plains,
+> mountain passes, and a fortress. Regional events, equipment, training, and unit
+> roles all affect power, win rate, losses, and rewards. Each region ends with a
+> dedicated guardian battle, while an asynchronous army ranking tracks your best runs.
 
 ### カテゴリ / タグ候補
 - Idle, Clicker, RPG, Casual
@@ -194,6 +208,10 @@
 - 武将ガチャ（SSR/SR/R/N）と所持武将の永続化
 - 装備合成（レアリティ別の詳細な排出率テーブル）
 - 武将一覧・装備の装着システム（ステータス強化）
+- 最大3人編成、役割補正、鍛錬Lvを遠征へ反映
+- 平原 / 峠 / 城塞の地域固有イベント
+- 3地域の専用守将アート
+- 非同期スコア比較「軍勢ランキング」
 
 ---
 
