@@ -1,0 +1,189 @@
+name: CrazyGames Marketing Assets
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/crazygames-marketing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game:
+          - color-match
+          - fist-legend
+          - karma-quest
+          - potion-workshop
+          - sangoku-tap
+          - side-scroller
+    defaults:
+      run:
+        working-directory: games/${{ matrix.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: games/${{ matrix.game }}/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+        working-directory: .
+      - name: Start game
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 > /tmp/${{ matrix.game }}-vite.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/${{ matrix.game }}-vite.log
+          exit 1
+      - name: Capture covers and preview videos
+        env:
+          GAME: ${{ matrix.game }}
+        run: |
+          mkdir -p marketing/raw-video
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          import path from "node:path";
+          import { chromium } from "@playwright/test";
+
+          const game = process.env.GAME;
+          const base = "http://127.0.0.1:4173/?lang=en";
+          const out = path.resolve("marketing");
+          fs.mkdirSync(out, { recursive: true });
+
+          const browser = await chromium.launch();
+
+          const canvasPoint = async (page, x, y) => {
+            const canvas = page.locator("canvas");
+            const box = await canvas.boundingBox();
+            const size = await canvas.evaluate((node) => ({
+              width: node.width,
+              height: node.height,
+            }));
+            if (!box || !size.width || !size.height) return null;
+            return {
+              x: box.x + (x / size.width) * box.width,
+              y: box.y + (y / size.height) * box.height,
+            };
+          };
+          const clickGame = async (page, x, y) => {
+            const point = await canvasPoint(page, x, y);
+            if (point) await page.mouse.click(point.x, point.y);
+          };
+
+          const warmup = async (page) => {
+            await page.goto(base, { waitUntil: "networkidle" });
+            await page.locator("canvas").waitFor({ state: "visible" });
+            await page.waitForTimeout(1400);
+          };
+
+          const covers = [
+            ["landscape", 1920, 1080],
+            ["portrait", 800, 1200],
+            ["square", 800, 800],
+          ];
+          for (const [name, width, height] of covers) {
+            const context = await browser.newContext({ viewport: { width, height } });
+            const page = await context.newPage();
+            await warmup(page);
+            await page.screenshot({
+              path: path.join(out, `${game}-cover-${name}.png`),
+              fullPage: true,
+            });
+            await context.close();
+          }
+
+          const showcase = async (page) => {
+            await warmup(page);
+            try {
+              if (game === "color-match") {
+                await clickGame(page, 225, 650);
+              } else if (game === "karma-quest") {
+                await clickGame(page, 225, 650);
+                await page.waitForTimeout(1300);
+                await clickGame(page, 225, 500);
+              } else if (game === "sangoku-tap") {
+                await clickGame(page, 225, 635);
+              } else if (game === "side-scroller") {
+                await clickGame(page, 400, 545);
+                await page.waitForTimeout(900);
+                await clickGame(page, 235, 320);
+                await page.waitForTimeout(600);
+                await page.keyboard.down("ArrowRight");
+                await page.waitForTimeout(900);
+                await page.keyboard.up("ArrowRight");
+                await page.keyboard.press("x");
+              } else if (game === "fist-legend") {
+                await clickGame(page, 400, 450);
+                await page.waitForTimeout(900);
+                await page.keyboard.press("1");
+                await page.waitForTimeout(400);
+                await page.keyboard.press("2");
+              } else if (game === "potion-workshop") {
+                await clickGame(page, 400, 255);
+                await page.waitForTimeout(500);
+                await clickGame(page, 400, 255);
+              }
+            } catch {
+              // A preview remains useful even if an optional scripted interaction
+              // does not match a future layout revision.
+            }
+            await page.waitForTimeout(15000);
+          };
+
+          for (const [name, width, height] of [
+            ["landscape", 1920, 1080],
+            ["portrait", 800, 1200],
+          ]) {
+            const videoDir = path.resolve("marketing/raw-video", name);
+            fs.mkdirSync(videoDir, { recursive: true });
+            const context = await browser.newContext({
+              viewport: { width, height },
+              recordVideo: { dir: videoDir, size: { width, height } },
+            });
+            const page = await context.newPage();
+            await showcase(page);
+            await page.close();
+            await context.close();
+            const files = fs.readdirSync(videoDir).filter((file) => file.endsWith(".webm"));
+            if (!files.length) throw new Error(`No ${name} preview video generated`);
+            fs.renameSync(
+              path.join(videoDir, files[0]),
+              path.join(out, `${game}-preview-${name}.webm`),
+            );
+          }
+
+          await browser.close();
+          NODE
+
+          for mode in landscape portrait; do
+            ffmpeg -y -i "marketing/${GAME}-preview-${mode}.webm"               -t 20 -an -c:v libx264 -preset medium -crf 24 -pix_fmt yuv420p               "marketing/${GAME}-preview-${mode}.mp4"
+            rm "marketing/${GAME}-preview-${mode}.webm"
+          done
+          ls -lh marketing
+      - name: Validate marketing assets
+        run: |
+          test -f "marketing/${{ matrix.game }}-cover-landscape.png"
+          test -f "marketing/${{ matrix.game }}-cover-portrait.png"
+          test -f "marketing/${{ matrix.game }}-cover-square.png"
+          test -f "marketing/${{ matrix.game }}-preview-landscape.mp4"
+          test -f "marketing/${{ matrix.game }}-preview-portrait.mp4"
+          test "$(stat -c%s "marketing/${{ matrix.game }}-preview-landscape.mp4")" -lt 52428800
+          test "$(stat -c%s "marketing/${{ matrix.game }}-preview-portrait.mp4")" -lt 52428800
+      - name: Upload CrazyGames marketing assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.game }}-crazygames-marketing
+          path: games/${{ matrix.game }}/marketing/
+          retention-days: 30
