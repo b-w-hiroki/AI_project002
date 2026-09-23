@@ -10,10 +10,12 @@ import {
 } from "./logic/round";
 import { loadBestScore } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
+import { tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
+  lang?: Lang;
   phase?: "title" | "playing" | "result";
   sessionRemaining?: number;
   currentRound?: Round | null;
@@ -220,11 +222,11 @@ function refresh(scene: Runtime): void {
   ui.timerText.setText(String(secs));
   ui.timerText.setColor(danger ? "#ffd0d8" : "#ffffff");
   ui.scoreText.setText(String(score).padStart(4, "0"));
-  ui.ruleText.setText(round.judgeMode === "color" ? "『文字の色』を見る" : "『文字の意味』を見る");
+  ui.ruleText.setText(round.judgeMode === "color" ? tr(scene.lang ?? "en", "『文字の色』を見る", "Watch INK COLOR") : tr(scene.lang ?? "en", "『文字の意味』を見る", "Watch WORD MEANING"));
   ui.promptText.setText(nameForColorId(round.promptWord, mode)).setColor(`#${hexForColorId(round.promptInk).toString(16).padStart(6, "0")}`);
   ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`);
   ui.chainText.setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
-  ui.nextText.setText(until <= 2000 ? "ルール切替まもなく！" : `次のルールまで ${Math.ceil(until / 1000)}秒  ·  BEST ${loadBestScore()}`);
+  ui.nextText.setText(until <= 2000 ? tr(scene.lang ?? "en", "ルール切替まもなく！", "RULE SHIFT SOON!") : `${tr(scene.lang ?? "en", "次のルールまで", "NEXT RULE IN")} ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`);
   ui.cards.forEach((card, i) => card.label.setText(nameForColorId(COLORS[i]!.id, mode)));
 }
 
