@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTeam, toggleTeamMember } from "../src/logic/team";
+import { fighterMoveMultiplier, normalizeTeam, toggleTeamMember } from "../src/logic/team";
 
 describe("fighter team", () => {
   it("defaults to Ryuga when empty", () => {
@@ -19,5 +19,13 @@ describe("fighter team", () => {
     const team = toggleTeamMember(["ryuga", "renka", "gaku"], "ryuga");
     expect(team).toEqual(["renka", "gaku"]);
     expect(toggleTeamMember(team, "mei")).toEqual(["renka", "gaku", "mei"]);
+  });
+
+  it("gives each specialist only a small bonus on their signature move", () => {
+    expect(fighterMoveMultiplier("ryuga", "punch")).toBe(1);
+    expect(fighterMoveMultiplier("renka", "punch")).toBe(1.18);
+    expect(fighterMoveMultiplier("renka", "kick")).toBe(1);
+    expect(fighterMoveMultiplier("gaku", "kick")).toBe(1.18);
+    expect(fighterMoveMultiplier("mei", "ki")).toBe(1.18);
   });
 });
