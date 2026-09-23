@@ -197,13 +197,24 @@ test("battle switch cycles through the selected team on touch controls", async (
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
   const switchPoint = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const root = scene.children.list.find(node =>
-      node.type === "Container" &&
-      typeof Reflect.get(node, "getByName") === "function" &&
-      Reflect.get(node, "getByName").call(node, "mobile-switch-landscape"),
-    ) as Phaser.GameObjects.Container | undefined;
-    const button = root?.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null;
-    if (!button || !button.visible) return null;
+    const findByName = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const found = findByName((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const button = findByName(
+      scene.children.list,
+      "mobile-switch-landscape",
+    ) as Phaser.GameObjects.Container | null;
+    if (!button || !button.visible || !button.parentContainer?.visible) return null;
     const bounds = button.getBounds();
     return { x: bounds.centerX, y: bounds.centerY };
   });
