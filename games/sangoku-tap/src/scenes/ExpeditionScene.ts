@@ -548,7 +548,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.text(30, 99, "FINAL ENCOUNTER", 11, `#${bossVisual.accent.toString(16).padStart(6, "0")}`)
         .setOrigin(0, 0)
         .setLetterSpacing(2);
-      this.text(30, 130, bossVisual.title.replace("の", "\n"), 29, "#fff0d0")
+      this.text(30, 130, tr(this.lang, bossVisual.title.replace("の", "\n"), this.run?.regionId === "plains" ? "DAWN\nGUARDIAN" : this.run?.regionId === "pass" ? "EMERALD\nGUARDIAN" : "CRIMSON\nGUARDIAN"), 29, "#fff0d0")
         .setOrigin(0, 0)
         .setLineSpacing(6)
         .setName("boss-region-label");
@@ -852,7 +852,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.run.status !== "active") this.settle();
       else this.render();
       if (this.run.status === "active" && this.run.step === 9) return; // Entrance owns the input lock until it ends.
-      if (expeditionMessage(this.lang, this.run.message).startsWith("小競り合い")) {
+      if (this.run.message.startsWith("小競り合い")) {
         this.playSkirmishResolution(this.run.message.includes("勝利"));
       }
       const burst = this.text(225, 485, this.run.message, 13, "#fff0d0")
