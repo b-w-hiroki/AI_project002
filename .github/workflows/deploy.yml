@@ -125,6 +125,26 @@ jobs:
           mkdir -p dist/sangoku-tap
           cp -r games/sangoku-tap/dist/. dist/sangoku-tap/
 
+      # CrazyGames / PLiCy投稿用: 各ゲームのdist内容をZIP化して1つのActions artifactへまとめる
+      - name: Package release ZIPs
+        run: |
+          mkdir -p release-packages
+          for game in potion-workshop side-scroller color-match fist-legend karma-quest sangoku-tap; do
+            (
+              cd "games/$game/dist"
+              zip -qr "../../../release-packages/$game.zip" .
+            )
+          done
+          ls -lh release-packages
+
+      - name: Upload release packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-release-packages
+          path: release-packages/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
       - uses: actions/configure-pages@v5
         with:
           # Pages 未設定のリポジトリでも自動で有効化する
