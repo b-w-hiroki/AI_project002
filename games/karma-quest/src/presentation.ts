@@ -302,7 +302,7 @@ function showChoiceDelta(scene: KarmaScene, before: KarmaState, after: KarmaStat
   const afterStats = deriveStats(after);
   const factionDelta = FACTIONS
     .filter((faction) => after[faction] !== before[faction])
-    .map((faction) => `${FACTION_SHORT[faction]} +${after[faction] - before[faction]}`)
+    .map((faction) => `${factionShort(scene.lang ?? "en", faction)} +${after[faction] - before[faction]}`)
     .join("  ");
   const statDelta = [
     ["ATK", afterStats.atk - beforeStats.atk],

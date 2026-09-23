@@ -40,7 +40,6 @@ import {
   encounterChoiceLabel,
   encounterText as localizedEncounterText,
   factionLabel,
-  factionShort,
   legendTitleText,
   mandateLabel,
   requestText as localizedRequestText,
@@ -469,7 +468,7 @@ export class GameScene extends Phaser.Scene {
     const progress = this.karmaGroup.getByName(
       "progress",
     ) as Phaser.GameObjects.Text;
-    const factionLabel = this.karmaGroup.getByName(
+    const factionLabelText = this.karmaGroup.getByName(
       "factionLabel",
     ) as Phaser.GameObjects.Text;
     const requestText = this.karmaGroup.getByName(
@@ -480,7 +479,7 @@ export class GameScene extends Phaser.Scene {
     >;
 
     progress.setText(`${this.stage} / ${TOTAL_STAGES} ${tr(this.lang, "年目", "Year")}`);
-    factionLabel.setText(`【${factionLabel(this.lang, this.currentRequest.faction)}】`);
+    factionLabelText.setText(`【${factionLabel(this.lang, this.currentRequest.faction)}】`);
     requestText.setText(localizedRequestText(this.lang, this.currentRequest));
 
     for (const faction of FACTIONS) {
