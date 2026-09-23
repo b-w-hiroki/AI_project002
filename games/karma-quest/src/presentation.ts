@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 import {
   FACTIONS,
-  FACTION_LABEL,
   deriveStats,
   dominantFaction,
   type Faction,
@@ -215,7 +214,7 @@ function refreshJourneyScreen(scene: KarmaScene): void {
     if (activeFaction) {
       ui.frame.lineStyle(1.6, FACTION_COLORS[faction], 0.9).strokeRoundedRect(245, y - 13, 166, 26, 8);
     }
-    ui.factionLabels[i]?.setText(`${FACTION_SHORT[faction]}  ${karma[faction]}`);
+    ui.factionLabels[i]?.setText(`${factionShort(scene.lang ?? "en", faction)}  ${karma[faction]}`);
   });
 
   // Choice-impact connectors point toward the existing interactive buttons below this overlay.
