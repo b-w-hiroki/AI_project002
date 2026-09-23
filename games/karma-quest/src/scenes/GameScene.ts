@@ -1,5 +1,4 @@
 import {
-  DEITIES,
   scoreDeeds,
   nextMandate,
   type Deed,
