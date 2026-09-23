@@ -17,7 +17,7 @@
     <style>
       :root { --accent:217,180,90; --shell:#0d1713; --shell2:#183126; --chrome:#f6eed8; }
       * { box-sizing:border-box; }
-      html, body { margin:0; height:100%; touch-action:none; overscroll-behavior:none; }
+      html, body { margin:0; height:100%; touch-action:none; overscroll-behavior:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; }
       body {
         display:grid; place-items:center; overflow:hidden;
         padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
