@@ -32,6 +32,7 @@ import {
 import { effectiveAtk } from "../logic/roster";
 import { arenaSnapshot, arenaSummary } from "../logic/arena";
 import { REGIONS, regionById, type RegionId } from "../logic/regions";
+import { detectLang, expeditionMessage, generalName, regionText, roleName, tr, type Lang } from "../logic/i18n";
 
 const REGION_BOSS_VISUAL: Readonly<Record<RegionId, {
   accent: number;
@@ -68,6 +69,7 @@ const ART: Record<string, string> = {
 };
 const INK = "#f9ecd3";
 export class ExpeditionScene extends Phaser.Scene {
+  readonly lang: Lang = detectLang();
   private root!: Phaser.GameObjects.Container;
   private party: string[] = [];
   private run: Expedition | null = null;
@@ -269,12 +271,12 @@ export class ExpeditionScene extends Phaser.Scene {
       225,
       23,
       this.view === "camp"
-        ? "三国遠征録"
+        ? tr(this.lang, "三国遠征録", "Sangoku Expedition")
         : this.view === "formation"
-          ? "遠征の支度"
+          ? tr(this.lang, "遠征の支度", "Expedition Setup")
           : this.view === "result"
-            ? "遠征の記録"
-            : "街道をゆく",
+            ? tr(this.lang, "遠征の記録", "Expedition Record")
+            : tr(this.lang, "街道をゆく", "On the Road"),
       25,
     );
     if (this.view === "camp") this.renderCampaign();
@@ -294,7 +296,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.text(
       225,
       89,
-      `攻略 ${this.campaign.cleared.length}/3  ·  功績 ${this.campaign.merit}  ·  ${loadCurrency()} 銭`,
+      `${tr(this.lang, "攻略", "Cleared")} ${this.campaign.cleared.length}/3 · ${tr(this.lang, "功績", "Merit")} ${this.campaign.merit} · ${loadCurrency()} ${tr(this.lang, "銭", "Coins")}`,
       15,
       "#f3d29a",
     );
@@ -350,10 +352,10 @@ export class ExpeditionScene extends Phaser.Scene {
         p.x,
         p.y - 49,
         this.campaign.cleared.includes(r.id)
-          ? "踏破"
+          ? tr(this.lang, "踏破", "Cleared")
           : unlocked
-            ? `第${i + 1}章`
-            : "未開放",
+            ? `${tr(this.lang, "第", "Chapter ")}${i + 1}${tr(this.lang, "章", "")}`
+            : tr(this.lang, "未開放", "Locked"),
         12,
         unlocked ? "#f0d29b" : "#99a6a9",
       );
@@ -369,11 +371,11 @@ export class ExpeditionScene extends Phaser.Scene {
       });
     });
     this.panel(225, 390, 414, 61, 0x18252a, 0.94);
-    this.text(225, 365, `${region.subtitle}  /  ${region.boss}`, 19);
+    this.text(225, 365, `${regionText(this.lang, region).subtitle}  /  ${regionText(this.lang, region).boss}`, 19);
     this.text(
       225,
       395,
-      `収穫 ×${region.reward.toFixed(1)}  ·  初踏破 功績+5  ·  Rare装備`,
+      `${tr(this.lang, "収穫", "Reward")} ×${region.reward.toFixed(1)} · ${tr(this.lang, "初踏破 功績+5", "First Clear Merit +5")} · Rare ${tr(this.lang, "装備", "Gear")}`,
       14,
       "#f0d29b",
     );
@@ -385,7 +387,7 @@ export class ExpeditionScene extends Phaser.Scene {
       this.text(x, 544, ROLES[id]!, 12, "#dfbd7d");
     });
     if (!this.party.length)
-      this.text(225, 484, "編成を開いて、仲間を選ぼう", 17);
+      this.text(225, 484, tr(this.lang, "編成を開いて、仲間を選ぼう", "Open Formation and choose your squad"), 17);
     const arena = arenaSnapshot(troop, this.campaign, loadBestDistance());
     this.text(
       225,
@@ -398,7 +400,7 @@ export class ExpeditionScene extends Phaser.Scene {
       113,
       608,
       196,
-      `編成 ${this.party.length}/3 · 戦力${troop.power}`,
+      `${tr(this.lang, "編成", "Party")} ${this.party.length}/3 · ${tr(this.lang, "戦力", "Power")} ${troop.power}`,
       () => {
         this.view = "formation";
         this.render();
@@ -411,8 +413,8 @@ export class ExpeditionScene extends Phaser.Scene {
       608,
       196,
       max
-        ? "鍛錬 Lv.5 達成"
-        : `鍛錬 Lv.${this.campaign.training} → ${this.campaign.training + 1}`,
+        ? tr(this.lang, "鍛錬 Lv.5 達成", "Training Lv.5 Complete")
+        : `${tr(this.lang, "鍛錬", "Training")} Lv.${this.campaign.training} → ${this.campaign.training + 1}`,
       () => {
         this.campaign = train(this.campaign);
         saveCampaign(this.campaign);
@@ -424,8 +426,8 @@ export class ExpeditionScene extends Phaser.Scene {
       225,
       643,
       max
-        ? "部隊戦力 +40% · 全地域で有効"
-        : `鍛錬：功績${cost}消費で戦力+8%  ／  3地点ごとに功績+1`,
+        ? tr(this.lang, "部隊戦力 +40% · 全地域で有効", "Squad Power +40% · all regions")
+        : `${tr(this.lang, "鍛錬", "Training")}: ${tr(this.lang, "功績", "Merit")} ${cost} → ${tr(this.lang, "戦力", "Power")} +8% / ${tr(this.lang, "3地点ごとに功績+1", "Merit +1 every 3 stops")}`,
       12,
       "#e0caaa",
     );
@@ -433,7 +435,7 @@ export class ExpeditionScene extends Phaser.Scene {
       225,
       692,
       404,
-      `${region.name}へ出陣`,
+      `${regionText(this.lang, region).name} ${tr(this.lang, "へ出陣", "Sortie")}`,
       () => {
         if (
           !isUnlocked(this.campaign, this.selectedRegion) ||
@@ -448,12 +450,12 @@ export class ExpeditionScene extends Phaser.Scene {
       },
       troop.ids.length > 0,
     );
-    this.button(225, 752, 404, "拠点へ · 武将募集と装備", () =>
+    this.button(225, 752, 404, tr(this.lang, "拠点へ · 武将募集と装備", "Base · Recruit and Equip"), () =>
       this.scene.start("GameScene"),
     );
   }
   private renderCamp(): void {
-    this.text(225, 90, "3人の役割で、旅の戦い方が変わる", 15, "#e0c38d");
+    this.text(225, 90, tr(this.lang, "3人の役割で、旅の戦い方が変わる", "Three roles shape how the expedition fights"), 15, "#e0c38d");
     const owned = loadOwnedGenerals(),
       eq = loadEquippedMap();
     GENERAL_POOL.forEach((g, i) => {
@@ -473,14 +475,14 @@ export class ExpeditionScene extends Phaser.Scene {
       this.text(
         x + 22,
         y - 37,
-        `${selected ? "● " : ""}${g.name}  ${g.rarity}`,
+        `${selected ? "● " : ""}${generalName(this.lang, g.id, g.name)}  ${g.rarity}`,
         14,
         has ? INK : "#a29387",
       );
       this.text(
         x + 22,
         y - 13,
-        `${ROLES[g.id]} · ${has ? effectiveAtk(g, eq) : "未所持"}`,
+        `${roleName(this.lang, ROLES[g.id])} · ${has ? effectiveAtk(g, eq) : tr(this.lang, "未所持", "Not Owned")}`,
         13,
         "#dfbd7d",
       );
@@ -501,27 +503,27 @@ export class ExpeditionScene extends Phaser.Scene {
     this.text(
       225,
       578,
-      `編成 ${this.party.length}/3  ／ 戦力 ${troop.power}  ／ 所持 ${loadCurrency()} 銭`,
+      `${tr(this.lang, "編成", "Party")} ${this.party.length}/3 / ${tr(this.lang, "戦力", "Power")} ${troop.power} / ${tr(this.lang, "所持", "Coins")} ${loadCurrency()}`,
       15,
     );
     this.text(
       225,
       610,
-      "帰還で収穫を全額確保。敗走では今回の収穫が半分に。\n獲得済みの武将・装備・コインは失いません。",
+      tr(this.lang, "帰還で収穫を全額確保。敗走では今回の収穫が半分に。\n獲得済みの武将・装備・コインは失いません。", "Return safely to secure all spoils. Defeat keeps half of this run.\nOwned generals, gear, and coins are never lost."),
       12,
     ).setAlign("center");
     this.button(
       225,
       686,
       380,
-      "この編成で戦略地図へ",
+      tr(this.lang, "この編成で戦略地図へ", "Use This Formation"),
       () => {
         this.view = "camp";
         this.render();
       },
       this.party.length > 0,
     );
-    this.button(225, 746, 380, "拠点へ戻る・装備を整える", () =>
+    this.button(225, 746, 380, tr(this.lang, "拠点へ戻る・装備を整える", "Return to Base / Adjust Gear"), () =>
       this.scene.start("GameScene"),
     );
   }
@@ -534,7 +536,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.root.add(shade);
     shade.fillStyle(0x0e1721, boss ? 0.35 : 0.12).fillRect(0, 0, 450, 544);
     shade.fillStyle(0x102027, 0.96).fillRect(0, 0, 450, 75);
-    this.text(24, 18, region.name, 18).setOrigin(0, 0);
+    this.text(24, 18, regionText(this.lang, region).name, 18).setOrigin(0, 0);
     this.text(422, 21, `${r.step} / 10`, 16, "#eac68d").setOrigin(1, 0);
     shade.lineStyle(2, 0x526364).lineBetween(26, 60, 424, 60);
     for (let i = 0; i <= 10; i++)
@@ -557,8 +559,8 @@ export class ExpeditionScene extends Phaser.Scene {
         225,
         105,
         r.route === "mountain"
-          ? "山道を越える · 収穫1.7倍"
-          : "夕暮れの街道を進む",
+          ? tr(this.lang, "山道を越える · 収穫1.7倍", "Mountain Route · Loot ×1.7")
+          : tr(this.lang, "夕暮れの街道を進む", "Advance along the road"),
         15,
         "#fff1d6",
       ).setStroke("#263038", 3);
@@ -603,11 +605,11 @@ export class ExpeditionScene extends Phaser.Scene {
     this.text(
       24,
       577,
-      `兵力 ${r.hp}`,
+      `${tr(this.lang, "兵力", "Troops")} ${r.hp}`,
       24,
       r.hp < 35 ? "#ef9d89" : "#eef0da",
     ).setOrigin(0, 0);
-    this.text(424, 581, `持帰り予定 ${r.loot} 銭`, 17, "#f0ce8b").setOrigin(
+    this.text(424, 581, `${tr(this.lang, "持帰り予定", "Projected Loot")} ${r.loot} ${tr(this.lang, "銭", "Coins")}`, 17, "#f0ce8b").setOrigin(
       1,
       0,
     );
@@ -621,30 +623,30 @@ export class ExpeditionScene extends Phaser.Scene {
       this.text(
         225,
         629,
-        `分岐 · 次戦勝率 街道 ${Math.round(victoryChance({ ...r, route: "road" }) * 100)}% / 山道 ${Math.round(victoryChance({ ...r, route: "mountain" }) * 100)}%`,
+        `${tr(this.lang, "分岐 · 次戦勝率", "Route Choice · Next Win Chance")} ${tr(this.lang, "街道", "Road")} ${Math.round(victoryChance({ ...r, route: "road" }) * 100)}% / ${tr(this.lang, "山道", "Mountain")} ${Math.round(victoryChance({ ...r, route: "mountain" }) * 100)}%`,
         13,
         "#e3d2b4",
       );
-      this.button(124, 676, 192, "街道へ", () => this.route("road"));
-      this.button(326, 676, 192, "山道へ · 収穫1.7倍", () =>
+      this.button(124, 676, 192, tr(this.lang, "街道へ", "Road"), () => this.route("road"));
+      this.button(326, 676, 192, tr(this.lang, "山道へ · 収穫1.7倍", "Mountain · Loot ×1.7"), () =>
         this.route("mountain"),
       );
     } else {
       this.text(
         225,
         629,
-        `${boss ? "関門戦" : "次の戦闘"}の勝率 ${Math.round(victoryChance(r) * 100)}%`,
+        `${boss ? tr(this.lang, "関門戦", "Gate Battle") : tr(this.lang, "次の戦闘", "Next Battle")} ${tr(this.lang, "の勝率", "Win Chance")} ${Math.round(victoryChance(r) * 100)}%`,
         13,
         "#e3d2b4",
       );
-      this.button(225, 676, 402, boss ? "守将に挑む" : "進軍する", () =>
+      this.button(225, 676, 402, boss ? tr(this.lang, "守将に挑む", "Challenge Guardian") : tr(this.lang, "進軍する", "Advance"), () =>
         this.advance(),
       );
     }
     const back = this.text(
       225,
       718,
-      `帰還して ${r.loot} 銭を確保`,
+      `${tr(this.lang, "帰還して", "Return and secure")} ${r.loot} ${tr(this.lang, "銭", "Coins")}`,
       14,
       "#c2cbc4",
     );
@@ -661,7 +663,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.text(
       225,
       766,
-      `敗走時 ${Math.floor(r.loot / 2)} 銭 · 自動保存`,
+      `${tr(this.lang, "敗走時", "On Defeat")} ${Math.floor(r.loot / 2)} ${tr(this.lang, "銭", "Coins")} · ${tr(this.lang, "自動保存", "Auto Save")}`,
       11,
       "#9eaaa5",
     );
@@ -831,7 +833,7 @@ export class ExpeditionScene extends Phaser.Scene {
       const verdict = this.text(
         225,
         462,
-        this.run.status === "clear" ? "関 門 突 破" : "一 度 、 退 こ う",
+        this.run.status === "clear" ? tr(this.lang, "関 門 突 破", "GATE CLEARED") : tr(this.lang, "一 度 、 退 こ う", "RETREAT"),
         28,
         "#fff1c9",
       ).setStroke("#241920", 5);
@@ -850,7 +852,7 @@ export class ExpeditionScene extends Phaser.Scene {
       if (this.run.status !== "active") this.settle();
       else this.render();
       if (this.run.status === "active" && this.run.step === 9) return; // Entrance owns the input lock until it ends.
-      if (this.run.message.startsWith("小競り合い")) {
+      if (expeditionMessage(this.lang, this.run.message).startsWith("小競り合い")) {
         this.playSkirmishResolution(this.run.message.includes("勝利"));
       }
       const burst = this.text(225, 485, this.run.message, 13, "#fff0d0")
@@ -1078,7 +1080,7 @@ export class ExpeditionScene extends Phaser.Scene {
         }
       }
       this.panel(353, 254, 104, 32, 0x4b252c, 0.92);
-      this.text(353, 244, "敵兵", 14, "#ffd7bd");
+      this.text(353, 244, tr(this.lang, "敵兵", "Enemy"), 14, "#ffd7bd");
     }
   }
   private route(route: "road" | "mountain"): void {
@@ -1119,32 +1121,32 @@ export class ExpeditionScene extends Phaser.Scene {
       129,
       r.status === "clear"
         ? this.campaign.cleared.length === 3
-          ? "三地域、完全踏破！"
-          : "関門を突破！"
+          ? tr(this.lang, "三地域、完全踏破！", "All three regions cleared!")
+          : tr(this.lang, "関門を突破！", "Gate cleared!")
         : r.status === "defeat"
-          ? "仲間と立て直そう"
-          : "収穫を持ち帰った",
+          ? tr(this.lang, "仲間と立て直そう", "Regroup with your allies")
+          : tr(this.lang, "収穫を持ち帰った", "Spoils secured"),
       25,
     );
     r.troop.ids.forEach((id, i) => this.portrait(id, 110 + i * 115, 287, 140));
-    this.text(225, 385, `到達 ${r.step}/10  ／ 兵力 ${r.hp}`, 18);
-    this.text(225, 428, `持ち帰り  ${expeditionReward(r)} 銭`, 29, "#f4cb7f");
+    this.text(225, 385, `${tr(this.lang, "到達", "Reached")} ${r.step}/10 / ${tr(this.lang, "兵力", "Troops")} ${r.hp}`, 18);
+    this.text(225, 428, `${tr(this.lang, "持ち帰り", "Secured")} ${expeditionReward(r)} ${tr(this.lang, "銭", "Coins")}`, 29, "#f4cb7f");
     this.text(
       225,
       481,
       r.status === "clear"
-        ? "Rare装備を1個入手"
+        ? tr(this.lang, "Rare装備を1個入手", "Rare Gear +1")
         : r.status !== "defeat" && r.step >= 3
-          ? "Common装備を1個入手"
+          ? tr(this.lang, "Common装備を1個入手", "Common Gear +1")
           : r.status === "defeat"
-            ? "今回の未確保コインの半分を回収"
-            : "武将・装備はそのまま",
+            ? tr(this.lang, "今回の未確保コインの半分を回収", "Recovered half of unsecured Coins")
+            : tr(this.lang, "武将・装備はそのまま", "Generals and gear retained"),
       16,
     );
     this.text(
       225,
       525,
-      `功績 +${this.earnedMerit}  ／  所持 ${this.campaign.merit}`,
+      `${tr(this.lang, "功績", "Merit")} +${this.earnedMerit} / ${tr(this.lang, "所持", "Total")} ${this.campaign.merit}`,
       21,
       "#9cdbc3",
     );
@@ -1157,20 +1159,20 @@ export class ExpeditionScene extends Phaser.Scene {
       225,
       560,
       this.firstClear && next
-        ? `${next.name}が開放！`
+        ? `${regionText(this.lang, next).name} ${tr(this.lang, "が開放！", "unlocked!")}`
         : this.campaign.merit >= trainingCost(this.campaign.training) &&
             this.campaign.training < MAX_TRAINING
-          ? "鍛錬で部隊を強くできる！"
-          : "3地点ごとに功績。帰還して少しずつ強く。",
+          ? tr(this.lang, "鍛錬で部隊を強くできる！", "Training can strengthen your squad!")
+          : tr(this.lang, "3地点ごとに功績。帰還して少しずつ強く。", "Earn Merit every 3 stops. Return often and grow steadily."),
       14,
     );
-    this.button(225, 607, 348, "戦略地図へ · 次の攻略へ", () => {
+    this.button(225, 607, 348, tr(this.lang, "戦略地図へ · 次の攻略へ", "Strategy Map · Next Region"), () => {
       this.view = "camp";
       this.run = null;
       if (next) this.selectedRegion = next.id;
       this.render();
     });
-    this.button(225, 696, 380, "拠点へ・ガチャと装備", () =>
+    this.button(225, 696, 380, tr(this.lang, "拠点へ・ガチャと装備", "Base · Gacha and Gear"), () =>
       this.scene.start("GameScene"),
     );
   }
