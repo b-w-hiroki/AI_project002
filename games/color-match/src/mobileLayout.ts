@@ -5,8 +5,7 @@ import {
   COLORS,
   TURBO_ENTRY_STREAK,
   WRITING_MODES,
-  WRITING_MODE_LABEL,
-  hexForColorId,
+    hexForColorId,
   nameForColorId,
   summarizeSession,
   type Round,
@@ -20,10 +19,12 @@ import {
   metricAvgReaction,
 } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
+import { tr, writingModeLabel, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
+  lang?: Lang;
   phase?: "title" | "playing" | "result";
   sessionRemaining?: number;
   sessionDurationMs?: number;
@@ -158,7 +159,7 @@ function build(scene: Runtime): LandscapeUi {
 
   const root = scene.add.container(0, 0).setDepth(4200).setVisible(false);
   sky(scene, root);
-  text(scene, root, 22, 22, "カラーマッチ", 26, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#245bc4", 5);
+  text(scene, root, 22, 22, tr(scene.lang ?? "en", "カラーマッチ", "Color Match"), 26, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#245bc4", 5);
   text(scene, root, 24, 55, "60 SEC ARCADE · COLOR / WORD SWITCH", 9, "#e8f8ff", "800").setOrigin(0, 0.5);
 
   const title = scene.add.container(0, 0);
@@ -170,8 +171,8 @@ function build(scene: Runtime): LandscapeUi {
   play.add(flowGlow);
 
   panel(scene, title, 250, 225, 400, 300, 0x164f82, 0x9be9ff, 0.94, 22);
-  text(scene, title, 250, 118, "色と文字のズレを見抜け！", 25, "#ffffff", "900");
-  text(scene, title, 250, 170, "60秒で総合力。20秒練習で弱点集中。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", 14, "#def5ff", "700");
+  text(scene, title, 250, 118, tr(scene.lang ?? "en", "色と文字のズレを見抜け！", "Spot the mismatch between word and color!"), 25, "#ffffff", "900");
+  text(scene, title, 250, 170, tr(scene.lang ?? "en", "60秒で総合力。20秒練習で弱点集中。\n指示が『文字の意味』か『文字の色』かを見て\n正しいカードをタップ。", "60 seconds tests overall skill. 20-second practice targets your weakness.\nFollow WORD MEANING or INK COLOR\nand tap the correct card."), 14, "#def5ff", "700");
   const titleMode = text(scene, title, 250, 244, "", 13, "#fff1a8", "900");
 
   const modeXs = [92, 194, 296, 398];
@@ -182,8 +183,8 @@ function build(scene: Runtime): LandscapeUi {
     title.add(hit);
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
   });
-  button(scene, title, 640, 250, 250, 62, "60秒チャレンジ", () => invoke(scene, "startSession", "challenge"));
-  button(scene, title, 640, 326, 250, 54, "20秒 弱点練習", () => invoke(scene, "startPractice"), 0x4b75d6);
+  button(scene, title, 640, 250, 250, 62, tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge"), () => invoke(scene, "startSession", "challenge"));
+  button(scene, title, 640, 326, 250, 54, tr(scene.lang ?? "en", "20秒 弱点練習", "20-Second Practice"), () => invoke(scene, "startPractice"), 0x4b75d6);
   panel(scene, title, 640, 150, 250, 120, 0xffffff, 0x8ac8f4, 0.94, 18);
   text(scene, title, 640, 128, "BEST", 11, "#2b5b87", "900");
   text(scene, title, 640, 158, `${loadBestScore()} SCORE`, 27, "#ff7a3d", "900");
@@ -196,7 +197,7 @@ function build(scene: Runtime): LandscapeUi {
   panel(scene, play, 247, 92, 250, 74, 0x164f82, 0x90e6ff, 0.95, 15);
   const ruleText = text(scene, play, 247, 92, "", 17, "#ffffff", "900");
   panel(scene, play, 228, 230, 300, 180, 0xffffff, 0x8ac8f4, 0.98, 18);
-  text(scene, play, 228, 168, "お題", 10, "#426c99", "900");
+  text(scene, play, 228, 168, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#426c99", "900");
   const promptText = text(scene, play, 228, 232, "", 50, "#253c58", "900");
   const chainText = text(scene, play, 342, 335, "0\nCHAIN!", 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
 
@@ -236,7 +237,7 @@ function build(scene: Runtime): LandscapeUi {
   panel(scene, result, 400, 225, 620, 330, 0x164f82, 0x9be9ff, 0.96, 22);
   const resultHeading = text(scene, result, 400, 118, "RESULT", 30, "#ffffff", "900");
   const resultStats = text(scene, result, 400, 215, "", 17, "#e8f8ff", "800");
-  button(scene, result, 400, 340, 280, 62, "もう一度あそぶ", () => invoke(scene, "startSession"), 0xff7a3d);
+  button(scene, result, 400, 340, 280, 62, tr(scene.lang ?? "en", "もう一度あそぶ", "Play Again"), () => invoke(scene, "startSession"), 0xff7a3d);
 
   const ui = {
     root,
@@ -270,7 +271,7 @@ function refresh(scene: Runtime): void {
   ui.title.setVisible(scene.phase === "title");
   ui.play.setVisible(scene.phase === "playing");
   ui.result.setVisible(scene.phase === "result");
-  ui.titleMode.setText(`表記: ${WRITING_MODE_LABEL[scene.writingMode ?? "hiragana"]}`);
+  ui.titleMode.setText(`${tr(scene.lang ?? "en", "表記", "Style")}: ${writingModeLabel(scene.lang ?? "en", scene.writingMode ?? "hiragana")}`);
 
   if (scene.phase === "playing" && scene.currentRound) {
     const duration = scene.sessionDurationMs ?? CHALLENGE_MS;
@@ -299,7 +300,7 @@ function refresh(scene: Runtime): void {
       .beginPath().arc(88, 115, 47, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).strokePath();
     ui.timerText.setText(String(seconds)).setColor(seconds <= 10 ? "#ffd0d8" : "#ffffff");
     ui.scoreText.setText(String(score).padStart(4, "0"));
-    ui.ruleText.setText(scene.currentRound.judgeMode === "color" ? "『文字の色』でタップ" : "『文字の意味』でタップ");
+    ui.ruleText.setText(scene.currentRound.judgeMode === "color" ? tr(scene.lang ?? "en", "『文字の色』でタップ", "Tap by INK COLOR") : tr(scene.lang ?? "en", "『文字の意味』でタップ", "Tap by WORD MEANING"));
     ui.promptText
       .setText(nameForColorId(scene.currentRound.promptWord, scene.writingMode ?? "hiragana"))
       .setColor(`#${hexForColorId(scene.currentRound.promptInk).toString(16).padStart(6, "0")}`);
@@ -307,10 +308,10 @@ function refresh(scene: Runtime): void {
       .setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
     ui.nextText.setText(
       scene.sessionMode === "practice"
-        ? `WEAK POINT  ${scene.practiceJudgeMode === "color" ? "文字の色" : "文字の意味"} を集中練習`
+        ? `WEAK POINT  ${scene.practiceJudgeMode === "color" ? tr(scene.lang ?? "en", "文字の色", "INK COLOR") : tr(scene.lang ?? "en", "文字の意味", "WORD MEANING")}`
         : until <= 2000
-          ? "RULE SHIFT まもなく！"
-          : `NEXT RULE ${Math.ceil(until / 1000)}秒  ·  BEST ${loadBestScore()}`,
+          ? tr(scene.lang ?? "en", "RULE SHIFT まもなく！", "RULE SHIFT SOON!")
+          : `NEXT RULE ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`,
     );
     ui.answers.forEach((answer, i) => answer.text.setText(nameForColorId(COLORS[i]!.id, scene.writingMode ?? "hiragana")));
   }
@@ -337,8 +338,8 @@ function refresh(scene: Runtime): void {
       return `${label} ${accuracy}%${reaction ? ` / ${reaction}ms` : ""}`;
     };
     ui.resultStats.setText(
-      `${scene.sessionMode === "practice" ? "20秒弱点練習" : "60秒チャレンジ"} · 正答率 ${Math.round(summary.accuracy * 100)}% · 平均 ${Math.round(summary.avgReactionMs)}ms\n` +
-      `${metric("content", "意味")}   ·   ${metric("color", "色")}   ·   ${metric("switch", "切替")}`,
+      `${scene.sessionMode === "practice" ? tr(scene.lang ?? "en", "20秒弱点練習", "20-Second Practice") : tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge")} · ${tr(scene.lang ?? "en", "正答率", "Accuracy")} ${Math.round(summary.accuracy * 100)}% · ${tr(scene.lang ?? "en", "平均", "Avg")} ${Math.round(summary.avgReactionMs)}ms\n` +
+      `${metric("content", tr(scene.lang ?? "en", "意味", "Word"))} · ${metric("color", tr(scene.lang ?? "en", "色", "Color"))} · ${metric("switch", tr(scene.lang ?? "en", "切替", "Switch"))}`,
     );
   }
 }
