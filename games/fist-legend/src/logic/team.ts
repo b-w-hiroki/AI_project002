@@ -5,13 +5,14 @@ export interface FighterProfile {
   name: string;
   role: string;
   accent: number;
+  specialty: "punch" | "kick" | "ki" | null;
 }
 
 export const FIGHTERS: readonly FighterProfile[] = [
-  { id: "ryuga", name: "竜牙", role: "攻守の基準", accent: 0xffffff },
-  { id: "renka", name: "蓮花", role: "連撃", accent: 0xffb6c9 },
-  { id: "gaku", name: "岳", role: "剛力", accent: 0xd6b078 },
-  { id: "mei", name: "冥", role: "気功", accent: 0x9da8ff },
+  { id: "ryuga", name: "竜牙", role: "攻守の基準", accent: 0xffffff, specialty: null },
+  { id: "renka", name: "蓮花", role: "連撃・拳", accent: 0xffb6c9, specialty: "punch" },
+  { id: "gaku", name: "岳", role: "剛力・蹴", accent: 0xd6b078, specialty: "kick" },
+  { id: "mei", name: "冥", role: "気功・気", accent: 0x9da8ff, specialty: "ki" },
 ] as const;
 
 export const MAX_TEAM_SIZE = 3;
@@ -38,4 +39,14 @@ export function toggleTeamMember(team: readonly FighterId[], id: FighterId): Fig
 
 export function teamLabel(team: readonly FighterId[]): string {
   return normalizeTeam(team).map(id => fighterById(id).name).join(" / ");
+}
+
+
+/** 得意技は通常技ダメージを18%だけ伸ばす。交代の意味を持たせつつ、固定キャラ必須にはしない。 */
+export function fighterMoveMultiplier(
+  id: FighterId,
+  move: "punch" | "kick" | "ki",
+): number {
+  const fighter = fighterById(id);
+  return fighter.specialty === move ? 1.18 : 1;
 }
