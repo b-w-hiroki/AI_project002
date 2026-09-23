@@ -1,6 +1,5 @@
 import {
   OPPONENTS,
-  MOVE_TELL,
   plannedMove,
   type Opponent,
 } from "../logic/opponent";
@@ -11,7 +10,6 @@ import {
   ClashResult,
   MAX_HP,
   MoveType,
-  MOVE_LABEL,
   OUGI_GAUGE_MAX,
   applyBeat,
   applyHiddenCommand,
@@ -46,11 +44,25 @@ import {
   FIGHTERS,
   fighterById,
   fighterMoveMultiplier,
-  teamLabel,
   toggleTeamMember,
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
+import {
+  detectLang,
+  fighterName,
+  gachaName,
+  moveLabel,
+  moveTell,
+  opponentHint,
+  opponentName,
+  opponentType,
+  storyClear,
+  storyIntro,
+  storyTitle,
+  tr,
+  type Lang,
+} from "../logic/i18n";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -118,10 +130,10 @@ const GACHA_CHAR_IMAGE: Readonly<Record<string, string>> = {
 
 type FighterSprite = Phaser.GameObjects.Image | Phaser.GameObjects.Graphics;
 
-const OPPONENT_VISUAL: Readonly<Record<Opponent, { accent: number; glow: number; label: string }>> = {
-  rush: { accent: 0xe6533f, glow: 0xffad66, label: "猛攻型" },
-  counter: { accent: 0x4ca67a, glow: 0x8ce6bd, label: "反撃型" },
-  charge: { accent: 0x576ccf, glow: 0xaebaff, label: "気功型" },
+const OPPONENT_VISUAL: Readonly<Record<Opponent, { accent: number; glow: number }>> = {
+  rush: { accent: 0xe6533f, glow: 0xffad66 },
+  counter: { accent: 0x4ca67a, glow: 0x8ce6bd },
+  charge: { accent: 0x576ccf, glow: 0xaebaff },
 };
 
 export class GameScene extends Phaser.Scene {
@@ -178,6 +190,7 @@ export class GameScene extends Phaser.Scene {
       ? localStorage.getItem(SOUND_PREF_KEY) !== "off"
       : true;
   private soundIcon!: Phaser.GameObjects.Graphics;
+  private lang: Lang = "en";
 
   constructor() {
     super("GameScene");
@@ -229,6 +242,8 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x1a1410);
+    this.lang = detectLang();
+    document.documentElement.lang = this.lang;
     this.selectedTeam = loadTeam();
     this.buildTitleScreen();
     this.buildBattleScreen();
@@ -277,13 +292,13 @@ export class GameScene extends Phaser.Scene {
     topBar.fillStyle(0x000000, 0.4);
     topBar.fillRect(0, 0, 800, 58);
     const title = this.add
-      .text(24, 29, "覇拳伝", { ...TYPE.h2, fontSize: "22px", color: THEME.textPrimary })
+      .text(24, 29, tr(this.lang, "覇拳伝", "Fist Legend"), { ...TYPE.h2, fontSize: "22px", color: THEME.textPrimary })
       .setOrigin(0, 0.5);
     const currencyPill = drawPill(this, 590, 29, 110, 34, "");
     const winPill = drawPill(this, 706, 29, 96, 34, "");
 
     const tagline = this.add
-      .text(400, 100, "この拳で、頂を掴め", {
+      .text(400, 100, tr(this.lang, "この拳で、頂を掴め", "Claim the summit with your fists"), {
         ...TYPE.h2,
         fontSize: "20px",
         color: THEME.textPrimary,
@@ -302,7 +317,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         400,
         372,
-        "拳は気に、気は蹴に、蹴は拳に有利。読み合いで奥義を溜め、60秒でHPを多く残した方が勝利。",
+        tr(this.lang, "拳は気に、気は蹴に、蹴は拳に有利。読み合いで奥義を溜め、60秒でHPを多く残した方が勝利。", "Punch beats Ki, Ki beats Kick, and Kick beats Punch. Read your rival, build your special gauge, and finish 60 seconds with more HP."),
         { ...TYPE.small, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -313,7 +328,7 @@ export class GameScene extends Phaser.Scene {
       412,
       140,
       54,
-      "対戦",
+      tr(this.lang, "対戦", "Battle"),
       () => {
         this.playSound(sfx.buttonTap);
         this.startSingleBattle();
@@ -330,7 +345,7 @@ export class GameScene extends Phaser.Scene {
       412,
       140,
       54,
-      "3連戦",
+      tr(this.lang, "3連戦", "Gauntlet"),
       () => {
         this.playSound(sfx.buttonTap);
         this.startSeries();
@@ -347,7 +362,7 @@ export class GameScene extends Phaser.Scene {
       412,
       140,
       54,
-      "物語",
+      tr(this.lang, "物語", "Story"),
       () => {
         this.playSound(sfx.buttonTap);
         this.startStory();
@@ -364,7 +379,7 @@ export class GameScene extends Phaser.Scene {
       412,
       140,
       54,
-      "ガチャ",
+      tr(this.lang, "ガチャ", "Gacha"),
       () => {
         this.playSound(sfx.buttonTap);
         this.openGacha();
@@ -387,7 +402,7 @@ export class GameScene extends Phaser.Scene {
         474,
         128,
         34,
-        fighter.name,
+        fighterName(this.lang, fighter.id),
         () => this.toggleTeamMember(fighter.id),
         {
           fontSize: "12px",
@@ -433,7 +448,7 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.setData("currencyPill", currencyPill);
     this.titleGroup.setData("winPill", winPill);
     this.opponentHint = this.add
-      .text(400, 564, OPPONENTS[0]!.hint, {
+      .text(400, 564, opponentHint(this.lang, OPPONENTS[0]!.id), {
         fontSize: "15px",
         color: "#f6d8a0",
       })
@@ -446,10 +461,10 @@ export class GameScene extends Phaser.Scene {
         515,
         190,
         44,
-        enemy.name,
+        opponentName(this.lang, enemy.id),
         () => {
           this.opponent = enemy.id;
-          this.opponentHint.setText(enemy.hint);
+          this.opponentHint.setText(opponentHint(this.lang, enemy.id));
           this.selectionButtons.forEach((b, j) =>
             b.container.setAlpha(i === j ? 1 : 0.55),
           );
@@ -471,7 +486,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshTeamSelection(): void {
-    this.teamSummary?.setText(`編成 ${this.selectedTeam.length}/3 · ${teamLabel(this.selectedTeam)} · 先頭が出場`);
+    this.teamSummary?.setText(`${tr(this.lang, "編成", "TEAM")} ${this.selectedTeam.length}/3 · ${this.selectedTeam.map(id => fighterName(this.lang, id)).join(" / ")} · ${tr(this.lang, "先頭が出場", "leader starts")}`);
     this.teamButtons.forEach((button, index) => {
       const fighter = FIGHTERS[index];
       button.container.setAlpha(fighter && this.selectedTeam.includes(fighter.id) ? 1 : 0.42);
@@ -511,7 +526,7 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(5, active.accent === 0xffffff ? 0xffd88a : active.accent, 0.86)
       .setDepth(15);
     const label = this.add
-      .text(this.playerSprite.x, this.playerSprite.y - 145, `CHANGE!  ${active.name}`, {
+      .text(this.playerSprite.x, this.playerSprite.y - 145, `CHANGE!  ${fighterName(this.lang, active.id)}`, {
         fontSize: "22px",
         color: "#fff4d0",
         fontStyle: "900",
@@ -571,8 +586,8 @@ export class GameScene extends Phaser.Scene {
     const winPill = this.titleGroup.getData("winPill") as {
       setText: (t: string) => void;
     };
-    currencyPill.setText(`豪拳石 ${loadCurrency()}`);
-    winPill.setText(`勝利 ${loadWinCount()}`);
+    currencyPill.setText(`${tr(this.lang, "豪拳石", "Fist Gems")} ${loadCurrency()}`);
+    winPill.setText(`${tr(this.lang, "勝利", "Wins")} ${loadWinCount()}`);
     this.refreshTeamSelection();
   }
 
@@ -601,7 +616,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0, 0.5)
       .setName("player-label");
     const enemyLabel = this.add
-      .text(760, 12, "対戦相手", { ...TYPE.small, color: THEME.textMuted })
+      .text(760, 12, tr(this.lang, "対戦相手", "OPPONENT"), { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(1, 0.5);
 
     this.timerText = this.add
@@ -642,7 +657,7 @@ export class GameScene extends Phaser.Scene {
     ougiBg.fillRoundedRect(300, 420, 200, 14, 6);
     this.ougiFill = this.add.graphics();
     const ougiLabel = this.add
-      .text(400, 405, "奥義ゲージ", {
+      .text(400, 405, tr(this.lang, "奥義ゲージ", "SPECIAL GAUGE"), {
         ...TYPE.small,
         color: THEME.textPrimary,
         stroke: "#1a1410",
@@ -657,7 +672,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "拳",
+      moveLabel(this.lang, "punch"),
       () => this.onPlayerMove("punch"),
       {
         fontSize: "22px",
@@ -670,7 +685,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "蹴",
+      moveLabel(this.lang, "kick"),
       () => this.onPlayerMove("kick"),
       {
         fontSize: "22px",
@@ -683,7 +698,7 @@ export class GameScene extends Phaser.Scene {
       buttonY,
       100,
       56,
-      "気",
+      moveLabel(this.lang, "ki"),
       () => this.onPlayerMove("ki"),
       {
         fontSize: "22px",
@@ -697,7 +712,7 @@ export class GameScene extends Phaser.Scene {
       545,
       220,
       44,
-      "奥義発動！",
+      tr(this.lang, "奥義発動！", "SPECIAL!"),
       () => this.onPlayerOugi(),
       {
         fontSize: "16px",
@@ -712,7 +727,7 @@ export class GameScene extends Phaser.Scene {
       545,
       120,
       44,
-      "交代",
+      tr(this.lang, "交代", "SWITCH"),
       () => this.switchFighter(),
       {
         fontSize: "15px",
@@ -822,15 +837,15 @@ export class GameScene extends Phaser.Scene {
   private resultPrimaryLabel(): string {
     if (this.storyActive) {
       if (this.lastOutcome === "playerWin" && this.storyChapterIndex < STORY_CHAPTERS.length - 1) {
-        return `次章へ (${this.storyChapterIndex + 2}/${STORY_CHAPTERS.length})`;
+        return `${tr(this.lang, "次章へ", "Next Chapter")} (${this.storyChapterIndex + 2}/${STORY_CHAPTERS.length})`;
       }
-      return this.lastOutcome === "playerWin" ? "物語を再演" : "この章を再挑戦";
+      return this.lastOutcome === "playerWin" ? tr(this.lang, "物語を再演", "Replay Story") : tr(this.lang, "この章を再挑戦", "Retry Chapter");
     }
-    if (!this.seriesActive) return "もう一度あそぶ";
+    if (!this.seriesActive) return tr(this.lang, "もう一度あそぶ", "Play Again");
     if (this.lastOutcome === "playerWin" && this.seriesIndex < SERIES_ORDER.length - 1) {
-      return `次の相手へ (${this.seriesIndex + 2}/${SERIES_ORDER.length})`;
+      return `${tr(this.lang, "次の相手へ", "Next Rival")} (${this.seriesIndex + 2}/${SERIES_ORDER.length})`;
     }
-    return this.lastOutcome === "playerWin" ? "もう一度3連戦" : "3連戦を再挑戦";
+    return this.lastOutcome === "playerWin" ? tr(this.lang, "もう一度3連戦", "Replay Gauntlet") : tr(this.lang, "3連戦を再挑戦", "Retry Gauntlet");
   }
 
   private startBattle(): void {
@@ -932,7 +947,7 @@ export class GameScene extends Phaser.Scene {
     this.battle = applyHiddenCommand(this.battle);
     const dealt = before - this.battle.enemyHp;
     this.playSound(sfx.ougi);
-    this.showClash("advantage", "punch", "ki", "隠しコマンド発動！");
+    this.showClash("advantage", "punch", "ki", tr(this.lang, "隠しコマンド発動！", "SECRET TECHNIQUE!"));
     this.flashHit(this.enemySprite, dealt);
     if (dealt > 0)
       this.spawnDamageText(
@@ -984,7 +999,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.battle = applyPlayerOugi(this.battle);
     this.playSound(sfx.ougi);
-    this.showClash("advantage", "punch", "punch", "奥義炸裂！");
+    this.showClash("advantage", "punch", "punch", tr(this.lang, "奥義炸裂！", "SPECIAL STRIKE!"));
     this.flashHit(this.enemySprite, 1);
     this.spawnDamageText(
       this.enemySprite.x,
@@ -1008,12 +1023,12 @@ export class GameScene extends Phaser.Scene {
   ): void {
     const text =
       overrideText ??
-      `${MOVE_LABEL[playerMove]} vs ${MOVE_LABEL[enemyMove]} ー ${
+      `${moveLabel(this.lang, playerMove)} vs ${moveLabel(this.lang, enemyMove)} — ${
         clash === "advantage"
-          ? "有利！"
+          ? tr(this.lang, "有利！", "ADVANTAGE!")
           : clash === "disadvantage"
-            ? "不利…"
-            : "相殺！"
+            ? tr(this.lang, "不利…", "DISADVANTAGE")
+            : tr(this.lang, "相殺！", "CLASH!")
       }`;
     // 同一フレーム内でshowClashが2回呼ばれる場合（通常技の直後に隠しコマンドが発動する等）、
     // 古いtweenが残ったまま新しいtweenを積むと表示が崩れることがあるため、先に停止させる
@@ -1034,7 +1049,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyAura.lineStyle(3, visual.accent, 0.56).strokeEllipse(620, 340, 168, 60);
     this.enemyAura.lineStyle(1, 0xffffff, 0.22).strokeEllipse(620, 340, 146, 50);
     this.opponentBadge
-      .setText(`${visual.label} · ${OPPONENTS.find(o => o.id === this.opponent)?.name ?? ""}`)
+      .setText(`${opponentType(this.lang, this.opponent)} · ${opponentName(this.lang, this.opponent)}`)
       .setStyle({ backgroundColor: `#${visual.accent.toString(16).padStart(6, "0")}` });
     if (intro) {
       this.opponentBadge.setAlpha(0).setScale(0.82);
@@ -1048,10 +1063,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private refreshTell(): void {
-    const enemy = OPPONENTS.find((o) => o.id === this.opponent)!;
     this.refreshOpponentVisual();
-    this.tell.setText(`${enemy.name}  ／  ${MOVE_TELL[this.nextEnemyMove]}
-拳 > 気 > 蹴 > 拳`);
+    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
+${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     this.tweens.add({
@@ -1141,7 +1155,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateTimerVisual(): void {
-    this.timerText.setText(`残り ${Math.ceil(this.timeRemainingSec)}秒`);
+    this.timerText.setText(`${tr(this.lang, "残り", "TIME")} ${Math.ceil(this.timeRemainingSec)}s`);
   }
 
   private finishBattle(timeUp: boolean): void {
@@ -1184,24 +1198,24 @@ export class GameScene extends Phaser.Scene {
 
     const outcomeLabel =
       outcome === "playerWin"
-        ? "勝利！"
+        ? tr(this.lang, "勝利！", "VICTORY!")
         : outcome === "enemyWin"
-          ? "敗北…"
-          : "引き分け";
+          ? tr(this.lang, "敗北…", "DEFEAT")
+          : tr(this.lang, "引き分け", "DRAW");
     const resultColor = outcome === "playerWin" ? 0xf2b84a : outcome === "enemyWin" ? 0x5f6d87 : 0x9a7fc1;
     heading.setText(outcomeLabel).setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#d7dfef" : "#e7d8ff");
     const seriesLine = this.seriesActive
       ? outcome === "playerWin" && this.seriesIndex === SERIES_ORDER.length - 1
-        ? `\n3連戦 COMPLETE · ${this.seriesWins}/3勝 · クリアボーナス +${seriesBonus}`
-        : `\n3連戦 ${this.seriesWins}/3勝 · ${this.seriesIndex + 1}/3戦目`
+        ? `\n${tr(this.lang, "3連戦", "GAUNTLET")} COMPLETE · ${this.seriesWins}/3 ${tr(this.lang, "勝", "wins")} · ${tr(this.lang, "クリアボーナス", "Clear Bonus")} +${seriesBonus}`
+        : `\n${tr(this.lang, "3連戦", "GAUNTLET")} ${this.seriesWins}/3 ${tr(this.lang, "勝", "wins")} · ${this.seriesIndex + 1}/3`
       : "";
     const chapter = storyChapterAt(this.storyChapterIndex);
     const storyLine = this.storyActive
       ? outcome === "playerWin" && this.storyChapterIndex === STORY_CHAPTERS.length - 1
-        ? `\n物語 COMPLETE · ${chapter.clearText} · ボーナス +${storyBonus}`
-        : `\n${chapter.title} · ${outcome === "playerWin" ? chapter.clearText : chapter.intro}`
+        ? `\n${tr(this.lang, "物語", "STORY")} COMPLETE · ${storyClear(this.lang, chapter.id, chapter.clearText)} · ${tr(this.lang, "ボーナス", "Bonus")} +${storyBonus}`
+        : `\n${storyTitle(this.lang, chapter.id, chapter.title)} · ${outcome === "playerWin" ? storyClear(this.lang, chapter.id, chapter.clearText) : storyIntro(this.lang, chapter.id, chapter.intro)}`
       : "";
-    stats.setText(`獲得: 豪拳石 +${reward + seriesBonus + storyBonus}（所持: ${balance}）${seriesLine}${storyLine}`);
+    stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
@@ -1280,7 +1294,7 @@ export class GameScene extends Phaser.Scene {
       360,
       260,
       48,
-      "もう一度あそぶ",
+      tr(this.lang, "もう一度あそぶ", "Play Again"),
       () => this.handleResultPrimary(),
       {
         fontSize: "15px",
@@ -1292,7 +1306,7 @@ export class GameScene extends Phaser.Scene {
       420,
       200,
       44,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -1354,10 +1368,10 @@ export class GameScene extends Phaser.Scene {
     // 右側：見出し・結果・残高・ボタン
     const tx = 500;
     const heading = this.add
-      .text(tx, 175, "ガチャ", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(tx, 175, tr(this.lang, "ガチャ", "Gacha"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(tx, 215, `1回 豪拳石 ${GACHA_COST}`, {
+      .text(tx, 215, `${tr(this.lang, "1回", "1 Pull")} · ${tr(this.lang, "豪拳石", "Fist Gems")} ${GACHA_COST}`, {
         ...TYPE.body,
         color: THEME.textMuted,
       })
@@ -1377,7 +1391,7 @@ export class GameScene extends Phaser.Scene {
       385,
       260,
       46,
-      "引く",
+      tr(this.lang, "引く", "Draw"),
       () => this.rollGacha(),
       { fontSize: "16px" },
     );
@@ -1387,7 +1401,7 @@ export class GameScene extends Phaser.Scene {
       437,
       260,
       40,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -1450,7 +1464,7 @@ export class GameScene extends Phaser.Scene {
     const balanceText = this.gachaGroup.getByName(
       "gachaBalance",
     ) as Phaser.GameObjects.Text;
-    balanceText.setText(`所持: 豪拳石 ${loadCurrency()}`);
+    balanceText.setText(`${tr(this.lang, "所持", "Balance")}: ${tr(this.lang, "豪拳石", "Fist Gems")} ${loadCurrency()}`);
   }
 
   private rollGacha(): void {
@@ -1459,7 +1473,7 @@ export class GameScene extends Phaser.Scene {
       const resultText = this.gachaGroup.getByName(
         "gachaResult",
       ) as Phaser.GameObjects.Text;
-      resultText.setText("豪拳石が足りません…").setColor(THEME.textMuted);
+      resultText.setText(tr(this.lang, "豪拳石が足りません…", "Not enough Fist Gems.")).setColor(THEME.textMuted);
       return;
     }
     spendCurrency(GACHA_COST);
@@ -1470,7 +1484,7 @@ export class GameScene extends Phaser.Scene {
       "gachaResult",
     ) as Phaser.GameObjects.Text;
     resultText
-      .setText(`【${item.rarity}】${item.name}`)
+      .setText(`【${item.rarity}】${gachaName(this.lang, item.id, item.name)}`)
       .setColor(hexToCss(RARITY_COLOR[item.rarity] ?? 0xffffff));
     this.showGachaCharImage(item);
     this.tweens.add({

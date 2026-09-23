@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX } from "./logic/battle";
+import { detectLang, moveLabel, tr } from "./logic/i18n";
 import { GameScene } from "./scenes/GameScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
@@ -67,21 +68,22 @@ function uiText(
 }
 
 function ensureBattleHud(scene: FistRuntime): BattleHud {
+  const lang = detectLang();
   const cached = hudByScene.get(scene);
   if (cached) return cached;
 
   const frame = scene.add.graphics();
   const roundText = uiText(scene, 400, 15, "ROUND 1", 11, "#e9c16e", "900");
-  const playerText = uiText(scene, 30, 15, "PLAYER  覇拳士", 11, "#ffd4aa", "900").setOrigin(0, 0.5);
+  const playerText = uiText(scene, 30, 15, tr(lang, "PLAYER  覇拳士", "PLAYER  FIGHTER"), 11, "#ffd4aa", "900").setOrigin(0, 0.5);
   const enemyText = uiText(scene, 770, 15, "RIVAL", 11, "#cbe4ff", "900").setOrigin(1, 0.5);
   const timerText = uiText(scene, 400, 42, "60", 28, "#fff1cf", "900");
   const gaugeText = uiText(scene, 187, 71, "", 10, "#f5c967", "900");
   const readText = uiText(scene, 613, 71, "", 10, "#9ec9ff", "900");
-  const rewardText = uiText(scene, 400, 82, "勝利報酬  +60 豪拳石", 10, "#d7bd86", "800");
+  const rewardText = uiText(scene, 400, 82, tr(lang, "勝利報酬  +60 豪拳石", "WIN REWARD  +60 FIST GEMS"), 10, "#d7bd86", "800");
   const moveHints = [
-    uiText(scene, 240, 444, "PUNCH  ·  気に強い", 10, "#ffb38d", "900"),
-    uiText(scene, 400, 444, "KICK  ·  拳に強い", 10, "#9edca2", "900"),
-    uiText(scene, 560, 444, "KI  ·  蹴に強い", 10, "#9fc9ff", "900"),
+    uiText(scene, 240, 444, tr(lang, "PUNCH  ·  気に強い", "PUNCH  ·  BEATS KI"), 10, "#ffb38d", "900"),
+    uiText(scene, 400, 444, tr(lang, "KICK  ·  拳に強い", "KICK  ·  BEATS PUNCH"), 10, "#9edca2", "900"),
+    uiText(scene, 560, 444, tr(lang, "KI  ·  蹴に強い", "KI  ·  BEATS KICK"), 10, "#9fc9ff", "900"),
   ];
 
   const root = scene.add
@@ -94,6 +96,7 @@ function ensureBattleHud(scene: FistRuntime): BattleHud {
 }
 
 function refreshBattleHud(scene: FistRuntime): void {
+  const lang = detectLang();
   const hud = ensureBattleHud(scene);
   const layout = getResponsiveLayout(scene);
   const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
@@ -149,13 +152,14 @@ function refreshBattleHud(scene: FistRuntime): void {
 
   hud.timerText.setText(String(remaining).padStart(2, "0"));
   hud.timerText.setColor(remaining <= 10 ? "#ffb3a4" : "#fff1cf");
-  hud.gaugeText.setText(gauge >= 1 ? "奥義 READY!" : `奥義 ${Math.round(gauge * 100)}%`);
+  hud.gaugeText.setText(gauge >= 1 ? `${tr(lang, "奥義", "SPECIAL")} READY!` : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gauge * 100)}%`);
   hud.gaugeText.setColor(gauge >= 1 ? "#fff4a8" : "#f5c967");
   hud.readText.setText(`READ WIN ${stats.wins}  ·  STREAK ${stats.streak}`);
-  hud.rewardText.setText(`拳 > 気 > 蹴 > 拳   ·   EXCHANGE ${String((scene.beat ?? 0) + 1).padStart(2, "0")}`);
+  hud.rewardText.setText(`${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}   ·   EXCHANGE ${String((scene.beat ?? 0) + 1).padStart(2, "0")}`);
 }
 
 function showReadWin(scene: Phaser.Scene): void {
+  const lang = detectLang();
   const flash = scene.add.graphics().setDepth(2000).setAlpha(0.9);
   flash.fillStyle(0xffd36a, 0.16);
   flash.fillRect(0, 0, 800, 600);
@@ -163,7 +167,7 @@ function showReadWin(scene: Phaser.Scene): void {
   slash.lineStyle(9, 0xfff2c2, 0.95).lineBetween(185, 420, 620, 120);
   slash.lineStyle(3, 0xd99c2b, 0.95).lineBetween(205, 438, 640, 138);
   const label = scene.add
-    .text(400, 154, "読み勝ち！", {
+    .text(400, 154, tr(lang, "読み勝ち！", "READ WIN!"), {
       fontSize: "44px",
       fontStyle: "900",
       color: "#fff4ce",
@@ -174,7 +178,7 @@ function showReadWin(scene: Phaser.Scene): void {
     .setDepth(2002)
     .setScale(0.78);
   const sub = scene.add
-    .text(400, 202, "相手の癖を捉えた  ·  奥義ゲージ上昇", {
+    .text(400, 202, tr(lang, "相手の癖を捉えた  ·  奥義ゲージ上昇", "Pattern read  ·  Special gauge up"), {
       fontSize: "17px",
       fontStyle: "700",
       color: "#ffd36a",
@@ -202,10 +206,11 @@ function showReadWin(scene: Phaser.Scene): void {
 }
 
 function showReadLoss(scene: Phaser.Scene): void {
+  const lang = detectLang();
   const warning = scene.add.graphics().setDepth(1999).setAlpha(0.85);
   warning.lineStyle(8, 0xb63a32, 0.72).strokeRect(6, 6, 788, 588);
   const label = scene.add
-    .text(400, 150, "読まれた…", {
+    .text(400, 150, tr(lang, "読まれた…", "READ BY RIVAL..."), {
       fontSize: "28px",
       fontStyle: "800",
       color: "#ffb8aa",
@@ -235,13 +240,14 @@ function updateReadStats(scene: FistRuntime, clash: unknown): void {
 }
 
 function showResultSummary(scene: FistRuntime): void {
+  const lang = detectLang();
   resultTextByScene.get(scene)?.destroy();
   const stats = statsByScene.get(scene) ?? newStats();
   const line = scene.add
     .text(
       400,
       320,
-      `読み勝ち ${stats.wins}回  ·  MAX STREAK ${stats.maxStreak}  ·  奥義 ${stats.ougiUsed ? "発動" : "未発動"}`,
+      `${tr(lang, "読み勝ち", "READ WINS")} ${stats.wins}  ·  MAX STREAK ${stats.maxStreak}  ·  ${tr(lang, "奥義", "SPECIAL")} ${stats.ougiUsed ? tr(lang, "発動", "USED") : tr(lang, "未発動", "NOT USED")}`,
       {
         fontFamily: '"Segoe UI", "Hiragino Sans", sans-serif',
         fontSize: "14px",

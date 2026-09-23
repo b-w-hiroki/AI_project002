@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import { OUGI_GAUGE_MAX } from "./logic/battle";
+import { detectLang, moveLabel, tr } from "./logic/i18n";
 import { GameScene } from "./scenes/GameScene";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
@@ -26,6 +27,7 @@ type PolishUi = {
 const uiByScene = new WeakMap<object, PolishUi>();
 
 function build(scene: Runtime): PolishUi {
+  const lang = detectLang();
   const cached = uiByScene.get(scene);
   if (cached) return cached;
 
@@ -43,15 +45,15 @@ function build(scene: Runtime): PolishUi {
       })
       .setOrigin(0.5);
 
-  const punch = make(240, 480, "打", 30, "#fff0e7");
-  const kick = make(400, 480, "蹴", 30, "#efffeb");
-  const ki = make(560, 480, "気", 30, "#eaf5ff");
-  const ougi = make(400, 545, "奥義", 23, "#fff2a0");
-  const leftCalligraphy = make(36, 272, "拳に宿るのは、\n仲間との絆だ。", 16, "#fff1d2")
+  const punch = make(240, 480, moveLabel(lang, "punch"), 24, "#fff0e7");
+  const kick = make(400, 480, moveLabel(lang, "kick"), 24, "#efffeb");
+  const ki = make(560, 480, moveLabel(lang, "ki"), 24, "#eaf5ff");
+  const ougi = make(400, 545, tr(lang, "奥義", "SPECIAL"), 21, "#fff2a0");
+  const leftCalligraphy = make(36, 272, tr(lang, "拳に宿るのは、\n仲間との絆だ。", "Strength lives\nin our bonds."), 16, "#fff1d2")
     .setOrigin(0.5)
     .setAngle(-2)
     .setLineSpacing(8);
-  const rightCalligraphy = make(764, 272, "闘う意志が、\n俺を強くする。", 16, "#e8f3ff")
+  const rightCalligraphy = make(764, 272, tr(lang, "闘う意志が、\n俺を強くする。", "The will to fight\nmakes me stronger."), 16, "#e8f3ff")
     .setOrigin(0.5)
     .setAngle(2)
     .setLineSpacing(8);
@@ -66,6 +68,7 @@ function build(scene: Runtime): PolishUi {
 }
 
 function refresh(scene: Runtime): void {
+  const lang = detectLang();
   const ui = build(scene);
   const layout = getResponsiveLayout(scene);
   const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
@@ -99,7 +102,7 @@ function refresh(scene: Runtime): void {
     ui.graphics.lineStyle(10, 0xffd83d, 0.13).strokeCircle(400, 545, 84);
     ui.graphics.lineStyle(3, 0xffed83, 0.76).strokeCircle(400, 545, 76);
   }
-  ui.ougi.setText(ready ? "奥義\nREADY" : "奥義").setFontSize(ready ? 17 : 23);
+  ui.ougi.setText(ready ? `${tr(lang, "奥義", "SPECIAL")}\nREADY` : tr(lang, "奥義", "SPECIAL")).setFontSize(ready ? 17 : 21);
 }
 
 export function installFistVisualPolish(): void {
