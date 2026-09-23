@@ -1,8 +1,6 @@
 import {
-  DEITIES,
   scoreDeeds,
   nextMandate,
-  legendTitle,
   type Deed,
   type Deity,
 } from "../logic/legend";
@@ -15,7 +13,6 @@ import {
   rollEncounterOccurs,
 } from "../logic/encounter";
 import {
-  FACTION_LABEL,
   FACTIONS,
   Faction,
   KarmaRequest,
@@ -34,6 +31,22 @@ import {
 } from "../logic/progress";
 
 import { sfx } from "../platform/audio";
+import {
+  choiceLabel,
+  deedTagLabel,
+  deityName,
+  deityWish,
+  detectLang,
+  encounterChoiceLabel,
+  encounterText as localizedEncounterText,
+  factionLabel,
+  factionShort,
+  legendTitleText,
+  mandateLabel,
+  requestText as localizedRequestText,
+  tr,
+  type Lang,
+} from "../logic/i18n";
 import { cg } from "../platform/crazygames";
 import {
   drawPanel,
@@ -80,6 +93,7 @@ interface HighlightRow {
 }
 
 export class GameScene extends Phaser.Scene {
+  readonly lang: Lang = detectLang();
   private deeds: Deed[] = [];
   private deity: Deity = "valor";
   private mandate = {
@@ -139,7 +153,7 @@ export class GameScene extends Phaser.Scene {
       plate.fillGradientStyle(0x1974af, 0x1974af, 0x103b69, 0x103b69, 1)
         .fillRect(x - barWidth / 2 + 3, y - 7, (barWidth - 6) * progress, 14);
       title.setPosition(x, y - 58);
-      label.setPosition(x, y + 42).setText(`冒険の準備中  ${Math.floor(progress * 100)}%`);
+      label.setPosition(x, y + 42).setText(`${tr(this.lang, "冒険の準備中", "Preparing Adventure")}  ${Math.floor(progress * 100)}%`);
     };
     const updateProgress = (value: number) => { progress = value; draw(); };
     this.load.on("progress", updateProgress);
@@ -178,7 +192,7 @@ export class GameScene extends Phaser.Scene {
     const panel = drawPanel(this, CX, 400, 400, 660, { depth: 0 });
 
     const title = this.add
-      .text(CX, 110, "カルマクエスト", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, tr(this.lang, "カルマクエスト", "Karma Quest"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     // 勇者イラスト（kq-hero-warrior）。タイトルと説明文の間に配置
     const hero = this.addHero(CX, 225, 170);
@@ -186,7 +200,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         CX,
         420,
-        "勇者を育て、討伐に送り出し、\n神様に戦果を報告する。\n\n派閥の要望に応えると\nカルマが傾き、勇者の力が変化する。\n\n実際の出来事から2場面を選んで報告。\n神様の期待が、次の年の冒険を変える。\n\n12年の旅を乗り越えて、\n自分だけの勇者伝説を作ろう！",
+        tr(this.lang, "勇者を育て、討伐に送り出し、\n神様に戦果を報告する。\n\n派閥の要望に応えると\nカルマが傾き、勇者の力が変化する。\n\n実際の出来事から2場面を選んで報告。\n神様の期待が、次の年の冒険を変える。\n\n12年の旅を乗り越えて、\n自分だけの勇者伝説を作ろう！", "Raise a hero, answer faction requests, and send them on hunts.\n\nYour choices shape Karma, stats, and appearance.\n\nAfter each year, report up to two moments to a god.\nTheir values decide the next year’s blessing and challenge.\n\nGuide your hero through all 12 years\nand create a legend of your own!"),
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
@@ -205,7 +219,7 @@ export class GameScene extends Phaser.Scene {
       650,
       260,
       52,
-      "旅を始める",
+      tr(this.lang, "旅を始める", "Begin Journey"),
       () => {
         this.playSound(sfx.buttonTap);
         this.startRun();
@@ -314,7 +328,7 @@ export class GameScene extends Phaser.Scene {
       "bestText",
     ) as Phaser.GameObjects.Text;
     bestText.setText(
-      `最高到達: ${loadBestStage()}回目\n累計評価: ${loadTotalEvaluation()}`,
+      `${tr(this.lang, "最高到達", "Best Year")}: ${loadBestStage()}\n${tr(this.lang, "累計評価", "Total Evaluation")}: ${loadTotalEvaluation()}`,
     );
   }
 
@@ -391,7 +405,7 @@ export class GameScene extends Phaser.Scene {
       500,
       320,
       52,
-      "力を貸す",
+      tr(this.lang, "力を貸す", "Help Them"),
       () => this.onKarmaChoice(true),
       {
         fontSize: "16px",
@@ -403,7 +417,7 @@ export class GameScene extends Phaser.Scene {
       570,
       320,
       48,
-      "断る",
+      tr(this.lang, "断る", "Decline"),
       () => this.onKarmaChoice(false),
       {
         fontSize: "15px",
@@ -450,7 +464,7 @@ export class GameScene extends Phaser.Scene {
     this.deeds = [];
     this.currentRequest = this.stage === 1 ? { ...this.homeRequest } : rollRequest();
     this.mandateText.setText(
-      `${legendTitle(this.legendCounts.valor, this.legendCounts.mercy)}\n${this.mandate.label}\n勝率への加護 +${Math.round(this.mandate.bonus * 100)}%`,
+      `${legendTitleText(this.lang, this.legendCounts.valor, this.legendCounts.mercy)}\n${mandateLabel(this.lang, this.mandate.label)}\n${tr(this.lang, "勝率への加護", "Win Chance Blessing")} +${Math.round(this.mandate.bonus * 100)}%`,
     );
     const progress = this.karmaGroup.getByName(
       "progress",
@@ -465,9 +479,9 @@ export class GameScene extends Phaser.Scene {
       typeof makeButton
     >;
 
-    progress.setText(`${this.stage} / ${TOTAL_STAGES} 年目`);
-    factionLabel.setText(`【${FACTION_LABEL[this.currentRequest.faction]}】`);
-    requestText.setText(this.currentRequest.text);
+    progress.setText(`${this.stage} / ${TOTAL_STAGES} ${tr(this.lang, "年目", "Year")}`);
+    factionLabel.setText(`【${factionLabel(this.lang, this.currentRequest.faction)}】`);
+    requestText.setText(localizedRequestText(this.lang, this.currentRequest));
 
     for (const faction of FACTIONS) {
       const active = faction === this.currentRequest.faction;
@@ -491,8 +505,8 @@ export class GameScene extends Phaser.Scene {
     this.deeds.push({
       id: "request",
       label: accepted
-        ? `${FACTION_LABEL[this.currentRequest.faction]}に力を貸した`
-        : "依頼を断り、別の道を選んだ",
+        ? `${factionLabel(this.lang, this.currentRequest.faction)} ${tr(this.lang, "に力を貸した", "helped")}`
+        : tr(this.lang, "依頼を断り、別の道を選んだ", "Declined the request and chose another path"),
       quality: 4,
       tag: accepted
         ? this.currentRequest.faction === "warrior"
@@ -522,7 +536,7 @@ export class GameScene extends Phaser.Scene {
     const panel = drawPanel(this, CX, 400, 400, 420, { depth: 0 });
 
     const heading = this.add
-      .text(CX, 260, "道中の出来事", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 260, tr(this.lang, "道中の出来事", "Road Encounter"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const encounterText = this.add
       .text(CX, 320, "", {
@@ -580,7 +594,7 @@ export class GameScene extends Phaser.Scene {
     const encounterText = this.encounterGroup.getByName(
       "encounterText",
     ) as Phaser.GameObjects.Text;
-    encounterText.setText(this.currentEncounter.text);
+    encounterText.setText(localizedEncounterText(this.lang, this.currentEncounter));
 
     const choiceABtn = this.encounterGroup.getData("choiceABtn") as ReturnType<
       typeof makeButton
@@ -588,8 +602,8 @@ export class GameScene extends Phaser.Scene {
     const choiceBBtn = this.encounterGroup.getData("choiceBBtn") as ReturnType<
       typeof makeButton
     >;
-    choiceABtn.setLabel(this.currentEncounter.choiceA.label);
-    choiceBBtn.setLabel(this.currentEncounter.choiceB.label);
+    choiceABtn.setLabel(encounterChoiceLabel(this.lang, this.currentEncounter, "A"));
+    choiceBBtn.setLabel(encounterChoiceLabel(this.lang, this.currentEncounter, "B"));
   }
 
   private onEncounterChoice(slot: "A" | "B"): void {
@@ -603,7 +617,7 @@ export class GameScene extends Phaser.Scene {
     this.encounterBonus = choice.powerBonus;
     this.deeds.push({
       id: "encounter",
-      label: choice.label,
+      label: choiceLabel(this.lang, this.currentEncounter, choice),
       quality: 4,
       tag: "wisdom",
     });
@@ -619,7 +633,7 @@ export class GameScene extends Phaser.Scene {
     // 討伐に向かう勇者（kq-hero-warrior）
     const hero = this.addHero(CX, 260, 130);
     const heading = this.add
-      .text(CX, 350, "討伐へ出発！", {
+      .text(CX, 350, tr(this.lang, "討伐へ出発！", "Hunt Begins!"), {
         ...TYPE.h1,
         color: THEME.textPrimary,
         align: "center",
@@ -649,7 +663,7 @@ export class GameScene extends Phaser.Scene {
       560,
       220,
       48,
-      "おうえん！",
+      tr(this.lang, "おうえん！", "CHEER!"),
       () => this.onCheerTap(),
       {
         fontSize: "16px",
@@ -687,7 +701,7 @@ export class GameScene extends Phaser.Scene {
       "battleResult",
     ) as Phaser.GameObjects.Text;
 
-    heading.setText("討伐中…");
+    heading.setText(tr(this.lang, "討伐中…", "Hunting..."));
     statsText.setText(
       `ATK ${stats.atk}  DEF ${stats.def}\nHP ${stats.hp}  MAGIC ${stats.magic}`,
     );
@@ -700,7 +714,7 @@ export class GameScene extends Phaser.Scene {
       typeof makeButton
     >;
     this.cheerCount = 0;
-    cheerCountText.setText("タップして応援しよう！（0回）");
+    cheerCountText.setText(tr(this.lang, "タップして応援しよう！（0回）", "Tap to cheer! (0)"));
     cheerBtn.setEnabled(true);
 
     this.time.delayedCall(BATTLE_CHEER_WINDOW_MS, () => {
@@ -716,13 +730,13 @@ export class GameScene extends Phaser.Scene {
       this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
       if (result.win) cg.happytime();
       heading.setText(
-        result.win ? "魔物を討伐した！" : "退却を余儀なくされた…",
+        result.win ? tr(this.lang, "魔物を討伐した！", "Monster defeated!") : tr(this.lang, "退却を余儀なくされた…", "Forced to retreat..."),
       );
       resultText.setText(
-        `残りHP割合: ${Math.round(result.hpRatioRemaining * 100)}%`,
+        `${tr(this.lang, "残りHP割合", "HP Remaining")}: ${Math.round(result.hpRatioRemaining * 100)}%`,
       );
       cheerCountText.setText(
-        this.cheerCount > 0 ? `おうえん ${this.cheerCount}回！` : "",
+        this.cheerCount > 0 ? `${tr(this.lang, "おうえん", "Cheers")} ${this.cheerCount}!` : "",
       );
       this.time.delayedCall(700, () => this.showReportPhase(result));
     });
@@ -735,7 +749,7 @@ export class GameScene extends Phaser.Scene {
     const cheerCountText = this.battleGroup.getByName(
       "cheerCountText",
     ) as Phaser.GameObjects.Text;
-    cheerCountText.setText(`タップして応援しよう！（${this.cheerCount}回）`);
+    cheerCountText.setText(`${tr(this.lang, "タップして応援しよう！", "Tap to cheer!")} (${this.cheerCount})`);
   }
 
   // ---------- 報告 ----------
@@ -745,13 +759,13 @@ export class GameScene extends Phaser.Scene {
     const panel = drawPanel(this, CX, 400, 400, 700, { depth: 0 });
 
     const heading = this.add
-      .text(CX, 110, "神様への報告", { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 110, tr(this.lang, "神様への報告", "Report to the Gods"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const hint = this.add
       .text(
         CX,
         155,
-        "この年の出来事を、最大2場面まで\n神様の価値観と次年の課題を選ぼう",
+        tr(this.lang, "この年の出来事を、最大2場面まで\n神様の価値観と次年の課題を選ぼう", "Choose up to two moments from this year.\nThe god you report to shapes the next challenge."),
         {
           ...TYPE.small,
           color: THEME.textMuted,
@@ -766,7 +780,7 @@ export class GameScene extends Phaser.Scene {
       680,
       260,
       52,
-      "報告する",
+      tr(this.lang, "報告する", "Submit Report"),
       () => this.onSubmitReport(),
       {
         fontSize: "16px",
@@ -796,7 +810,7 @@ export class GameScene extends Phaser.Scene {
         213,
         184,
         42,
-        DEITIES[god].name,
+        deityName(this.lang, god),
         () => {
           if (this.phase !== "report") return;
           this.deity = god;
@@ -820,8 +834,8 @@ export class GameScene extends Phaser.Scene {
       {
         id: "battle",
         label: result.win
-          ? "魔物を討ち、道を切り開いた"
-          : "討伐から生還し、次に備えた",
+          ? tr(this.lang, "魔物を討ち、道を切り開いた", "Defeated the monster and opened the road")
+          : tr(this.lang, "討伐から生還し、次に備えた", "Survived the hunt and prepared for next time"),
         quality: 4,
         tag: result.win ? "valor" : "mercy",
       },
@@ -829,7 +843,7 @@ export class GameScene extends Phaser.Scene {
     if (this.cheerCount > 0)
       highlights.push({
         id: "cheer",
-        label: `勇者に ${this.cheerCount} 回の声援を送った`,
+        label: `${tr(this.lang, "勇者に", "Cheered the hero")} ${this.cheerCount} ${tr(this.lang, "回の声援を送った", "times")}`,
         quality: 4,
         tag: "mercy",
       });
@@ -842,7 +856,7 @@ export class GameScene extends Phaser.Scene {
         .text(
           0,
           0,
-          `${highlight.tag === "valor" ? "武勇" : highlight.tag === "mercy" ? "慈悲" : "知恵"}  ／  この年の記録\n${highlight.label}`,
+          `${deedTagLabel(this.lang, highlight.tag)} / ${tr(this.lang, "この年の記録", "Year Record")}\n${highlight.label}`,
           {
             ...TYPE.body,
             color: THEME.textPrimary,
@@ -904,7 +918,7 @@ export class GameScene extends Phaser.Scene {
       .filter((r) => r.selected)
       .map((r) => r.highlight);
     this.reportPreview.setText(
-      `${DEITIES[this.deity].name}へ · 選択 ${selected.length}/2 · 評価 ${scoreDeeds(selected, this.deity)}\n${DEITIES[this.deity].wish}`,
+      `${deityName(this.lang, this.deity)} · ${tr(this.lang, "選択", "Selected")} ${selected.length}/2 · ${tr(this.lang, "評価", "Evaluation")} ${scoreDeeds(selected, this.deity)}\n${deityWish(this.lang, this.deity)}`,
     );
     this.submitButton.setEnabled(selected.length > 0);
   }
@@ -922,14 +936,14 @@ export class GameScene extends Phaser.Scene {
     this.mandate = nextMandate(selected, this.deity);
     this.legendCounts[this.deity] += 1;
     this.chronicle.push(
-      `${this.stage}年目 · ${DEITIES[this.deity].name}\n${selected.map((d) => d.label).join(" ／ ")}`,
+      `${tr(this.lang, "第", "Year ")}${this.stage}${tr(this.lang, "年目", "")} · ${deityName(this.lang, this.deity)}\n${selected.map((d) => d.label).join(" / ")}`,
     );
     this.runEvaluation += evaluation;
     addTotalEvaluation(evaluation);
     this.spawnFloatingText(
       CX,
       630,
-      `評価 +${evaluation}`,
+      `${tr(this.lang, "評価", "Evaluation")} +${evaluation}`,
       hexToCss(THEME.accent),
     );
     this.time.delayedCall(500, () => this.nextStage());
@@ -989,7 +1003,7 @@ export class GameScene extends Phaser.Scene {
       490,
       300,
       52,
-      "もう一度旅に出る",
+      tr(this.lang, "もう一度旅に出る", "Begin Another Journey"),
       () => this.startRun(),
       {
         fontSize: "15px",
@@ -1001,7 +1015,7 @@ export class GameScene extends Phaser.Scene {
       555,
       300,
       46,
-      "タイトルへ戻る",
+      tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
@@ -1042,9 +1056,9 @@ export class GameScene extends Phaser.Scene {
     const stats = this.finalGroup.getByName(
       "finalStats",
     ) as Phaser.GameObjects.Text;
-    heading.setText("12年の旅、完結");
+    heading.setText(tr(this.lang, "12年の旅、完結", "The 12-Year Journey is Complete"));
     stats.setText(
-      `${legendTitle(this.legendCounts.valor, this.legendCounts.mercy)}\n累計評価 ${this.runEvaluation} · ${FACTION_LABEL[faction]}\n軍神 ${this.legendCounts.valor}年 ／ 慈愛神 ${this.legendCounts.mercy}年`,
+      `${legendTitleText(this.lang, this.legendCounts.valor, this.legendCounts.mercy)}\n${tr(this.lang, "累計評価", "Total Evaluation")} ${this.runEvaluation} · ${factionLabel(this.lang, faction)}\n${deityName(this.lang, "valor")} ${this.legendCounts.valor} / ${deityName(this.lang, "mercy")} ${this.legendCounts.mercy}`,
     );
     for (const f of FACTIONS) {
       (

@@ -2,7 +2,6 @@ import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import {
   FACTIONS,
-  FACTION_LABEL,
   deriveStats,
   dominantFaction,
   type Faction,
@@ -11,6 +10,7 @@ import {
 } from "./logic/karma";
 import { loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
+import { factionLabel, factionShort, mandateLabel, requestText as localizedRequestText, tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -22,6 +22,7 @@ type Runtime = Phaser.Scene & {
   karma?: KarmaState;
   mandate?: { label?: string; bonus?: number; threat?: number };
   currentRequest?: KarmaRequest | null;
+  lang?: Lang;
 };
 
 type LandscapeUi = {
@@ -49,13 +50,6 @@ const FACTION_COLORS: Record<Faction, number> = {
   outlaw: 0x54a965,
   mage: 0x9b55c8,
 };
-const FACTION_SHORT: Record<Faction, string> = {
-  warrior: "戦士",
-  merchant: "商人",
-  outlaw: "荒くれ",
-  mage: "魔術師",
-};
-
 function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
   const fn = Reflect.get(scene, key);
   return typeof fn === "function" ? (fn as (...values: unknown[]) => unknown).apply(scene, args) : undefined;
@@ -142,8 +136,8 @@ function build(scene: Runtime): LandscapeUi {
   const karma = scene.add.container(0, 0);
   root.add([title, karma]);
 
-  text(scene, root, 24, 25, "カルマクエスト", 27, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#244b63", 5);
-  text(scene, root, 26, 51, "CHOICE RPG — 選択が世界と勇者を変える", 9, "#eef8ff", "800").setOrigin(0, 0.5);
+  text(scene, root, 24, 25, tr(scene.lang ?? "en", "カルマクエスト", "Karma Quest"), 27, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#244b63", 5);
+  text(scene, root, 26, 51, tr(scene.lang ?? "en", "CHOICE RPG — 選択が世界と勇者を変える", "CHOICE RPG — Your decisions shape the world and hero"), 9, "#eef8ff", "800").setOrigin(0, 0.5);
 
   panel(scene, title, 260, 238, 440, 300, 0x14251e, 0xc8a45a, 0.9, 20);
   if (scene.textures.exists("kq-hero-warrior")) {
@@ -151,13 +145,13 @@ function build(scene: Runtime): LandscapeUi {
     hero.setScale(Math.min(190 / hero.width, 255 / hero.height));
     title.add(hero);
   }
-  text(scene, title, 340, 140, "12年の選択で\n自分だけの勇者伝説をつくる", 22, "#fff5dc", "900");
-  text(scene, title, 340, 225, "派閥の要望、道中の出来事、討伐の結果。\n何を選び、何を神へ報告したかで\n次の年の世界と勇者が変わる。", 13, "#dce9df", "700");
+  text(scene, title, 340, 140, tr(scene.lang ?? "en", "12年の選択で\n自分だけの勇者伝説をつくる", "Twelve years of choices\ncreate your own hero legend"), 22, "#fff5dc", "900");
+  text(scene, title, 340, 225, tr(scene.lang ?? "en", "派閥の要望、道中の出来事、討伐の結果。\n何を選び、何を神へ報告したかで\n次の年の世界と勇者が変わる。", "Faction requests, road encounters, and hunt results.\nWhat you choose—and what you report—\nchanges the next year."), 13, "#dce9df", "700");
   panel(scene, title, 650, 178, 250, 155, 0xf1e7ca, 0xb68c49, 0.98, 12);
   text(scene, title, 650, 135, "LEGEND RECORD", 11, "#6b5431", "900");
-  text(scene, title, 650, 178, `最高到達 ${loadBestStage()}年`, 21, "#4c493f", "900");
-  text(scene, title, 650, 213, `累計評価 ${loadTotalEvaluation()}`, 13, "#76684f", "800");
-  button(scene, title, 650, 310, 250, 66, "旅を始める", () => invoke(scene, "startRun"), 0x356f68);
+  text(scene, title, 650, 178, `${tr(scene.lang ?? "en", "最高到達", "Best Year")} ${loadBestStage()}`, 21, "#4c493f", "900");
+  text(scene, title, 650, 213, `${tr(scene.lang ?? "en", "累計評価", "Total Evaluation")} ${loadTotalEvaluation()}`, 13, "#76684f", "800");
+  button(scene, title, 650, 310, 250, 66, tr(scene.lang ?? "en", "旅を始める", "Begin Journey"), () => invoke(scene, "startRun"), 0x356f68);
 
   panel(scene, karma, 238, 246, 420, 330, 0x12231c, 0xc8a45a, 0.9, 18);
   let hero: Phaser.GameObjects.Image | undefined;
@@ -168,7 +162,7 @@ function build(scene: Runtime): LandscapeUi {
   }
   const dominantText = text(scene, karma, 275, 124, "", 11, "#f2d99c", "900");
   const statsText = text(scene, karma, 292, 205, "", 13, "#eef5ee", "900");
-  text(scene, karma, 292, 286, "主人公と王都", 10, "#c9d7ce", "700");
+  text(scene, karma, 292, 286, tr(scene.lang ?? "en", "主人公と王都", "Hero and Capital"), 10, "#c9d7ce", "700");
 
   panel(scene, karma, 590, 145, 360, 155, 0xf2e8cc, 0xb58d48, 0.985, 10);
   const requestFaction = text(scene, karma, 590, 93, "", 12, "#6c512b", "900");
@@ -188,10 +182,10 @@ function build(scene: Runtime): LandscapeUi {
   karma.add(bars);
   const factionTexts = FACTIONS.map((_, i) => text(scene, karma, 485, 250 + i * 19, "", 9, "#e8ddc7", "800").setOrigin(0, 0.5));
 
-  button(scene, karma, 510, 385, 190, 56, "力を貸す", () => invoke(scene, "onKarmaChoice", true), 0x3377ae);
-  button(scene, karma, 705, 385, 165, 56, "断る", () => invoke(scene, "onKarmaChoice", false), 0x56504a);
+  button(scene, karma, 510, 385, 190, 56, tr(scene.lang ?? "en", "力を貸す", "Help Them"), () => invoke(scene, "onKarmaChoice", true), 0x3377ae);
+  button(scene, karma, 705, 385, 165, 56, tr(scene.lang ?? "en", "断る", "Decline"), () => invoke(scene, "onKarmaChoice", false), 0x56504a);
   const acceptHint = text(scene, karma, 510, 425, "", 9, "#d8efff", "800");
-  const declineHint = text(scene, karma, 705, 425, "別の道へ", 9, "#ddd0c2", "800");
+  const declineHint = text(scene, karma, 705, 425, tr(scene.lang ?? "en", "別の道へ", "Choose another path"), 9, "#ddd0c2", "800");
 
   panel(scene, karma, 650, 34, 286, 48, 0x10201a, 0xd1ad61, 0.92, 11);
   const yearText = text(scene, karma, 530, 34, "", 10, "#f5dfaa", "900").setOrigin(0, 0.5);
@@ -265,13 +259,13 @@ function refresh(scene: Runtime): void {
   const dominant = dominantFaction(karma);
   const max = Math.max(10, ...FACTIONS.map((faction) => karma[faction]));
   ui.yearText.setText(`YEAR ${Math.max(1, scene.stage ?? 1)}/12`);
-  ui.evaluationText.setText(`評価 ${(scene.runEvaluation ?? 0) >= 0 ? "+" : ""}${scene.runEvaluation ?? 0}`);
-  ui.mandateText.setText(`神託  ${(scene.mandate?.label ?? "自由に勇者を育てよう").slice(0, 48)}`);
-  ui.requestFaction.setText(request ? `【${FACTION_LABEL[request.faction]}からの依頼】` : "旅人からの依頼");
-  ui.requestText.setText(request?.text ?? "次の依頼を待っています。あなたの判断が世界を動かす。");
-  ui.dominantText.setText(`カルマ  ${FACTION_LABEL[dominant]}`);
+  ui.evaluationText.setText(`${tr(scene.lang ?? "en", "評価", "Evaluation")} ${(scene.runEvaluation ?? 0) >= 0 ? "+" : ""}${scene.runEvaluation ?? 0}`);
+  ui.mandateText.setText(`${tr(scene.lang ?? "en", "神託", "Mandate")}  ${mandateLabel(scene.lang ?? "en", scene.mandate?.label ?? "最初の旅：自由に勇者を育てよう").slice(0, 48)}`);
+  ui.requestFaction.setText(request ? `【${factionLabel(scene.lang ?? "en", request.faction)}】` : tr(scene.lang ?? "en", "旅人からの依頼", "Traveler Request"));
+  ui.requestText.setText(request ? localizedRequestText(scene.lang ?? "en", request) : tr(scene.lang ?? "en", "次の依頼を待っています。あなたの判断が世界を動かす。", "Waiting for the next request. Your judgment will move the world."));
+  ui.dominantText.setText(`${tr(scene.lang ?? "en", "カルマ", "Karma")}  ${factionLabel(scene.lang ?? "en", dominant)}`);
   ui.statsText.setText(`ATK ${stats.atk}   DEF ${stats.def}\nHP ${stats.hp}   MAGIC ${stats.magic}`);
-  ui.acceptHint.setText(request ? `${FACTION_SHORT[request.faction]} +${request.karmaDelta} / 勇者が成長` : "");
+  ui.acceptHint.setText(request ? `${factionShort(scene.lang ?? "en", request.faction)} +${request.karmaDelta} / ${tr(scene.lang ?? "en", "勇者が成長", "Hero grows")}` : "");
 
   ui.bars.clear();
   FACTIONS.forEach((faction, i) => {
@@ -279,7 +273,7 @@ function refresh(scene: Runtime): void {
     const ratio = Phaser.Math.Clamp(karma[faction] / max, 0, 1);
     ui.bars.fillStyle(0x59645d, 0.72).fillRoundedRect(585, y - 3, 118, 7, 4);
     ui.bars.fillStyle(FACTION_COLORS[faction], 0.98).fillRoundedRect(585, y - 3, 118 * ratio, 7, 4);
-    ui.factionTexts[i]?.setText(`${FACTION_SHORT[faction]} ${karma[faction]}`);
+    ui.factionTexts[i]?.setText(`${factionShort(scene.lang ?? "en", faction)} ${karma[faction]}`);
   });
 
   if (ui.hero) {
