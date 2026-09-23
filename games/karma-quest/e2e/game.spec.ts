@@ -278,7 +278,7 @@ test("home navigation opens and closes information without starting a journey be
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {
-    localStorage.setItem("karma_quest_total_evaluation_v1", "1000");
+    localStorage.setItem("karma_quest_total_eval_v1", "1000");
     localStorage.setItem("karma_quest_best_stage_v1", "8");
   });
 
@@ -313,7 +313,9 @@ test("hero league opens from home in portrait and landscape", async ({ page }) =
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const root = scene.children.list.find(child =>
-      child instanceof Phaser.GameObjects.Container && child.getByName("home-information-wide"),
+      child.type === "Container" &&
+      typeof Reflect.get(child, "getByName") === "function" &&
+      Reflect.get(child, "getByName").call(child, "home-information-wide"),
     ) as Phaser.GameObjects.Container | undefined;
     const modal = root?.getByName("home-information-wide") as Phaser.GameObjects.Container | null;
     return modal?.visible ?? false;
@@ -330,7 +332,7 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
       maxHp: 900,
       defeats: 0,
     }));
-    localStorage.setItem("karma_quest_total_evaluation_v1", "0");
+    localStorage.setItem("karma_quest_total_eval_v1", "0");
   });
 
   await tapPoint(page, 135, 758);
@@ -351,7 +353,7 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
   await tapPoint(page, 225, 510);
   const afterClaim = await page.evaluate(() => ({
     raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
-    evaluation: Number(localStorage.getItem("karma_quest_total_evaluation_v1") ?? "0"),
+    evaluation: Number(localStorage.getItem("karma_quest_total_eval_v1") ?? "0"),
   }));
   expect(afterClaim.raid.level).toBe(2);
   expect(afterClaim.raid.defeats).toBe(1);
@@ -751,7 +753,8 @@ test("landscape home information opens without activating the journey behind it"
   test.setTimeout(60000);
   await page.setViewportSize({ width: 800, height: 360 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-  for (const index of [0, 1, 2, 3, 4, 5, 6]) {
+  // ワールド(index=1)は専用Raidモーダルを開くため、共通情報モーダルの対象外。
+  for (const index of [0, 2, 3, 4, 5, 6]) {
     await tapPoint(page, 62 + (index % 4) * 88, index < 4 ? 348 : 407);
     await expect.poll(() => page.evaluate(() => {
       const find = (node: Phaser.GameObjects.GameObject): boolean => {
