@@ -226,7 +226,7 @@ function attachTapTargets(scene: ColorScene): void {
   }
 }
 
-function showRuleShift(scene: Phaser.Scene, mode: "content" | "color"): void {
+function showRuleShift(scene: ColorScene, mode: "content" | "color"): void {
   const band = scene.add.graphics().setDepth(2000).setAlpha(0);
   band.fillStyle(mode === "color" ? 0x4f6ee0 : 0x3a9a73, 0.96).fillRoundedRect(25, 278, 400, 170, 22);
   band.lineStyle(3, 0xffffff, 0.75).strokeRoundedRect(25, 278, 400, 170, 22);
