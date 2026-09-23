@@ -17,7 +17,7 @@
     <style>
       :root { --accent:255,122,61; --shell:#12131b; --shell2:#23212d; --chrome:#fff7e9; }
       * { box-sizing:border-box; }
-      html, body { margin:0; height:100%; touch-action:none; overscroll-behavior:none; }
+      html, body { margin:0; height:100%; touch-action:none; overscroll-behavior:none; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; }
       body { display:grid; place-items:center; overflow:hidden; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background:radial-gradient(circle at 50% 42%,rgba(var(--accent),.16),transparent 36%),linear-gradient(150deg,var(--shell2),var(--shell) 58%,#0a0b10); color:var(--chrome); }
       body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.12; background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px); background-size:30px 30px; mask-image:radial-gradient(circle at center,#000 20%,transparent 78%); }
       #game { position:relative; line-height:0; filter:drop-shadow(0 18px 40px rgba(0,0,0,.36)); }
