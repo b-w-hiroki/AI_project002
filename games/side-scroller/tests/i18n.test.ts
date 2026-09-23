@@ -27,3 +27,12 @@ describe("Blade Woods i18n", () => {
     expect(tr("en", "開始", "Start")).toBe("Start");
   });
 });
+
+
+describe("CrazyGames locale priority", () => {
+  it("prefers SDK locale over browser locale while query override stays highest", () => {
+    expect(detectLang("", "en-US", "ja-JP")).toBe("ja");
+    expect(detectLang("", "ja-JP", "en-US")).toBe("en");
+    expect(detectLang("?lang=ja", "en-US", "en-US")).toBe("ja");
+  });
+});

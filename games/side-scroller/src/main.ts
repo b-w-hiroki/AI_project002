@@ -10,7 +10,7 @@ import { installSideMobileScenePolish } from "./mobileScenePolish";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
-void initCrazyGames();
+await initCrazyGames();
 installSideScrollerPresentation();
 installSideConceptArtPass();
 installSideVisualPolish();

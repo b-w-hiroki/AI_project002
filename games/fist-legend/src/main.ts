@@ -16,7 +16,7 @@ installFistMobileLayout();
 installFistArtFidelity();
 installFistHajaMode();
 
-void initCrazyGames();
+await initCrazyGames();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

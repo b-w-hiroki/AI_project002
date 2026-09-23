@@ -1,3 +1,4 @@
+import { resolveJaEnLang } from "../../../shared/locale";
 /** 2言語対応（日本語/英語）。Phaser 非依存の純粋ロジック。 */
 
 export type Lang = "ja" | "en";
@@ -95,8 +96,12 @@ export function achievementName(lang: Lang, id: string): string {
 }
 
 /** ブラウザの言語設定から初期言語を決める */
-export function detectLang(navigatorLanguage: string): Lang {
-  return navigatorLanguage.toLowerCase().startsWith("ja") ? "ja" : "en";
+export function detectLang(
+  navigatorLanguage: string,
+  search = typeof window !== "undefined" ? window.location.search : "",
+  sdkLocale?: string,
+): Lang {
+  return resolveJaEnLang(search, navigatorLanguage, sdkLocale);
 }
 
 export function toggleLang(lang: Lang): Lang {

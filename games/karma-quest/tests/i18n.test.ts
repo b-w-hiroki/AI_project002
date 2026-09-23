@@ -38,3 +38,12 @@ describe("Karma Quest i18n", () => {
     expect(legendTitleText("en", 10, 2)).toContain("Battle");
   });
 });
+
+
+describe("CrazyGames locale priority", () => {
+  it("prefers SDK locale over browser locale while query override stays highest", () => {
+    expect(detectLang("", "en-US", "ja-JP")).toBe("ja");
+    expect(detectLang("", "ja-JP", "en-US")).toBe("en");
+    expect(detectLang("?lang=ja", "en-US", "en-US")).toBe("ja");
+  });
+});

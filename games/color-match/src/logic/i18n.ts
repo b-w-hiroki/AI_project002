@@ -1,12 +1,12 @@
+import { resolveJaEnLang } from "../../../shared/locale";
 export type Lang = "ja" | "en";
 
 export function detectLang(
   search = typeof window !== "undefined" ? window.location.search : "",
   browserLanguage = typeof navigator !== "undefined" ? navigator.language : "en",
+  sdkLocale?: string,
 ): Lang {
-  const forced = new URLSearchParams(search).get("lang");
-  if (forced === "ja" || forced === "en") return forced;
-  return browserLanguage.toLowerCase().startsWith("ja") ? "ja" : "en";
+  return resolveJaEnLang(search, browserLanguage, sdkLocale);
 }
 
 const STRINGS = {
