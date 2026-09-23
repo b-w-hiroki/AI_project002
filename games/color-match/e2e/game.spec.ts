@@ -49,6 +49,29 @@ test("English landscape marketing UI contains no Japanese", async ({ page }) => 
     return scenes.flatMap(scene => collect(scene.children.list));
   });
   expect(visibleText.join("\n")).not.toMatch(/[ぁ-んァ-ヶ一-龠]/);
+
+  const headlineBounds = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.type === "Text" && (node as Phaser.GameObjects.Text).text.includes("Spot the mismatch")) {
+          return node as Phaser.GameObjects.Text;
+        }
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const node = find(scene.children.list);
+    if (!node) return null;
+    const bounds = node.getBounds();
+    return { left: bounds.left, right: bounds.right };
+  });
+  expect(headlineBounds).not.toBeNull();
+  expect(headlineBounds!.left).toBeGreaterThanOrEqual(48);
+  expect(headlineBounds!.right).toBeLessThanOrEqual(452);
 });
 
 test("English fallback localizes the primary title and controls", async ({ page }) => {
