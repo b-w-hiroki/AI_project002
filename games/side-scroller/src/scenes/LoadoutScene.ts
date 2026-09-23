@@ -146,7 +146,7 @@ export class LoadoutScene extends Phaser.Scene {
       const y = 130;
       drawPanel(this, x, y, 160, 90, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
       this.add
-        .text(x, y - 34, KIND_LABEL[kind], { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
+        .text(x, y - 34, weaponLabel(this.lang, kind), { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
         .setOrigin(0.5);
       const text = this.add
         .text(x, y, tr(this.lang, "(未設定)", "(Not Set)"), { fontSize: "13px", color: "#8a97a8", align: "center", wordWrap: { width: 150 } })
@@ -228,7 +228,7 @@ export class LoadoutScene extends Phaser.Scene {
     let y = 231;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
-      this.add.text(500, y, `🔨 ${weaponName(this.lang, template.id, weaponName(this.lang, template.id, template.name))} ${tr(this.lang, "を鍛治", "Forge")} (${cost})`, { fontSize: "12px", color: "#e0447a" });
+      this.add.text(500, y, `🔨 ${weaponName(this.lang, template.id, template.name)} ${tr(this.lang, "を鍛治", "Forge")} (${cost})`, { fontSize: "12px", color: "#e0447a" });
       // 密なリスト（行間20px）のため高さは行間ぎりぎりまで、横幅は右端まで広げて妥協する
       makeTappable(this, 640, y + 6, 300, 18, () => this.craft(template.id));
       y += 20;
