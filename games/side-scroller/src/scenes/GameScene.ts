@@ -138,12 +138,12 @@ interface EnemySprite {
  * 読み込めなかった場合は従来どおり Graphics で描いたプレースホルダーにフォールバックする。
  */
 const ART_BG_KEY = "sf-bg-forest";
-const ART_HERO_KEY = "sf-hero-swordsman";
+const ART_HERO_KEY = "sf-hero-swordsman";\nconst ART_HERO_ATTACK_KEY = "sf-hero-swordsman-attack";\nconst ART_HERO_HURT_KEY = "sf-hero-swordsman-hurt";
 const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
 const ART_ENEMY_AGILE_KEY = "sf-enemy-agile";
 const ART_ENEMY_TANK_KEY = "sf-enemy-tank";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
-const HERO_ART_TEXTURE = "hero-art";
+const HERO_ART_TEXTURE = "hero-art";\nconst HERO_ATTACK_ART_TEXTURE = "hero-attack-art";\nconst HERO_HURT_ART_TEXTURE = "hero-hurt-art";
 const ENEMY_NORMAL_ART_TEXTURE = "goblin-art";
 const ENEMY_AGILE_ART_TEXTURE = "goblin-agile-art";
 const ENEMY_TANK_ART_TEXTURE = "goblin-tank-art";
@@ -329,7 +329,7 @@ export class GameScene extends Phaser.Scene {
     // 404 などで読み込めなくても Phaser はエラーで止まらないので、使用箇所で textures.exists() を確認して
     // Graphics 描画のプレースホルダーにフォールバックする。
     this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
-    this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
+    this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");\n    this.load.svg(ART_HERO_ATTACK_KEY, "images/sf-hero-swordsman-attack.svg");\n    this.load.svg(ART_HERO_HURT_KEY, "images/sf-hero-swordsman-hurt.svg");
     this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
     this.load.svg(ART_ENEMY_AGILE_KEY, "images/sf-enemy-agile.svg");
     this.load.svg(ART_ENEMY_TANK_KEY, "images/sf-enemy-tank.svg");
@@ -472,7 +472,7 @@ export class GameScene extends Phaser.Scene {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
-    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
+    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);\n    this.buildArtTexture(ART_HERO_ATTACK_KEY, HERO_ATTACK_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);\n    this.buildArtTexture(ART_HERO_HURT_KEY, HERO_HURT_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
@@ -665,7 +665,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 使用中のプレイヤーテクスチャに応じた当たり判定オフセット（判定サイズ自体はどちらも同じ） */
   private playerBodyOffset(): { x: number; y: number } {
-    return this.player.texture.key === HERO_ART_TEXTURE ? PLAYER_BODY_OFFSET.art : PLAYER_BODY_OFFSET.fallback;
+    const artKeys = [HERO_ART_TEXTURE, HERO_ATTACK_ART_TEXTURE, HERO_HURT_ART_TEXTURE];\n    return artKeys.includes(this.player.texture.key) ? PLAYER_BODY_OFFSET.art : PLAYER_BODY_OFFSET.fallback;
   }
 
   /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
@@ -1358,6 +1358,24 @@ export class GameScene extends Phaser.Scene {
     this.dashAttack(SKILL_RANGE, WEAPONS[this.playerState.equippedWeapon].damage * SKILL_DAMAGE_MULTIPLIER, time);
   }
 
+  /** 専用アクション立ち絵へ一時的に差し替える。当たり判定は通常時と同じ。 */
+  private showPlayerActionPose(textureKey: string, durationMs: number): void {
+    if (!this.textures.exists(textureKey)) return;
+    this.player.setTexture(textureKey);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const off = this.playerBodyOffset();
+    body.setSize(PLAYER_BODY.w, this.crouching ? PLAYER_BODY.crouchH / CROUCH_SCALE_Y : PLAYER_BODY.h)
+      .setOffset(off.x, off.y);
+    this.time.delayedCall(durationMs, () => {
+      if (this.player.texture.key !== textureKey) return;
+      const normal = this.textures.exists(HERO_ART_TEXTURE) ? HERO_ART_TEXTURE : "hero";
+      this.player.setTexture(normal);
+      const normalOff = this.playerBodyOffset();
+      body.setSize(PLAYER_BODY.w, this.crouching ? PLAYER_BODY.crouchH / CROUCH_SCALE_Y : PLAYER_BODY.h)
+        .setOffset(normalOff.x, normalOff.y);
+    });
+  }
+
   /** スキル・奥義・秘奥義に共通の「その場で前方範囲を薙ぎ払う」処理 */
   private dashAttack(range: number, damage: number, time: number): void {
     for (const enemy of this.enemies) {
@@ -1408,6 +1426,7 @@ export class GameScene extends Phaser.Scene {
     const kindColor: Record<WeaponKind, number> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
     const color = kindColor[weapon.kind];
     const facing = this.playerState.facing;
+    this.showPlayerActionPose(HERO_ATTACK_ART_TEXTURE, Math.max(150, weapon.attackWindowMs + 40));
     const radius = weapon.range * 0.7;
     const slashSprite = this.add
       .image(this.player.x + facing * 26, this.player.y - 8, COMBAT_SLASH_TEXTURE)
@@ -1723,6 +1742,7 @@ export class GameScene extends Phaser.Scene {
 
   private playPlayerDamageFx(sourceX: number): void {
     const direction = sourceX >= this.player.x ? 1 : -1;
+    this.showPlayerActionPose(HERO_HURT_ART_TEXTURE, 280);
     const hitSprite = this.add
       .image(this.player.x + direction * 8, this.player.y - 14, COMBAT_HIT_TEXTURE)
       .setDepth(COMBAT_FX_DEPTH)
