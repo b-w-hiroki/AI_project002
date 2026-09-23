@@ -1,0 +1,59 @@
+name: WebKit Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "games/**"
+      - ".github/workflows/webkit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "games/**"
+      - ".github/workflows/webkit.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  webkit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game:
+          - color-match
+          - fist-legend
+          - karma-quest
+          - potion-workshop
+          - sangoku-tap
+          - side-scroller
+    defaults:
+      run:
+        working-directory: games/${{ matrix.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: games/${{ matrix.game }}/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - name: Run WebKit E2E
+        shell: bash
+        run: |
+          if [ "${{ matrix.game }}" = "karma-quest" ]; then
+            npx playwright test --browser=webkit --grep "representative phone|sound preference|touch starts a journey|landscape dialogue|landscape encounter|result images load on demand"
+          else
+            npx playwright test --browser=webkit
+          fi
+      - name: Upload WebKit visual QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.game }}-webkit-visual-qa
+          path: games/${{ matrix.game }}/e2e/screenshots/
+          if-no-files-found: warn
+          retention-days: 14
