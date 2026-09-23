@@ -45,6 +45,7 @@ import {
 import {
   FIGHTERS,
   fighterById,
+  fighterMoveMultiplier,
   teamLabel,
   toggleTeamMember,
   type FighterId,
@@ -94,6 +95,13 @@ const IMG = {
   enemy: "fl-enemy-fighter",
   ryuga: "fl-gacha-char-ryuga",
 } as const;
+
+const FIGHTER_ART: Readonly<Record<FighterId, string>> = {
+  ryuga: "fl-fighter-ryuga",
+  renka: "fl-fighter-renka",
+  gaku: "fl-fighter-gaku",
+  mei: "fl-fighter-mei",
+};
 
 /** 立ち絵は 384×512（3:4）。バトル中の表示高さと、それに合わせた幅 */
 const FIGHTER_H = 290;
@@ -182,6 +190,9 @@ export class GameScene extends Phaser.Scene {
     this.load.image(IMG.hero, "images/fl-hero-fighter.png");
     this.load.image(IMG.enemy, "images/fl-enemy-fighter.png");
     this.load.image(IMG.ryuga, "images/fl-gacha-char-ryuga.png");
+    for (const key of Object.values(FIGHTER_ART)) {
+      this.load.svg(key, `images/${key}.svg`);
+    }
   }
 
   /**
@@ -475,8 +486,14 @@ export class GameScene extends Phaser.Scene {
         : `PLAYER · ${leader.name}`,
     );
     if (this.playerSprite instanceof Phaser.GameObjects.Image) {
-      if (leader.id === "ryuga") this.playerSprite.clearTint();
-      else this.playerSprite.setTint(leader.accent);
+      const artKey = FIGHTER_ART[leader.id];
+      if (this.textures.exists(artKey)) {
+        this.playerSprite.setTexture(artKey).setDisplaySize(FIGHTER_W, FIGHTER_H).clearTint();
+      } else {
+        this.playerSprite.setTexture(IMG.hero).setDisplaySize(FIGHTER_W, FIGHTER_H);
+        if (leader.id === "ryuga") this.playerSprite.clearTint();
+        else this.playerSprite.setTint(leader.accent);
+      }
     }
     this.switchBtn?.setEnabled(this.phase === "battle" && this.selectedTeam.length > 1);
   }
@@ -601,7 +618,11 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0);
 
-    this.playerSprite = this.buildFighter(180, IMG.hero, 0x3b7fd1);
+    this.playerSprite = this.buildFighter(
+      180,
+      FIGHTER_ART[this.selectedTeam[0] ?? "ryuga"],
+      0x3b7fd1,
+    );
     this.enemyAura = this.add.graphics();
     this.enemySprite = this.buildFighter(620, IMG.enemy, 0xd1493b);
     if (this.enemySprite instanceof Phaser.GameObjects.Image) this.enemySprite.setFlipX(true);
@@ -838,7 +859,23 @@ export class GameScene extends Phaser.Scene {
     const enemyMove = this.nextEnemyMove;
     this.beat += 1;
     this.nextEnemyMove = plannedMove(this.opponent, this.beat, move);
-    const result = applyBeat(this.battle, move, enemyMove);
+    const rawResult = applyBeat(this.battle, move, enemyMove);
+    const activeId = this.selectedTeam[this.activeFighterIndex] ?? "ryuga";
+    const specialtyMultiplier = fighterMoveMultiplier(activeId, move);
+    const specialtyBonus = Math.max(
+      0,
+      Math.round(rawResult.playerDamageDealt * (specialtyMultiplier - 1)),
+    );
+    const result = specialtyBonus > 0
+      ? {
+          ...rawResult,
+          playerDamageDealt: rawResult.playerDamageDealt + specialtyBonus,
+          state: {
+            ...rawResult.state,
+            enemyHp: Math.max(0, rawResult.state.enemyHp - specialtyBonus),
+          },
+        }
+      : rawResult;
     this.battle = result.state;
 
     this.playSound(
