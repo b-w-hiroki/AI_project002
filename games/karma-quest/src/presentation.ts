@@ -9,6 +9,7 @@ import {
   type KarmaState,
 } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
+import { factionLabel, factionShort, mandateLabel, requestText as localizedRequestText, tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -19,6 +20,7 @@ type KarmaScene = Phaser.Scene & {
   karma?: KarmaState;
   mandate?: { label?: string; bonus?: number; threat?: number };
   currentRequest?: KarmaRequest | null;
+  lang?: Lang;
 };
 
 interface JourneyScreen {
@@ -45,13 +47,6 @@ const FACTION_COLORS: Readonly<Record<Faction, number>> = {
   outlaw: 0x6f5c91,
   mage: 0x3f79a8,
 };
-const FACTION_SHORT: Readonly<Record<Faction, string>> = {
-  warrior: "戦士",
-  merchant: "商人",
-  outlaw: "荒くれ",
-  mage: "魔術師",
-};
-
 function uiText(
   scene: Phaser.Scene,
   x: number,
@@ -95,7 +90,7 @@ function ensureJourneyScreen(scene: KarmaScene): JourneyScreen {
 
   const frame = scene.add.graphics();
   const yearText = uiText(scene, 22, 21, "", 11, "#f5dd9d", "900").setOrigin(0, 0.5);
-  const titleText = uiText(scene, 225, 21, "勇者の旅", 13, "#f3ead5", "900");
+  const titleText = uiText(scene, 225, 21, tr(scene.lang ?? "en", "勇者の旅", "Hero Journey"), 13, "#f3ead5", "900");
   const evalText = uiText(scene, 428, 21, "", 11, "#f5dd9d", "900").setOrigin(1, 0.5);
   const mandateText = scene.add
     .text(225, 53, "", {
@@ -191,7 +186,7 @@ function refreshJourneyScreen(scene: KarmaScene): void {
   const request = scene.currentRequest;
   const stage = Phaser.Math.Clamp(scene.stage ?? 1, 1, 12);
   const evaluation = scene.runEvaluation ?? 0;
-  const mandate = scene.mandate?.label ?? "神託を待つ";
+  const mandate = mandateLabel(scene.lang ?? "en", scene.mandate?.label ?? "最初の旅：自由に勇者を育てよう");
   const maxKarma = Math.max(10, ...FACTIONS.map((faction) => karma[faction]));
 
   ui.frame.clear();
@@ -228,17 +223,17 @@ function refreshJourneyScreen(scene: KarmaScene): void {
   ui.frame.lineStyle(1.4, 0x8e7aa0, 0.45).lineBetween(322, 447, 322, 538);
 
   ui.yearText.setText(`YEAR ${stage}/12`);
-  ui.evalText.setText(`評価 ${evaluation >= 0 ? "+" : ""}${evaluation}`);
+  ui.evalText.setText(`${tr(scene.lang ?? "en", "評価", "Evaluation")} ${evaluation >= 0 ? "+" : ""}${evaluation}`);
   ui.titleText.setText("HERO JOURNEY");
-  ui.mandateText.setText(`神託  ${mandate.length > 36 ? `${mandate.slice(0, 36)}…` : mandate}`);
-  ui.requestTitle.setText(request ? `【${FACTION_LABEL[request.faction]}】` : "旅人からの依頼");
-  ui.requestText.setText(request?.text ?? "次の依頼を待っています");
-  ui.dominantText.setText(`現在の傾向  ${FACTION_LABEL[dominant]}`);
+  ui.mandateText.setText(`${tr(scene.lang ?? "en", "神託", "Mandate")}  ${mandate.length > 36 ? `${mandate.slice(0, 36)}…` : mandate}`);
+  ui.requestTitle.setText(request ? `【${factionLabel(scene.lang ?? "en", request.faction)}】` : tr(scene.lang ?? "en", "旅人からの依頼", "Traveler Request"));
+  ui.requestText.setText(request ? localizedRequestText(scene.lang ?? "en", request) : tr(scene.lang ?? "en", "次の依頼を待っています", "Waiting for the next request"));
+  ui.dominantText.setText(`${tr(scene.lang ?? "en", "現在の傾向", "Current Path")}  ${factionLabel(scene.lang ?? "en", dominant)}`);
   ui.statsText.setText(`ATK ${stats.atk}   DEF ${stats.def}\nHP ${stats.hp}   MAGIC ${stats.magic}`);
   ui.acceptImpact.setText(
-    request ? `力を貸す → ${FACTION_SHORT[request.faction]} +${request.karmaDelta}  /  勇者が成長` : "",
+    request ? `${tr(scene.lang ?? "en", "力を貸す", "Help")} → ${factionShort(scene.lang ?? "en", request.faction)} +${request.karmaDelta} / ${tr(scene.lang ?? "en", "勇者が成長", "Hero grows")}` : "",
   );
-  ui.declineImpact.setText(request ? "断る → 他派閥 +1  /  別の伝説へ" : "");
+  ui.declineImpact.setText(request ? tr(scene.lang ?? "en", "断る → 他派閥 +1  /  別の伝説へ", "Decline → other factions +1 / another legend") : "");
 
   if (ui.hero) {
     const tint = FACTION_COLORS[dominant];
@@ -253,14 +248,14 @@ function refreshJourneyScreen(scene: KarmaScene): void {
 
 function showChapterCard(scene: KarmaScene): void {
   const stage = scene.stage ?? 1;
-  const mandate = scene.mandate?.label ?? "新たな旅が始まる";
+  const mandate = mandateLabel(scene.lang ?? "en", scene.mandate?.label ?? "最初の旅：自由に勇者を育てよう");
   const veil = scene.add.graphics().setDepth(2000).setAlpha(0);
   veil.fillStyle(0x0b1612, 0.78).fillRect(0, 0, 450, 800);
   const crest = scene.add.graphics().setDepth(2001).setAlpha(0);
   crest.lineStyle(2, 0xd9b45a, 0.8).strokeCircle(225, 286, 42);
   crest.lineBetween(190, 286, 260, 286).lineBetween(225, 251, 225, 321);
   const year = scene.add
-    .text(225, 365, `第 ${stage} 年`, {
+    .text(225, 365, `${tr(scene.lang ?? "en", "第", "YEAR ")} ${stage}${tr(scene.lang ?? "en", " 年", "")}`, {
       fontSize: "42px",
       fontStyle: "800",
       color: "#f4dd9d",
@@ -285,7 +280,7 @@ function showChapterCard(scene: KarmaScene): void {
     .setDepth(2002)
     .setAlpha(0);
   const kicker = scene.add
-    .text(225, 500, stage === 1 ? "勇者の伝説が始まる" : "前の選択が、次の旅を変える", {
+    .text(225, 500, stage === 1 ? tr(scene.lang ?? "en", "勇者の伝説が始まる", "The hero legend begins") : tr(scene.lang ?? "en", "前の選択が、次の旅を変える", "Your previous choice changes the next journey"), {
       fontSize: "13px",
       color: "#b9c9bd",
       fontStyle: "700",
@@ -320,7 +315,7 @@ function showChoiceDelta(scene: KarmaScene, before: KarmaState, after: KarmaStat
     .map(([label, delta]) => `${label}+${delta}`)
     .join("  ");
   const label = scene.add
-    .text(225, 615, `${accepted ? "選択が世界を動かした" : "別の道を選んだ"}\n${factionDelta}${statDelta ? `  ·  ${statDelta}` : ""}`, {
+    .text(225, 615, `${accepted ? tr(scene.lang ?? "en", "選択が世界を動かした", "Your choice moved the world") : tr(scene.lang ?? "en", "別の道を選んだ", "You chose another path")}\n${factionDelta}${statDelta ? ` · ${statDelta}` : ""}`, {
       fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
       fontSize: "13px",
       fontStyle: "800",
