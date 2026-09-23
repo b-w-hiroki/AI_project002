@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { autoBattle, cheerBonus, heroPower, monsterPowerForStage } from "../src/logic/battle";
+import { autoBattle, battleWinProbability, cheerBonus, heroPower, monsterPowerForStage } from "../src/logic/battle";
+import { deriveStats } from "../src/logic/karma";
 
 function sequentialRng(values: number[]): () => number {
   let i = 0;
@@ -96,5 +97,41 @@ describe("cheerBonus", () => {
 
   it("負の回数は0として扱う", () => {
     expect(cheerBonus(-5)).toBe(0);
+  });
+});
+
+
+describe("12-year balance curve", () => {
+  it("初年度は素の勇者でも勝率65%前後を確保する", () => {
+    const p = battleWinProbability(deriveStats({ warrior: 0, merchant: 0, outlaw: 0, mage: 0 }), 1);
+    expect(p).toBeGreaterThanOrEqual(0.6);
+    expect(p).toBeLessThanOrEqual(0.75);
+  });
+
+  it("中盤の均等育成+応援は80%前後で安定する", () => {
+    const stats = deriveStats({ warrior: 6, merchant: 6, outlaw: 6, mage: 6 });
+    const p = battleWinProbability(stats, 6, 10);
+    expect(p).toBeGreaterThanOrEqual(0.75);
+    expect(p).toBeLessThanOrEqual(0.85);
+  });
+
+  it("12年目はどの派閥特化でも応援込み70%以上を維持する", () => {
+    const builds = [
+      { warrior: 48, merchant: 0, outlaw: 0, mage: 0 },
+      { warrior: 0, merchant: 48, outlaw: 0, mage: 0 },
+      { warrior: 0, merchant: 0, outlaw: 48, mage: 0 },
+      { warrior: 0, merchant: 0, outlaw: 0, mage: 48 },
+    ] as const;
+    const probabilities = builds.map(karma =>
+      battleWinProbability(deriveStats(karma), 12, 10),
+    );
+    expect(Math.min(...probabilities)).toBeGreaterThanOrEqual(0.7);
+    expect(Math.max(...probabilities) - Math.min(...probabilities)).toBeLessThanOrEqual(0.15);
+  });
+
+  it("9年目以降は追加成長し、終盤だけ難度が一段上がる", () => {
+    const before = monsterPowerForStage(8) - monsterPowerForStage(7);
+    const after = monsterPowerForStage(9) - monsterPowerForStage(8);
+    expect(after).toBeGreaterThan(before);
   });
 });
