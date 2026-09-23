@@ -24,6 +24,32 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English fallback localizes the primary title and controls", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  const labels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collectText = (
+      nodes: Phaser.GameObjects.GameObject[],
+      out: string[] = [],
+    ): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") {
+          collectText((node as Phaser.GameObjects.Container).list, out);
+        }
+      }
+      return out;
+    };
+    return collectText(scene.children.list);
+  });
+  expect(labels).toContain("Color Match");
+  expect(labels).toContain("Word Style");
+  expect(labels).toContain("60-Second Challenge");
+  expect(labels).toContain("20-Second Practice");
+  await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
+});
+
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;

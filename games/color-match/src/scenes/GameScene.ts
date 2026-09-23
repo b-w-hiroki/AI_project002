@@ -34,6 +34,7 @@ import {
   saveWritingMode,
   weakestJudgeMode,
 } from "../logic/progress";
+import { detectLang, t, writingModeLabel, type Lang } from "../logic/i18n";
 import { cg } from "../platform/crazygames";
 import { sfx } from "../platform/audio";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
@@ -93,6 +94,7 @@ export class GameScene extends Phaser.Scene {
   private turboStreak = 0;
   private turboPoints = 0;
   private writingMode: WritingMode = "hiragana";
+  private lang: Lang = "en";
 
   private promptCard!: Phaser.GameObjects.Container;
   private promptBg!: Phaser.GameObjects.Graphics;
@@ -125,6 +127,8 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0xfdf6e3);
+    this.lang = detectLang();
+    document.documentElement.lang = this.lang;
     this.writingMode = loadWritingMode();
     this.buildTitleScreen();
     this.buildPlayScreen();
@@ -141,8 +145,8 @@ export class GameScene extends Phaser.Scene {
     this.sessionRemaining = Math.max(0, this.sessionRemaining - delta);
     this.progressText.setText(
       this.sessionMode === "practice"
-        ? `20秒 弱点練習 · ${this.practiceJudgeMode === "content" ? "文字の意味" : "文字の色"} · 残り ${Math.ceil(this.sessionRemaining / 1000)}秒 · ${this.roundIndex}問`
-        : `60秒 CHALLENGE  ·  残り ${Math.ceil(this.sessionRemaining / 1000)}秒  ·  ${this.roundIndex}問`,
+        ? `${t(this.lang, "practice")} · ${this.practiceJudgeMode === "content" ? t(this.lang, "contentMeaning") : t(this.lang, "inkColor")} · ${t(this.lang, "remaining")} ${Math.ceil(this.sessionRemaining / 1000)}s · ${this.roundIndex}${t(this.lang, "questions")}`
+        : `${t(this.lang, "challenge")} · ${t(this.lang, "remaining")} ${Math.ceil(this.sessionRemaining / 1000)}s · ${this.roundIndex}${t(this.lang, "questions")}`,
     );
     if (this.sessionRemaining <= 0) {
       if (this.accepting && this.currentRound) {
@@ -166,15 +170,15 @@ export class GameScene extends Phaser.Scene {
     if (this.sessionMode === "practice") {
       this.switchHint.setText(
         this.practiceJudgeMode === "content"
-          ? "弱点練習：文字そのものの意味だけに集中"
-          : "弱点練習：文字の見た目の色だけに集中",
+          ? t(this.lang, "practiceContentHint")
+          : t(this.lang, "practiceColorHint"),
       );
     } else {
       const until = nextSwitchAt(elapsed) - elapsed;
       this.switchHint.setText(
         until <= 2000
-          ? "まもなく、次のカードから判定が切り替わります"
-          : "内容 → 色 → 切り替え。目の前の指示を見よう",
+          ? t(this.lang, "switchSoon")
+          : t(this.lang, "switchGuide"),
       );
     }
     if (!this.accepting) return;
@@ -195,7 +199,7 @@ export class GameScene extends Phaser.Scene {
     // マスコット画像がある時はタイトル文字を右へ寄せ、左隣にマスコットを置く。無ければ従来の中央揃え
     const hasMascot = this.textures.exists(MASCOT_KEY);
     const title = this.add
-      .text(hasMascot ? CX + 55 : CX, 110, "カラーマッチ", {
+      .text(hasMascot ? CX + 55 : CX, 110, t(this.lang, "title"), {
         ...TYPE.h1,
         color: THEME.textPrimary,
       })
@@ -204,13 +208,13 @@ export class GameScene extends Phaser.Scene {
       .text(
         CX,
         260,
-        "60秒チャレンジで総合力を測定。\n20秒弱点練習では、過去成績から苦手な判定だけを集中出題。\n指示に合う色の枠までカードをドラッグしてください。\n\n制限時間内に判断できないと失敗になります。\n1秒以内の正解が5回続くとターボモード突入、\n獲得ポイントが加速します。",
+        t(this.lang, "rules"),
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const modeLabel = this.add
-      .text(CX, 430, "出題の表記", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 430, t(this.lang, "writing"), { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5);
     this.titleGroup.add([panel, title, rules, modeLabel]);
     if (hasMascot) {
@@ -234,7 +238,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         CX,
         580,
-        `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`,
+        `${t(this.lang, "bestScore")}: ${loadBestScore()}\n${t(this.lang, "bestTurbo")}: ${loadBestTurbo()}pt`,
         {
           ...TYPE.small,
           color: THEME.textMuted,
@@ -249,7 +253,7 @@ export class GameScene extends Phaser.Scene {
       650,
       260,
       52,
-      "60秒チャレンジ",
+      t(this.lang, "challenge"),
       () => this.startSession("challenge"),
       {
         fontSize: "16px",
@@ -261,7 +265,7 @@ export class GameScene extends Phaser.Scene {
       716,
       260,
       48,
-      "20秒 弱点練習",
+      t(this.lang, "practice"),
       () => this.startPractice(),
       {
         fontSize: "15px",
@@ -290,7 +294,7 @@ export class GameScene extends Phaser.Scene {
 
       const bg = this.add.graphics();
       const label = this.add
-        .text(0, 0, WRITING_MODE_LABEL[mode], {
+        .text(0, 0, writingModeLabel(this.lang, mode), {
           ...TYPE.small,
           fontStyle: "700",
           color: THEME.textPrimary,
@@ -595,7 +599,7 @@ export class GameScene extends Phaser.Scene {
       510,
       280,
       52,
-      "もう一度あそぶ (R)",
+      t(this.lang, "retry"),
       () => this.startSession(),
       {
         fontSize: "15px",
@@ -616,7 +620,7 @@ export class GameScene extends Phaser.Scene {
       "bestText",
     ) as Phaser.GameObjects.Text;
     bestText.setText(
-      `ベストスコア: ${loadBestScore()}\nベストターボ: ${loadBestTurbo()}pt`,
+      `${t(this.lang, "bestScore")}: ${loadBestScore()}\n${t(this.lang, "bestTurbo")}: ${loadBestTurbo()}pt`,
     );
   }
 
@@ -674,13 +678,13 @@ export class GameScene extends Phaser.Scene {
 
     this.progressText.setText(
       this.sessionMode === "practice"
-        ? `20秒 弱点練習 · ${this.practiceJudgeMode === "content" ? "文字の意味" : "文字の色"} · ${this.roundIndex}問`
-        : `60秒 CHALLENGE · ${this.roundIndex}問`,
+        ? `${t(this.lang, "practice")} · ${this.practiceJudgeMode === "content" ? t(this.lang, "contentMeaning") : t(this.lang, "inkColor")} · ${this.roundIndex}${t(this.lang, "questions")}`
+        : `${t(this.lang, "challenge")} · ${this.roundIndex}${t(this.lang, "questions")}`,
     );
     this.judgeModeText.setText(
       round.judgeMode === "content"
-        ? "文字の「内容」に合う枠へ\nドラッグ"
-        : "文字の「色」に合う枠へ\nドラッグ",
+        ? t(this.lang, "dragContent")
+        : t(this.lang, "dragColor"),
     );
     const word = nameForColorId(round.promptWord, this.writingMode);
     this.promptText
@@ -709,7 +713,7 @@ export class GameScene extends Phaser.Scene {
     this.timerBarFill.fillStyle(color, 0.9);
     this.timerBarFill.fillRoundedRect(CX - 130, 130, 260 * ratio, 8, 4);
     this.timerText.setText(
-      `残り ${(this.timeRemainingMs / 1000).toFixed(1)}秒`,
+      `${t(this.lang, "remaining")} ${(this.timeRemainingMs / 1000).toFixed(1)}s`,
     );
   }
 
@@ -782,7 +786,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.turboStreak >= TURBO_ENTRY_STREAK) {
       this.turboText
-        .setText(`🔥 ターボモード ×${this.turboStreak}`)
+        .setText(`🔥 ${t(this.lang, "turbo")} ×${this.turboStreak}`)
         .setVisible(true);
       this.tweens.add({
         targets: this.turboText,
@@ -955,15 +959,15 @@ export class GameScene extends Phaser.Scene {
           : "C";
     heading.setText(
       this.sessionMode === "practice"
-        ? `練習 ${this.practiceJudgeMode === "content" ? "意味" : "色"} · ${grade} · ${summary.score}`
-        : `${grade}  ·  スコア ${summary.score}`,
+        ? `${t(this.lang, "practice")} ${this.practiceJudgeMode === "content" ? t(this.lang, "practiceShortContent") : t(this.lang, "practiceShortColor")} · ${grade} · ${summary.score}`
+        : `${grade} · ${t(this.lang, "score")} ${summary.score}`,
     );
     heading.setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
     heading.setScale(0.78);
     this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
     if (grade === "S" || grade === "A") this.cameras.main.flash(120, 255, 222, 110);
     stats.setText(
-      `正答率: ${Math.round(summary.accuracy * 100)}%\n平均反応: ${Math.round(summary.avgReactionMs)}ms\nターボボーナス: ${this.turboPoints}pt`,
+      `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt`,
     );
     const metricText = (key: "content" | "color" | "switch", label: string) => {
       const metric = performance[key];
@@ -975,7 +979,7 @@ export class GameScene extends Phaser.Scene {
     bestLine
       .setPosition(CX, 438)
       .setText(
-        `${metricText("content", "意味")}\n${metricText("color", "色  ")}\n${metricText("switch", "切替")}\n60秒ベスト ${best} · ターボ ${bestTurbo}pt`,
+        `${metricText("content", t(this.lang, "metricContent"))}\n${metricText("color", t(this.lang, "metricColor"))}\n${metricText("switch", t(this.lang, "metricSwitch"))}\n${t(this.lang, "best60")} ${best} · ${t(this.lang, "turbo")} ${bestTurbo}pt`,
       );
 
     this.resultGroup.setVisible(true);
