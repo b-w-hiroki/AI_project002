@@ -194,8 +194,21 @@ test("battle switch cycles through the selected team on touch controls", async (
 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-  await page.waitForTimeout(80);
-  await tapPoint(page, 300, 402);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  const switchPoint = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(node =>
+      node.type === "Container" &&
+      typeof Reflect.get(node, "getByName") === "function" &&
+      Reflect.get(node, "getByName").call(node, "mobile-switch-landscape"),
+    ) as Phaser.GameObjects.Container | undefined;
+    const button = root?.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null;
+    if (!button || !button.visible) return null;
+    const bounds = button.getBounds();
+    return { x: bounds.centerX, y: bounds.centerY };
+  });
+  expect(switchPoint).not.toBeNull();
+  await tapPoint(page, switchPoint!.x, switchPoint!.y);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return {
