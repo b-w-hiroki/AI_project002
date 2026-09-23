@@ -131,8 +131,8 @@ function build(scene: Runtime): ArcadeUi {
   const root = scene.add.container(0, 0).setDepth(1800).setVisible(false);
   makeSky(scene, root);
 
-  text(scene, root, 20, 28, "カラーマッチ", 29, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#235bc4", 6);
-  text(scene, root, 22, 57, "Color Match — 色と文字の反射神経", 9, "#eef9ff", "800").setOrigin(0, 0.5);
+  text(scene, root, 20, 28, tr(scene.lang ?? "en", "カラーマッチ", "Color Match"), 29, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#235bc4", 6);
+  text(scene, root, 22, 57, tr(scene.lang ?? "en", "Color Match — 色と文字の反射神経", "Color Match — Reflex Arcade"), 9, "#eef9ff", "800").setOrigin(0, 0.5);
 
   panel(scene, root, 352, 42, 160, 54, 0x153e6a, 0xffd463, 0.96, 12);
   text(scene, root, 352, 29, "SCORE", 9, "#d8ecff", "900");
@@ -144,9 +144,9 @@ function build(scene: Runtime): ArcadeUi {
   text(scene, root, 70, 119, "TIME", 9, "#d7f3ff", "900");
 
   panel(scene, root, 270, 151, 280, 100, 0x144f82, 0x8ce5ff, 0.96, 15);
-  text(scene, root, 270, 122, "お題", 10, "#d8f5ff", "900");
+  text(scene, root, 270, 122, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#d8f5ff", "900");
   const ruleText = text(scene, root, 270, 149, "", 18, "#ffffff", "900");
-  text(scene, root, 270, 178, "正しい色カードをタップ！", 10, "#d7f2ff", "800");
+  text(scene, root, 270, 178, tr(scene.lang ?? "en", "正しい色カードをタップ！", "Tap the correct color card!"), 10, "#d7f2ff", "800");
 
   panel(scene, root, 225, 278, 250, 112, 0xffffff, 0x8ac8f4, 0.97, 16);
   const promptText = text(scene, root, 225, 278, "", 46, "#273d5b", "900");
