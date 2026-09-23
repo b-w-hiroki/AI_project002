@@ -1374,7 +1374,7 @@ export class GameScene extends Phaser.Scene {
     for (const { key, kind } of this.weaponKeys) {
       if (Phaser.Input.Keyboard.JustDown(key) && this.playerState.equippedWeapon !== kind) {
         this.playerState = switchWeapon(this.playerState, kind);
-        this.spawnFloatingText(this.player.x, this.player.y - 60, WEAPON_LABEL[kind], "#7fd1ff");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, weaponLabel(this.lang, kind), "#7fd1ff");
       }
     }
   }
