@@ -52,6 +52,13 @@ describe("deriveStats", () => {
     expect(high.atk).toBeGreaterThan(low.atk);
   });
 
+  it("荒くれカルマはATKとMAGICの両方へ寄与する", () => {
+    const low = deriveStats({ warrior: 0, merchant: 0, outlaw: 0, mage: 0 });
+    const high = deriveStats({ warrior: 0, merchant: 0, outlaw: 20, mage: 0 });
+    expect(high.atk).toBeGreaterThan(low.atk);
+    expect(high.magic).toBeGreaterThan(low.magic);
+  });
+
   it("魔術師カルマが高いほどMAGICが伸びる", () => {
     const low = deriveStats({ warrior: 0, merchant: 0, outlaw: 0, mage: 0 });
     const high = deriveStats({ warrior: 0, merchant: 0, outlaw: 0, mage: 20 });

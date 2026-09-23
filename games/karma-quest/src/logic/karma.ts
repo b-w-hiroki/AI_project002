@@ -74,10 +74,10 @@ const BASE_STATS: HeroStats = { atk: 10, def: 8, hp: 40, magic: 5 };
 /** カルマの傾向からステータスを算出する。派閥ごとに伸びるパラメータが異なる */
 export function deriveStats(karma: KarmaState): HeroStats {
   return {
-    atk: BASE_STATS.atk + Math.floor(karma.warrior * 0.8) + Math.floor(karma.outlaw * 0.4),
+    atk: BASE_STATS.atk + Math.floor(karma.warrior * 0.8) + Math.floor(karma.outlaw * 0.6),
     def: BASE_STATS.def + Math.floor(karma.merchant * 0.6) + Math.floor(karma.warrior * 0.2),
     hp: BASE_STATS.hp + Math.floor(karma.merchant * 1.2) + Math.floor(karma.warrior * 0.6),
-    magic: BASE_STATS.magic + Math.floor(karma.mage * 0.9) + Math.floor(karma.outlaw * 0.1),
+    magic: BASE_STATS.magic + Math.floor(karma.mage * 0.9) + Math.floor(karma.outlaw * 0.3),
   };
 }
 

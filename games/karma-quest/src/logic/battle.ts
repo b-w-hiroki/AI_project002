@@ -7,12 +7,16 @@
 import { HeroStats } from "./karma";
 
 export function heroPower(stats: HeroStats): number {
-  return stats.atk + stats.magic + stats.def * 0.5 + stats.hp * 0.1;
+  // 防御/体力型（商人寄り）でも討伐で十分価値が出るよう、
+  // ATK/MAGICだけでなくDEFとHPも総合力へしっかり反映する。
+  return stats.atk + stats.magic + stats.def + stats.hp * 0.25;
 }
 
-/** ステージが進むほど魔物が強くなる */
+/** ステージが進むほど魔物が強くなる。9年目以降だけ追加成長して終盤に緊張感を作る。 */
 export function monsterPowerForStage(stage: number): number {
-  return 18 + stage * 3.5;
+  const normalized = Math.max(1, stage);
+  const lateGameRamp = Math.max(0, normalized - 8) * 1.5;
+  return 30 + normalized * 4.2 + lateGameRamp;
 }
 
 export interface BattleResult {
@@ -28,6 +32,22 @@ const CHEER_BONUS_CAP = 0.15;
 /** おうえん回数から勝率への上乗せ量を算出する（純粋関数、Vitestで境界値を検証） */
 export function cheerBonus(cheerCount: number): number {
   return Math.min(CHEER_BONUS_CAP, Math.max(0, cheerCount) * CHEER_BONUS_PER_TAP);
+}
+
+/** UI・テスト・将来の難度調整で共通利用する勝率算出。 */
+export function battleWinProbability(
+  stats: HeroStats,
+  stage: number,
+  cheerCount = 0,
+  encounterBonus = 0,
+): number {
+  const power = heroPower(stats);
+  const monsterPower = monsterPowerForStage(stage);
+  const ratio = power / monsterPower;
+  return Math.max(
+    0.05,
+    Math.min(0.95, ratio - 0.3 + cheerBonus(cheerCount) + encounterBonus),
+  );
 }
 
 /**
@@ -47,7 +67,12 @@ export function autoBattle(
   const power = heroPower(stats);
   const monsterPower = monsterPowerForStage(stage);
   const ratio = power / monsterPower;
-  const winProbability = Math.max(0.05, Math.min(0.95, ratio - 0.3 + cheerBonus(cheerCount) + encounterBonus));
+  const winProbability = battleWinProbability(
+    stats,
+    stage,
+    cheerCount,
+    encounterBonus,
+  );
   const win = rng() < winProbability;
 
   const hpRatioRemaining = win
