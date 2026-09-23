@@ -30,7 +30,7 @@ import {
   productionPerSec,
   tick,
 } from "../logic/economy";
-import { achievementName, detectLang, generatorName, Lang, t, toggleLang } from "../logic/i18n";
+import { achievementName, detectLang, generatorName, Lang, t, toggleLang, townDesc, townName } from "../logic/i18n";
 import {
   AnalyticsData,
   loadAnalytics,
@@ -922,7 +922,7 @@ export class IdleScene extends Phaser.Scene {
       },
     );
     const title = this.add
-      .text(centerX, layout.titleY, "次の街を選ぶ", {
+      .text(centerX, layout.titleY, this.lang === "ja" ? "次の街を選ぶ" : "Choose Your Next Town", {
         fontSize: `${layout.titleSize}px`,
         color: "#3d332a",
         fontStyle: "700",
@@ -932,7 +932,9 @@ export class IdleScene extends Phaser.Scene {
       .text(
         centerX,
         layout.subY,
-        `転生で Essence +${formatNumber(gained)} · 街ごとに需要と注文報酬が変化`,
+        this.lang === "ja"
+          ? `転生で Essence +${formatNumber(gained)} · 街ごとに需要と注文報酬が変化`
+          : `Ascend for Essence +${formatNumber(gained)} · Each town changes demand and order rewards`,
         {
           fontSize: `${portrait ? 13 : 15}px`,
           color: "#675848",
@@ -975,7 +977,7 @@ export class IdleScene extends Phaser.Scene {
         borderAlpha: 0.95,
       });
       const heading = this.add
-        .text(cardLayout.x, headingY, town.name, {
+        .text(cardLayout.x, headingY, townName(this.lang, town.index, town.cycle, town.name), {
           fontSize: `${layout.headingSize}px`,
           color: "#30483e",
           fontStyle: "700",
@@ -987,7 +989,7 @@ export class IdleScene extends Phaser.Scene {
         .text(
           cardLayout.x,
           descY,
-          `${town.desc}\n\n需要: ${town.demandGeneratorId ? `${generatorName(this.lang, town.demandGeneratorId)} ×1.5` : "通常生産"}\n注文評判: ×${town.contractRewardMultiplier}`,
+          `${townDesc(this.lang, town.index, town.desc)}\n\n${this.lang === "ja" ? "需要" : "Demand"}: ${town.demandGeneratorId ? `${generatorName(this.lang, town.demandGeneratorId)} ×1.5` : this.lang === "ja" ? "通常生産" : "Standard production"}\n${this.lang === "ja" ? "注文評判" : "Order rep"}: ×${town.contractRewardMultiplier}`,
           {
             fontSize: `${layout.descSize}px`,
             color: "#516157",
@@ -1005,7 +1007,7 @@ export class IdleScene extends Phaser.Scene {
         .lineStyle(2, 0xffffff, 0.55)
         .strokeRoundedRect(cardLayout.x - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, 13);
       const label = this.add
-        .text(cardLayout.x, buttonY, "この街へ転生", {
+        .text(cardLayout.x, buttonY, this.lang === "ja" ? "この街へ転生" : "Ascend to This Town", {
           fontSize: `${portrait ? 15 : 16}px`,
           color: "#ffffff",
           fontStyle: "700",
@@ -1020,7 +1022,7 @@ export class IdleScene extends Phaser.Scene {
     });
 
     const close = this.add
-      .text(centerX, layout.closeY, "今回は戻る", {
+      .text(centerX, layout.closeY, this.lang === "ja" ? "今回は戻る" : "Back for Now", {
         fontSize: `${portrait ? 15 : 16}px`,
         color: "#6d6258",
       })

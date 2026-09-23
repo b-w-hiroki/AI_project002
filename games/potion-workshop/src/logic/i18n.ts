@@ -107,3 +107,41 @@ export function detectLang(
 export function toggleLang(lang: Lang): Lang {
   return lang === "ja" ? "en" : "ja";
 }
+
+
+const TOWN_NAMES = [
+  "Starting Village",
+  "Orsha, City by the Water",
+  "Karenica, City of Lights",
+  "Rain Highlands",
+  "Draconia Valley",
+  "Astra Star Tower",
+  "Necros Sandsea",
+  "Edenria Paradise Isle",
+] as const;
+
+const TOWN_DESCS = [
+  "A peaceful village where the journey begins",
+  "A canal city lined with busy markets",
+  "A commercial city glowing through the night",
+  "Highlands rich with medicinal herbs",
+  "A hidden valley filled with ancient ruins",
+  "A tower where star-powered alchemy is passed down",
+  "A desert whispered to hold forbidden alchemy",
+  "A legendary island said to lie at the edge of the world",
+] as const;
+
+export function townName(
+  lang: Lang,
+  index: number,
+  cycle: number,
+  fallback: string,
+): string {
+  if (lang === "ja") return fallback;
+  const base = TOWN_NAMES[index] ?? fallback;
+  return cycle > 0 ? `${base} (Cycle ${cycle + 1})` : base;
+}
+
+export function townDesc(lang: Lang, index: number, fallback: string): string {
+  return lang === "ja" ? fallback : (TOWN_DESCS[index] ?? fallback);
+}
