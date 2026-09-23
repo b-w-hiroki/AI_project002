@@ -24,6 +24,30 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English fallback localizes home and campaign", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  const homeLabels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return collect(scene.children.list);
+  });
+  expect(homeLabels).toContain("Sangoku Tap");
+  expect(homeLabels).toContain("General Gacha");
+  expect(homeLabels).toContain("Equipment Fusion");
+
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  const lang = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("ExpeditionScene"), "lang"));
+  expect(lang).toBe("en");
+});
+
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;

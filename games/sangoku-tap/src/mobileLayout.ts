@@ -15,6 +15,7 @@ import { REGIONS, regionById, type RegionId } from "./logic/regions";
 import { arenaSnapshot, arenaSummary } from "./logic/arena";
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
 import { GameScene } from "./scenes/GameScene";
+import { generalName, regionText, roleName, tr, type Lang } from "./logic/i18n";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -27,6 +28,7 @@ type Runtime = Phaser.Scene & {
   party?: string[];
   run?: Expedition | null;
   settled?: boolean;
+  lang?: Lang;
   earnedMerit?: number;
   firstClear?: boolean;
 };
@@ -101,7 +103,7 @@ function portrait(scene: Phaser.Scene, root: Phaser.GameObjects.Container, id: s
     root.add(image);
   }
   const general = GENERAL_POOL.find((item) => item.id === id);
-  label(scene, root, x, y + h / 2 - 10, general?.name ?? "武将", 9, "#fff1d5", "900");
+  label(scene, root, x, y + h / 2 - 10, general ? generalName((scene as Runtime).lang ?? "en", general.id, general.name) : tr((scene as Runtime).lang ?? "en", "武将", "General"), 9, "#fff1d5", "900");
 }
 
 function background(scene: Phaser.Scene, root: Phaser.GameObjects.Container, tint = 0xffffff): void {
@@ -129,7 +131,7 @@ function header(scene: Runtime, root: Phaser.GameObjects.Container, title: strin
   label(scene, root, 24, 51, subtitle, 9, "#e5c893", "700").setOrigin(0, 0.5);
   if (scene.campaign) {
     panel(scene, root, 670, 29, 230, 38, 0x171211, 0xd2a65f, 0.9, 10);
-    label(scene, root, 670, 29, `銭 ${loadCurrency()}   功績 ${scene.campaign.merit}   踏破 ${scene.campaign.cleared.length}/3`, 11, "#f7deb1", "900");
+    label(scene, root, 670, 29, `${tr(scene.lang ?? "en", "銭", "Coins")} ${loadCurrency()}   ${tr(scene.lang ?? "en", "功績", "Merit")} ${scene.campaign.merit}   ${tr(scene.lang ?? "en", "踏破", "Cleared")} ${scene.campaign.cleared.length}/3`, 11, "#f7deb1", "900");
   }
 }
 
@@ -141,7 +143,7 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
   const preview = canSortie && troop ? newExpedition(troop as never, scene.selectedRegion) : null;
   const win = preview ? Math.round(victoryChance(preview) * 100) : 0;
 
-  header(scene, root, "三国ポチポチ", "戦略地図 — 武将を率い、天下への道を選べ");
+  header(scene, root, tr(scene.lang ?? "en", "三国ポチポチ", "Sangoku Tap"), tr(scene.lang ?? "en", "戦略地図 — 武将を率い、天下への道を選べ", "Strategy Map — Lead your generals toward unification"));
 
   panel(scene, root, 285, 243, 520, 332, 0x17110f, region.accent, 0.62, 16);
   const map = scene.add.graphics();
@@ -163,8 +165,8 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
     map.fillStyle(selected ? 0x8c241b : 0x171313, 0.98).fillCircle(p.x, p.y, selected ? 29 : 24);
     map.lineStyle(selected ? 4 : 2, unlocked ? 0xf0c06a : 0x67615f, unlocked ? 0.95 : 0.5).strokeCircle(p.x, p.y, selected ? 29 : 24);
     map.fillStyle(unlocked ? (cleared ? 0xd6ad55 : 0xb33227) : 0x515050, 1).fillRect(p.x - 9, p.y - 9, 18, 19);
-    label(scene, root, p.x, p.y - 43, cleared ? `第${i + 1}章 踏破` : unlocked ? `第${i + 1}章` : "未開放", 10, unlocked ? "#ffe4b2" : "#aaa19a", "900");
-    label(scene, root, p.x, p.y + 40, r.name, 13, unlocked ? "#fff0d0" : "#978e88", "900");
+    label(scene, root, p.x, p.y - 43, cleared ? `${tr(scene.lang ?? "en", "第", "Chapter ")}${i + 1} ${tr(scene.lang ?? "en", "章 踏破", "Cleared")}` : unlocked ? `${tr(scene.lang ?? "en", "第", "Chapter ")}${i + 1}${tr(scene.lang ?? "en", "章", "")}` : tr(scene.lang ?? "en", "未開放", "Locked"), 10, unlocked ? "#ffe4b2" : "#aaa19a", "900");
+    label(scene, root, p.x, p.y + 40, regionText(scene.lang ?? "en", r).name, 13, unlocked ? "#fff0d0" : "#978e88", "900");
     const hit = scene.add.zone(p.x, p.y, 105, 98).setInteractive({ useHandCursor: unlocked });
     root.add(hit);
     hit.on("pointerdown", () => {
@@ -175,23 +177,23 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
   });
 
   panel(scene, root, 665, 218, 240, 286, 0x141111, region.accent, 0.94, 15);
-  label(scene, root, 665, 93, `第${REGIONS.findIndex((item) => item.id === region.id) + 1}章`, 10, "#dcb977", "900");
-  label(scene, root, 665, 119, region.name, 23, "#fff0d1", "900");
-  label(scene, root, 665, 148, region.subtitle, 10, "#dac6a7", "700");
-  label(scene, root, 665, 177, `守将  ${region.boss}`, 12, "#f2cf98", "900");
-  label(scene, root, 665, 209, `勝率  ${win}%`, 22, win >= 70 ? "#9fe0b6" : "#efc779", "900");
-  label(scene, root, 665, 239, `収穫 ×${region.reward.toFixed(1)}\n初踏破 功績+5 / Rare装備`, 11, "#ebd6b0", "700");
+  label(scene, root, 665, 93, `${tr(scene.lang ?? "en", "第", "Chapter ")}${REGIONS.findIndex((item) => item.id === region.id) + 1}${tr(scene.lang ?? "en", "章", "")}`, 10, "#dcb977", "900");
+  label(scene, root, 665, 119, regionText(scene.lang ?? "en", region).name, 23, "#fff0d1", "900");
+  label(scene, root, 665, 148, regionText(scene.lang ?? "en", region).subtitle, 10, "#dac6a7", "700");
+  label(scene, root, 665, 177, `${tr(scene.lang ?? "en", "守将", "Guardian")}  ${regionText(scene.lang ?? "en", region).boss}`, 12, "#f2cf98", "900");
+  label(scene, root, 665, 209, `${tr(scene.lang ?? "en", "勝率", "Win Chance")}  ${win}%`, 22, win >= 70 ? "#9fe0b6" : "#efc779", "900");
+  label(scene, root, 665, 239, `${tr(scene.lang ?? "en", "収穫", "Reward")} ×${region.reward.toFixed(1)}\n${tr(scene.lang ?? "en", "初踏破 功績+5 / Rare装備", "First Clear: Merit +5 / Rare Gear")}`, 11, "#ebd6b0", "700");
 
   const party = scene.party ?? [];
   party.slice(0, 3).forEach((id, i) => portrait(scene, root, id, 596 + i * 70, 303, 62, 82));
-  if (!party.length) label(scene, root, 665, 303, "編成で武将を選ぼう", 11, "#bfae92", "700");
+  if (!party.length) label(scene, root, 665, 303, tr(scene.lang ?? "en", "編成で武将を選ぼう", "Choose generals in Formation"), 11, "#bfae92", "700");
   const arena = troop ? arenaSnapshot(troop as never, scene.campaign, loadBestDistance()) : null;
   if (arena) {
     label(scene, root, 665, 344, arenaSummary(arena), 9, arena.rank <= 3 ? "#f2cf86" : "#bfcdbf", "800");
   }
 
-  button(scene, root, 596, 389, 100, 50, "編成", () => { scene.view = "formation"; invoke(scene, "render"); }, true, 0x3d4b50);
-  button(scene, root, 700, 389, 184, 54, "出陣", () => {
+  button(scene, root, 596, 389, 100, 50, tr(scene.lang ?? "en", "編成", "Formation"), () => { scene.view = "formation"; invoke(scene, "render"); }, true, 0x3d4b50);
+  button(scene, root, 700, 389, 184, 54, tr(scene.lang ?? "en", "出陣", "Sortie"), () => {
     if (!troop || !canSortie || !scene.selectedRegion) return;
     scene.run = newExpedition(troop as never, scene.selectedRegion);
     saveExpedition(scene.run);
@@ -203,7 +205,7 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
 
 function renderFormation(scene: Runtime, root: Phaser.GameObjects.Container): void {
   if (!scene.campaign) return;
-  header(scene, root, "遠征の支度", "3人を選び、役割を組み合わせる");
+  header(scene, root, tr(scene.lang ?? "en", "遠征の支度", "Expedition Setup"), tr(scene.lang ?? "en", "3人を選び、役割を組み合わせる", "Choose three generals and combine their roles"));
   const owned = loadOwnedGenerals();
   GENERAL_POOL.forEach((general, i) => {
     const x = 130 + (i % 2) * 250;
@@ -216,8 +218,8 @@ function renderFormation(scene: Runtime, root: Phaser.GameObjects.Container): vo
       root.add(img);
     }
     label(scene, root, x + 35, y - 29, `${selected ? "● " : ""}${general.name}  ${general.rarity}`, 13, has ? "#fff0d3" : "#8d8580", "900");
-    label(scene, root, x + 35, y + 2, `${ROLES[general.id] ?? "武将"}`, 11, "#e1bd7d", "800");
-    label(scene, root, x + 35, y + 28, has ? "タップで編成切替" : "未所持", 9, "#c4b59e", "700");
+    label(scene, root, x + 35, y + 2, `${roleName(scene.lang ?? "en", ROLES[general.id] ?? "武将")}`, 11, "#e1bd7d", "800");
+    label(scene, root, x + 35, y + 28, has ? tr(scene.lang ?? "en", "タップで編成切替", "Tap to toggle") : tr(scene.lang ?? "en", "未所持", "Not Owned"), 9, "#c4b59e", "700");
     const hit = scene.add.zone(x, y, 225, 116).setInteractive({ useHandCursor: has });
     root.add(hit);
     hit.on("pointerdown", () => {
@@ -232,17 +234,17 @@ function renderFormation(scene: Runtime, root: Phaser.GameObjects.Container): vo
 
   const troop = invoke(scene, "troop") as Troop | undefined;
   panel(scene, root, 665, 220, 240, 300, 0x141111, 0xc09a59, 0.94, 15);
-  label(scene, root, 665, 106, "遠征部隊", 12, "#dcb977", "900");
+  label(scene, root, 665, 106, tr(scene.lang ?? "en", "遠征部隊", "Expedition Squad"), 12, "#dcb977", "900");
   label(scene, root, 665, 142, `${scene.party?.length ?? 0} / 3`, 27, "#fff0d1", "900");
-  label(scene, root, 665, 183, `戦力 ${troop?.power ?? 0}`, 22, "#9fe0b6", "900");
-  label(scene, root, 665, 225, "役割", 10, "#d4bd98", "900");
-  label(scene, root, 665, 264, (scene.party ?? []).map((id) => ROLES[id] ?? "武将").join(" / ") || "未編成", 11, "#f0dfc0", "800");
+  label(scene, root, 665, 183, `${tr(scene.lang ?? "en", "戦力", "Power")} ${troop?.power ?? 0}`, 22, "#9fe0b6", "900");
+  label(scene, root, 665, 225, tr(scene.lang ?? "en", "役割", "Roles"), 10, "#d4bd98", "900");
+  label(scene, root, 665, 264, (scene.party ?? []).map((id) => roleName(scene.lang ?? "en", ROLES[id] ?? "武将")).join(" / ") || tr(scene.lang ?? "en", "未編成", "No Formation"), 11, "#f0dfc0", "800");
   if (troop) {
     const arena = arenaSnapshot(troop as never, scene.campaign, loadBestDistance());
     label(scene, root, 665, 304, arenaSummary(arena), 9, arena.rank <= 3 ? "#f2cf86" : "#bfcdbf", "800");
   }
-  label(scene, root, 665, 330, "敗走しても武将・装備は失わない", 9, "#b9c8be", "700");
-  button(scene, root, 665, 368, 205, 54, "戦略地図へ", () => { scene.view = "camp"; invoke(scene, "render"); }, !!scene.party?.length, 0xa72f22);
+  label(scene, root, 665, 330, tr(scene.lang ?? "en", "敗走しても武将・装備は失わない", "Defeat never removes generals or gear"), 9, "#b9c8be", "700");
+  button(scene, root, 665, 368, 205, 54, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => { scene.view = "camp"; invoke(scene, "render"); }, !!scene.party?.length, 0xa72f22);
 }
 
 function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
@@ -250,7 +252,7 @@ function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
   if (!run) return;
   const region = regionById(run.regionId);
   const boss = run.step === 9;
-  header(scene, root, region.name, `進軍 ${run.step}/10 — ${boss ? "FINAL ENCOUNTER" : run.route === "mountain" ? "山道" : "街道"}`);
+  header(scene, root, regionText(scene.lang ?? "en", region).name, `${tr(scene.lang ?? "en", "進軍", "Advance")} ${run.step}/10 — ${boss ? "FINAL ENCOUNTER" : run.route === "mountain" ? tr(scene.lang ?? "en", "山道", "Mountain") : tr(scene.lang ?? "en", "街道", "Road")}`);
 
   const stageShade = scene.add.graphics();
   stageShade.fillStyle(0x0c1012, 0.16).fillRect(0, 64, 535, 386);
@@ -282,45 +284,45 @@ function renderRoad(scene: Runtime, root: Phaser.GameObjects.Container): void {
   }
 
   panel(scene, root, 665, 225, 240, 320, 0x111518, boss ? 0xb44737 : region.accent, 0.95, 15);
-  label(scene, root, 665, 93, boss ? "関門戦" : "遠征状況", 12, "#e7c47e", "900");
-  label(scene, root, 665, 132, `兵力 ${run.hp}`, 25, run.hp < 35 ? "#ef9d89" : "#eef0da", "900");
-  label(scene, root, 665, 169, `持帰り予定 ${run.loot} 銭`, 13, "#f0ce8b", "900");
-  label(scene, root, 665, 203, `次戦勝率 ${Math.round(victoryChance(run) * 100)}%`, 16, "#b9e0c7", "900");
+  label(scene, root, 665, 93, boss ? tr(scene.lang ?? "en", "関門戦", "Gate Battle") : tr(scene.lang ?? "en", "遠征状況", "Expedition Status"), 12, "#e7c47e", "900");
+  label(scene, root, 665, 132, `${tr(scene.lang ?? "en", "兵力", "Troops")} ${run.hp}`, 25, run.hp < 35 ? "#ef9d89" : "#eef0da", "900");
+  label(scene, root, 665, 169, `${tr(scene.lang ?? "en", "持帰り予定", "Projected Loot")} ${run.loot} ${tr(scene.lang ?? "en", "銭", "Coins")}`, 13, "#f0ce8b", "900");
+  label(scene, root, 665, 203, `${tr(scene.lang ?? "en", "次戦勝率", "Next Win Chance")} ${Math.round(victoryChance(run) * 100)}%`, 16, "#b9e0c7", "900");
 
   if (run.fork) {
-    button(scene, root, 612, 265, 102, 52, "街道", () => invoke(scene, "route", "road"), true, 0x4a5960);
-    button(scene, root, 718, 265, 102, 52, "山道 ×1.7", () => invoke(scene, "route", "mountain"), true, 0x78502f);
+    button(scene, root, 612, 265, 102, 52, tr(scene.lang ?? "en", "街道", "Road"), () => invoke(scene, "route", "road"), true, 0x4a5960);
+    button(scene, root, 718, 265, 102, 52, tr(scene.lang ?? "en", "山道 ×1.7", "Mountain ×1.7"), () => invoke(scene, "route", "mountain"), true, 0x78502f);
   } else {
-    button(scene, root, 665, 267, 205, 56, boss ? "守将に挑む" : "進軍する", () => invoke(scene, "advance"), true, boss ? 0xa72f22 : 0x536b55);
+    button(scene, root, 665, 267, 205, 56, boss ? tr(scene.lang ?? "en", "守将に挑む", "Challenge Guardian") : tr(scene.lang ?? "en", "進軍する", "Advance"), () => invoke(scene, "advance"), true, boss ? 0xa72f22 : 0x536b55);
   }
-  button(scene, root, 665, 332, 205, 50, `${run.loot} 銭を確保して帰還`, () => {
+  button(scene, root, 665, 332, 205, 50, `${tr(scene.lang ?? "en", "帰還", "Return")} · ${run.loot} ${tr(scene.lang ?? "en", "銭を確保", "Coins Secured")}`, () => {
     scene.run = returnExpedition(run);
     invoke(scene, "settle");
   }, true, 0x3d4b50);
-  label(scene, root, 665, 385, `敗走時 ${Math.floor(run.loot / 2)} 銭\n進行は自動保存`, 10, "#aeb8b3", "700");
+  label(scene, root, 665, 385, `${tr(scene.lang ?? "en", "敗走時", "On Defeat")} ${Math.floor(run.loot / 2)} ${tr(scene.lang ?? "en", "銭", "Coins")}\n${tr(scene.lang ?? "en", "進行は自動保存", "Progress auto-saves")}`, 10, "#aeb8b3", "700");
 }
 
 function renderResult(scene: Runtime, root: Phaser.GameObjects.Container): void {
   const run = scene.run;
   if (!run || !scene.campaign) return;
-  header(scene, root, run.status === "clear" ? "関門突破" : run.status === "defeat" ? "遠征終了" : "無事帰還", "遠征の記録");
+  header(scene, root, run.status === "clear" ? tr(scene.lang ?? "en", "関門突破", "Gate Cleared") : run.status === "defeat" ? tr(scene.lang ?? "en", "遠征終了", "Expedition Ended") : tr(scene.lang ?? "en", "無事帰還", "Returned Safely"), tr(scene.lang ?? "en", "遠征の記録", "Expedition Record"));
   panel(scene, root, 290, 240, 500, 310, 0x151313, 0xc7a159, 0.94, 16);
   run.troop.ids.forEach((id, i) => portrait(scene, root, id, 125 + i * 160, 215, 126, 170));
-  label(scene, root, 290, 344, `到達 ${run.step}/10   ·   兵力 ${run.hp}`, 14, "#e8d6b8", "800");
+  label(scene, root, 290, 344, `${tr(scene.lang ?? "en", "到達", "Reached")} ${run.step}/10 · ${tr(scene.lang ?? "en", "兵力", "Troops")} ${run.hp}`, 14, "#e8d6b8", "800");
 
   panel(scene, root, 665, 225, 240, 310, 0x151313, 0xd3a657, 0.96, 15);
-  label(scene, root, 665, 105, "戦果", 11, "#dcb977", "900");
-  label(scene, root, 665, 151, `${run.loot} 銭`, 30, "#f4cb7f", "900");
-  label(scene, root, 665, 198, run.status === "clear" ? "Rare装備 +1" : run.status !== "defeat" && run.step >= 3 ? "Common装備 +1" : "装備報酬なし", 12, "#f1dfc0", "800");
-  label(scene, root, 665, 234, `功績 +${scene.earnedMerit ?? 0}`, 16, "#9cdbc3", "900");
-  button(scene, root, 665, 298, 205, 54, "戦略地図へ", () => {
+  label(scene, root, 665, 105, tr(scene.lang ?? "en", "戦果", "Results"), 11, "#dcb977", "900");
+  label(scene, root, 665, 151, `${run.loot} ${tr(scene.lang ?? "en", "銭", "Coins")}`, 30, "#f4cb7f", "900");
+  label(scene, root, 665, 198, run.status === "clear" ? tr(scene.lang ?? "en", "Rare装備 +1", "Rare Gear +1") : run.status !== "defeat" && run.step >= 3 ? tr(scene.lang ?? "en", "Common装備 +1", "Common Gear +1") : tr(scene.lang ?? "en", "装備報酬なし", "No Gear Reward"), 12, "#f1dfc0", "800");
+  label(scene, root, 665, 234, `${tr(scene.lang ?? "en", "功績", "Merit")} +${scene.earnedMerit ?? 0}`, 16, "#9cdbc3", "900");
+  button(scene, root, 665, 298, 205, 54, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => {
     const next = REGIONS.find((r) => isUnlocked(scene.campaign!, r.id) && !scene.campaign!.cleared.includes(r.id));
     scene.view = "camp";
     scene.run = null;
     if (next) scene.selectedRegion = next.id;
     invoke(scene, "render");
   }, true, 0xa72f22);
-  button(scene, root, 665, 360, 205, 48, "拠点へ", () => scene.scene.start("GameScene"), true, 0x3d4b50);
+  button(scene, root, 665, 360, 205, 48, tr(scene.lang ?? "en", "拠点へ", "Base"), () => scene.scene.start("GameScene"), true, 0x3d4b50);
 }
 
 function renderLandscape(scene: Runtime): void {
