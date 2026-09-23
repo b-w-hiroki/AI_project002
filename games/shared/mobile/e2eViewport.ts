@@ -1,4 +1,5 @@
 export const RESPONSIVE_VIEWPORTS = [
+  // Existing phone/tablet coverage.
   { width: 360, height: 800 },
   { width: 390, height: 844 },
   { width: 430, height: 932 },
@@ -7,6 +8,18 @@ export const RESPONSIVE_VIEWPORTS = [
   { width: 932, height: 430 },
   { width: 768, height: 1024 },
   { width: 1024, height: 768 },
+
+  // CrazyGames high-traffic iframe/fullscreen sizes (2026-09 requirements).
+  { width: 907, height: 510 },
+  { width: 1216, height: 684 },
+  { width: 1077, height: 606 },
+  { width: 821, height: 462 },
+  { width: 1366, height: 768 },
+  { width: 1920, height: 1080 },
+  { width: 1536, height: 864 },
+  { width: 1280, height: 720 },
+  { width: 800, height: 450 },
+  { width: 1080, height: 607 },
 ] as const;
 
 interface CanvasBox { x: number; y: number; width: number; height: number }
