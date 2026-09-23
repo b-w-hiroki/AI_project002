@@ -37,11 +37,11 @@ export function saveBestTurbo(points: number): void {
   saveIfHigher(BEST_TURBO_KEY, points);
 }
 
-export function loadWritingMode(): WritingMode {
+export function loadWritingMode(defaultMode: WritingMode = "hiragana"): WritingMode {
   const raw = localStorage.getItem(WRITING_MODE_KEY);
   return (WRITING_MODES as readonly string[]).includes(raw ?? "")
     ? (raw as WritingMode)
-    : "hiragana";
+    : defaultMode;
 }
 
 export function saveWritingMode(mode: WritingMode): void {
