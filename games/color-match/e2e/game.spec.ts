@@ -47,6 +47,10 @@ test("English fallback localizes the primary title and controls", async ({ page 
   expect(labels).toContain("Word Style");
   expect(labels).toContain("60-Second Challenge");
   expect(labels).toContain("20-Second Practice");
+  const writingMode = await page.evaluate(() =>
+    Reflect.get(window.__qaGame.scene.getScene("GameScene"), "writingMode"),
+  );
+  expect(writingMode).toBe("english");
   await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
 });
 
