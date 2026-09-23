@@ -157,9 +157,10 @@ test.describe("phone visual QA", () => {
         sprite: scene.children.list.some(child =>
           child.type === "Image" &&
           (child as Phaser.GameObjects.Image).texture.key === "combat-slash-fx"),
+        heroPose: player.texture.key,
       };
     });
-    expect(attackFx).toEqual({ texture: true, sprite: true });
+    expect(attackFx).toEqual({ texture: true, sprite: true, heroPose: "hero-attack-art" });
     await page.waitForTimeout(35);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-attack-pose-844x390.png",
@@ -183,9 +184,10 @@ test.describe("phone visual QA", () => {
         sprite: scene.children.list.some(child =>
           child.type === "Image" &&
           (child as Phaser.GameObjects.Image).texture.key === "combat-hit-fx"),
+        heroPose: player.texture.key,
       };
     });
-    expect(hitFx).toEqual({ texture: true, sprite: true });
+    expect(hitFx).toEqual({ texture: true, sprite: true, heroPose: "hero-hurt-art" });
     await page.waitForTimeout(45);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-player-hit-sprite-844x390.png",
