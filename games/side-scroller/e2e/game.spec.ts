@@ -140,7 +140,7 @@ test.describe("phone visual QA", () => {
     await page.locator("canvas").waitFor();
     await page.waitForFunction(() => !!window.__qaGame);
     await enterBattleForVisualQa(page);
-    await page.evaluate(() => {
+    const attackFx = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const camera = scene.cameras.main;
       const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
@@ -152,10 +152,43 @@ test.describe("phone visual QA", () => {
         attackWindowMs: 220,
       });
       scene.physics.pause();
+      return {
+        texture: scene.textures.exists("combat-slash-fx"),
+        sprite: scene.children.list.some(child =>
+          child.type === "Image" &&
+          (child as Phaser.GameObjects.Image).texture.key === "combat-slash-fx"),
+      };
     });
+    expect(attackFx).toEqual({ texture: true, sprite: true });
     await page.waitForTimeout(35);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-attack-pose-844x390.png",
+      animations: "disabled",
+    });
+  });
+
+  test("dedicated hit sprite appears for player damage", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const hitFx = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      Reflect.get(scene, "playPlayerDamageFx").call(scene, player.x + 100);
+      return {
+        texture: scene.textures.exists("combat-hit-fx"),
+        sprite: scene.children.list.some(child =>
+          child.type === "Image" &&
+          (child as Phaser.GameObjects.Image).texture.key === "combat-hit-fx"),
+      };
+    });
+    expect(hitFx).toEqual({ texture: true, sprite: true });
+    await page.waitForTimeout(45);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-player-hit-sprite-844x390.png",
       animations: "disabled",
     });
   });

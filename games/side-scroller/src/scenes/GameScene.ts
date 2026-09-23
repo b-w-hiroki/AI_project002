@@ -152,6 +152,8 @@ const HUD_DEPTH = 20;
 /** コンセプト装飾(1770台)より手前、モバイル操作UI(2600+)より奥に戦闘FXをまとめる。 */
 const COMBAT_FX_DEPTH = 1900;
 const COMBAT_FLASH_DEPTH = 1950;
+const COMBAT_SLASH_TEXTURE = "combat-slash-fx";
+const COMBAT_HIT_TEXTURE = "combat-hit-fx";
 /** 背景のパララックス係数（カメラより遅く流れる） */
 const BG_SCROLL_FACTOR = 0.4;
 
@@ -492,6 +494,35 @@ export class GameScene extends Phaser.Scene {
     orb.fillCircle(6, 6, 6);
     orb.generateTexture("orb", 12, 12);
     orb.destroy();
+
+    // 戦闘演出は毎回Graphicsを描くだけでなく、専用テクスチャを一度生成してスプライトとして再利用する。
+    const slashFx = this.make.graphics({ x: 0, y: 0 }, false);
+    slashFx.fillStyle(0xffffff, 0.18);
+    slashFx.fillTriangle(8, 82, 148, 14, 104, 72);
+    slashFx.lineStyle(10, 0xffffff, 0.9).lineBetween(12, 72, 146, 18);
+    slashFx.lineStyle(4, 0xffffff, 1).lineBetween(20, 82, 154, 28);
+    slashFx.generateTexture(COMBAT_SLASH_TEXTURE, 160, 96);
+    slashFx.destroy();
+
+    const hitFx = this.make.graphics({ x: 0, y: 0 }, false);
+    hitFx.fillStyle(0xffffff, 0.92);
+    hitFx.fillPoints([
+      new Phaser.Math.Vector2(48, 2),
+      new Phaser.Math.Vector2(58, 34),
+      new Phaser.Math.Vector2(92, 20),
+      new Phaser.Math.Vector2(66, 47),
+      new Phaser.Math.Vector2(94, 65),
+      new Phaser.Math.Vector2(60, 60),
+      new Phaser.Math.Vector2(48, 94),
+      new Phaser.Math.Vector2(38, 61),
+      new Phaser.Math.Vector2(5, 75),
+      new Phaser.Math.Vector2(30, 49),
+      new Phaser.Math.Vector2(4, 31),
+      new Phaser.Math.Vector2(37, 36),
+    ], true);
+    hitFx.fillStyle(0xffffff, 1).fillCircle(48, 48, 13);
+    hitFx.generateTexture(COMBAT_HIT_TEXTURE, 96, 96);
+    hitFx.destroy();
 
     this.drawPickupTexture("pickup_medium", 0xd9a7ff);
     this.drawPickupTexture("pickup_armor", 0x7fd1ff);
@@ -1378,6 +1409,24 @@ export class GameScene extends Phaser.Scene {
     const color = kindColor[weapon.kind];
     const facing = this.playerState.facing;
     const radius = weapon.range * 0.7;
+    const slashSprite = this.add
+      .image(this.player.x + facing * 26, this.player.y - 8, COMBAT_SLASH_TEXTURE)
+      .setDepth(COMBAT_FX_DEPTH)
+      .setTint(color)
+      .setFlipX(facing < 0)
+      .setScale(Math.max(0.55, weapon.range / 150), 0.72)
+      .setAlpha(0.95);
+    this.tweens.add({
+      targets: slashSprite,
+      x: slashSprite.x + facing * 20,
+      scaleX: slashSprite.scaleX * 1.16,
+      scaleY: slashSprite.scaleY * 1.08,
+      alpha: 0,
+      duration: Math.max(130, weapon.attackWindowMs),
+      ease: "Cubic.easeOut",
+      onComplete: () => slashSprite.destroy(),
+    });
+
     const g = this.add.graphics({ x: this.player.x + facing * 21, y: this.player.y - 6 });
     g.setDepth(COMBAT_FX_DEPTH);
     g.lineStyle(5, color, 0.95);
@@ -1605,6 +1654,21 @@ export class GameScene extends Phaser.Scene {
     body.setVelocityX(this.playerState.facing * 180);
 
     const sparkColor = enemy.type === "agile" ? 0x63e1e7 : enemy.type === "tank" ? 0xc0a4ff : 0xffd166;
+    const hitSprite = this.add
+      .image(enemy.sprite.x, enemy.sprite.y - 10, COMBAT_HIT_TEXTURE)
+      .setDepth(COMBAT_FX_DEPTH)
+      .setTint(sparkColor)
+      .setScale(enemy.type === "tank" ? 0.72 : 0.56)
+      .setAngle(Phaser.Math.Between(-18, 18));
+    this.tweens.add({
+      targets: hitSprite,
+      alpha: 0,
+      scale: hitSprite.scale * 1.55,
+      angle: hitSprite.angle + 24,
+      duration: 170,
+      ease: "Cubic.easeOut",
+      onComplete: () => hitSprite.destroy(),
+    });
     for (let i = 0; i < 5; i++) {
       const spark = this.add.circle(enemy.sprite.x, enemy.sprite.y - 10, 3 + (i % 2), sparkColor, 0.85).setDepth(COMBAT_FX_DEPTH);
       this.tweens.add({
@@ -1659,6 +1723,21 @@ export class GameScene extends Phaser.Scene {
 
   private playPlayerDamageFx(sourceX: number): void {
     const direction = sourceX >= this.player.x ? 1 : -1;
+    const hitSprite = this.add
+      .image(this.player.x + direction * 8, this.player.y - 14, COMBAT_HIT_TEXTURE)
+      .setDepth(COMBAT_FX_DEPTH)
+      .setTint(0xff5f6d)
+      .setFlipX(direction < 0)
+      .setScale(0.68);
+    this.tweens.add({
+      targets: hitSprite,
+      alpha: 0,
+      scale: 1.05,
+      x: hitSprite.x - direction * 14,
+      duration: 210,
+      ease: "Cubic.easeOut",
+      onComplete: () => hitSprite.destroy(),
+    });
     const impact = this.add.graphics({ x: this.player.x, y: this.player.y - 12 }).setDepth(COMBAT_FX_DEPTH);
     impact.lineStyle(5, 0xff5f6d, 0.9)
       .lineBetween(-24 * direction, -28, 18 * direction, 18)
