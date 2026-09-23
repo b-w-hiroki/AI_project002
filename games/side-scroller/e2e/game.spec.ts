@@ -45,6 +45,32 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("English fallback localizes loadout and battle HUD", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  const loadoutLabels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("LoadoutScene");
+    const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
+      for (const node of nodes) {
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, out);
+      }
+      return out;
+    };
+    return collect(scene.children.list);
+  });
+  expect(loadoutLabels.some(label => label.includes("Blade Woods"))).toBe(true);
+  expect(loadoutLabels.some(label => label.includes("Loadout"))).toBe(true);
+  expect(loadoutLabels).toContain("▶ Start Run");
+
+  await page.goto("/?visualqa=battle&lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.isActive("GameScene"))).toBe(true);
+  const lang = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "lang"));
+  expect(lang).toBe("en");
+});
+
 test("ゲームが起動して canvas が表示される", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
   await page.screenshot({ path: "e2e/screenshots/game.png" });

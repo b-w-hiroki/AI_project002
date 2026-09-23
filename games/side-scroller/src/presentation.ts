@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { OUGI_GAUGE_MAX, type PlayerState } from "./logic/combat";
 import { bossPhase, type CombatStyle } from "./logic/style";
 import { GameScene } from "./scenes/GameScene";
+import { combatStyleLabel, tr, weaponLabel, type Lang } from "./logic/i18n";
 
 type BossEnemy = {
   boss: boolean;
@@ -17,6 +18,7 @@ type GameRuntime = Phaser.Scene & {
   playerState?: PlayerState;
   combatStyle?: CombatStyle;
   status?: string;
+  lang?: Lang;
 };
 
 interface CombatHud {
@@ -117,13 +119,14 @@ function refreshCombatHud(scene: GameRuntime): void {
   const player = scene.playerState;
   const combo = player?.comboStreak ?? 0;
   const boss = scene.enemies.find((enemy) => enemy.boss);
-  const style = scene.combatStyle === "draw" ? "居合" : "連撃";
-  const objective = boss ? "BOSSを見切って斬り返せ" : remaining > 0 ? `敵をあと ${remaining} 体倒せ` : "WAVE CLEAR";
+  const lang = scene.lang ?? "en";
+  const style = combatStyleLabel(lang, scene.combatStyle === "draw" ? "draw" : "chain");
+  const objective = boss ? tr(lang, "BOSSを見切って斬り返せ", "Read the BOSS and counter") : remaining > 0 ? `${tr(lang, "敵をあと", "Defeat")} ${remaining} ${tr(lang, "体倒せ", "more enemies")}` : "WAVE CLEAR";
   const hp = player?.health ?? 0;
   const maxHp = Math.max(1, player?.maxHealth ?? 3);
   const armor = player?.armorCharges ?? 0;
   const ougi = player?.ougiGauge ?? 0;
-  const weapon = player?.equippedWeapon === "mid" ? "長刀" : player?.equippedWeapon === "ranged" ? "飛刃" : "太刀";
+  const weapon = player ? weaponLabel(lang, player.equippedWeapon) : weaponLabel(lang, "melee");
 
   hud.frame.clear();
 
@@ -173,8 +176,8 @@ function refreshCombatHud(scene: GameRuntime): void {
   hud.weaponText.setText(`${weapon}  ·  ${style} STYLE`);
   hud.comboText.setText(combo >= 1 ? `COMBO ×${combo}` : "");
   hud.comboText.setColor(combo >= 30 ? "#ffffff" : combo >= 10 ? "#6f3db7" : "#8a4fd1");
-  hud.ougiText.setText(`奥義 ${Math.floor((ougi / OUGI_GAUGE_MAX) * 100)}%`);
-  hud.bossText.setText(boss ? "BOSS  ·  予兆を読め" : `BEST WAVE  ·  ${wave}`);
+  hud.ougiText.setText(`${tr(lang, "奥義", "OUGI")} ${Math.floor((ougi / OUGI_GAUGE_MAX) * 100)}%`);
+  hud.bossText.setText(boss ? `BOSS · ${tr(lang, "予兆を読め", "READ THE TELL")}` : `BEST WAVE · ${wave}`);
   hud.controlsText.setText("ATTACK  X\nSKILL   C\nJUMP  SPACE\nOUGI  ↓↓X");
 }
 
@@ -224,13 +227,13 @@ function onBossPhase(scene: GameRuntime, enemy: BossEnemy): void {
   lastPhase.set(scene, phase);
 
   if (phase === "tell") {
-    announce(scene, "DODGE!　突進方向を読む", "#ffd0a3", 560);
+    announce(scene, tr(scene.lang ?? "en", "DODGE!　突進方向を読む", "DODGE! Read the charge"), "#ffd0a3", 560);
     pulseBorder(scene, 0xd85d47);
   } else if (phase === "charge") {
     scene.cameras.main.shake(120, 0.0035);
     chargeStreak(scene, enemy.bossDir);
   } else {
-    announce(scene, "CHANCE!　斬り返せ", "#ffe17d", 650);
+    announce(scene, tr(scene.lang ?? "en", "CHANCE!　斬り返せ", "CHANCE! Counter now"), "#ffe17d", 650);
     pulseBorder(scene, 0xf0bd4f);
   }
 }

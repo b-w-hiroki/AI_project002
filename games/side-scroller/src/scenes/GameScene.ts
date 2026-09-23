@@ -96,6 +96,7 @@ import { cg } from "../platform/crazygames";
 import { bgm, sfx } from "../platform/audio";
 import { THEME, TYPE, drawPanel, popOnChange } from "../ui/theme";
 import { loadBestWave, saveBestWave } from "../logic/progress";
+import { detectLang, itemName, stageBuffText, tr, weaponLabel, type Lang } from "../logic/i18n";
 import { EnemySpawnSpec, EnemyType, WaveKind, pickupsForWave, rollWaveComposition } from "../logic/waves";
 
 const GROUND_Y = 520;
@@ -221,14 +222,9 @@ const WEAPON_KEY_BINDINGS: { code: number; kind: WeaponKind }[] = [
   { code: Phaser.Input.Keyboard.KeyCodes.THREE, kind: "ranged" },
 ];
 
-const WEAPON_LABEL: Record<WeaponKind, string> = {
-  melee: "近接",
-  mid: "中距離",
-  ranged: "遠距離",
-};
-
 /** 剣戟の森 — 横スクロールアクションのメインシーン */
 export class GameScene extends Phaser.Scene {
+  readonly lang: Lang = detectLang();
   private combatStyle: CombatStyle = "chain";
   private styleChoosing = false;
   private lastStyleHit = -Infinity;
@@ -744,7 +740,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private announceWave(wave: number, kind: WaveKind): void {
-    const suffix = kind === "boss" ? " - BOSS!" : kind === "swarm" ? " - 大量発生!" : "";
+    const suffix = kind === "boss" ? " - BOSS!" : kind === "swarm" ? tr(this.lang, " - 大量発生!", " - SWARM!") : "";
     const color = kind === "boss" ? "#e0447a" : kind === "swarm" ? "#c98a12" : "#8a4fd1";
     this.spawnFloatingText(this.player.x, this.player.y - 105, `WAVE ${wave}${suffix}`, color);
   }
@@ -853,7 +849,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0);
 
     this.tipsHint = this.add
-      .text(400, 748, "Enterキーで操作方法を表示", { fontSize: "12px", color: "#7488a0" })
+      .text(400, 748, tr(this.lang, "Enterキーで操作方法を表示", "Press Enter for Controls"), { fontSize: "12px", color: "#7488a0" })
       .setOrigin(0.5)
       .setScrollFactor(0);
 
@@ -895,40 +891,65 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     const title = this.add
-      .text(400, 170, "操作方法", { fontSize: "24px", color: "#2d3a52", fontStyle: "700" })
+      .text(400, 170, tr(this.lang, "操作方法", "Controls"), { fontSize: "24px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     const body = this.add
       .text(
         400,
         380,
-        [
-          "← → : 移動　　↑ : ジャンプ　　↓ : しゃがみ",
-          "X : 通常攻撃（装備中の武器で攻撃）",
-          "1 / 2 / 3 : 武器切替（近接／中距離／遠距離）",
-          "C : スキル発動（クールダウンあり）",
-          "Shift : ガード（正面からの接触ダメージを防ぐ。移動・攻撃はできない）",
-          "空中二段ジャンプのバフ中は空中でもう一度↑でジャンプできる",
-          "Z / V / B : ポーション／剛力の護符／俊足の護符を使用",
-          "",
-          "必殺ゲージが満タンの時：",
-          "↓ → X の順に入力で【奥義】発動",
-          "",
-          "秘奥義解放後、ゲージ満タンの時：",
-          "↓ → ↓ → X の順に入力で【秘奥義】発動",
-          "",
-          "召喚媒体/ステージバフを拾うと一時停止して選択画面が開きます",
-          "",
-          "敵を全滅させるとウェーブクリア。少し休んだら次のウェーブが始まります",
-          "ウェーブが進むほど敵の数・体力・防御力が上がっていきます。どこまで生き残れるか挑戦！",
-          "水色=敏捷型（速いが打たれ弱い）　紫色=タンク型（遅いが硬い）",
-          "5ウェーブごとにボス、7ウェーブごとに大量発生ウェーブが出現します",
-          "R : ゲームオーバー後にリトライ",
-        ].join("\n"),
+        (this.lang === "ja"
+          ? [
+              "← → : 移動　　↑ : ジャンプ　　↓ : しゃがみ",
+              "X : 通常攻撃（装備中の武器で攻撃）",
+              "1 / 2 / 3 : 武器切替（近接／中距離／遠距離）",
+              "C : スキル発動（クールダウンあり）",
+              "Shift : ガード（正面からの接触ダメージを防ぐ。移動・攻撃はできない）",
+              "空中二段ジャンプのバフ中は空中でもう一度↑でジャンプできる",
+              "Z / V / B : ポーション／剛力の護符／俊足の護符を使用",
+              "",
+              "必殺ゲージが満タンの時：",
+              "↓ → X の順に入力で【奥義】発動",
+              "",
+              "秘奥義解放後、ゲージ満タンの時：",
+              "↓ → ↓ → X の順に入力で【秘奥義】発動",
+              "",
+              "召喚媒体/ステージバフを拾うと一時停止して選択画面が開きます",
+              "",
+              "敵を全滅させるとウェーブクリア。少し休んだら次のウェーブが始まります",
+              "ウェーブが進むほど敵の数・体力・防御力が上がっていきます。どこまで生き残れるか挑戦！",
+              "水色=敏捷型（速いが打たれ弱い）　紫色=タンク型（遅いが硬い）",
+              "5ウェーブごとにボス、7ウェーブごとに大量発生ウェーブが出現します",
+              "R : ゲームオーバー後にリトライ",
+            ]
+          : [
+              "← → : Move    ↑ : Jump    ↓ : Crouch",
+              "X : Attack with the equipped weapon",
+              "1 / 2 / 3 : Switch Melee / Mid-range / Ranged",
+              "C : Skill (cooldown applies)",
+              "Shift : Guard frontal contact damage; movement and attacks are disabled",
+              "With Double Jump active, press ↑ again in midair",
+              "Z / V / B : Potion / Power Charm / Haste Charm",
+              "",
+              "When the special gauge is full:",
+              "Input ↓ → X to unleash OUGI",
+              "",
+              "After Hi-Ougi is unlocked with a full gauge:",
+              "Input ↓ → ↓ → X to unleash HI-OUGI",
+              "",
+              "Picking up a Summon Medium or Stage Buff pauses the game for a choice",
+              "",
+              "Defeat every enemy to clear the wave. The next wave begins after a short break",
+              "Enemy count, HP and defense rise with each wave. Survive as long as you can",
+              "Cyan = Agile (fast/fragile)    Purple = Tank (slow/tough)",
+              "Boss every 5 waves; swarm wave every 7 waves",
+              "R : Retry after Game Over",
+            ]
+        ).join("\n"),
         { fontSize: "15px", color: "#3a4a5a", align: "center", lineSpacing: 8 },
       )
       .setOrigin(0.5);
     const closeHint = this.add
-      .text(400, 590, "Enter でとじる", { fontSize: "13px", color: "#7488a0" })
+      .text(400, 590, tr(this.lang, "Enter でとじる", "Press Enter to Close"), { fontSize: "13px", color: "#7488a0" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title, body, closeHint]);
     this.tipsOverlay = overlay;
@@ -955,7 +976,7 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, "⚔️ 召喚媒体 — 呼び出す武器を選択", { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
+      .text(400, 190, tr(this.lang, "⚔️ 召喚媒体 — 呼び出す武器を選択", "⚔️ SUMMON MEDIUM — Choose a Weapon"), { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
@@ -980,7 +1001,7 @@ export class GameScene extends Phaser.Scene {
         )
         .on("pointerdown", () => this.trySummon(kind));
       const label = this.add
-        .text(x, y - 60, `${i + 1}: ${WEAPON_LABEL[kind]}`, { fontSize: "12px", color: "#6a7a95" })
+        .text(x, y - 60, `${i + 1}: ${weaponLabel(this.lang, kind)}`, { fontSize: "12px", color: "#6a7a95" })
         .setOrigin(0.5);
       const text = this.add
         .text(x, y, "", {
@@ -995,7 +1016,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.summonHintText = this.add
-      .text(400, 410, "1 / 2 / 3 キー、またはクリックで選択", { fontSize: "12px", color: "#7488a0" })
+      .text(400, 410, tr(this.lang, "1 / 2 / 3 キー、またはクリックで選択", "Press 1 / 2 / 3 or Click to Choose"), { fontSize: "12px", color: "#7488a0" })
       .setOrigin(0.5);
     overlay.add(this.summonHintText);
     this.summonOverlay = overlay;
@@ -1008,12 +1029,12 @@ export class GameScene extends Phaser.Scene {
       const instanceId = this.loadout[kind];
       const instance = instanceId ? this.inventory.find((w) => w.id === instanceId) : undefined;
       if (!instance) {
-        text.setText("(未設定)\nロードアウトで設定してください").setColor("#62628a");
+        text.setText(tr(this.lang, "(未設定)\nロードアウトで設定してください", "(Not Set)\nConfigure it in Loadout")).setColor("#62628a");
         continue;
       }
       const template = findTemplate(instance.templateId);
       const run = this.runWeaponStates[kind];
-      const stageLabel = run && run.instanceId === instance.id ? `召喚中 stage${run.stage}` : "未召喚";
+      const stageLabel = run && run.instanceId === instance.id ? `${tr(this.lang, "召喚中", "Summoned")} stage${run.stage}` : tr(this.lang, "未召喚", "Not Summoned");
       text
         .setText(`${template?.name ?? "?"}\n[${instance.rarity}] ${stageLabel}`)
         .setColor("#3a4a5a");
@@ -1024,7 +1045,7 @@ export class GameScene extends Phaser.Scene {
     this.summonOverlayVisible = true;
     this.physics.pause();
     this.refreshSummonOverlayTexts();
-    this.summonHintText?.setText("1 / 2 / 3 キー、またはクリックで選択");
+    this.summonHintText?.setText(tr(this.lang, "1 / 2 / 3 キー、またはクリックで選択", "Press 1 / 2 / 3 or Click to Choose"));
     this.summonOverlay?.setVisible(true);
   }
 
@@ -1037,7 +1058,7 @@ export class GameScene extends Phaser.Scene {
   private trySummon(kind: WeaponKind): void {
     const result = resolveSummon(this.loadout, this.inventory, kind, this.runWeaponStates[kind]);
     if (!result) {
-      this.summonHintText?.setText(`${WEAPON_LABEL[kind]}はロードアウト未設定です`);
+      this.summonHintText?.setText(tr(this.lang, `${weaponLabel(this.lang, kind)}はロードアウト未設定です`, `${weaponLabel(this.lang, kind)} is not configured in Loadout`));
       return;
     }
     this.playerState = setCustomWeapon(this.playerState, kind, toWeaponDef(result.stats, kind));
@@ -1062,7 +1083,7 @@ export class GameScene extends Phaser.Scene {
         icon.destroy();
         this.cameras.main.flash(150, 217, 167, 255);
         this.tweens.add({ targets: this.player, scale: 1.2, duration: 80, yoyo: true });
-        this.spawnFloatingText(this.player.x, this.player.y - 75, `${WEAPON_LABEL[kind]} 召喚！`, "#d9a7ff");
+        this.spawnFloatingText(this.player.x, this.player.y - 75, `${weaponLabel(this.lang, kind)} ${tr(this.lang, "召喚！", "SUMMONED!")}`, "#d9a7ff");
       },
     });
   }
@@ -1079,7 +1100,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (pickup.kind === "armor") {
       this.playerState = gainArmor(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, "🛡️ 防具+1", "#7fd1ff");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, tr(this.lang, "🛡️ 防具+1", "🛡️ Armor +1"), "#7fd1ff");
       return;
     }
     if (pickup.kind === "stageBuff") {
@@ -1089,7 +1110,7 @@ export class GameScene extends Phaser.Scene {
     // item: 所持数を増やすだけ。使用は対応するキー（Z/V/B）で行う
     if (pickup.itemId) {
       this.items = { ...this.items, [pickup.itemId]: (this.items[pickup.itemId] ?? 0) + 1 };
-      const name = findItemDef(pickup.itemId)?.name ?? pickup.itemId;
+      const name = itemName(this.lang, pickup.itemId, findItemDef(pickup.itemId)?.name ?? pickup.itemId);
       this.spawnFloatingText(this.player.x, this.player.y - 60, `📦 ${name}+1`, "#7fffb0");
     }
   }
@@ -1100,7 +1121,7 @@ export class GameScene extends Phaser.Scene {
       if (!Phaser.Input.Keyboard.JustDown(key)) continue;
       const consumed = useItem(this.items, itemId);
       if (!consumed) {
-        this.spawnFloatingText(this.player.x, this.player.y - 60, "所持していない", "#ff6b8a");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, tr(this.lang, "所持していない", "Not owned"), "#ff6b8a");
         continue;
       }
       this.items = consumed;
@@ -1109,16 +1130,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyItemEffect(itemId: string, time: number): void {
-    const name = findItemDef(itemId)?.name ?? itemId;
+    const name = itemName(this.lang, itemId, findItemDef(itemId)?.name ?? itemId);
     if (itemId === "potion") {
       this.playerState = healPlayer(this.playerState, 1);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, `❤️ ${name}使用`, "#ff6b8a");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `${name} ${tr(this.lang, "使用", "used")} ❤️`, "#ff6b8a");
       return;
     }
     const buffKind: BuffKind | null = itemId === "power_charm" ? "power" : itemId === "haste_charm" ? "haste" : null;
     if (buffKind) {
       this.playerState = applyBuff(this.playerState, buffKind, time, ITEM_BUFF_DURATION_MS);
-      this.spawnFloatingText(this.player.x, this.player.y - 60, `✨ ${name}使用`, "#ffd166");
+      this.spawnFloatingText(this.player.x, this.player.y - 60, `${name} ${tr(this.lang, "使用", "used")} ✨`, "#ffd166");
     }
   }
 
@@ -1135,7 +1156,7 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, "✨ ステージバフ — 1つ選択", { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
+      .text(400, 190, tr(this.lang, "✨ ステージバフ — 1つ選択", "✨ STAGE BUFF — Choose One"), { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
     overlay.add([bg, panel, title]);
 
@@ -1172,7 +1193,8 @@ export class GameScene extends Phaser.Scene {
   private openStageBuffOverlay(): void {
     this.currentStageBuffOptions = rollStageBuffOptions(3);
     this.currentStageBuffOptions.forEach((option, i) => {
-      this.stageBuffOverlayTexts[i]?.setText(`${option.label}\n${option.desc}`);
+      const localized = stageBuffText(this.lang, option.kind, option.label, option.desc);
+      this.stageBuffOverlayTexts[i]?.setText(`${localized.label}\n${localized.desc}`);
     });
     this.stageBuffOverlayVisible = true;
     this.physics.pause();
@@ -1352,7 +1374,7 @@ export class GameScene extends Phaser.Scene {
     for (const { key, kind } of this.weaponKeys) {
       if (Phaser.Input.Keyboard.JustDown(key) && this.playerState.equippedWeapon !== kind) {
         this.playerState = switchWeapon(this.playerState, kind);
-        this.spawnFloatingText(this.player.x, this.player.y - 60, WEAPON_LABEL[kind], "#7fd1ff");
+        this.spawnFloatingText(this.player.x, this.player.y - 60, weaponLabel(this.lang, kind), "#7fd1ff");
       }
     }
   }
@@ -1582,8 +1604,8 @@ export class GameScene extends Phaser.Scene {
     this.bossTell.clear();
     this.styleText.setText(
       this.combatStyle === "chain"
-        ? `連撃の型 · 連続命中 ${this.playerState.comboStreak}`
-        : `居合の型 · ${this.time.now - this.lastStyleHit >= 1200 ? "一撃の準備ができた" : "間合いを取ろう"}`,
+        ? `${tr(this.lang, "連撃の型", "Combo Stance")} · ${tr(this.lang, "連続命中", "Hits")} ${this.playerState.comboStreak}`
+        : `${tr(this.lang, "居合の型", "Draw Stance")} · ${this.time.now - this.lastStyleHit >= 1200 ? tr(this.lang, "一撃の準備ができた", "Strike Ready") : tr(this.lang, "間合いを取ろう", "Create Distance")}`,
     );
     for (const enemy of this.enemies) {
       if (!enemy.state.alive) {
@@ -1846,7 +1868,7 @@ export class GameScene extends Phaser.Scene {
     const unlocked = this.playerState.hiougiUnlocked;
     this.playerState = checkHiougiUnlock(this.playerState);
     if (!unlocked && this.playerState.hiougiUnlocked) {
-      this.spawnFloatingText(this.player.x, this.player.y - 90, "秘奥義解放！", "#ffd166");
+      this.spawnFloatingText(this.player.x, this.player.y - 90, tr(this.lang, "秘奥義解放！", "HI-OUGI UNLOCKED!"), "#ffd166");
       this.cameras.main.flash(400, 255, 209, 102);
     }
 
@@ -1874,7 +1896,7 @@ export class GameScene extends Phaser.Scene {
       saveBestWave(window.localStorage as unknown as KVStore, this.wave);
       this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
-      this.restartText.setText(`到達: Wave ${this.wave}  ベスト: Wave ${this.bestWave}\nR キーでリトライ`);
+      this.restartText.setText(`${tr(this.lang, "到達", "Reached")}: Wave ${this.wave}  ${tr(this.lang, "ベスト", "Best")}: Wave ${this.bestWave}\n${tr(this.lang, "R キーでリトライ", "Press R to Retry")}`);
       this.virtualControls?.setVisible(false);
       this.statusPanel.setVisible(true);
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
@@ -1908,20 +1930,20 @@ export class GameScene extends Phaser.Scene {
       `${"♥".repeat(this.playerState.health)}${"♡".repeat(this.playerState.maxHealth - this.playerState.health)}`,
     );
     this.scoreText.setText(`SCORE ${this.playerState.score}  WAVE ${this.wave}`);
-    popOnChange(this, this.weaponText, `装備: ${WEAPON_LABEL[this.playerState.equippedWeapon]}（1/2/3で切替）`);
+    popOnChange(this, this.weaponText, `${tr(this.lang, "装備", "Weapon")}: ${weaponLabel(this.lang, this.playerState.equippedWeapon)} ${tr(this.lang, "（1/2/3で切替）", "(1/2/3 to switch)")}`);
 
     const now = this.time.now;
     const cdRemainingSec = Math.max(0, (SKILL_COOLDOWN_MS - (now - this.playerState.lastSkillAt)) / 1000);
     this.skillText.setText(
-      cdRemainingSec > 0 ? `スキル: 準備中 ${cdRemainingSec.toFixed(1)}s` : "スキル: 使用可能（C）",
+      cdRemainingSec > 0 ? `${tr(this.lang, "スキル: 準備中", "Skill: Cooldown")} ${cdRemainingSec.toFixed(1)}s` : tr(this.lang, "スキル: 使用可能（C）", "Skill: READY (C)"),
     );
     this.skillText.setColor(canUseSkill(this.playerState, now) ? "#1f8a63" : THEME.textMuted);
 
     const gaugeRatio = this.playerState.ougiGauge / OUGI_GAUGE_MAX;
     this.gaugeBarFill.width = 216 * gaugeRatio;
-    this.gaugeLabel.setText(gaugeRatio >= 1 ? "奥義 READY (↓→X)" : `必殺 ${Math.floor(this.playerState.ougiGauge)}%`);
+    this.gaugeLabel.setText(gaugeRatio >= 1 ? `${tr(this.lang, "奥義", "OUGI")} READY (↓→X)` : `${tr(this.lang, "必殺", "Special")} ${Math.floor(this.playerState.ougiGauge)}%`);
     this.gaugeBarFill.setFillStyle(gaugeRatio >= 1 ? 0xffd166 : 0xd9a7ff);
-    this.hiougiHint.setText(this.playerState.hiougiUnlocked ? "秘奥義: ↓→↓→X で発動可" : "");
+    this.hiougiHint.setText(this.playerState.hiougiUnlocked ? tr(this.lang, "秘奥義: ↓→↓→X で発動可", "HI-OUGI: ↓→↓→X") : "");
 
     const multiplier = superComboMultiplier(this.playerState.comboStreak);
     const armorLabel = this.playerState.armorCharges > 0 ? ` 🛡️${this.playerState.armorCharges}` : "";
@@ -1933,7 +1955,7 @@ export class GameScene extends Phaser.Scene {
       .filter(Boolean)
       .join("");
     this.comboText.setText(
-      `コンボ ${this.playerState.comboStreak}${multiplier > 1 ? ` ×${multiplier.toFixed(1)}` : ""}${armorLabel}${
+      `${tr(this.lang, "コンボ", "Combo")} ${this.playerState.comboStreak}${multiplier > 1 ? ` ×${multiplier.toFixed(1)}` : ""}${armorLabel}${
         buffLabels ? ` ${buffLabels}` : ""
       }`,
     );
@@ -1941,7 +1963,7 @@ export class GameScene extends Phaser.Scene {
 
     this.itemsText.setText(
       this.itemKeys
-        .map(({ itemId, label }) => `${label}:${findItemDef(itemId)?.name ?? itemId}×${this.items[itemId] ?? 0}`)
+        .map(({ itemId, label }) => `${label}:${itemName(this.lang, itemId, findItemDef(itemId)?.name ?? itemId)}×${this.items[itemId] ?? 0}`)
         .join(" "),
     );
   }
@@ -1954,7 +1976,7 @@ export class GameScene extends Phaser.Scene {
       .rectangle(400, 300, 800, 600, 0x102025, 0.8)
       .setInteractive();
     const title = this.add
-      .text(400, 170, "今回の剣を、どう振るう？", {
+      .text(400, 170, tr(this.lang, "今回の剣を、どう振るう？", "How will you wield your blade?"), {
         fontSize: "28px",
         color: "#fff0cc",
       })
@@ -1972,8 +1994,8 @@ export class GameScene extends Phaser.Scene {
           x,
           292,
           style === "chain"
-            ? "連撃の型\n連続命中で最大 +60%"
-            : "居合の型\n1.2秒間、命中なしで次撃 +90%",
+            ? tr(this.lang, "連撃の型\n連続命中で最大 +60%", "Combo Stance\nChain hits for up to +60%")
+            : tr(this.lang, "居合の型\n1.2秒間、命中なしで次撃 +90%", "Draw Stance\nNo hit for 1.2s: next strike +90%"),
           {
             fontSize: "18px",
             color: "#fff0d5",
@@ -1988,8 +2010,8 @@ export class GameScene extends Phaser.Scene {
           x,
           380,
           style === "chain"
-            ? "攻めをつないで、押し切る"
-            : "間合いを取り、一撃を通す",
+            ? tr(this.lang, "攻めをつないで、押し切る", "Keep pressure and overwhelm them")
+            : tr(this.lang, "間合いを取り、一撃を通す", "Create space and land one decisive strike"),
           { fontSize: "14px", color: "#e7d4b3" },
         )
         .setOrigin(0.5);

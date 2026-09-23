@@ -4,6 +4,7 @@ import { OUGI_GAUGE_MAX, type PlayerState } from "./logic/combat";
 import { bossPhase } from "./logic/style";
 import { fakeKeyEvent } from "./ui/touch";
 import { GameScene } from "./scenes/GameScene";
+import { tr, type Lang } from "./logic/i18n";
 
 type BossEnemy = {
   boss: boolean;
@@ -34,6 +35,7 @@ type Runtime = Phaser.Scene & {
   gaugeLabel?: Phaser.GameObjects.Text;
   hiougiHint?: Phaser.GameObjects.Text;
   tipsHint?: Phaser.GameObjects.Text;
+  lang?: Lang;
   pushCommand?: (token: "down" | "forward" | "back" | "attack", time: number) => void;
   tryTriggerSpecial?: (time: number) => void;
 };
@@ -203,7 +205,8 @@ function showPhoneStyleChoice(scene: Runtime): void {
 
   const root = scene.add.container(0, 0).setScrollFactor(0).setDepth(2700);
   const shade = scene.add.rectangle(width / 2, height / 2, width, height, 0x06131d, 0.86).setInteractive();
-  const title = text(scene, width / 2, portrait ? 145 : 105, "今回の剣を、どう振るう？", portrait ? 25 : 22, "#fff0cc");
+  const lang = scene.lang ?? "en";
+  const title = text(scene, width / 2, portrait ? 145 : 105, tr(lang, "今回の剣を、どう振るう？", "How will you wield your blade?"), portrait ? 25 : 22, "#fff0cc");
   root.add([shade, title]);
 
   const cards = portrait
@@ -234,7 +237,7 @@ function showPhoneStyleChoice(scene: Runtime): void {
       .text(
         x,
         y - 28,
-        style === "chain" ? "連撃の型\n連続命中で最大 +60%" : "居合の型\n1.2秒間、命中なしで次撃 +90%",
+        style === "chain" ? tr(lang, "連撃の型\n連続命中で最大 +60%", "Combo Stance\nChain hits for up to +60%") : tr(lang, "居合の型\n1.2秒間、命中なしで次撃 +90%", "Draw Stance\nNo hit 1.2s: next +90%"),
         {
           fontFamily: '"Hiragino Sans", "Yu Gothic", sans-serif',
           fontSize: portrait ? "19px" : "17px",
@@ -249,7 +252,7 @@ function showPhoneStyleChoice(scene: Runtime): void {
       scene,
       x,
       y + 48,
-      style === "chain" ? "攻めをつないで、押し切る" : "間合いを取り、一撃を通す",
+      style === "chain" ? tr(lang, "攻めをつないで、押し切る", "Keep pressure and overwhelm them") : tr(lang, "間合いを取り、一撃を通す", "Create space and land one strike"),
       portrait ? 14 : 13,
       "#e7d4b3",
     );
@@ -304,11 +307,11 @@ function rebuildControls(scene: Runtime, ui: MobileUi, portrait: boolean): void 
     keyButton(scene, ui.controls, 98, 646, 27, "↑", scene.cursors?.up, 0x355d78);
     keyButton(scene, ui.controls, 98, 766, 27, "↓", scene.cursors?.down, 0x355d78);
 
-    keyButton(scene, ui.controls, 332, 706, 40, "斬", scene.attackKey, 0xd94f5b);
-    keyButton(scene, ui.controls, 397, 640, 29, "跳", scene.cursors?.up, 0x42677f);
-    keyButton(scene, ui.controls, 397, 708, 29, "技", scene.skillKey, 0x227fc5);
-    keyButton(scene, ui.controls, 268, 756, 26, "守", scene.guardKey, 0x56677d);
-    ui.ougiButton = makeButton(scene, ui.controls, 397, 770, 34, "奥義", 0xb97a16, () => triggerOugi(scene));
+    keyButton(scene, ui.controls, 332, 706, 40, tr(scene.lang ?? "en", "斬", "ATK"), scene.attackKey, 0xd94f5b);
+    keyButton(scene, ui.controls, 397, 640, 29, tr(scene.lang ?? "en", "跳", "JMP"), scene.cursors?.up, 0x42677f);
+    keyButton(scene, ui.controls, 397, 708, 29, tr(scene.lang ?? "en", "技", "SKL"), scene.skillKey, 0x227fc5);
+    keyButton(scene, ui.controls, 268, 756, 26, tr(scene.lang ?? "en", "守", "GRD"), scene.guardKey, 0x56677d);
+    ui.ougiButton = makeButton(scene, ui.controls, 397, 770, 34, tr(scene.lang ?? "en", "奥義", "OUGI"), 0xb97a16, () => triggerOugi(scene));
   } else {
     // 横持ちは戦場を最大化。操作は左右の下端へ追いやる。
     keyButton(scene, ui.controls, 72, 378, 27, "←", scene.cursors?.left, 0x233d50);
@@ -316,11 +319,11 @@ function rebuildControls(scene: Runtime, ui: MobileUi, portrait: boolean): void 
     keyButton(scene, ui.controls, 104, 322, 25, "↑", scene.cursors?.up, 0x355d78);
     keyButton(scene, ui.controls, 104, 418, 25, "↓", scene.cursors?.down, 0x355d78);
 
-    keyButton(scene, ui.controls, 716, 378, 40, "斬", scene.attackKey, 0xd94f5b);
-    keyButton(scene, ui.controls, 766, 316, 27, "跳", scene.cursors?.up, 0x42677f);
-    keyButton(scene, ui.controls, 645, 391, 29, "技", scene.skillKey, 0x227fc5);
-    keyButton(scene, ui.controls, 584, 405, 24, "守", scene.guardKey, 0x56677d);
-    ui.ougiButton = makeButton(scene, ui.controls, 770, 410, 32, "奥義", 0xb97a16, () => triggerOugi(scene));
+    keyButton(scene, ui.controls, 716, 378, 40, tr(scene.lang ?? "en", "斬", "ATK"), scene.attackKey, 0xd94f5b);
+    keyButton(scene, ui.controls, 766, 316, 27, tr(scene.lang ?? "en", "跳", "JMP"), scene.cursors?.up, 0x42677f);
+    keyButton(scene, ui.controls, 645, 391, 29, tr(scene.lang ?? "en", "技", "SKL"), scene.skillKey, 0x227fc5);
+    keyButton(scene, ui.controls, 584, 405, 24, tr(scene.lang ?? "en", "守", "GRD"), scene.guardKey, 0x56677d);
+    ui.ougiButton = makeButton(scene, ui.controls, 770, 410, 32, tr(scene.lang ?? "en", "奥義", "OUGI"), 0xb97a16, () => triggerOugi(scene));
   }
 }
 
@@ -421,10 +424,10 @@ function refresh(scene: Runtime): void {
   ui.stage.setPosition(width / 2, portrait ? 28 : 24).setText(`WAVE ${scene.wave ?? 1}`);
   ui.objective
     .setPosition(width - 18, portrait ? 31 : 27)
-    .setText(boss ? "BOSS" : `残敵 ${remaining}`);
+    .setText(boss ? "BOSS" : `${tr(scene.lang ?? "en", "残敵", "ENEMIES")} ${remaining}`);
   ui.ougiStatus
     .setPosition(portrait ? 325 : 337, portrait ? 80 : 48)
-    .setText(gaugeRatio >= 1 ? "奥義 READY" : `奥義 ${Math.round(gaugeRatio * 100)}%`);
+    .setText(gaugeRatio >= 1 ? `${tr(scene.lang ?? "en", "奥義", "OUGI")} READY` : `${tr(scene.lang ?? "en", "奥義", "OUGI")} ${Math.round(gaugeRatio * 100)}%`);
 
   if (boss) {
     const phase = bossPhase(scene.time.now - (boss.bornAt ?? scene.time.now));
