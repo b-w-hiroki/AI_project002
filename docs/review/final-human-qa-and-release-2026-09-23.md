@@ -1,6 +1,6 @@
 # 最終実機QA・公開チェックシート（2026-09-23）
 
-コード側の実装・自動検証は完了済み。最新main（`3fbb6dd`）で Browser E2E run #343、WebKit Smoke run #63、CrazyGames Readiness run #7、CrazyGames Marketing Assets run #7、GitHub Pages deploy run #163 がすべて成功。
+コード側の実装・自動検証は完了済み。最新ゲームコード（`3fbb6dd`）で Browser E2E run #343、WebKit Smoke run #63、CrazyGames Readiness run #7、CrazyGames Marketing Assets run #7 が成功し、最新main（`e505de2`）の GitHub Pages deploy run #164 も成功。CrazyGames実投稿は `docs/review/crazygames-final-submission-2026-09-24.md` を単一の提出手順として使用する。
 
 ## 1. iOS Safari 実機QA
 
@@ -65,12 +65,13 @@
 
 ## 6. 現在の自動検証基準
 
-- main: `3fbb6dd`（PR #171まで反映）
+- main: `e505de2`（PR #172まで反映）
+- ゲームコード基準: `3fbb6dd`（PR #171）
 - Browser E2E: run #343 成功
 - WebKit Smoke: run #63 成功
 - CrazyGames Readiness: run #7 全6作品成功
 - CrazyGames Marketing Assets: run #7 全6作品成功、6 artifact生成
-- GitHub Pages: Deploy to GitHub Pages run #163 成功
+- GitHub Pages: Deploy to GitHub Pages run #164 成功
 - open PR: 0
 - コード側作品Epic #94 / #95 / #96 / #99 / #100: 完了
 - 剣戟 #93: 実機QAのみ残件
