@@ -1,14 +1,14 @@
 # 投稿準備資料（CrazyGames / PLiCy）
 
-6作すべて Phaser + TypeScript + Vite（HTML5、外部プラグイン依存なし）、CrazyGames SDK連携済み（`src/platform/crazygames.ts`、非SDK環境ではno-op）。日本語UIのみ（多言語対応はポーション工房のみ）。
+6作すべて Phaser + TypeScript + Vite（HTML5、外部プラグイン依存なし）、CrazyGames SDK連携済み（`src/platform/crazygames.ts`、非SDK環境ではno-op）。CrazyGames向け英語fallbackとSDK locale連動を全6作品へ実装済み。
 
 公開URL: https://b-w-hiroki.github.io/AI_project002/
 
 > [!IMPORTANT]
-> CrazyGamesは Issue #150 の完了後に提出する。
-> 2026-09時点の公式要件では英語ローカライズ、Landscape/Portrait/Squareの3種カバー、
-> Landscape/Portraitの15〜20秒プレビュー動画が必要。
-> PLiCy向けHTML5 ZIPは `game-release-packages` artifactで自動生成済み。
+> CrazyGames向けコード実装・自動検証は完了済み。最新main（`3fbb6dd`）で Browser E2E / WebKit Smoke /
+> CrazyGames Readiness / CrazyGames Marketing Assets / GitHub Pages がすべて成功。
+> 6作品分の3種カバーとLandscape/Portraitプレビュー動画も最新mainからartifact生成済み。
+> 残りはDeveloper Portal Previewでの最終確認、PEGI確認、アカウント作成・実投稿など人間作業。
 
 ---
 
@@ -227,11 +227,12 @@
 - [x] 非独占（他ポータルにも同時公開可能）
 - [x] 投稿ZIP自動生成（PR #147 / #149）
 - [x] Chromium Browser E2E / WebKit Smoke
-- [ ] 英語ローカライズ（Issue #150）
-- [ ] CrazyGames主要iframeサイズで最終QA（Issue #150）
-- [ ] 3種カバー: 1920×1080 / 800×1200 / 800×800（Issue #150）
-- [ ] 15〜20秒プレビュー動画: landscape + portrait（Issue #150）
-- [ ] Developer Portal Previewで初期download size / SDK / localeを確認
+- [x] 英語ローカライズ + SDK locale連動（Issue #150）
+- [x] CrazyGames主要iframeサイズで自動QA（Issue #150）
+- [x] 3種カバー: 1920×1080 / 800×1200 / 800×800（最新mainのMarketing Assets run #7で6作品分生成）
+- [x] 15〜20秒プレビュー動画: landscape + portrait（最新mainのMarketing Assets run #7で6作品分生成）
+- [ ] Developer Portal Previewで初期download size / SDK / locale / asset見た目を最終確認
+- [ ] PEGI 12相当の内容確認（Developer Portal登録時）
 - [ ] CrazyGames 開発者アカウント作成（人間の作業）
 
 ## PLiCy投稿の準備（全6作共通）
