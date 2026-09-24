@@ -1,6 +1,6 @@
 # 最終実機QA・公開チェックシート（2026-09-23）
 
-コード側の実装・自動検証は完了済み。Browser E2E run #283 は6作品×checks/e2eの全12ジョブ成功、GitHub Pages deploy run #139 も成功。
+コード側の実装・自動検証は完了済み。最新main（`3fbb6dd`）で Browser E2E run #343、WebKit Smoke run #63、CrazyGames Readiness run #7、CrazyGames Marketing Assets run #7、GitHub Pages deploy run #163 がすべて成功。
 
 ## 1. iOS Safari 実機QA
 
@@ -43,10 +43,15 @@
 
 ## 4. CrazyGames
 
+- [x] 最新mainで6作品の英語fallback / SDK locale / iframe / 初期download / 禁止UIを自動検証
+- [x] 最新mainから6作品分の3種カバー + landscape/portrait previewをartifact生成
+- [x] 各作品の投稿ZIPを `game-release-packages` artifactで自動生成
 - [ ] 開発者アカウント作成
+- [ ] Developer Portal Previewで初期download size / SDK / locale / asset見た目を最終確認
+- [ ] PEGI 12相当の内容確認
 - [ ] `docs/submission.md` のタイトル・紹介文・タグを使用
-- [ ] 最新mainから各作品をbuild
-- [ ] 必要形式でdistをzip化して6作品を投稿
+- [ ] 最新 `game-release-packages` artifact の各ZIPを6作品分アップロード
+- [ ] 最新 `*-crazygames-marketing` artifact のカバー/previewを使用
 - [ ] 審査URL / 公開URL / 審査結果をIssue #98へ記録
 - [ ] プラットフォーム固有修正は個別Issue化
 
@@ -60,11 +65,15 @@
 
 ## 6. 現在の自動検証基準
 
-- Browser E2E: run #283 全12ジョブ成功
-- GitHub Pages: Deploy to GitHub Pages run #139 成功
+- main: `3fbb6dd`（PR #171まで反映）
+- Browser E2E: run #343 成功
+- WebKit Smoke: run #63 成功
+- CrazyGames Readiness: run #7 全6作品成功
+- CrazyGames Marketing Assets: run #7 全6作品成功、6 artifact生成
+- GitHub Pages: Deploy to GitHub Pages run #163 成功
 - open PR: 0
 - コード側作品Epic #94 / #95 / #96 / #99 / #100: 完了
 - 剣戟 #93: 実機QAのみ残件
 - Karma #90: 実機QAのみ残件
 - 共通 #97: 実機QAのみ残件
-- 公開 #98: 外部アカウント作成・実投稿のみ残件
+- 公開 #98: CrazyGames Developer Portal最終確認、外部アカウント作成・実投稿のみ残件
