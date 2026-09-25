@@ -813,10 +813,10 @@ export class GameScene extends Phaser.Scene {
   private buildHudObjects(): void {
     drawPanel(this, 150, 68, 284, 128, {
       radius: 14,
-      fillColor: THEME.panelFill,
-      fillAlpha: 0.72,
-      borderColor: THEME.accent,
-      borderAlpha: 0.3,
+      fillColor: 0x17362f,
+      fillAlpha: 0.86,
+      borderColor: 0x8dc48e,
+      borderAlpha: 0.7,
       scrollFactor: 0,
       shadow: false,
     });
@@ -824,10 +824,10 @@ export class GameScene extends Phaser.Scene {
       .text(16, 12, "", { ...TYPE.numeric, fontSize: "18px", color: "#e0447a" })
       .setScrollFactor(0);
     this.scoreText = this.add
-      .text(16, 34, "", { ...TYPE.body, fontSize: "14px", color: "#c98a12" })
+      .text(16, 34, "", { ...TYPE.body, fontSize: "14px", color: "#ffd56a", fontStyle: "700" })
       .setScrollFactor(0);
     this.weaponText = this.add
-      .text(16, 54, "", { ...TYPE.body, color: "#2f8fd1" })
+      .text(16, 54, "", { ...TYPE.body, color: "#9fe7d0" })
       .setScrollFactor(0);
     this.skillText = this.add
       .text(16, 72, "", { ...TYPE.small, color: THEME.textMuted })
@@ -841,9 +841,10 @@ export class GameScene extends Phaser.Scene {
 
     drawPanel(this, 660, 20, 228, 22, {
       radius: 11,
-      fillColor: 0xffffff,
-      borderColor: 0xd9a7ff,
-      borderAlpha: 0.5,
+      fillColor: 0x17362f,
+      fillAlpha: 0.9,
+      borderColor: 0x8dc48e,
+      borderAlpha: 0.7,
       scrollFactor: 0,
       shadow: false,
     });
