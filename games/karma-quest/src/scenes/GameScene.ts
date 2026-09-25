@@ -194,18 +194,18 @@ export class GameScene extends Phaser.Scene {
       .text(CX, 110, tr(this.lang, "カルマクエスト", "Karma Quest"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     // 勇者イラスト（kq-hero-warrior）。タイトルと説明文の間に配置
-    const hero = this.addHero(CX, 225, 170);
+    const hero = this.addHero(CX, 238, 210);
     const rules = this.add
       .text(
         CX,
-        420,
-        tr(this.lang, "勇者を育て、討伐に送り出し、\n神様に戦果を報告する。\n\n派閥の要望に応えると\nカルマが傾き、勇者の力が変化する。\n\n実際の出来事から2場面を選んで報告。\n神様の期待が、次の年の冒険を変える。\n\n12年の旅を乗り越えて、\n自分だけの勇者伝説を作ろう！", "Raise a hero, answer faction requests, and send them on hunts.\n\nYour choices shape Karma, stats, and appearance.\n\nAfter each year, report up to two moments to a god.\nTheir values decide the next year’s blessing and challenge.\n\nGuide your hero through all 12 years\nand create a legend of your own!"),
+        440,
+        tr(this.lang, "12年の旅で、派閥の選択が勇者を変える。\n討伐の記録を神へ報告し、次の年の運命を選ぼう。\nあなたのカルマが、ひとつの伝説になる。", "Across 12 years, faction choices reshape your hero.\nReport each year’s deeds to the gods and shape what comes next.\nYour Karma becomes a legend."),
         { ...TYPE.body, color: THEME.textMuted, align: "center" },
       )
       .setOrigin(0.5);
 
     const best = this.add
-      .text(CX, 570, "", {
+      .text(CX, 545, "", {
         ...TYPE.small,
         color: THEME.textMuted,
         align: "center",
@@ -215,8 +215,8 @@ export class GameScene extends Phaser.Scene {
     const startBtn = makeButton(
       this,
       CX,
-      650,
-      260,
+      630,
+      280,
       52,
       tr(this.lang, "旅を始める", "Begin Journey"),
       () => {
@@ -385,7 +385,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("progress");
     const factionLabel = this.add
-      .text(CX, 320, "", { ...TYPE.h2, color: hexToCss(THEME.accent) })
+      .text(CX, 326, "", { ...TYPE.h2, fontSize: "24px", color: hexToCss(THEME.accent) })
       .setOrigin(0.5)
       .setName("factionLabel");
     const requestText = this.add
@@ -401,8 +401,8 @@ export class GameScene extends Phaser.Scene {
     const acceptBtn = makeButton(
       this,
       CX,
-      500,
-      320,
+      510,
+      332,
       52,
       tr(this.lang, "力を貸す", "Help Them"),
       () => this.onKarmaChoice(true),
@@ -413,8 +413,8 @@ export class GameScene extends Phaser.Scene {
     const declineBtn = makeButton(
       this,
       CX,
-      570,
-      320,
+      580,
+      332,
       48,
       tr(this.lang, "断る", "Decline"),
       () => this.onKarmaChoice(false),
@@ -435,7 +435,7 @@ export class GameScene extends Phaser.Scene {
     // 派閥アイコン（大）。全派閥分を生成しておき、表示時に該当のものだけ見せる。
     // 画像が無い派閥は生成されず、従来どおりラベルのみの表示になる
     for (const faction of FACTIONS) {
-      const icon = this.addFactionIcon(faction, CX, 262, 76);
+      const icon = this.addFactionIcon(faction, CX, 266, 92);
       if (icon) {
         icon.setName(`icon_${faction}`).setVisible(false);
         this.karmaGroup.add(icon);
@@ -787,6 +787,14 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.submitButton = submitBtn;
+    const chronicleLabel = this.add
+      .text(CX, 548, tr(this.lang, "CHRONICLE · 年代記", "CHRONICLE"), {
+        fontSize: "12px",
+        color: "#c9ad75",
+        fontStyle: "700",
+        letterSpacing: 2,
+      })
+      .setOrigin(0.5);
     this.reportPreview = this.add
       .text(CX, 576, "", {
         fontSize: "14px",
@@ -800,6 +808,7 @@ export class GameScene extends Phaser.Scene {
       heading,
       hint,
       submitBtn.container,
+      chronicleLabel,
       this.reportPreview,
     ]);
     (["valor", "mercy"] as const).forEach((god, i) => {
