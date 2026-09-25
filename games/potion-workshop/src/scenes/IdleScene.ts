@@ -126,6 +126,7 @@ export class IdleScene extends Phaser.Scene {
   preload(): void {
     this.load.image("pw-bg-workshop", "images/pw-bg-workshop.png");
     this.load.image("pw-hero-alchemist", "images/pw-hero-alchemist.png");
+    this.load.image("pw-hero-alchemist-female", "images/generated/characters/pw-hero-alchemist-female.webp");
     this.load.image("pw-cauldron-icon", "images/pw-cauldron-icon.png");
     this.load.image("pw-dragon-icon", "images/pw-dragon-icon.png");
   }
@@ -231,7 +232,7 @@ export class IdleScene extends Phaser.Scene {
    */
   private buildZonePanels(): void {
     // 転生ボタン（y=525,h=64→下端557）とパネル下端の間に十分な余白を確保する
-    drawPanel(this, 160, 360, 300, 450, {
+    drawPanel(this, 160, 370, 300, 470, {
       radius: 18,
       fillColor: ELEVATION.zone,
       fillAlpha: 0.9,
@@ -258,8 +259,9 @@ export class IdleScene extends Phaser.Scene {
    * （画像が無い場合は buildBrewArea() 側が単色円のフォールバックボタンを描く）
    */
   private buildAlchemistMascot(): Phaser.GameObjects.Image | null {
-    if (!this.textures.exists("pw-hero-alchemist")) return null;
-    return this.add.image(160, 200, "pw-hero-alchemist").setDisplaySize(220, 220);
+    const key = this.textures.exists("pw-hero-alchemist-female") ? "pw-hero-alchemist-female" : "pw-hero-alchemist";
+    if (!this.textures.exists(key)) return null;
+    return this.add.image(145, 218, key).setDisplaySize(238, 258).setOrigin(0.5, 0.55);
   }
 
   private buildHeader(): void {
