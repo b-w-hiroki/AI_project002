@@ -1295,6 +1295,12 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
   private buildResultScreen(): void {
     this.resultGroup = this.add.container(0, 0);
     const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
+    const resultHero = this.textures.exists(IMG.hero)
+      ? this.add.image(205, 300, IMG.hero).setDisplaySize(150, 200).setAlpha(0.28)
+      : null;
+    const resultEnemy = this.textures.exists(IMG.enemy)
+      ? this.add.image(595, 300, IMG.enemy).setDisplaySize(150, 200).setFlipX(true).setAlpha(0.22)
+      : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
       .text(400, 150, "", {
@@ -1344,6 +1350,8 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
 
     this.resultGroup.add([
       panel,
+      ...(resultHero ? [resultHero] : []),
+      ...(resultEnemy ? [resultEnemy] : []),
       this.resultAccent,
       this.resultFinish,
       heading,

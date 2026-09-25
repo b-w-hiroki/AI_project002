@@ -350,12 +350,21 @@ export class ExpeditionScene extends Phaser.Scene {
       map
         .lineStyle(selected ? 3 : 1, unlocked ? r.accent : 0x718087, 0.9)
         .strokeCircle(p.x, p.y, 25);
-      map
-        .fillStyle(unlocked ? r.accent : 0x718087)
-        .fillRect(p.x - 11, p.y - 6, 22, 18)
-        .fillRect(p.x - 15, p.y - 11, 8, 9)
-        .fillRect(p.x - 4, p.y - 11, 8, 9)
-        .fillRect(p.x + 7, p.y - 11, 8, 9);
+      if (this.textures.exists("st-prop-city")) {
+        const cityNode = this.add
+          .image(p.x, p.y, "st-prop-city")
+          .setDisplaySize(selected ? 58 : 48, selected ? 58 : 48)
+          .setAlpha(unlocked ? (selected ? 1 : 0.78) : 0.3);
+        if (!unlocked) cityNode.setTint(0x6f777a);
+        this.root.add(cityNode);
+      } else {
+        map
+          .fillStyle(unlocked ? r.accent : 0x718087)
+          .fillRect(p.x - 11, p.y - 6, 22, 18)
+          .fillRect(p.x - 15, p.y - 11, 8, 9)
+          .fillRect(p.x - 4, p.y - 11, 8, 9)
+          .fillRect(p.x + 7, p.y - 11, 8, 9);
+      }
       this.text(p.x, p.y + 32, r.name, 13, unlocked ? INK : "#99a6a9");
       this.text(
         p.x,

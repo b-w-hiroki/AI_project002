@@ -754,6 +754,26 @@ export class GameScene extends Phaser.Scene {
     if (correct) sfx.correct();
     else sfx.miss();
     if (correct) {
+      const selected = colorId ? this.targetBoxes.find((box) => box.colorId === colorId) : undefined;
+      if (selected) {
+        this.drawTargetBox(selected.bg, hexForColorId(selected.colorId), true);
+        this.tweens.killTweensOf(selected.container);
+        selected.container.setScale(0.96);
+        this.tweens.add({
+          targets: selected.container,
+          scale: 1.08,
+          duration: 90,
+          yoyo: true,
+          ease: "Back.easeOut",
+          onComplete: () => {
+            selected.container.setScale(1);
+            this.drawTargetBox(selected.bg, hexForColorId(selected.colorId), false);
+          },
+        });
+      }
+      if (reactionMs < TURBO_FAST_MS) {
+        this.cameras.main.flash(55, 125, 235, 180);
+      }
       this.tweens.add({
         targets: this.promptCard,
         scale: 1.15,
