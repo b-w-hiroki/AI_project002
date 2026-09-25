@@ -24,9 +24,26 @@ test("generated title assets are loaded and visible", async ({ page }) => {
   const state = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const keys = ["st-generated-hero", "st-generated-capital-bg"];
-    const visible = scene.children.list
-      .filter(node => node.type === "Image" && node.visible)
-      .map(node => (node as Phaser.GameObjects.Image).texture.key);
+    const collectVisibleImages = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+      out: string[] = [],
+    ): string[] => {
+      for (const node of nodes) {
+        const visible = parentVisible && ("visible" in node
+          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
+          : true);
+        if (!visible) continue;
+        if (node.type === "Image") {
+          out.push((node as Phaser.GameObjects.Image).texture.key);
+        }
+        if (node.type === "Container") {
+          collectVisibleImages((node as Phaser.GameObjects.Container).list, visible, out);
+        }
+      }
+      return out;
+    };
+    const visible = collectVisibleImages(scene.children.list);
     return {
       loaded: keys.every(key => scene.textures.exists(key)),
       visible: keys.every(key => visible.includes(key)),
