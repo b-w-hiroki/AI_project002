@@ -1246,6 +1246,21 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
       : "";
     stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
+    const resultHero = this.resultGroup.getByName("resultHero") as Phaser.GameObjects.Image | null;
+    const resultEnemy = this.resultGroup.getByName("resultEnemy") as Phaser.GameObjects.Image | null;
+    if (resultHero) {
+      resultHero.clearTint().setAlpha(outcome === "playerWin" ? 0.72 : 0.18).setScale(1);
+      if (outcome === "playerWin") {
+        this.tweens.add({ targets: resultHero, scale: 1.08, duration: 220, yoyo: true, ease: "Back.easeOut" });
+      }
+    }
+    if (resultEnemy) {
+      resultEnemy.clearTint().setAlpha(outcome === "enemyWin" ? 0.68 : 0.15).setScale(1);
+      if (outcome === "playerWin") resultEnemy.setTint(0x777777);
+      if (outcome === "enemyWin") {
+        this.tweens.add({ targets: resultEnemy, scale: 1.08, duration: 220, yoyo: true, ease: "Back.easeOut" });
+      }
+    }
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
     this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
@@ -1296,10 +1311,10 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
     this.resultGroup = this.add.container(0, 0);
     const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
     const resultHero = this.textures.exists(IMG.hero)
-      ? this.add.image(205, 300, IMG.hero).setDisplaySize(150, 200).setAlpha(0.28)
+      ? this.add.image(205, 300, IMG.hero).setDisplaySize(150, 200).setAlpha(0.28).setName("resultHero")
       : null;
     const resultEnemy = this.textures.exists(IMG.enemy)
-      ? this.add.image(595, 300, IMG.enemy).setDisplaySize(150, 200).setFlipX(true).setAlpha(0.22)
+      ? this.add.image(595, 300, IMG.enemy).setDisplaySize(150, 200).setFlipX(true).setAlpha(0.22).setName("resultEnemy")
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add

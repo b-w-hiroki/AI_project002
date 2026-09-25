@@ -1720,11 +1720,15 @@ export class GameScene extends Phaser.Scene {
     body.setVelocityX(this.playerState.facing * 180);
 
     const sparkColor = enemy.type === "agile" ? 0x63e1e7 : enemy.type === "tank" ? 0xc0a4ff : 0xffd166;
+    if (enemy.boss) {
+      this.cameras.main.shake(85, 0.004);
+      this.cameras.main.flash(55, 160, 220, 170);
+    }
     const hitSprite = this.add
       .image(enemy.sprite.x, enemy.sprite.y - 10, COMBAT_HIT_TEXTURE)
       .setDepth(COMBAT_FX_DEPTH)
       .setTint(sparkColor)
-      .setScale(enemy.type === "tank" ? 0.72 : 0.56)
+      .setScale(enemy.boss ? 0.94 : enemy.type === "tank" ? 0.72 : 0.56)
       .setAngle(Phaser.Math.Between(-18, 18));
     this.tweens.add({
       targets: hitSprite,
