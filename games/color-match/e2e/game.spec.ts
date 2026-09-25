@@ -20,6 +20,20 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
+test("generated answer UI is loaded and visible during play", async ({ page }) => {
+  await tapPoint(page, 225, 705);
+  await expect.poll(() => phase(page)).toBe("playing");
+  const assetState = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const textureLoaded = scene.textures.exists("cm-answer-buttons");
+    const visibleImage = scene.children.list.some(
+      node => node.type === "Image" && (node as Phaser.GameObjects.Image).texture.key === "cm-answer-buttons" && node.visible,
+    );
+    return { textureLoaded, visibleImage };
+  });
+  expect(assetState).toEqual({ textureLoaded: true, visibleImage: true });
+});
+
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
   await expectResponsiveCanvas(page);
 });
