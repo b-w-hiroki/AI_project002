@@ -54,6 +54,9 @@ export interface TouchButtonOptions {
   color?: number;
   alpha?: number;
   fontSize?: string;
+  borderColor?: number;
+  borderAlpha?: number;
+  textColor?: string;
 }
 
 /**
@@ -76,10 +79,10 @@ export function bindHeldKey(
     .circle(x, y, radius, options.color ?? 0x2a2a4a, options.alpha ?? 0.55)
     .setScrollFactor(0)
     .setDepth(90)
-    .setStrokeStyle(1, 0x54547a)
+    .setStrokeStyle(2, options.borderColor ?? 0x54547a, options.borderAlpha ?? 0.85)
     .setInteractive();
   const labelText = scene.add
-    .text(x, y, label, { fontSize: options.fontSize ?? "16px", color: "#e8e8fb" })
+    .text(x, y, label, { fontSize: options.fontSize ?? "16px", color: options.textColor ?? "#e8e8fb", fontStyle: "700" })
     .setOrigin(0.5)
     .setScrollFactor(0)
     .setDepth(91);
@@ -111,6 +114,11 @@ export interface JoystickKeys {
 export interface JoystickOptions {
   maxRadius?: number;
   deadzone?: number;
+  baseColor?: number;
+  baseAlpha?: number;
+  borderColor?: number;
+  thumbColor?: number;
+  thumbAlpha?: number;
 }
 
 /**
@@ -130,13 +138,13 @@ export function bindVirtualJoystick(
   const deadzone = options.deadzone ?? 14;
 
   const base = scene.add
-    .circle(0, 0, maxRadius, 0xffffff, 0.12)
-    .setStrokeStyle(2, 0xffffff, 0.25)
+    .circle(0, 0, maxRadius, options.baseColor ?? 0x19443a, options.baseAlpha ?? 0.28)
+    .setStrokeStyle(2, options.borderColor ?? 0x9fe7d0, 0.65)
     .setScrollFactor(0)
     .setDepth(85)
     .setVisible(false);
   const thumb = scene.add
-    .circle(0, 0, maxRadius * 0.45, 0xffffff, 0.3)
+    .circle(0, 0, maxRadius * 0.45, options.thumbColor ?? 0x7fd1b2, options.thumbAlpha ?? 0.55)
     .setScrollFactor(0)
     .setDepth(86)
     .setVisible(false);
