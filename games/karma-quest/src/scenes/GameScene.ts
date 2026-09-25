@@ -1067,7 +1067,7 @@ export class GameScene extends Phaser.Scene {
     const retryBtn = makeButton(
       this,
       CX,
-      635,
+      700,
       300,
       52,
       tr(this.lang, "もう一度旅に出る", "Begin Another Journey"),
@@ -1077,7 +1077,7 @@ export class GameScene extends Phaser.Scene {
     const titleBtn = makeButton(
       this,
       CX,
-      700,
+      635,
       300,
       46,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
