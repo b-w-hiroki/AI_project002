@@ -75,6 +75,7 @@ const GENERAL_ART: Readonly<Record<string, string>> = {
 const BG_KEY = "st-bg-battlefield";
 const GENERATED_HERO_KEY = "st-generated-hero";
 const GENERATED_CAPITAL_BG_KEY = "st-generated-capital-bg";
+const GENERATED_DEPLOY_UI_KEY = "st-generated-deploy-ui";
 /** 立ち絵の縦横比（384:512） */
 const ART_ASPECT = 384 / 512;
 
@@ -123,6 +124,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
     this.load.image(GENERATED_HERO_KEY, "images/generated/characters/st-hero-protagonist.webp");
     this.load.image(GENERATED_CAPITAL_BG_KEY, "images/generated/backgrounds/st-bg-capital.webp");
+    this.load.image(GENERATED_DEPLOY_UI_KEY, "images/generated/ui/st-ui-deploy-button.webp");
     for (const key of Object.values(GENERAL_ART))
       this.load.image(key, `images/${key}.png`);
   }
@@ -205,6 +207,11 @@ export class GameScene extends Phaser.Scene {
       depth: 0,
       fillAlpha: hasArt ? 0.9 : 0.97,
     });
+
+    if (this.textures.exists(GENERATED_DEPLOY_UI_KEY)) {
+      const deployPlate = this.add.image(CX, 635, GENERATED_DEPLOY_UI_KEY).setDisplaySize(376, 62).setAlpha(0.42);
+      this.titleGroup.add(deployPlate);
+    }
 
     const questBtn = makeButton(
       this,
