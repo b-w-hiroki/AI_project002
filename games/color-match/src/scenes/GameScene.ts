@@ -584,8 +584,18 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("heading");
     const resultMascot = hasMascot
-      ? this.add.image(CX + 120, 255, MASCOT_KEY).setDisplaySize(72, 72)
+      ? this.add.image(CX + 120, 255, MASCOT_KEY).setDisplaySize(84, 84)
       : null;
+    if (resultMascot) {
+      this.tweens.add({
+        targets: resultMascot,
+        y: resultMascot.y - 8,
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
     const stats = this.add
       .text(CX, 350, "", {
         ...TYPE.body,
@@ -993,6 +1003,21 @@ export class GameScene extends Phaser.Scene {
         : `${grade} · ${t(this.lang, "score")} ${summary.score}`,
     );
     heading.setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
+    if (grade === "S" || grade === "A") {
+      const haloColor = grade === "S" ? 0xffd75e : 0x7ee9ff;
+      const halo = this.add.circle(CX, 255, 70, haloColor, 0)
+        .setStrokeStyle(5, haloColor, 0.6)
+        .setDepth(5);
+      this.resultGroup.add(halo);
+      this.tweens.add({
+        targets: halo,
+        scale: 1.9,
+        alpha: 0,
+        duration: 420,
+        ease: "Cubic.easeOut",
+        onComplete: () => halo.destroy(),
+      });
+    }
     heading.setScale(0.78);
     this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
     if (grade === "S" || grade === "A") this.cameras.main.flash(120, 255, 222, 110);

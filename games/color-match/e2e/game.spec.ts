@@ -107,6 +107,10 @@ test("English landscape marketing UI contains no Japanese", async ({ page }) => 
 test("English fallback localizes the primary title and controls", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(async () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return scene?.children?.list?.length ?? 0;
+  }), { timeout: 10000 }).toBeGreaterThan(0);
   const labels = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const collectText = (
