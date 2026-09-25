@@ -476,6 +476,15 @@ export class GameScene extends Phaser.Scene {
       borderAlpha: 0.95,
       textColor: "#ecfff7",
     }));
+    controls.add(bindHeldKey(this, 590, 520, "GRD", this.guardKey, {
+      radius: 28,
+      color: 0x35546a,
+      alpha: 0.78,
+      fontSize: "12px",
+      borderColor: 0x9fc8e8,
+      borderAlpha: 0.92,
+      textColor: "#edf7ff",
+    }));
 
     WEAPON_KEY_BINDINGS.forEach((_binding, i) => {
       const key = this.weaponKeys[i]?.key;
