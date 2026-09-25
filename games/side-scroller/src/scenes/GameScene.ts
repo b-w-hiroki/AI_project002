@@ -455,10 +455,27 @@ export class GameScene extends Phaser.Scene {
       this,
       { x: 0, y: 0, width: 400, height: 600 },
       { left: this.cursors.left, right: this.cursors.right, up: this.cursors.up, down: this.cursors.down },
+      { baseColor: 0x153f36, baseAlpha: 0.34, borderColor: 0x9fe7d0, thumbColor: 0x78cfae, thumbAlpha: 0.62 },
     ));
 
-    controls.add(bindHeldKey(this, 730, 520, "X", this.attackKey, { radius: 40, color: 0xff6b8a, alpha: 0.5, fontSize: "20px" }));
-    controls.add(bindHeldKey(this, 650, 500, "C", this.skillKey, { radius: 28, color: 0x7fd1ff, alpha: 0.5 }));
+    controls.add(bindHeldKey(this, 730, 520, "ATK", this.attackKey, {
+      radius: 42,
+      color: 0xb84a4a,
+      alpha: 0.82,
+      fontSize: "17px",
+      borderColor: 0xffd38b,
+      borderAlpha: 0.95,
+      textColor: "#fff3d0",
+    }));
+    controls.add(bindHeldKey(this, 650, 500, "SKL", this.skillKey, {
+      radius: 31,
+      color: 0x2e7f73,
+      alpha: 0.82,
+      fontSize: "13px",
+      borderColor: 0x9fe7d0,
+      borderAlpha: 0.95,
+      textColor: "#ecfff7",
+    }));
 
     WEAPON_KEY_BINDINGS.forEach((_binding, i) => {
       const key = this.weaponKeys[i]?.key;
@@ -469,7 +486,14 @@ export class GameScene extends Phaser.Scene {
       if (key) controls.add(bindHeldKey(this, 580 + i * 36, 410, label, key, { radius: 16, fontSize: "13px", color: 0x7fffb0 }));
     });
 
-    controls.add(bindHeldKey(this, 770, 24, "?", this.tipsKey, { radius: 18, fontSize: "14px" }));
+    controls.add(bindHeldKey(this, 770, 24, "?", this.tipsKey, {
+      radius: 20,
+      color: 0x17362f,
+      alpha: 0.78,
+      fontSize: "14px",
+      borderColor: 0x8dc48e,
+      textColor: "#f5ffe8",
+    }));
     this.virtualControls = controls;
   }
 
