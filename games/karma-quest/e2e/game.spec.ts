@@ -13,8 +13,18 @@ test.beforeEach(async ({ page }) => {
   errors.set(page, messages);
   page.on("pageerror", error => messages.push(error.message));
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
-    const response = await route.fetch();
-    await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await route.fetch();
+        await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
+        return;
+      } catch (error) {
+        lastError = error;
+        await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+      }
+    }
+    throw lastError;
   });
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
