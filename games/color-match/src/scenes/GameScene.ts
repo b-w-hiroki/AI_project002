@@ -43,12 +43,12 @@ import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 const CX = 225;
 
 const FEEDBACK_DELAY_MS = 320;
-const CARD_W = 160;
-const CARD_H = 100;
+const CARD_W = 176;
+const CARD_H = 112;
 const CARD_HOME_X = CX;
 const CARD_HOME_Y = 260;
-const BOX_W = 160;
-const BOX_H = 80;
+const BOX_W = 166;
+const BOX_H = 84;
 const TURBO_COLOR = 0xff7a3d;
 const PRACTICE_MS = 20_000;
 /** 画像アセットのキー（docs/art-assets.md の asset-id と一致させる） */
@@ -427,8 +427,8 @@ export class GameScene extends Phaser.Scene {
     if (this.textures.exists(ANSWER_BUTTONS_KEY)) {
       const answerArt = this.add
         .image(CX, 526, ANSWER_BUTTONS_KEY)
-        .setDisplaySize(360, 272)
-        .setAlpha(0.92);
+        .setDisplaySize(370, 282)
+        .setAlpha(0.96);
       this.playGroup.add(answerArt);
     }
 

@@ -58,15 +58,15 @@ function refresh(scene: Runtime): void {
     g.lineStyle(2, color, frameAlpha * (1 - index * 0.08)).strokeRoundedRect(inset, inset, width - inset * 2, height - inset * 2, 22);
   });
 
-  const particleCount = Math.min(portrait ? 18 : 24, 8 + Math.floor(streak * 0.8));
+  const particleCount = Math.min(portrait ? 8 : 10, 4 + Math.floor(streak * 0.35));
   for (let i = 0; i < particleCount; i++) {
     const xBase = (i * 83 + 29) % width;
     const yBase = (i * 61 + 94) % Math.max(160, height - 90);
     const x = xBase + Math.sin(scene.time.now / 490 + i) * 8;
     const y = yBase + Math.cos(scene.time.now / 620 + i * 0.7) * 10;
     const color = RAINBOW[i % RAINBOW.length]!;
-    if (i % 3 === 0) star(g, x, y, 6 + (i % 2) * 2, color, 0.22);
-    else g.fillStyle(color, 0.2).fillCircle(x, y, i % 2 ? 2.3 : 1.5);
+    if (i % 3 === 0) star(g, x, y, 6 + (i % 2) * 2, color, 0.14);
+    else g.fillStyle(color, 0.12).fillCircle(x, y, i % 2 ? 2.3 : 1.5);
   }
 
   if (streak >= 2) {
