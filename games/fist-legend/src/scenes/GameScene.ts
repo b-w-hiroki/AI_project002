@@ -116,9 +116,9 @@ const FIGHTER_ART: Readonly<Record<FighterId, string>> = {
 };
 
 /** 立ち絵は 384×512（3:4）。バトル中の表示高さと、それに合わせた幅 */
-const FIGHTER_H = 290;
+const FIGHTER_H = 320;
 const FIGHTER_W = (FIGHTER_H * 384) / 512;
-const FIGHTER_Y = 270;
+const FIGHTER_Y = 286;
 /** ガチャ竜牙立ち絵（SSR演出）の高さ */
 const RYUGA_H = 280;
 const RYUGA_W = (RYUGA_H * 384) / 512;
@@ -297,8 +297,17 @@ export class GameScene extends Phaser.Scene {
     const currencyPill = drawPill(this, 590, 29, 110, 34, "");
     const winPill = drawPill(this, 706, 29, 96, 34, "");
 
+    if (this.textures.exists(IMG.hero)) {
+      const titleHero = this.add.image(190, 250, IMG.hero).setDisplaySize(180, 240).setAlpha(0.96);
+      this.titleGroup.add(titleHero);
+    }
+    if (this.textures.exists(IMG.enemy)) {
+      const titleEnemy = this.add.image(610, 250, IMG.enemy).setDisplaySize(180, 240).setFlipX(true).setAlpha(0.92);
+      this.titleGroup.add(titleEnemy);
+    }
+
     const tagline = this.add
-      .text(400, 100, tr(this.lang, "この拳で、頂を掴め", "Claim the summit with your fists"), {
+      .text(400, 92, tr(this.lang, "この拳で、頂を掴め", "Claim the summit with your fists"), {
         ...TYPE.h2,
         fontSize: "20px",
         color: THEME.textPrimary,
@@ -316,7 +325,7 @@ export class GameScene extends Phaser.Scene {
     const rules = this.add
       .text(
         400,
-        372,
+        352,
         tr(this.lang, "拳は気に、気は蹴に、蹴は拳に有利。読み合いで奥義を溜め、60秒でHPを多く残した方が勝利。", "Punch beats Ki, Ki beats Kick, and Kick beats Punch. Read your rival, build your special gauge, and finish 60 seconds with more HP."),
         { ...TYPE.small, color: THEME.textMuted, align: "center" },
       )
