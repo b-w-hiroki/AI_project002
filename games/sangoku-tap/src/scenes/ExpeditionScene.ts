@@ -357,6 +357,16 @@ export class ExpeditionScene extends Phaser.Scene {
           .setAlpha(unlocked ? (selected ? 1 : 0.78) : 0.3);
         if (!unlocked) cityNode.setTint(0x6f777a);
         this.root.add(cityNode);
+        if (selected && unlocked) {
+          this.tweens.add({
+            targets: cityNode,
+            scale: { from: 1, to: 1.08 },
+            duration: 850,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+          });
+        }
       } else {
         map
           .fillStyle(unlocked ? r.accent : 0x718087)
