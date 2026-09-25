@@ -631,6 +631,7 @@ export class GameScene extends Phaser.Scene {
 
     // 討伐に向かう勇者（kq-hero-warrior）
     const hero = this.addHero(CX, 260, 130);
+    if ("setName" in hero) (hero as Phaser.GameObjects.GameObject & { setName: (name: string) => Phaser.GameObjects.GameObject }).setName("battleHero");
     const heading = this.add
       .text(CX, 350, tr(this.lang, "討伐へ出発！", "Hunt Begins!"), {
         ...TYPE.h1,
@@ -727,7 +728,16 @@ export class GameScene extends Phaser.Scene {
       );
       this.currentBattleResult = result;
       this.playSound(result.win ? sfx.battleWin : sfx.battleLose);
-      if (result.win) cg.happytime();
+      this.cameras.main.flash(
+        120,
+        result.win ? 110 : 160,
+        result.win ? 220 : 90,
+        result.win ? 150 : 110,
+      );
+      if (result.win) {
+        this.cameras.main.shake(90, 0.0035);
+        cg.happytime();
+      }
       heading.setText(
         result.win ? tr(this.lang, "魔物を討伐した！", "Monster defeated!") : tr(this.lang, "退却を余儀なくされた…", "Forced to retreat..."),
       );
@@ -745,6 +755,33 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "battle" || this.currentBattleResult) return;
     this.cheerCount += 1;
     this.playSound(sfx.buttonTap);
+    const hero = this.battleGroup.getByName("battleHero") as Phaser.GameObjects.GameObject & {
+      x?: number;
+      y?: number;
+      scale?: number;
+      setScale?: (value: number) => unknown;
+    } | null;
+    if (hero && hero.setScale) {
+      this.tweens.killTweensOf(hero);
+      hero.setScale(1.08);
+      this.tweens.add({
+        targets: hero,
+        scale: 1,
+        duration: 150,
+        ease: "Back.easeOut",
+      });
+      const ring = this.add
+        .circle(hero.x ?? CX, (hero.y ?? 260) + 18, 28, 0xf0c86a, 0)
+        .setStrokeStyle(4, 0xf0c86a, 0.7);
+      this.battleGroup.add(ring);
+      this.tweens.add({
+        targets: ring,
+        scale: 1.8,
+        alpha: 0,
+        duration: 180,
+        onComplete: () => ring.destroy(),
+      });
+    }
     const cheerCountText = this.battleGroup.getByName(
       "cheerCountText",
     ) as Phaser.GameObjects.Text;
