@@ -479,11 +479,27 @@ export class GameScene extends Phaser.Scene {
 
     WEAPON_KEY_BINDINGS.forEach((_binding, i) => {
       const key = this.weaponKeys[i]?.key;
-      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 450, `${i + 1}`, key, { radius: 16, fontSize: "13px" }));
+      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 450, `${i + 1}`, key, {
+        radius: 15,
+        fontSize: "12px",
+        color: 0x244a42,
+        alpha: 0.62,
+        borderColor: 0x6fae98,
+        borderAlpha: 0.72,
+        textColor: "#dff8ec",
+      }));
     });
     ITEM_KEY_BINDINGS.forEach(({ label }, i) => {
       const key = this.itemKeys[i]?.key;
-      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 410, label, key, { radius: 16, fontSize: "13px", color: 0x7fffb0 }));
+      if (key) controls.add(bindHeldKey(this, 580 + i * 36, 410, label, key, {
+        radius: 15,
+        fontSize: "11px",
+        color: 0x48633c,
+        alpha: 0.58,
+        borderColor: 0xa9c77d,
+        borderAlpha: 0.7,
+        textColor: "#f0f8d8",
+      }));
     });
 
     controls.add(bindHeldKey(this, 770, 24, "?", this.tipsKey, {
@@ -683,7 +699,8 @@ export class GameScene extends Phaser.Scene {
 
   private buildPlayer(): void {
     const useArt = this.textures.exists(HERO_ART_TEXTURE);
-    this.player = this.physics.add.sprite(80, GROUND_Y - 60, useArt ? HERO_ART_TEXTURE : "hero");
+    const startX = isTouchDevice(this) ? 150 : 80;
+    this.player = this.physics.add.sprite(startX, GROUND_Y - 60, useArt ? HERO_ART_TEXTURE : "hero");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(3);
     const off = this.playerBodyOffset();
