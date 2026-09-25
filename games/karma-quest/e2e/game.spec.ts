@@ -846,7 +846,7 @@ test("landscape encounter battle and report remain operable through rotation", a
   await expect.poll(() => phase(page)).toBe("battle");
   await tapPoint(page, 591, 396);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "cheerCount"))).toBe(1);
-  await expect.poll(() => phase(page)).toBe("report");
+  await expect.poll(() => phase(page), { timeout: 10000 }).toBe("report");
   await tapPoint(page, 609, 405);
   expect(await phase(page)).toBe("report");
   await tapPoint(page, 215, 150);

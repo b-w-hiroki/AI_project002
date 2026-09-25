@@ -1249,13 +1249,13 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
     const resultHero = this.resultGroup.getByName("resultHero") as Phaser.GameObjects.Image | null;
     const resultEnemy = this.resultGroup.getByName("resultEnemy") as Phaser.GameObjects.Image | null;
     if (resultHero) {
-      resultHero.clearTint().setAlpha(outcome === "playerWin" ? 0.72 : 0.18).setScale(1);
+      resultHero.clearTint().setAlpha(outcome === "playerWin" ? 0.9 : 0.28).setScale(1);
       if (outcome === "playerWin") {
         this.tweens.add({ targets: resultHero, scale: 1.08, duration: 220, yoyo: true, ease: "Back.easeOut" });
       }
     }
     if (resultEnemy) {
-      resultEnemy.clearTint().setAlpha(outcome === "enemyWin" ? 0.68 : 0.15).setScale(1);
+      resultEnemy.clearTint().setAlpha(outcome === "enemyWin" ? 0.86 : 0.24).setScale(1);
       if (outcome === "playerWin") resultEnemy.setTint(0x777777);
       if (outcome === "enemyWin") {
         this.tweens.add({ targets: resultEnemy, scale: 1.08, duration: 220, yoyo: true, ease: "Back.easeOut" });
@@ -1309,12 +1309,14 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
 
   private buildResultScreen(): void {
     this.resultGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, 400, 300, 480, 320, { depth: 0 });
+    const bg = this.buildArenaBackground();
+    const tint = this.shade(0, 0, 800, 600, bg ? 0.52 : 0);
+    const panel = drawPanel(this, 400, 300, 520, 340, { depth: 0, fillAlpha: bg ? 0.68 : 0.95 });
     const resultHero = this.textures.exists(IMG.hero)
-      ? this.add.image(205, 300, IMG.hero).setDisplaySize(150, 200).setAlpha(0.28).setName("resultHero")
+      ? this.add.image(255, 335, IMG.hero).setDisplaySize(180, 240).setAlpha(0.52).setName("resultHero")
       : null;
     const resultEnemy = this.textures.exists(IMG.enemy)
-      ? this.add.image(595, 300, IMG.enemy).setDisplaySize(150, 200).setFlipX(true).setAlpha(0.22).setName("resultEnemy")
+      ? this.add.image(545, 335, IMG.enemy).setDisplaySize(180, 240).setFlipX(true).setAlpha(0.42).setName("resultEnemy")
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
@@ -1364,6 +1366,8 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
     );
 
     this.resultGroup.add([
+      ...(bg ? [bg] : []),
+      tint,
       panel,
       ...(resultHero ? [resultHero] : []),
       ...(resultEnemy ? [resultEnemy] : []),
