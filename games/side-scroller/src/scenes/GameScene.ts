@@ -168,10 +168,10 @@ const BG_SCROLL_FACTOR = 0.4;
 
 /**
  * キャラクターの表示倍率。当初の 36×54(主人公)/40×40(ゴブリン) では緻密な背景に対して小さく見えたため
- * 1.5 倍（54×81 / 60×60）に拡大した。テクスチャ・当たり判定・演出のオフセットはすべてこの倍率で揃えている。
+ * 背景に埋もれないよう表示を 2.0 倍基準へ拡大。物理当たり判定サイズは固定し、見た目と足元オフセットだけを合わせる。
  * ジャンプ初速と最下段の足場も合わせて調整し、重力は1200を維持する。
  */
-const CHAR_SCALE = 1.72;
+const CHAR_SCALE = 2.0;
 /** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
 const HUMANOID_BASE = { w: 30, h: 42 };
 const HERO_ART_SIZE = { w: 36 * CHAR_SCALE, h: 54 * CHAR_SCALE }; // 54×81
@@ -488,7 +488,7 @@ export class GameScene extends Phaser.Scene {
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     const bossSource = this.textures.exists(GENERATED_BOSS_KEY) ? GENERATED_BOSS_KEY : ART_BOSS_KEY;
-    this.buildArtTexture(bossSource, BOSS_ART_TEXTURE, 160, 160);
+    this.buildArtTexture(bossSource, BOSS_ART_TEXTURE, 180, 180);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
