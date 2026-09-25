@@ -145,6 +145,7 @@ const ART_HERO_HURT_KEY = "sf-hero-swordsman-hurt";
 const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
 const ART_ENEMY_AGILE_KEY = "sf-enemy-agile";
 const ART_ENEMY_TANK_KEY = "sf-enemy-tank";
+const ART_BOSS_KEY = "sf-boss-forest-guardian";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
 const HERO_ART_TEXTURE = "hero-art";
 const HERO_ATTACK_ART_TEXTURE = "hero-attack-art";
@@ -152,6 +153,7 @@ const HERO_HURT_ART_TEXTURE = "hero-hurt-art";
 const ENEMY_NORMAL_ART_TEXTURE = "goblin-art";
 const ENEMY_AGILE_ART_TEXTURE = "goblin-agile-art";
 const ENEMY_TANK_ART_TEXTURE = "goblin-tank-art";
+const BOSS_ART_TEXTURE = "forest-guardian-art";
 /** HUD の描画深度（キャラ/攻撃演出より前面、オーバーレイ 100+ より背面） */
 const HUD_DEPTH = 20;
 /** コンセプト装飾(1770台)より手前、モバイル操作UI(2600+)より奥に戦闘FXをまとめる。 */
@@ -167,7 +169,7 @@ const BG_SCROLL_FACTOR = 0.4;
  * 1.5 倍（54×81 / 60×60）に拡大した。テクスチャ・当たり判定・演出のオフセットはすべてこの倍率で揃えている。
  * ジャンプ初速と最下段の足場も合わせて調整し、重力は1200を維持する。
  */
-const CHAR_SCALE = 1.5;
+const CHAR_SCALE = 1.72;
 /** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
 const HUMANOID_BASE = { w: 30, h: 42 };
 const HERO_ART_SIZE = { w: 36 * CHAR_SCALE, h: 54 * CHAR_SCALE }; // 54×81
@@ -335,6 +337,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
     this.load.svg(ART_ENEMY_AGILE_KEY, "images/sf-enemy-agile.svg");
     this.load.svg(ART_ENEMY_TANK_KEY, "images/sf-enemy-tank.svg");
+    this.load.svg(ART_BOSS_KEY, "images/sf-boss-forest-guardian.svg");
   }
 
   create(): void {
@@ -480,6 +483,7 @@ export class GameScene extends Phaser.Scene {
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
+    this.buildArtTexture(ART_BOSS_KEY, BOSS_ART_TEXTURE, 132, 132);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -680,11 +684,13 @@ export class GameScene extends Phaser.Scene {
     x: number,
     index: number,
   ): void {
-    const artTexture = ENEMY_ART_TEXTURE[spec.type];
+    const boss = wave % 5 === 0;
+    const typeArtTexture = ENEMY_ART_TEXTURE[spec.type];
+    const artTexture = boss && this.textures.exists(BOSS_ART_TEXTURE) ? BOSS_ART_TEXTURE : typeArtTexture;
     const useArt = !!artTexture && this.textures.exists(artTexture);
     const sprite = this.physics.add.sprite(
       x,
-      GROUND_Y - 45,
+      GROUND_Y - (boss ? 66 : 45),
       useArt ? artTexture! : "goblin",
     );
     sprite.setCollideWorldBounds(true);
@@ -693,7 +699,8 @@ export class GameScene extends Phaser.Scene {
     sprite.setSize(ENEMY_BODY.w, ENEMY_BODY.h).setOffset(off.x, off.y);
     if (!useArt) sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
     if (spec.type === "agile") sprite.setScale(0.96);
-    if (spec.type === "tank") sprite.setScale(1.4);
+    if (spec.type === "tank" && !boss) sprite.setScale(1.28);
+    if (boss) sprite.setScale(1.18);
     this.physics.add.collider(sprite, this.platforms);
 
     const patrolRadius = 80 * spec.speedMul;
@@ -705,7 +712,7 @@ export class GameScene extends Phaser.Scene {
       dir: 1,
       type: spec.type,
       speedMul: spec.speedMul,
-      boss: wave % 5 === 0,
+      boss,
       bornAt: this.time.now,
       bossDir: 1,
       lastBossPhase: "",
