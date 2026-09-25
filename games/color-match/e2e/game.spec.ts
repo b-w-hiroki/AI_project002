@@ -26,9 +26,25 @@ test("generated answer UI is loaded and visible during play", async ({ page }) =
   const assetState = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const textureLoaded = scene.textures.exists("cm-answer-buttons");
-    const visibleImage = scene.children.list.some(
-      node => node.type === "Image" && (node as Phaser.GameObjects.Image).texture.key === "cm-answer-buttons" && node.visible,
-    );
+    const hasVisibleImage = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+    ): boolean =>
+      nodes.some(node => {
+        const visible = parentVisible && ("visible" in node
+          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
+          : true);
+        if (!visible) return false;
+        if (
+          node.type === "Image" &&
+          (node as Phaser.GameObjects.Image).texture.key === "cm-answer-buttons"
+        ) return true;
+        if (node.type === "Container") {
+          return hasVisibleImage((node as Phaser.GameObjects.Container).list, visible);
+        }
+        return false;
+      });
+    const visibleImage = hasVisibleImage(scene.children.list);
     return { textureLoaded, visibleImage };
   });
   expect(assetState).toEqual({ textureLoaded: true, visibleImage: true });

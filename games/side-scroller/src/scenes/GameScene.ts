@@ -146,6 +146,8 @@ const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
 const ART_ENEMY_AGILE_KEY = "sf-enemy-agile";
 const ART_ENEMY_TANK_KEY = "sf-enemy-tank";
 const ART_BOSS_KEY = "sf-boss-forest-guardian";
+const GENERATED_BOSS_KEY = "sf-generated-boss-guardian";
+const GENERATED_SLASH_KEY = "sf-generated-slash";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
 const HERO_ART_TEXTURE = "hero-art";
 const HERO_ATTACK_ART_TEXTURE = "hero-attack-art";
@@ -338,6 +340,8 @@ export class GameScene extends Phaser.Scene {
     this.load.svg(ART_ENEMY_AGILE_KEY, "images/sf-enemy-agile.svg");
     this.load.svg(ART_ENEMY_TANK_KEY, "images/sf-enemy-tank.svg");
     this.load.svg(ART_BOSS_KEY, "images/sf-boss-forest-guardian.svg");
+    this.load.image(GENERATED_BOSS_KEY, "images/generated/characters/sf-boss-forest-guardian.webp");
+    this.load.image(GENERATED_SLASH_KEY, "images/generated/effects/sf-fx-slash.webp");
   }
 
   create(): void {
@@ -483,7 +487,8 @@ export class GameScene extends Phaser.Scene {
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
-    this.buildArtTexture(ART_BOSS_KEY, BOSS_ART_TEXTURE, 132, 132);
+    const bossSource = this.textures.exists(GENERATED_BOSS_KEY) ? GENERATED_BOSS_KEY : ART_BOSS_KEY;
+    this.buildArtTexture(bossSource, BOSS_ART_TEXTURE, 160, 160);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -504,12 +509,15 @@ export class GameScene extends Phaser.Scene {
     orb.destroy();
 
     // 戦闘演出は毎回Graphicsを描くだけでなく、専用テクスチャを一度生成してスプライトとして再利用する。
+    if (this.textures.exists(GENERATED_SLASH_KEY) && !this.textures.exists(COMBAT_SLASH_TEXTURE)) {
+      this.buildArtTexture(GENERATED_SLASH_KEY, COMBAT_SLASH_TEXTURE, 160, 96);
+    }
     const slashFx = this.make.graphics({ x: 0, y: 0 }, false);
     slashFx.fillStyle(0xffffff, 0.18);
     slashFx.fillTriangle(8, 82, 148, 14, 104, 72);
     slashFx.lineStyle(10, 0xffffff, 0.9).lineBetween(12, 72, 146, 18);
     slashFx.lineStyle(4, 0xffffff, 1).lineBetween(20, 82, 154, 28);
-    slashFx.generateTexture(COMBAT_SLASH_TEXTURE, 160, 96);
+    if (!this.textures.exists(COMBAT_SLASH_TEXTURE)) slashFx.generateTexture(COMBAT_SLASH_TEXTURE, 160, 96);
     slashFx.destroy();
 
     const hitFx = this.make.graphics({ x: 0, y: 0 }, false);
