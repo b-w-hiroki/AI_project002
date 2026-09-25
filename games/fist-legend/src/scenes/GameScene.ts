@@ -910,6 +910,26 @@ export class GameScene extends Phaser.Scene {
           : sfx.hitClash,
     );
     this.showClash(result.clash, move, enemyMove);
+    if (result.clash === "advantage") {
+      this.cameras.main.shake(95, 0.0045);
+      this.cameras.main.flash(70, 255, 190, 90);
+      const impactRing = this.add
+        .circle(400, 270, 34, 0xffc85a, 0)
+        .setStrokeStyle(5, 0xffc85a, 0.8)
+        .setDepth(14);
+      this.battleGroup.add(impactRing);
+      this.tweens.add({
+        targets: impactRing,
+        scale: 2.2,
+        alpha: 0,
+        duration: 180,
+        ease: "Cubic.easeOut",
+        onComplete: () => impactRing.destroy(),
+      });
+    } else if (result.clash === "disadvantage") {
+      this.cameras.main.shake(120, 0.0065);
+      this.cameras.main.flash(65, 110, 145, 210);
+    }
     this.flashHit(this.enemySprite, result.playerDamageDealt);
     this.flashHit(this.playerSprite, result.enemyDamageDealt);
     if (result.playerDamageDealt > 0) {

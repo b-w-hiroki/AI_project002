@@ -410,6 +410,8 @@ export class GameScene extends Phaser.Scene {
       },
     );
 
+    tapBtn.container.setName("tapAdvanceButton");
+
     const backBtn = makeButton(
       this,
       CX,
@@ -456,6 +458,26 @@ export class GameScene extends Phaser.Scene {
   private onTapAdvance(): void {
     if (this.phase !== "quest") return;
     this.distance += 1;
+    const tapButton = this.questGroup.getByName("tapAdvanceButton") as Phaser.GameObjects.Container | null;
+    if (tapButton) {
+      this.tweens.killTweensOf(tapButton);
+      tapButton.setScale(0.92);
+      this.tweens.add({
+        targets: tapButton,
+        scale: 1,
+        duration: 130,
+        ease: "Back.easeOut",
+      });
+    }
+    if (this.distance % 10 === 0) {
+      this.cameras.main.flash(90, 255, 205, 110);
+      this.spawnFloatingText(
+        CX,
+        365,
+        tr(this.lang, "突破！", "MILESTONE!"),
+        "#ffd27a",
+      );
+    }
     const troopLevel = 1 + Math.floor(this.distance / 25);
     const event: QuestEvent = resolveQuestTap(this.distance, troopLevel);
     if (event.reward > 0) addCurrency(event.reward);
