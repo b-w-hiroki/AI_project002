@@ -89,9 +89,14 @@ export class ExpeditionScene extends Phaser.Scene {
     for (const key of [
       "st-bg-battlefield",
       "st-boss-gatekeeper",
+      "st-prop-city",
+      "st-fx-impact",
       ...Object.values(ART),
     ])
-      if (!this.textures.exists(key)) this.load.image(key, `images/${key}.png`);
+      if (!this.textures.exists(key)) {
+        const generated = key === "st-prop-city" ? "images/generated/props/st-prop-city.webp" : key === "st-fx-impact" ? "images/generated/effects/st-fx-impact.webp" : `images/${key}.png`;
+        this.load.image(key, generated);
+      }
     for (const key of Object.values(REGION_BOSS_ART))
       if (!this.textures.exists(key)) this.load.svg(key, `images/${key}.svg`);
   }
@@ -304,6 +309,10 @@ export class ExpeditionScene extends Phaser.Scene {
     this.panel(225, 236, 414, 236, 0x192e33, 0.97);
     const map = this.add.graphics();
     this.root.add(map);
+    if (this.textures.exists("st-prop-city")) {
+      const city = this.add.image(362, 205, "st-prop-city").setDisplaySize(68, 68).setAlpha(0.78);
+      this.root.add(city);
+    }
     for (let i = 0; i < 7; i++) {
       const x = 40 + i * 54,
         y = 159 + (i % 3) * 48;
@@ -544,6 +553,10 @@ export class ExpeditionScene extends Phaser.Scene {
         .fillStyle(i <= r.step ? region.accent : 0x526364)
         .fillCircle(26 + i * 39.8, 60, i === r.step ? 5 : 2.5);
     if (boss) {
+      if (this.textures.exists("st-fx-impact")) {
+        const impact = this.add.image(225, 340, "st-fx-impact").setDisplaySize(210, 190).setAlpha(0.22);
+        this.root.add(impact);
+      }
       const bossVisual = REGION_BOSS_VISUAL[region.id];
       this.text(30, 99, "FINAL ENCOUNTER", 11, `#${bossVisual.accent.toString(16).padStart(6, "0")}`)
         .setOrigin(0, 0)
