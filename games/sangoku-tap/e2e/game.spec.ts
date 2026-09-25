@@ -20,6 +20,22 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
+test("generated title assets are loaded and visible", async ({ page }) => {
+  const state = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const keys = ["st-generated-hero", "st-generated-capital-bg"];
+    const visible = scene.children.list
+      .filter(node => node.type === "Image" && node.visible)
+      .map(node => (node as Phaser.GameObjects.Image).texture.key);
+    return {
+      loaded: keys.every(key => scene.textures.exists(key)),
+      visible: keys.every(key => visible.includes(key)),
+    };
+  });
+  expect(state).toEqual({ loaded: true, visible: true });
+  await checkFrame(page, "portrait-title-generated-assets");
+});
+
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
   await expectResponsiveCanvas(page);
 });
