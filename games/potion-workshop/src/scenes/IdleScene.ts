@@ -557,7 +557,8 @@ export class IdleScene extends Phaser.Scene {
     this.footerStatsText.setText(
       `${t(this.lang, "footerLifetimeBrewed")}: ${formatNumber(this.state.lifetimeBrewed)}   ·   ${t(this.lang, "achievementsButton")}: ${unlockedCount}/${totalCount}\n` +
         `${t(this.lang, "footerPrestigeCount")}: ${this.state.prestigeCount}   ·   ${t(this.lang, "footerPlaytime")}: ${hours}h ${minutes}m`,
-    );  }
+    );
+  }
 
   /**
    * 転生回数から現在の街を求め、表示とアクセントカラーを更新する。
