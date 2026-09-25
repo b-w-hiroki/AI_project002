@@ -213,19 +213,6 @@ export class IdleScene extends Phaser.Scene {
     // refreshTownGlow() が行う（townText 等ヘッダー要素の生成が buildBackground より後のため）
     this.townGlow = this.add.graphics();
 
-    for (let i = 0; i < 14; i++) {
-      const x = Phaser.Math.Between(20, 780);
-      const y = Phaser.Math.Between(140, 700);
-      const bubble = this.add.circle(x, y, Phaser.Math.Between(2, 5), 0xffffff, 0.55);
-      this.tweens.add({
-        targets: bubble,
-        y: y - Phaser.Math.Between(30, 80),
-        alpha: 0,
-        duration: Phaser.Math.Between(4000, 9000),
-        repeat: -1,
-        delay: Phaser.Math.Between(0, 4000),
-      });
-    }
   }
 
   /**
@@ -704,6 +691,9 @@ export class IdleScene extends Phaser.Scene {
   private refreshStaticTexts(): void {
     this.titleText.setText(t(this.lang, "title"));
     this.brewText?.setText(t(this.lang, "brew"));
+    if (this.brewHint?.visible) {
+      this.brewHint.setText(this.lang === "ja" ? "錬金術師をタップして調合" : "Tap the alchemist to brew");
+    }
     this.langText.setText(t(this.lang, "langButton"));
     this.soundIcon.destroy();
     this.soundIcon = drawSpeakerIcon(this, 700, 26, this.soundOn, 18);
