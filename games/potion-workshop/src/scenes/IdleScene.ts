@@ -90,6 +90,7 @@ export class IdleScene extends Phaser.Scene {
   private rateText!: Phaser.GameObjects.Text;
   private essenceText!: Phaser.GameObjects.Text;
   private brewText: Phaser.GameObjects.Text | null = null;
+  private brewHint: Phaser.GameObjects.Text | null = null;
   private langText!: Phaser.GameObjects.Text;
   private soundIcon!: Phaser.GameObjects.Graphics;
   private clickCard!: ActionCard;
@@ -327,6 +328,23 @@ export class IdleScene extends Phaser.Scene {
       // タップ可能であることが伝わるよう、常時ゆっくり上下に揺れるアイドルアニメーションを付与
       this.tweens.add({ targets: mascot, y: mascot.y - 6, duration: 1400, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       mascot.on("pointerdown", () => this.onBrewTap([mascot], glow));
+      this.brewHint = this.add
+        .text(160, 348, this.lang === "ja" ? "錬金術師をタップして調合" : "Tap the alchemist to brew", {
+          ...TYPE.small,
+          fontSize: "13px",
+          color: "#5d6f86",
+          backgroundColor: "#ffffffcc",
+          padding: { x: 10, y: 5 },
+        })
+        .setOrigin(0.5);
+      this.tweens.add({
+        targets: this.brewHint,
+        alpha: { from: 0.55, to: 1 },
+        duration: 850,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
     }
 
     // 購入数セレクター（クリック強化に使う一括購入数）。選択中はクリック強化カードと同じ金色で統一する
@@ -421,6 +439,30 @@ export class IdleScene extends Phaser.Scene {
     const gain = this.state.clickPower * essenceMultiplier(this.state);
     this.state = click(this.state);
     this.playSound(sfx.click);
+    if (this.brewHint?.visible) {
+      this.tweens.killTweensOf(this.brewHint);
+      this.tweens.add({
+        targets: this.brewHint,
+        alpha: 0,
+        y: this.brewHint.y - 10,
+        duration: 180,
+        onComplete: () => this.brewHint?.setVisible(false),
+      });
+    }
+    for (let i = 0; i < 4; i++) {
+      const angle = (-Math.PI * 0.85) + i * (Math.PI * 0.55);
+      const spark = this.add.circle(160, 205, 4, i % 2 ? 0xa6e8ff : 0xffd76a, 0.9);
+      this.tweens.add({
+        targets: spark,
+        x: 160 + Math.cos(angle) * 54,
+        y: 205 + Math.sin(angle) * 44,
+        alpha: 0,
+        scale: 0.25,
+        duration: 260,
+        ease: "Cubic.easeOut",
+        onComplete: () => spark.destroy(),
+      });
+    }
     this.tweens.add({
       targets: bounceTargets,
       scaleX: "*=0.94",
