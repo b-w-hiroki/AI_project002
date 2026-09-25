@@ -73,6 +73,8 @@ const GENERAL_ART: Readonly<Record<string, string>> = {
   gen_ashigaru: "st-general-ashigaru",
 };
 const BG_KEY = "st-bg-battlefield";
+const GENERATED_HERO_KEY = "st-generated-hero";
+const GENERATED_CAPITAL_BG_KEY = "st-generated-capital-bg";
 /** 立ち絵の縦横比（384:512） */
 const ART_ASPECT = 384 / 512;
 
@@ -119,6 +121,8 @@ export class GameScene extends Phaser.Scene {
     // 画像はすべて任意。404 でも Phaser は警告を出すだけでゲームは続行し、各利用箇所で
     // textures.exists() を確認して Graphics 描画にフォールバックする
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
+    this.load.image(GENERATED_HERO_KEY, "images/generated/characters/st-hero-protagonist.webp");
+    this.load.image(GENERATED_CAPITAL_BG_KEY, "images/generated/backgrounds/st-bg-capital.webp");
     for (const key of Object.values(GENERAL_ART))
       this.load.image(key, `images/${key}.png`);
   }
@@ -162,6 +166,17 @@ export class GameScene extends Phaser.Scene {
   private buildTitleScreen(): void {
     this.titleGroup = this.add.container(0, 0);
     const hasArt = this.textures.exists(BG_KEY);
+    const hasGeneratedHero = this.textures.exists(GENERATED_HERO_KEY);
+    const hasGeneratedCapital = this.textures.exists(GENERATED_CAPITAL_BG_KEY);
+
+    if (hasGeneratedCapital) {
+      const capital = this.add.image(CX, 330, GENERATED_CAPITAL_BG_KEY).setDisplaySize(450, 300).setAlpha(0.52);
+      this.titleGroup.add(capital);
+    }
+    if (hasGeneratedHero) {
+      const hero = this.add.image(92, 390, GENERATED_HERO_KEY).setDisplaySize(118, 264).setAlpha(0.98);
+      this.titleGroup.add(hero);
+    }
 
     // 上部帯: タイトル+資源ピル。イラストが見えるよう帯は薄めにする
     const topBar = this.add.graphics();
