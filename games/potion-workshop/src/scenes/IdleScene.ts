@@ -158,9 +158,10 @@ export class IdleScene extends Phaser.Scene {
     this.buildBrewArea(mascot);
     this.buildGeneratorList();
     this.buildSaveTools();
-    const orders = this.makeSmallButton(660, 715, 190, "", () =>
+    const orders = this.makeSmallButton(665, 715, 210, "", () =>
       this.showContracts(),
     );
+    orders.label.setStyle({ fontSize: "14px", fontStyle: "700" });
     this.registerRefresh(() =>
       orders.label.setText(this.lang === "ja" ? "街の注文" : "Town orders"),
     );
@@ -531,7 +532,13 @@ export class IdleScene extends Phaser.Scene {
       shadow: false,
     });
     this.footerStatsText = this.add
-      .text(400, 630, "", { ...TYPE.small, color: THEME.textMuted, align: "center" })
+      .text(400, 632, "", {
+        ...TYPE.small,
+        fontSize: "11px",
+        color: THEME.textMuted,
+        align: "center",
+        lineSpacing: 5,
+      })
       .setOrigin(0.5);
 
     const exportButton = this.makeSmallButton(220, 715, 200, "", () => this.doExport());
@@ -548,10 +555,8 @@ export class IdleScene extends Phaser.Scene {
     const hours = Math.floor(this.analytics.totalPlaytimeSec / 3600);
     const minutes = Math.floor((this.analytics.totalPlaytimeSec % 3600) / 60);
     this.footerStatsText.setText(
-      `${t(this.lang, "footerLifetimeBrewed")}: ${formatNumber(this.state.lifetimeBrewed)}  |  ` +
-        `${t(this.lang, "achievementsButton")}: ${unlockedCount}/${totalCount}  |  ` +
-        `${t(this.lang, "footerPrestigeCount")}: ${this.state.prestigeCount}  |  ` +
-        `${t(this.lang, "footerPlaytime")}: ${hours}h ${minutes}m`,
+      `${t(this.lang, "footerLifetimeBrewed")}: ${formatNumber(this.state.lifetimeBrewed)}   ·   ${t(this.lang, "achievementsButton")}: ${unlockedCount}/${totalCount}\n` +
+        `${t(this.lang, "footerPrestigeCount")}: ${this.state.prestigeCount}   ·   ${t(this.lang, "footerPlaytime")}: ${hours}h ${minutes}m`,
     );
   }
 

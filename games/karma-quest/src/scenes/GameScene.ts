@@ -1023,18 +1023,25 @@ export class GameScene extends Phaser.Scene {
 
   private buildFinalScreen(): void {
     this.finalGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 380, 700, { depth: 0 });
+    const panel = drawPanel(this, CX, 400, 390, 700, { depth: 0 });
 
     const heading = this.add
-      .text(CX, 110, "", {
+      .text(CX, 105, "", {
         ...TYPE.h1,
         color: THEME.textPrimary,
         align: "center",
       })
       .setOrigin(0.5)
       .setName("finalHeading");
+
+    const finalHero = this.addHero(CX, 220, 180);
+    if ("setName" in finalHero) {
+      (finalHero as Phaser.GameObjects.GameObject & { setName: (name: string) => Phaser.GameObjects.GameObject })
+        .setName("finalHero");
+    }
+
     const stats = this.add
-      .text(CX, 385, "", {
+      .text(CX, 380, "", {
         ...TYPE.body,
         color: THEME.textMuted,
         align: "center",
@@ -1042,42 +1049,54 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("finalStats");
 
+    const chroniclePanel = drawPanel(this, CX, 525, 350, 125, {
+      depth: 0,
+      fillAlpha: 0.68,
+      borderAlpha: 0.35,
+      shadow: false,
+    });
+    const chronicleLabel = this.add
+      .text(CX, 470, tr(this.lang, "CHRONICLE · 旅の年代記", "CHRONICLE · JOURNEY RECORD"), {
+        fontSize: "11px",
+        color: "#d8b96d",
+        fontStyle: "700",
+        letterSpacing: 1,
+      })
+      .setOrigin(0.5);
+
     const retryBtn = makeButton(
       this,
       CX,
-      490,
+      635,
       300,
       52,
       tr(this.lang, "もう一度旅に出る", "Begin Another Journey"),
       () => this.startRun(),
-      {
-        fontSize: "15px",
-      },
+      { fontSize: "15px" },
     );
     const titleBtn = makeButton(
       this,
       CX,
-      555,
+      700,
       300,
       46,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
-      {
-        fontSize: "14px",
-      },
+      { fontSize: "14px" },
     );
 
     this.finalGroup.add([
       panel,
       heading,
-      this.addHero(CX, 225, 165),
+      finalHero,
       stats,
+      chroniclePanel,
+      chronicleLabel,
       retryBtn.container,
       titleBtn.container,
     ]);
-    // 最も応えた派閥のアイコン（見出しとステータスの間、64px）
     for (const faction of FACTIONS) {
-      const icon = this.addFactionIcon(faction, CX, 330, 50);
+      const icon = this.addFactionIcon(faction, CX, 326, 52);
       if (icon) {
         icon.setName(`icon_${faction}`).setVisible(false);
         this.finalGroup.add(icon);
@@ -1101,7 +1120,16 @@ export class GameScene extends Phaser.Scene {
     const stats = this.finalGroup.getByName(
       "finalStats",
     ) as Phaser.GameObjects.Text;
-    heading.setText(tr(this.lang, "12年の旅、完結", "The 12-Year Journey is Complete"));
+    heading
+      .setText(tr(this.lang, "12年の旅、完結", "The 12-Year Journey is Complete"))
+      .setScale(0.78);
+    this.tweens.add({ targets: heading, scale: 1, duration: 300, ease: "Back.easeOut" });
+    this.cameras.main.flash(140, 210, 175, 95);
+    const finalHero = this.finalGroup.getByName("finalHero") as Phaser.GameObjects.GameObject & { setScale?: (value: number) => unknown } | null;
+    if (finalHero?.setScale) {
+      finalHero.setScale(0.94);
+      this.tweens.add({ targets: finalHero, scale: 1, duration: 360, ease: "Back.easeOut" });
+    }
     stats.setText(
       `${legendTitleText(this.lang, this.legendCounts.valor, this.legendCounts.mercy)}\n${tr(this.lang, "累計評価", "Total Evaluation")} ${this.runEvaluation} · ${factionLabel(this.lang, faction)}\n${deityName(this.lang, "valor")} ${this.legendCounts.valor} / ${deityName(this.lang, "mercy")} ${this.legendCounts.mercy}`,
     );
@@ -1116,12 +1144,12 @@ export class GameScene extends Phaser.Scene {
     const previous = this.finalGroup.getByName("chronicle");
     previous?.destroy();
     const book = this.add
-      .text(CX, 625, this.chronicle.slice(-2).join("\n"), {
-        fontSize: "12px",
+      .text(CX, 492, this.chronicle.slice(-3).join("\n"), {
+        fontSize: "11px",
         color: "#dacaab",
         align: "center",
-        lineSpacing: 6,
-        wordWrap: { width: 350, useAdvancedWrap: true },
+        lineSpacing: 5,
+        wordWrap: { width: 320, useAdvancedWrap: true },
       })
       .setOrigin(0.5, 0)
       .setName("chronicle");
