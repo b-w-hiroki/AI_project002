@@ -567,6 +567,10 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
   await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.005,
   });
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-final-chronicle.png",
+    animations: "disabled",
+  });
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-chronicle-current.png" });
   await page.locator("canvas").click({ position: { x: 225, y: 708 } });
   await expect.poll(() => phase(page)).toBe("karma");
