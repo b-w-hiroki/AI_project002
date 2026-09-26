@@ -47,7 +47,7 @@ function refresh(scene: Runtime): void {
   // Give the character and cauldron the visual dominance seen in the standalone concept.
   for (const child of scene.children.list) {
     if (!(child instanceof Phaser.GameObjects.Image)) continue;
-    if (child.texture.key === "pw-hero-alchemist") {
+    if (["pw-hero-alchemist-female", "pw-hero-alchemist"].includes(child.texture.key)) {
       child.setPosition(183, 266).setDisplaySize(354, 354);
     }
     if (child.texture.key === "pw-cauldron-icon") {

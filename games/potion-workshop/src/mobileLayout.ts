@@ -209,8 +209,11 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const brewY = portrait ? 365 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
-  if (scene.textures.exists("pw-hero-alchemist")) {
-    hero = scene.add.image(heroX, heroY, "pw-hero-alchemist").setDisplaySize(portrait ? 250 : 230, portrait ? 250 : 230);
+  const heroKey = scene.textures.exists("pw-hero-alchemist-female")
+    ? "pw-hero-alchemist-female"
+    : "pw-hero-alchemist";
+  if (scene.textures.exists(heroKey)) {
+    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 250 : 230, portrait ? 250 : 230);
     root.add(hero);
   }
   if (scene.textures.exists("pw-cauldron-icon")) {
