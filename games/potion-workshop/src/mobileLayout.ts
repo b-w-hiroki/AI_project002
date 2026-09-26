@@ -195,8 +195,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   root.add(blocker);
 
   const lang = scene.lang ?? "en";
-  text(scene, root, 22, 26, t(lang, "title"), portrait ? 25 : 27, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
-  text(scene, root, 24, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
+  const titleX = portrait ? 108 : 104;
+  text(scene, root, titleX, 26, t(lang, "title"), portrait ? 23 : 25, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
+  text(scene, root, titleX, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
 
   const potionText = text(scene, root, portrait ? 340 : 545, 25, "", portrait ? 15 : 16, "#fff2cd", "900");
   const essenceText = text(scene, root, portrait ? 340 : 665, 49, "", 10, "#e3c4ff", "900");
