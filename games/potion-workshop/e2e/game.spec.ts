@@ -41,7 +41,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   });
   expect(responsiveLabels.lang).toBe("en");
   expect(responsiveLabels.labels).toContain("Potion Workshop");
-  expect(responsiveLabels.labels).toContain("BREW POTION");
+  expect(responsiveLabels.labels).toContain("TAP TO BREW");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
   expect(responsiveLabels.labels).toContain("UPGRADE");
 
