@@ -708,7 +708,7 @@ export class GameScene extends Phaser.Scene {
 
   private buildPlayer(): void {
     const useArt = this.textures.exists(HERO_ART_TEXTURE);
-    const startX = isTouchDevice(this) ? 150 : 80;
+    const startX = isTouchDevice(this) ? 180 : 80;
     this.player = this.physics.add.sprite(startX, GROUND_Y - 60, useArt ? HERO_ART_TEXTURE : "hero");
     this.player.setCollideWorldBounds(true);
     this.player.setDepth(3);
