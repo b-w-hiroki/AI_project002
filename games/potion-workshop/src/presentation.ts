@@ -180,7 +180,10 @@ function makeHitButton(
 
 function findHero(scene: IdleRuntime): Phaser.GameObjects.Image | null {
   for (const child of scene.children.list) {
-    if (child instanceof Phaser.GameObjects.Image && child.texture.key === "pw-hero-alchemist") return child;
+    if (
+      child instanceof Phaser.GameObjects.Image &&
+      ["pw-hero-alchemist-female", "pw-hero-alchemist"].includes(child.texture.key)
+    ) return child;
   }
   return null;
 }
