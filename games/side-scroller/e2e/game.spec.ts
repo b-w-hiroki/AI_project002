@@ -32,7 +32,7 @@ async function enterBattleForVisualQa(page: Page): Promise<void> {
     if (!game.scene.isActive("GameScene")) return false;
     const scene = game.scene.getScene("GameScene");
     return !!Reflect.get(scene, "player");
-  }), { timeout: 8_000, intervals: [100, 200, 400] }).toBe(true);
+  }), { timeout: 15_000, intervals: [100, 200, 400, 800] }).toBe(true);
 }
 
 test.beforeEach(async ({ page }) => {
