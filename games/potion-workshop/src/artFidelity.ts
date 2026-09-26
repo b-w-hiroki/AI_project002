@@ -73,8 +73,8 @@ function refresh(scene: Runtime): void {
   g.lineStyle(1, 0x78e9ff, 0.22).strokeCircle(brewX, brewY, (portrait ? 91 : 98) / pulse);
 
   const bubbles: Array<[number, number, number]> = portrait
-    ? [[184, 316, 5], [254, 304, 4], [279, 342, 3], [168, 357, 3], [244, 286, 2]]
-    : [[296, 205, 5], [360, 188, 4], [382, 225, 3], [282, 240, 3], [349, 174, 2]];
+    ? [[184, 316, 4], [254, 304, 3], [279, 342, 2]]
+    : [[296, 205, 4], [360, 188, 3], [382, 225, 2]];
   bubbles.forEach(([x, y, r], index) => {
     const bob = Math.sin(scene.time.now / 360 + index) * 5;
     g.fillStyle(index % 2 ? 0x7ce8ff : 0x9affc5, 0.48).fillCircle(x, y + bob, r);
@@ -101,7 +101,7 @@ function refresh(scene: Runtime): void {
     .setPosition(brewX, portrait ? 484 : 374)
     .setText(`MAGIC FLOW  +${Math.floor(rate * 10) / 10}/sec`);
 
-  const sparkleCount = Math.min(8, 2 + Math.floor(state.reputation / 2));
+  const sparkleCount = Math.min(4, 1 + Math.floor(state.reputation / 3));
   for (let i = 0; i < sparkleCount; i++) {
     const x = portrait ? 38 + ((i * 71) % 374) : 26 + ((i * 101) % 740);
     const y = portrait ? 104 + ((i * 53) % 350) : 88 + ((i * 47) % 275);

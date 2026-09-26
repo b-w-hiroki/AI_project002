@@ -226,8 +226,16 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   glow.fillStyle(0x7de6b0, 0.16).fillCircle(brewX, brewY, portrait ? 90 : 100);
   glow.lineStyle(2, 0xd5ffd8, 0.48).strokeCircle(brewX, brewY, portrait ? 82 : 92);
   root.add(glow);
-  text(scene, root, brewX, brewY + (portrait ? 92 : 99), lang === "ja" ? "ポーション製造" : "BREW POTION", 13, "#fff8df", "900");
-  text(scene, root, brewX, brewY + (portrait ? 112 : 119), "TAP!", 18, "#9dffd0", "900");
+  text(
+    scene,
+    root,
+    brewX,
+    brewY + (portrait ? 104 : 110),
+    lang === "ja" ? "大釜をタップして調合" : "TAP TO BREW",
+    15,
+    "#b8ffd7",
+    "900",
+  );
   hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
 
   const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 493 : 390, "", 12, "#fff1d0", "900");
@@ -366,7 +374,7 @@ function refresh(scene: Runtime): void {
   const rate = productionPerSec(state);
   const town = townForState(state);
   ui.potionText.setText(`${formatNumber(state.potions)} potions`);
-  ui.rateText.setText(`+${formatNumber(rate)}${lang === "ja" ? "/秒" : "/sec"}   ·   TAP +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
+  ui.rateText.setText(`+${formatNumber(rate)}${lang === "ja" ? "/秒" : "/sec"}   ·   ${lang === "ja" ? "調合" : "BREW"} +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
   ui.essenceText.setText(`Essence ${formatNumber(state.essence)}`);
   ui.reputationText.setText(`REP ${state.reputation}`);
   const demandedId = demandGenerator(state);
