@@ -615,10 +615,13 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private showWelcomeModal(gained: number): void {
+    const heroKey = this.textures.exists("pw-hero-alchemist-female")
+      ? "pw-hero-alchemist-female"
+      : "pw-hero-alchemist";
     this.showModal(
       `${t(this.lang, "welcomeTitle")}\n\n${t(this.lang, "welcomeBack", { n: formatNumber(gained) })}`,
       undefined,
-      "pw-hero-alchemist",
+      heroKey,
     );
   }
 
