@@ -7,7 +7,7 @@ import {
   recordLocalSessionStart,
   telemetryKey,
   type TelemetryStore,
-} from "../shared/localTelemetry";
+} from "../../shared/localTelemetry";
 
 function memoryStore(initial: Record<string, string> = {}): TelemetryStore {
   const map = new Map(Object.entries(initial));
