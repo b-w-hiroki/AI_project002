@@ -288,11 +288,16 @@ test("route fork shows risk, expected loot, and squad fit", async ({ page }) => 
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("ExpeditionScene");
-    const troop = Reflect.get(scene, "troop").call(scene);
     const run = {
       id: crypto.randomUUID(),
       regionId: "pass",
-      troop,
+      troop: {
+        ids: ["gen_soujin", "gen_kohei", "gen_ashigaru"],
+        power: 145,
+        guard: 0.25,
+        scout: 0,
+        merchant: 1.2,
+      },
       step: 3,
       hp: 100,
       loot: 40,
