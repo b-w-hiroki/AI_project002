@@ -1037,3 +1037,50 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
 });
+
+
+test("final chronicle changes replay prompt for different choice strategies", async ({ page }) => {
+  await useNativePortrait(page);
+  const readPrompt = async (supported: boolean) => page.evaluate(async ({ supported }) => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const outcome = (year: number, accepted: boolean, faction: "warrior" | "merchant" | "outlaw" | "mage") => ({
+      year,
+      outcome: {
+        faction,
+        requestId: "qa",
+        title: accepted ? "支援しました" : "支援を見送りました",
+        body: accepted ? "支援の結果です。" : "見送った結果です。",
+        quote: "",
+        deltas: [0, 0, 0, 0],
+      },
+    });
+    const history = supported
+      ? [
+          outcome(1, true, "warrior"),
+          outcome(2, true, "mage"),
+          outcome(3, true, "merchant"),
+          outcome(4, false, "outlaw"),
+        ]
+      : [
+          outcome(1, false, "warrior"),
+          outcome(2, false, "mage"),
+          outcome(3, false, "merchant"),
+          outcome(4, true, "outlaw"),
+        ];
+    Reflect.set(scene, "choiceHistory", history);
+    Reflect.set(scene, "stage", 12);
+    Reflect.set(scene, "runEvaluation", 120);
+    Reflect.set(scene, "legendCounts", { valor: 4, mercy: 4 });
+    Reflect.get(scene, "showFinal").call(scene);
+    await new Promise(resolve => setTimeout(resolve, 80));
+    const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+    (root.getData("refreshChronicle") as () => void)();
+    return (root.getByName("chronicleReplayHint") as Phaser.GameObjects.Text | null)?.text ?? "";
+  }, { supported });
+
+  const supportPrompt = await readPrompt(true);
+  const selectivePrompt = await readPrompt(false);
+  expect(supportPrompt).toMatch(/次の旅|NEXT RUN/);
+  expect(selectivePrompt).toMatch(/次の旅|NEXT RUN/);
+  expect(supportPrompt).not.toBe(selectivePrompt);
+});
