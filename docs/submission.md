@@ -251,3 +251,36 @@
 - 覇拳伝: https://b-w-hiroki.github.io/AI_project002/fist-legend/
 - カルマクエスト: https://b-w-hiroki.github.io/AI_project002/karma-quest/
 - 三国ポチポチ: https://b-w-hiroki.github.io/AI_project002/sangoku-tap/
+
+
+---
+
+## 2026-09-27 公式Portal要件メモ
+
+### CrazyGames
+最新公式ドキュメント確認事項:
+- Launchは Basic Launch → Full Launch の2段階。
+- Full LaunchではCrazyGames SDK要件への適合が必須。
+- total file sizeは最大250MB、file count上限1500。
+- initial downloadは50MB以下。mobile homepage対象は20MB以下。
+- 907×510 / 1216×684 / 1077×606 など主要iframeで文字・画像が読めること。
+- custom fullscreen buttonは禁止。
+- cross-promotionは禁止（限定的な例外のみ）。
+- PEGI 12準拠。
+- Full Implementationでは新規ユーザーを即ゲームプレイへ入れる。難しい場合も最大1 click。
+- Developer Portal PreviewでSDK・iframe・実表示を最終確認する。
+
+このリポジトリではReadiness / Browser E2E / WebKitで上記のうち自動検証可能な項目を継続チェックする。
+Portal上でのみ確認できるPreview / PEGI回答 / submissionはIssue #98 / #150で管理。
+
+### PLiCy
+最新公式FAQ確認事項:
+- HTML5ゲームはZIPでアップロードし、ブラウザ用 `index.html` を含める。
+- `index.html` にある最初のcanvasがサムネイル撮影対象になる。
+- 別サーバー内容だけを表示する外部iframeは禁止。
+- 外部通信はHTTPS + CORS対応が必要。
+- 1回のアップロードは2GBまで。
+- 公開フローはZIPアップロード → コンバート → ゲーム設定 → テストプレイ/サムネイル → 公開。
+- 公開対象は全年齢向けゲーム。
+
+AI_project002は各作品を単体ZIP化しているため、PLiCy投稿では最新 `game-release-packages` artifactの対象ZIPを使用する。

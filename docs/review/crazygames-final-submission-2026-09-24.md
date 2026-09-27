@@ -160,3 +160,25 @@ PLiCy:
 - アカウント作成
 - 6作品登録
 - 公開URLをIssue #98へ記録
+
+
+## 9. 2026-09-27公式要件再確認
+
+Developer Portal提出時に以下を再確認する。
+
+### Technical
+- [x] total file size < 250MB
+- [x] initial download <= 50MB
+- [x] mobile homepage目安 <= 20MB
+- [x] file count / packagingはCIで管理
+- [x] 主要iframeサイズで可読性を自動検証
+- [x] custom fullscreenなし
+- [x] cross-promotion禁止UIなし
+
+### Gameplay / metadata
+- [x] 英語fallback
+- [x] 主要操作へ短い導線
+- [ ] PEGI 12回答をPortalで確認
+- [ ] Basic Launch / Full Launch状態に応じたSDK要件をPortalで確認
+- [ ] Preview Tool上で実表示・SDK eventsを確認
+- [ ] metadata / controls / covers / preview動画を最終目視
