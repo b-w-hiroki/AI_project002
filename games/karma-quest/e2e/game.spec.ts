@@ -1041,7 +1041,7 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
 
 test("final chronicle changes replay prompt for different choice strategies", async ({ page }) => {
   await useNativePortrait(page);
-  const readPrompt = async (supported: boolean) => page.evaluate(({ supported }) => {
+  const readPrompt = async (supported: boolean) => page.evaluate(async ({ supported }) => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const outcome = (year: number, accepted: boolean, faction: "warrior" | "merchant" | "outlaw" | "mage") => ({
       year,
