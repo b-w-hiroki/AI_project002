@@ -2,33 +2,30 @@
 
 ## 0. 現在地
 
-- main: `e505de2`
-- ゲームコード基準: `3fbb6dd`（PR #171）
-- Browser E2E #343: success
-- WebKit Smoke #63: success
-- CrazyGames Readiness #7: success
-- CrazyGames Marketing Assets #7: success
-- GitHub Pages #164: success
-- open PR: 0
-- コード側の追加修正: 現時点なし
+- release candidate: **v1.0.0-rc.1**
+- source: main
+- Browser E2E / WebKit Smoke / CrazyGames Readiness / CrazyGames Marketing Assets / GitHub Pages は、**mainの最新成功run**を使用する
+- open PR: 0を投稿前に確認
+- コード側の追加修正: Portal Previewで差異が出た場合のみ
 
 ## 1. 使用する最新artifact
 
 ### 投稿ZIP
-GitHub Pages run #164 の `game-release-packages` を使用する。
-- artifact id: `10787129783`
-- 6作品ZIP + `BUILD-INFO.txt` + `SHA256SUMS.txt`
-- run: https://github.com/b-w-hiroki/AI_project002/actions/runs/35949431334
+**最新成功の Deploy to GitHub Pages run** にある `game-release-packages` を使用する。
+- 6作品ZIP
+- `BUILD-INFO.txt`
+- `SHA256SUMS.txt`
+
+古いartifact IDを固定参照しない。投稿直前にmain最新runのBUILD-INFOとcommitを確認する。
 
 ### Marketing Assets
-CrazyGames Marketing Assets run #7 の各artifactを使用する。
+**最新成功の CrazyGames Marketing Assets run** の各作品artifactを使用する。
 - color-match-crazygames-marketing
 - fist-legend-crazygames-marketing
 - karma-quest-crazygames-marketing
 - potion-workshop-crazygames-marketing
 - sangoku-tap-crazygames-marketing
 - side-scroller-crazygames-marketing
-- run: https://github.com/b-w-hiroki/AI_project002/actions/runs/35928093865
 
 各作品に以下を含む。
 - Landscape cover: 1920x1080

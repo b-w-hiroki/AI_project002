@@ -1,6 +1,6 @@
 # 最終実機QA・公開チェックシート（2026-09-23）
 
-コード側の実装・自動検証は完了済み。最新ゲームコード（`3fbb6dd`）で Browser E2E run #343、WebKit Smoke run #63、CrazyGames Readiness run #7、CrazyGames Marketing Assets run #7 が成功し、最新main（`e505de2`）の GitHub Pages deploy run #164 も成功。CrazyGames実投稿は `docs/review/crazygames-final-submission-2026-09-24.md` を単一の提出手順として使用する。
+コード側の実装・自動検証は完了済み。現在のリリース候補は **v1.0.0-rc.1**。最新状態は `RELEASE-CANDIDATE.md` と `docs/review/final-release-gate-2026-09-27.md` を正とする。CrazyGames実投稿は `docs/review/crazygames-final-submission-2026-09-24.md` を単一の提出手順として使用する。固定commit/run番号ではなく、**mainの最新成功workflow**を使用する。
 
 ## 1. iOS Safari 実機QA
 
@@ -65,16 +65,19 @@
 
 ## 6. 現在の自動検証基準
 
-- main: `e505de2`（PR #172まで反映）
-- ゲームコード基準: `3fbb6dd`（PR #171）
-- Browser E2E: run #343 成功
-- WebKit Smoke: run #63 成功
-- CrazyGames Readiness: run #7 全6作品成功
-- CrazyGames Marketing Assets: run #7 全6作品成功、6 artifact生成
-- GitHub Pages: Deploy to GitHub Pages run #164 成功
-- open PR: 0
-- コード側作品Epic #94 / #95 / #96 / #99 / #100: 完了
+- release candidate: `v1.0.0-rc.1`
+- source: main
+- Browser E2E: mainの最新成功run
+- WebKit Smoke: mainの最新成功run
+- CrazyGames Readiness: mainの最新成功run
+- CrazyGames Marketing Assets: mainの最新成功run
+- GitHub Pages: mainの最新成功run
+- open PR: 0をリリース前に確認
 - 剣戟 #93: 実機QAのみ残件
 - Karma #90: 実機QAのみ残件
 - 共通 #97: 実機QAのみ残件
-- 公開 #98: CrazyGames Developer Portal最終確認、外部アカウント作成・実投稿のみ残件
+- 公開 #98: CrazyGames / PLiCy外部アカウント・Portal Preview・実投稿
+- branch cleanup: Issue #212
+- v1.1 gameplay/retention: Issue #213
+
+Karma Questは2026-09-27に未参照の重複PNG/旧outcome画像を削除済み。初期ロード設計は変更せず、総packageを軽量化している。

@@ -5,10 +5,11 @@
 公開URL: https://b-w-hiroki.github.io/AI_project002/
 
 > [!IMPORTANT]
-> CrazyGames向けコード実装・自動検証は完了済み。最新main（`3fbb6dd`）で Browser E2E / WebKit Smoke /
-> CrazyGames Readiness / CrazyGames Marketing Assets / GitHub Pages がすべて成功。
-> 6作品分の3種カバーとLandscape/Portraitプレビュー動画も最新mainからartifact生成済み。
-> 残りはDeveloper Portal Previewでの最終確認、PEGI確認、アカウント作成・実投稿など人間作業。
+> 現在のリリース候補は **v1.0.0-rc.1**。コード実装・自動検証は完了済み。
+> Browser E2E / WebKit Smoke / CrazyGames Readiness / CrazyGames Marketing Assets / GitHub Pages は
+> **mainの最新成功workflow**を使用する。投稿ZIPは最新成功Pages runの `game-release-packages`、
+> カバー/previewは最新成功Marketing Assets runを使用する。
+> 残りはDeveloper Portal Preview、PEGI確認、物理実機QA、アカウント作成・実投稿など人間作業。
 
 ---
 
