@@ -17,6 +17,10 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
+  await page.waitForFunction(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return scene.sys.isActive() && !!Reflect.get(scene, "titleGroup");
+  });
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
