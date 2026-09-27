@@ -2,7 +2,7 @@
 
 > **Current release gate:** [Final Release Gate — 2026-09-27](final-release-gate-2026-09-27.md)
 >
-> 6タイトルの最新モック寄せ・モバイル・Browser E2E・WebKit・Pages・release package確認は上記を正とする。以下は過去ラウンドの検証記録として保持する。
+> 6タイトルの最新モック寄せ・モバイル・Browser E2E・WebKit・Pages・release package確認は上記を正とする。以下は過去ラウンドの検証記録として保持する。\n>\n> 今後の仕上げ作業は [Game finish QA template](game-finish-qa-template.md) を共通Done条件として使う。
 
 # 初回改修の検証と画面集
 
