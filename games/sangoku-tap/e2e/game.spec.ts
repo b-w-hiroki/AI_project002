@@ -281,3 +281,39 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
 });
+
+
+test("route fork shows risk, expected loot, and squad fit", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const troop = Reflect.get(scene, "troop").call(scene);
+    const run = {
+      id: crypto.randomUUID(),
+      regionId: "pass",
+      troop,
+      step: 3,
+      hp: 100,
+      loot: 40,
+      route: "road",
+      fork: true,
+      status: "active",
+      message: "fork qa",
+    };
+    Reflect.set(scene, "run", run);
+    Reflect.set(scene, "view", "road");
+    Reflect.get(scene, "render").call(scene);
+  });
+  const preview = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+    const road = root.getByName("route-preview-road") as Phaser.GameObjects.Text | null;
+    const mountain = root.getByName("route-preview-mountain") as Phaser.GameObjects.Text | null;
+    return { road: road?.text ?? "", mountain: mountain?.text ?? "" };
+  });
+  expect(preview.road).toMatch(/街道|Road/);
+  expect(preview.mountain).toMatch(/山道|Mountain/);
+  expect(preview.mountain).toMatch(/高リスク|High Risk|編成相性|Squad Fit|安定|Stable/);
+  await checkFrame(page, "portrait-route-preview");
+});

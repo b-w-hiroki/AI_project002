@@ -9,6 +9,7 @@ import {
   expeditionReward,
   victoryChance,
   rollRegionEvent,
+  routePreview,
 } from "../src/logic/expedition";
 const owned = { gen_soujin: 1, gen_kohei: 1, gen_ashigaru: 1, gen_suzaku: 1 };
 const troop = buildTroop(
@@ -138,3 +139,34 @@ describe("遠征バランス帯", () => {
   });
 });
 
+
+
+describe("ルート判断プレビュー", () => {
+  it("山道は街道より期待収穫が高い", () => {
+    const run = { ...newExpedition(troop, "pass"), step: 3, fork: true };
+    const road = routePreview(run, "road");
+    const mountain = routePreview(run, "mountain");
+    expect(mountain.lootMultiplier).toBe(1.7);
+    expect(mountain.expectedNextLoot).toBeGreaterThan(road.expectedNextLoot);
+    expect(road.fit).toBe("stable");
+  });
+
+  it("軍師なしの山道は危険と表示される", () => {
+    const run = { ...newExpedition(troop, "pass"), step: 3, fork: true };
+    expect(routePreview(run, "mountain").fit).toBe("risky");
+  });
+
+  it("軍師編成なら山道が有利と表示される", () => {
+    const strategistOwned = { gen_soujin: 1, gen_suzaku: 1, gen_ashigaru: 1 };
+    const strategistTroop = buildTroop(
+      ["gen_soujin", "gen_suzaku", "gen_ashigaru"],
+      strategistOwned,
+      {},
+    );
+    const run = { ...newExpedition(strategistTroop, "pass"), step: 3, fork: true };
+    const road = routePreview(run, "road");
+    const mountain = routePreview(run, "mountain");
+    expect(mountain.winChance).toBeGreaterThanOrEqual(road.winChance);
+    expect(mountain.fit).toBe("favored");
+  });
+});
