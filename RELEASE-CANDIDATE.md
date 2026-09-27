@@ -40,3 +40,15 @@ Required before promoting a commit to this candidate:
 ## Known non-blockers
 - historical merged branches remain because automatic branch deletion is disabled and the current connector cannot delete refs.
 - historical review screenshots remain as evidence; the final release gate is the current source of truth.
+
+
+## Package snapshot
+Latest measured release package sizes after Karma cleanup:
+- Color Match: ~1.2 MB
+- Fist Legend: ~4.8 MB
+- Karma Quest: ~66 MB
+- Potion Workshop: ~4.3 MB
+- Sangoku Tap: ~8.2 MB
+- Sword Forest: ~3.4 MB
+
+Karma Quest was reduced from ~94 MB to ~66 MB by removing unreferenced duplicate/legacy art while preserving deferred runtime loading.

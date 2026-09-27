@@ -45,7 +45,7 @@
 5. Sangoku Tap
 6. Karma Quest
 
-Karma QuestはZIP総容量が大きいため最後に確認する。自動計測上の初期downloadは3.25MBで基準内。
+Karma Questはrelease ZIPが約66MBのため最後に確認する。2026-09-27の重複資産整理で約94MB→66MBへ削減済み。自動計測上の初期downloadは3.25MBで基準内。
 
 ## 3. 作品別登録情報
 
@@ -120,7 +120,7 @@ Karma QuestはZIP総容量が大きいため最後に確認する。自動計測
 - Home → Request → Battle → Report → Next Year
 - 英語前面UI
 - 縦画面での収まり
-- 大容量ZIPでも初期downloadが基準内かPortal実測
+- release ZIP約66MBでも初期downloadが基準内かPortal実測
 
 ## 6. 自動検証済みのため再確認不要な項目
 

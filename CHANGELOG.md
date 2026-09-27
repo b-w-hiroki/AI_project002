@@ -24,7 +24,7 @@ Six-game release candidate for AI_project002.
 ### Karma Quest
 - final chronicle presentation strengthened
 - deferred outcome loading retained
-- duplicate PNG and legacy outcome assets removed to reduce package size
+- duplicate PNG and legacy outcome assets removed; release ZIP reduced from ~94 MB to ~66 MB
 
 ### 剣戟の森
 - hero/enemy/boss presence increased
