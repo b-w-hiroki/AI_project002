@@ -1,3 +1,9 @@
+# Review / QA index
+
+> **Current release gate:** [Final Release Gate — 2026-09-27](final-release-gate-2026-09-27.md)
+>
+> 6タイトルの最新モック寄せ・モバイル・Browser E2E・WebKit・Pages・release package確認は上記を正とする。以下は過去ラウンドの検証記録として保持する。
+
 # 初回改修の検証と画面集
 
 2026-09-07追補：三国の最新画面集は大型ボスと新しい兵士イラストに更新済み。制作方法・プロンプトは[キャラクター制作記録](../design/sangoku-character-art.md)。
