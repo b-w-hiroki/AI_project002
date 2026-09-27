@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installColorMatchPresentation } from "./presentation";
 import { installColorConceptArtPass } from "./conceptArt";
@@ -19,6 +20,7 @@ installColorArtFidelity();
 installColorFantasyBackground();
 
 await initCrazyGames();
+installLocalTelemetry("color-match");
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

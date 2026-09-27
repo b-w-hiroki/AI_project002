@@ -1,4 +1,5 @@
 import { ExpeditionScene } from "./scenes/ExpeditionScene";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import Phaser from "phaser";
 import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
@@ -11,6 +12,7 @@ import { GameScene } from "./scenes/GameScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 await initCrazyGames();
+installLocalTelemetry("sangoku-tap");
 installSangokuPresentation();
 installSangokuConceptArtPass();
 installSangokuArtFidelity();

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installFistLegendPresentation } from "./presentation";
 import { installFistConceptArtPass } from "./conceptArt";
@@ -17,6 +18,7 @@ installFistArtFidelity();
 installFistHajaMode();
 
 await initCrazyGames();
+installLocalTelemetry("fist-legend");
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
