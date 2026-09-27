@@ -5,11 +5,17 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "npm"
     directory: "/games/potion-workshop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
@@ -18,6 +24,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
@@ -26,6 +35,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
@@ -34,6 +46,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
@@ -42,6 +57,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
@@ -50,6 +68,9 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend-toolchain:
         patterns: ["vite", "vitest", "typescript", "typescript-eslint", "eslint", "@eslint/js", "@playwright/test", "@types/node"]
