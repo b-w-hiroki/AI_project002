@@ -244,3 +244,22 @@ test("corrupt persisted save does not block startup", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
 });
+
+
+test("next objective guides the workshop loop", async ({ page }) => {
+  const objective = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    return (scene.children.getByName("next-objective") as Phaser.GameObjects.Text | null)?.text ?? "";
+  });
+  expect(objective).toMatch(/次の目標|NEXT/);
+  expect(objective).toMatch(/注文|order/i);
+
+  const ascension = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", { ...state, totalBrewed: 1_000_000 });
+    Reflect.get(scene, "refreshUI").call(scene);
+    return (scene.children.getByName("next-objective") as Phaser.GameObjects.Text | null)?.text ?? "";
+  });
+  expect(ascension).toMatch(/転生|Ascend/i);
+});

@@ -42,6 +42,7 @@ import {
 } from "../logic/analytics";
 import { exportSaveJson, load, parseSaveJson, save } from "../logic/save";
 import { nextTownChoices, townForState } from "../logic/towns";
+import { nextObjective } from "../logic/nextObjective";
 import { sfx } from "../platform/audio";
 import { cg } from "../platform/crazygames";
 import {
@@ -101,6 +102,7 @@ export class IdleScene extends Phaser.Scene {
   private prestigeGlowTween?: Phaser.Tweens.Tween;
   private prestigeWasAffordable = false;
   private footerStatsText!: Phaser.GameObjects.Text;
+  private objectiveText!: Phaser.GameObjects.Text;
   private townGlow!: Phaser.GameObjects.Graphics;
   private townText!: Phaser.GameObjects.Text;
   private lastTownIndex = -1;
@@ -519,7 +521,7 @@ export class IdleScene extends Phaser.Scene {
       shadow: false,
     });
     this.footerStatsText = this.add
-      .text(400, 632, "", {
+      .text(400, 630, "", {
         ...TYPE.small,
         fontSize: "11px",
         color: THEME.textMuted,
@@ -527,6 +529,17 @@ export class IdleScene extends Phaser.Scene {
         lineSpacing: 5,
       })
       .setOrigin(0.5);
+
+    this.objectiveText = this.add
+      .text(400, 670, "", {
+        ...TYPE.small,
+        fontSize: "12px",
+        fontStyle: "700",
+        color: "#356b5a",
+        align: "center",
+      })
+      .setOrigin(0.5)
+      .setName("next-objective");
 
     const exportButton = this.makeSmallButton(220, 715, 200, "", () => this.doExport());
     this.registerRefresh(() => exportButton.label.setText(t(this.lang, "exportButton")));
@@ -544,6 +557,47 @@ export class IdleScene extends Phaser.Scene {
     this.footerStatsText.setText(
       `${t(this.lang, "footerLifetimeBrewed")}: ${formatNumber(this.state.lifetimeBrewed)}   ·   ${t(this.lang, "achievementsButton")}: ${unlockedCount}/${totalCount}\n` +
         `${t(this.lang, "footerPrestigeCount")}: ${this.state.prestigeCount}   ·   ${t(this.lang, "footerPlaytime")}: ${hours}h ${minutes}m`,
+    );
+  }
+
+  private refreshNextObjective(): void {
+    const objective = nextObjective(this.state);
+    const progress = objective.target > 0
+      ? `${formatNumber(objective.current)} / ${formatNumber(objective.target)}`
+      : "";
+
+    if (objective.kind === "ascend") {
+      this.objectiveText.setText(
+        this.lang === "ja"
+          ? `次の目標：新しい街へ転生 · +${formatNumber(objective.essenceGain ?? 0)} ✨`
+          : `NEXT: Ascend to a new town · +${formatNumber(objective.essenceGain ?? 0)} ✨`,
+      );
+      return;
+    }
+
+    if (objective.kind === "contract") {
+      this.objectiveText.setText(
+        this.lang === "ja"
+          ? `次の目標：街の注文 ${(objective.contractIndex ?? 0) + 1} · ${progress}`
+          : `NEXT: Town order ${(objective.contractIndex ?? 0) + 1} · ${progress}`,
+      );
+      return;
+    }
+
+    if (objective.kind === "demand_generator") {
+      const label = generatorName(this.lang, objective.generatorId ?? "");
+      this.objectiveText.setText(
+        this.lang === "ja"
+          ? `次の目標：需要設備「${label}」を増設 · ${progress}`
+          : `NEXT: Build town-demand ${label} · ${progress}`,
+      );
+      return;
+    }
+
+    this.objectiveText.setText(
+      this.lang === "ja"
+        ? `次の目標：転生へ向けて調合 · ${Math.floor(objective.ratio * 100)}%`
+        : `NEXT: Brew toward Ascension · ${Math.floor(objective.ratio * 100)}%`,
     );
   }
 
@@ -706,6 +760,7 @@ export class IdleScene extends Phaser.Scene {
   private refreshUI(deltaSec = 0): void {
     this.refreshWorkshopDecor();
     this.refreshFooterStats();
+    this.refreshNextObjective();
     this.refreshTownGlow();
     const displayedPotions = this.potionCounter.next(this.state.potions, deltaSec);
     this.potionText.setText(`${formatNumber(displayedPotions)} ${t(this.lang, "potions")}`);
