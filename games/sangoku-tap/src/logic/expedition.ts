@@ -152,6 +152,40 @@ export function victoryChance(run: Expedition): number {
     ),
   );
 }
+export type RouteFit = "stable" | "favored" | "risky";
+export interface RoutePreview {
+  route: Route;
+  winChance: number;
+  lootMultiplier: number;
+  expectedNextLoot: number;
+  fit: RouteFit;
+}
+export function routePreview(run: Expedition, route: Route): RoutePreview {
+  const candidate = { ...run, route };
+  const winChance = victoryChance(candidate);
+  const lootMultiplier = route === "mountain" ? 1.7 : 1;
+  const nextStep = Math.min(10, run.step + 1);
+  const baseLoot = Math.round(
+    (12 + nextStep * 4) *
+      lootMultiplier *
+      run.troop.merchant *
+      regionById(run.regionId).reward,
+  );
+  const roadChance = victoryChance({ ...run, route: "road" });
+  const fit: RouteFit =
+    route === "road"
+      ? "stable"
+      : winChance >= roadChance
+        ? "favored"
+        : "risky";
+  return {
+    route,
+    winChance,
+    lootMultiplier,
+    expectedNextLoot: Math.round(baseLoot * winChance),
+    fit,
+  };
+}
 export function advanceExpedition(
   run: Expedition,
   rng: () => number = Math.random,

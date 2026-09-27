@@ -20,6 +20,7 @@ import {
   returnExpedition,
   expeditionReward,
   victoryChance,
+  routePreview,
   type Expedition,
 } from "../logic/expedition";
 import {
@@ -652,15 +653,37 @@ export class ExpeditionScene extends Phaser.Scene {
       .fillStyle(r.hp < 35 ? 0xd57b67 : 0x8cc0aa)
       .fillRoundedRect(24, 613, (402 * r.hp) / 100, 5, 2);
     if (r.fork) {
+      const road = routePreview(r, "road");
+      const mountain = routePreview(r, "mountain");
+      const fitLabel = (fit: "stable" | "favored" | "risky") =>
+        fit === "favored"
+          ? tr(this.lang, "編成相性◎", "Squad Fit +")
+          : fit === "risky"
+            ? tr(this.lang, "高リスク", "High Risk")
+            : tr(this.lang, "安定", "Stable");
       this.text(
         225,
-        629,
-        `${tr(this.lang, "分岐 · 次戦勝率", "Route Choice · Next Win Chance")} ${tr(this.lang, "街道", "Road")} ${Math.round(victoryChance({ ...r, route: "road" }) * 100)}% / ${tr(this.lang, "山道", "Mountain")} ${Math.round(victoryChance({ ...r, route: "mountain" }) * 100)}%`,
-        13,
-        "#e3d2b4",
+        624,
+        tr(this.lang, "分岐 · 勝率 / 次の期待収穫 / 編成相性", "Route Choice · Win / Expected Loot / Squad Fit"),
+        11,
+        "#d7c4a7",
       );
-      this.button(124, 676, 192, tr(this.lang, "街道へ", "Road"), () => this.route("road"));
-      this.button(326, 676, 192, tr(this.lang, "山道へ · 収穫1.7倍", "Mountain · Loot ×1.7"), () =>
+      this.text(
+        124,
+        646,
+        `${tr(this.lang, "街道", "Road")}  ${Math.round(road.winChance * 100)}% · +${road.expectedNextLoot} · ${fitLabel(road.fit)}`,
+        12,
+        "#d8e5dc",
+      ).setName("route-preview-road");
+      this.text(
+        326,
+        646,
+        `${tr(this.lang, "山道", "Mountain")}  ${Math.round(mountain.winChance * 100)}% · +${mountain.expectedNextLoot} · ${fitLabel(mountain.fit)}`,
+        12,
+        mountain.fit === "favored" ? "#9fe0bf" : mountain.fit === "risky" ? "#efa98e" : "#f0d29b",
+      ).setName("route-preview-mountain");
+      this.button(124, 686, 192, tr(this.lang, "街道へ", "Road"), () => this.route("road"));
+      this.button(326, 686, 192, tr(this.lang, "山道へ · 収穫1.7倍", "Mountain · Loot ×1.7"), () =>
         this.route("mountain"),
       );
     } else {
