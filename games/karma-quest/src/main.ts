@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installKarmaQuestPresentation } from "./presentation";
 import { installKarmaConceptArtPass } from "./conceptArt";
@@ -18,6 +19,7 @@ installKarmaKingdomBackground();
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 await initCrazyGames();
+installLocalTelemetry("karma-quest");
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installWallClockPersistence } from "./persistence";
@@ -11,6 +12,7 @@ import { IdleScene } from "./scenes/IdleScene";
 
 // CrazyGames ポータル上でのみ SDK が有効化される（他環境では no-op）
 await initCrazyGames();
+installLocalTelemetry("potion-workshop");
 installPotionPresentation();
 installPotionConceptArtPass();
 installPotionVisualPolish();

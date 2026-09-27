@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { initCrazyGames } from "./platform/crazygames";
 import { installSideScrollerPresentation } from "./presentation";
@@ -11,6 +12,7 @@ import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
 await initCrazyGames();
+installLocalTelemetry("side-scroller");
 installSideScrollerPresentation();
 installSideConceptArtPass();
 installSideVisualPolish();
