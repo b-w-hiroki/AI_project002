@@ -2,6 +2,8 @@
 
 ## Current
 
+次のゲーム内容フェーズは **[Six-game retention phase](retention-phase-2026-09-27.md)** を入口とする。ビジュアル完成後は既存コアループを維持したまま、継続プレイ理由と中期目標を強化する。
+
 Karma Questのモック再現は **[実行手順](karma-execution-plan.md)** を入口とする。王都ホームの縦1画面を完成基準にし、縦の残り3画面、横画面へ順に展開する。この作業中は下記の全作品共通の実装順より本手順を優先する。
 
 Karma QuestのUI造形・配色・部品仕様は **[Karma Quest UIデザイン基準](karma-ui-design-system.md)** を参照。ユーザー指定の金枠ボタンを起点とする最新基準。
