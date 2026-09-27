@@ -174,7 +174,14 @@ jobs:
           NODE
 
           for mode in landscape portrait; do
-            ffmpeg -y -i "marketing/${GAME}-preview-${mode}.webm"               -t 20 -an -c:v libx264 -preset medium -crf 24 -pix_fmt yuv420p               "marketing/${GAME}-preview-${mode}.mp4"
+            # CrazyGames recommends using the static cover as the opening frame.
+            # Prepend 0.6s of the exact cover before the gameplay capture.
+            ffmpeg -y \
+              -loop 1 -t 0.6 -i "marketing/${GAME}-cover-${mode}.png" \
+              -i "marketing/${GAME}-preview-${mode}.webm" \
+              -filter_complex "[0:v]fps=30,format=yuv420p[cover];[1:v]fps=30,format=yuv420p[game];[cover][game]concat=n=2:v=1:a=0[out]" \
+              -map "[out]" -t 20 -an -c:v libx264 -preset medium -crf 24 -pix_fmt yuv420p \
+              "marketing/${GAME}-preview-${mode}.mp4"
             rm "marketing/${GAME}-preview-${mode}.webm"
           done
           ls -lh marketing
