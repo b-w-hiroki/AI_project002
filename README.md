@@ -25,3 +25,23 @@ AIフル活用でゲーム開発
 - [三国ポチポチの最新画面集](docs/review/sangoku-campaign/index.html)
 
 三国ポチポチは編成・遠征・帰還、覇拳伝は敵の予兆と読み合い、カルマクエストは神様と報告、ポーション工房は需要と注文、剣戟の森は流派とボス行動、カラーマッチは60秒の段階出題を追加しています。大型機能や追加イラストは統合設計の「次段階」に区別しています。
+
+
+## Release candidate
+
+Current candidate: **v1.0.0-rc.1**
+
+Automated release gates:
+- Browser E2E
+- WebKit Smoke
+- CrazyGames Readiness
+- CrazyGames Marketing Assets
+- GitHub Pages build/deploy
+- six standalone release ZIPs + SHA256SUMS
+
+Human-only gates before final v1.0.0:
+- physical iOS Safari smoke
+- physical Android Chrome smoke
+- CrazyGames / PLiCy portal upload and preview checks
+
+See [RELEASE-CANDIDATE.md](RELEASE-CANDIDATE.md) and [docs/review/final-release-gate-2026-09-27.md](docs/review/final-release-gate-2026-09-27.md).
