@@ -93,6 +93,13 @@ export function rollRegionEvent(
 }
 
 export type Route = "road" | "mountain";
+
+export interface RoutePreview {
+  winChance: number;
+  lootMultiplier: number;
+  scoutBonus: number;
+}
+
 export interface Expedition {
   id: string;
   regionId: RegionId;
@@ -152,6 +159,14 @@ export function victoryChance(run: Expedition): number {
     ),
   );
 }
+export function routePreview(run: Expedition, route: Route): RoutePreview {
+  return {
+    winChance: victoryChance({ ...run, route }),
+    lootMultiplier: route === "mountain" ? 1.7 : 1,
+    scoutBonus: route === "mountain" ? run.troop.scout : 0,
+  };
+}
+
 export function advanceExpedition(
   run: Expedition,
   rng: () => number = Math.random,

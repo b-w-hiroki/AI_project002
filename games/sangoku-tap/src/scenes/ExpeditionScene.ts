@@ -20,6 +20,7 @@ import {
   returnExpedition,
   expeditionReward,
   victoryChance,
+  routePreview,
   type Expedition,
 } from "../logic/expedition";
 import {
@@ -652,13 +653,16 @@ export class ExpeditionScene extends Phaser.Scene {
       .fillStyle(r.hp < 35 ? 0xd57b67 : 0x8cc0aa)
       .fillRoundedRect(24, 613, (402 * r.hp) / 100, 5, 2);
     if (r.fork) {
+      const roadPreview = routePreview(r, "road");
+      const mountainPreview = routePreview(r, "mountain");
+      const scoutPct = Math.round(mountainPreview.scoutBonus * 100);
       this.text(
         225,
-        629,
-        `${tr(this.lang, "分岐 · 次戦勝率", "Route Choice · Next Win Chance")} ${tr(this.lang, "街道", "Road")} ${Math.round(victoryChance({ ...r, route: "road" }) * 100)}% / ${tr(this.lang, "山道", "Mountain")} ${Math.round(victoryChance({ ...r, route: "mountain" }) * 100)}%`,
-        13,
+        625,
+        `${tr(this.lang, "分岐 · 次戦", "Route Choice · Next Battle")}  ${tr(this.lang, "街道", "Road")} ${Math.round(roadPreview.winChance * 100)}% · ×${roadPreview.lootMultiplier.toFixed(1)} / ${tr(this.lang, "山道", "Mountain")} ${Math.round(mountainPreview.winChance * 100)}% · ×${mountainPreview.lootMultiplier.toFixed(1)}\n${scoutPct > 0 ? tr(this.lang, `軍師適性 · 山道勝率 +${scoutPct}%`, `Strategist fit · Mountain +${scoutPct}%`) : tr(this.lang, "山道は高リスク・高収穫", "Mountain is higher risk, higher reward")}`,
+        12,
         "#e3d2b4",
-      );
+      ).setLineSpacing(3);
       this.button(124, 676, 192, tr(this.lang, "街道へ", "Road"), () => this.route("road"));
       this.button(326, 676, 192, tr(this.lang, "山道へ · 収穫1.7倍", "Mountain · Loot ×1.7"), () =>
         this.route("mountain"),

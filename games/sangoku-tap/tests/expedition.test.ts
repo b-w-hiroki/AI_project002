@@ -8,6 +8,7 @@ import {
   returnExpedition,
   expeditionReward,
   victoryChance,
+  routePreview,
   rollRegionEvent,
 } from "../src/logic/expedition";
 const owned = { gen_soujin: 1, gen_kohei: 1, gen_ashigaru: 1, gen_suzaku: 1 };
@@ -119,6 +120,18 @@ describe("遠征バランス帯", () => {
     const road = { ...newExpedition(troop, "pass"), route: "road" as const };
     const mountain = { ...road, route: "mountain" as const };
     expect(victoryChance(mountain)).toBeLessThan(victoryChance(road));
+  });
+
+  it("分岐プレビューは収穫倍率と軍師補正を明示する", () => {
+    const strategistTroop = buildTroop(
+      ["gen_soujin", "gen_suzaku", "gen_ashigaru"],
+      { gen_soujin: 1, gen_suzaku: 1, gen_ashigaru: 1 },
+      {},
+    );
+    const run = newExpedition(strategistTroop, "pass");
+    expect(routePreview(run, "road")).toMatchObject({ lootMultiplier: 1, scoutBonus: 0 });
+    expect(routePreview(run, "mountain").lootMultiplier).toBe(1.7);
+    expect(routePreview(run, "mountain").scoutBonus).toBeGreaterThan(0);
   });
 
   it("軍師を入れると山道の勝率補正がリスクを上回る", () => {
