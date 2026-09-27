@@ -1026,3 +1026,14 @@ test("home loads only its artwork and journey preparation retries safely", async
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(0);
 });
+
+
+test("corrupt persisted progress does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_best_stage_v1", "-999");
+    localStorage.setItem("karma_quest_total_eval_v1", "NaN");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+});

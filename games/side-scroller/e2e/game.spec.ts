@@ -282,3 +282,13 @@ test.describe("phone visual QA", () => {
     });
   });
 });
+
+
+test("corrupt persisted progress does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("ai_project002_sideScroller_bestWave_v1", "-999");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame);
+});

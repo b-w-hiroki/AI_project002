@@ -248,3 +248,14 @@ test("20-second weakness practice locks the weak judge and records stats", async
   expect(stats[state.weak].total).toBeGreaterThanOrEqual(1);
 });
 
+
+
+test("corrupt persisted progress does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("color_match_60s_best_score_v1", "-999");
+    localStorage.setItem("color_match_performance_v1", "{broken");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame);
+});

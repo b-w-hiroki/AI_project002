@@ -234,3 +234,13 @@ test("visual QA: all workshop generators have distinct shelf silhouettes", async
   });
 });
 
+
+
+test("corrupt persisted save does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("ai_project002_save_v1", "{broken");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame);
+});
