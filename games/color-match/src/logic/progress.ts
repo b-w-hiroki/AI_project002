@@ -12,7 +12,7 @@ function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
   if (!raw) return 0;
   const n = Number(raw);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 function saveIfHigher(key: string, value: number): void {
@@ -78,10 +78,10 @@ export function loadPerformanceStats(): PerformanceStats {
   try {
     const parsed = JSON.parse(raw) as Partial<PerformanceStats>;
     const normalize = (value?: Partial<PerformanceMetric>): PerformanceMetric => ({
-      correct: Number.isFinite(value?.correct) ? Math.max(0, Number(value?.correct)) : 0,
-      total: Number.isFinite(value?.total) ? Math.max(0, Number(value?.total)) : 0,
+      correct: Number.isFinite(value?.correct) ? Math.max(0, Math.floor(Number(value?.correct))) : 0,
+      total: Number.isFinite(value?.total) ? Math.max(0, Math.floor(Number(value?.total))) : 0,
       reactionTotalMs: Number.isFinite(value?.reactionTotalMs) ? Math.max(0, Number(value?.reactionTotalMs)) : 0,
-      reactionSamples: Number.isFinite(value?.reactionSamples) ? Math.max(0, Number(value?.reactionSamples)) : 0,
+      reactionSamples: Number.isFinite(value?.reactionSamples) ? Math.max(0, Math.floor(Number(value?.reactionSamples))) : 0,
     });
     return {
       content: normalize(parsed.content),

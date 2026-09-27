@@ -13,7 +13,7 @@ function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
   if (!raw) return 0;
   const n = Number(raw);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 export function loadCurrency(): number {
@@ -56,9 +56,9 @@ export function loadEquipmentInventory(): EquipmentInventory {
   try {
     const parsed = JSON.parse(raw) as Partial<EquipmentInventory>;
     return {
-      Common: Number.isFinite(parsed.Common) ? Number(parsed.Common) : 0,
-      Rare: Number.isFinite(parsed.Rare) ? Number(parsed.Rare) : 0,
-      Epic: Number.isFinite(parsed.Epic) ? Number(parsed.Epic) : 0,
+      Common: Number.isFinite(parsed.Common) ? Math.max(0, Math.floor(Number(parsed.Common))) : 0,
+      Rare: Number.isFinite(parsed.Rare) ? Math.max(0, Math.floor(Number(parsed.Rare))) : 0,
+      Epic: Number.isFinite(parsed.Epic) ? Math.max(0, Math.floor(Number(parsed.Epic))) : 0,
     };
   } catch {
     return emptyInventory();
@@ -85,7 +85,13 @@ export function loadOwnedGenerals(): OwnedGenerals {
   const raw = localStorage.getItem(OWNED_GENERALS_KEY);
   if (!raw) return emptyRoster();
   try {
-    return JSON.parse(raw) as OwnedGenerals;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([id, count]) => {
+        const n = Number(count);
+        return Number.isFinite(n) && n > 0 ? [[id, Math.floor(n)]] : [];
+      }),
+    ) as OwnedGenerals;
   } catch {
     return emptyRoster();
   }
@@ -102,7 +108,10 @@ export function loadEquippedMap(): EquippedMap {
   const raw = localStorage.getItem(EQUIPPED_MAP_KEY);
   if (!raw) return emptyEquipped();
   try {
-    return JSON.parse(raw) as EquippedMap;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([, rarity]) => rarity === "Common" || rarity === "Rare" || rarity === "Epic"),
+    ) as EquippedMap;
   } catch {
     return emptyEquipped();
   }
