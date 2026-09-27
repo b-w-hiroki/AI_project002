@@ -1,0 +1,41 @@
+name: Mobile device issue
+description: Report physical-device safe-area, touch, rotation, audio, or long-session problems.
+title: "mobile: "
+labels: ["bug", "mobile"]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: "iPhone / Pixel model"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and browser
+      placeholder: "iOS 26 Safari / Android Chrome"
+    validations:
+      required: true
+  - type: dropdown
+    id: orientation
+    attributes:
+      label: Orientation
+      options: [Portrait, Landscape, Both]
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: checkboxes
+    id: class
+    attributes:
+      label: Problem type
+      options:
+        - label: Touch target / coordinate mismatch
+        - label: Safe area / browser chrome overlap
+        - label: Rotation / resize issue
+        - label: Audio issue
+        - label: Performance / memory / thermal issue
+        - label: Visual clipping / unreadable text

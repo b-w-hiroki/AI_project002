@@ -1,0 +1,32 @@
+name: Platform feedback
+description: Record CrazyGames, PLiCy, or other portal review feedback.
+title: "platform: "
+labels: ["release"]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [CrazyGames, PLiCy, Other]
+    validations:
+      required: true
+  - type: input
+    id: game
+    attributes:
+      label: Game
+    validations:
+      required: true
+  - type: input
+    id: review_url
+    attributes:
+      label: Review / preview URL
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Platform feedback
+    validations:
+      required: true
+  - type: textarea
+    id: requested_change
+    attributes:
+      label: Requested change / acceptance criteria
