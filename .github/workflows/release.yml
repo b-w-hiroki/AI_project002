@@ -1,0 +1,120 @@
+name: Create GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version/tag (e.g. v1.0.0 or v1.0.0-rc.1)"
+        required: true
+        type: string
+      prerelease:
+        description: "Mark as prerelease"
+        required: true
+        default: true
+        type: boolean
+      target_ref:
+        description: "Git ref to release"
+        required: true
+        default: "main"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            games/potion-workshop/package-lock.json
+            games/side-scroller/package-lock.json
+            games/color-match/package-lock.json
+            games/fist-legend/package-lock.json
+            games/karma-quest/package-lock.json
+            games/sangoku-tap/package-lock.json
+
+      - name: Build six games
+        shell: bash
+        run: |
+          set -euo pipefail
+          for game in potion-workshop side-scroller color-match fist-legend karma-quest sangoku-tap; do
+            echo "::group::build $game"
+            (
+              cd "games/$game"
+              npm ci
+              npm run build
+            )
+            echo "::endgroup::"
+          done
+
+      - name: Package release ZIPs
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-packages
+          for game in potion-workshop side-scroller color-match fist-legend karma-quest sangoku-tap; do
+            (
+              cd "games/$game/dist"
+              zip -qr "../../../release-packages/$game.zip" .
+            )
+          done
+          printf "version=%s\ncommit=%s\ngenerated_utc=%s\n" \
+            "$VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > release-packages/BUILD-INFO.txt
+          (
+            cd release-packages
+            sha256sum *.zip > SHA256SUMS.txt
+          )
+          ls -lh release-packages
+
+      - name: Create GitHub Release and tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists."
+            exit 1
+          fi
+
+          args=(
+            release create "$VERSION"
+            release-packages/*.zip
+            release-packages/BUILD-INFO.txt
+            release-packages/SHA256SUMS.txt
+            --target "$GITHUB_SHA"
+            --title "$VERSION"
+          )
+
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease --notes-file RELEASE-CANDIDATE.md)
+          else
+            args+=(--notes-file CHANGELOG.md)
+          fi
+
+          gh "${args[@]}"
