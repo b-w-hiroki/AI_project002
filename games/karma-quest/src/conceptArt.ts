@@ -8,6 +8,7 @@ import { formatLeague, leagueSnapshot } from "./logic/league";
 import { advanceRaid, attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
+import { replayPrompt, summarizeJourney } from "./logic/journeySummary";
 import { outcomeArtKey } from "./outcomeArt";
 import { loadOutcome } from "./outcomeLoader";
 
@@ -912,6 +913,8 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const eventBody = text(scene, root, 304, 244, "", 21, "#43382e", "700", 200).setAlign("left").setName("chronicleBody");
   const previousTitle = text(scene, root, 225, 343, "", 21, "#35281e", "900", 350);
   const recordCount = text(scene, root, 225, 381, "", 21, "#43382e", "700", 350);
+  const replayHint = text(scene, root, 225, 401, "", 12, "#6a4a2a", "800", 350)
+    .setName("chronicleReplayHint");
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   const cityShade = scene.add.graphics();
   cityShade.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 0.98, 0.98).fillRect(34, 437, 382, 83);
@@ -935,6 +938,9 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     eventBody.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
     previousTitle.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
     recordCount.setText(`この旅で刻んだ選択：${history.length}件`);
+    const summary = summarizeJourney(history);
+    const prompt = replayPrompt(summary);
+    replayHint.setText(scene.lang === "en" ? prompt.en : prompt.ja);
     const values = deriveStats(scene.karma ?? initialKarma());
     [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
   });
@@ -970,6 +976,9 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   const heading = text(scene, root, 591, 136, "", 23, "#35281e", "900", 338);
   const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
   const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
+  const replayHint = final
+    ? text(scene, root, 591, 345, "", 14, "#6a4a2a", "800", 338).setName("landscape-replay-hint")
+    : undefined;
   if (final) {
     journalEmblem(scene, root, 510, 43);
     root.add(scene.add.graphics().lineStyle(1, 0xb79451, 0.55).lineBetween(420, 288, 762, 288));
@@ -1000,6 +1009,9 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       heading.setText(latest ? `${latest.year}年目 · ${latest.outcome.title}` : "旅の記録");
       body.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
       footer.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
+      const summary = summarizeJourney(history);
+      const prompt = replayPrompt(summary);
+      replayHint?.setText(scene.lang === "en" ? prompt.en : prompt.ja);
       const stats = deriveStats(scene.karma ?? initialKarma());
       [stats.atk, stats.def, stats.hp, stats.magic].forEach((value, i) => statValues[i]?.setText(String(value)));
     } else {
