@@ -177,9 +177,7 @@ export function routePreview(run: Expedition, route: Route): RoutePreview {
       ? "stable"
       : winChance >= roadChance
         ? "favored"
-        : roadChance - winChance >= 0.08
-          ? "risky"
-          : "stable";
+        : "risky";
   return {
     route,
     winChance,
