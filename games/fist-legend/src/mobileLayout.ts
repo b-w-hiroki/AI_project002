@@ -71,6 +71,9 @@ type MobileUi = {
   battleStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
+  resultBackdrop?: Phaser.GameObjects.Image;
+  resultHero?: Phaser.GameObjects.Image;
+  resultEnemy?: Phaser.GameObjects.Image;
   resultFinish: Phaser.GameObjects.Text;
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
@@ -215,6 +218,21 @@ function buildUi(scene: Runtime): MobileUi {
   const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, tr(lang, "交代", "SWITCH"), 0x505385, () => scene.switchFighter?.());
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
+  const resultBackdrop = scene.textures.exists("fl-bg-arena")
+    ? scene.add.image(225, 400, "fl-bg-arena").setDisplaySize(450, 800).setAlpha(0.34)
+    : undefined;
+  const resultHero = scene.textures.exists("fl-hero-fighter")
+    ? scene.add.image(118, 430, "fl-hero-fighter").setDisplaySize(150, 200).setAlpha(0.72)
+    : undefined;
+  const resultEnemy = scene.textures.exists("fl-enemy-fighter")
+    ? scene.add.image(332, 430, "fl-enemy-fighter").setDisplaySize(150, 200).setFlipX(true).setAlpha(0.42)
+    : undefined;
+  resultGroup.add([
+    ...(resultBackdrop ? [resultBackdrop] : []),
+    ...(resultHero ? [resultHero] : []),
+    ...(resultEnemy ? [resultEnemy] : []),
+  ]);
+
   const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
     .setStroke("#3a1a12", 7)
     .setAngle(-5);
@@ -238,6 +256,9 @@ function buildUi(scene: Runtime): MobileUi {
     battleStatus,
     battleTell,
     battleGauge,
+    resultBackdrop,
+    resultHero,
+    resultEnemy,
     resultFinish,
     resultHeading,
     resultStats,
@@ -433,8 +454,24 @@ function refresh(scene: Runtime): void {
   }
 
   if (scene.phase === "result") {
-    ui.chrome.fillStyle(0x120907, 0.97).fillRect(0, 0, width, height);
+    ui.chrome.fillStyle(0x120907, 0.58).fillRect(0, 0, width, height);
+    ui.resultBackdrop?.setPosition(width / 2, height / 2).setDisplaySize(width, height).setAlpha(0.34);
+    if (portrait) {
+      ui.resultHero?.setPosition(width * 0.28, 430).setDisplaySize(150, 200);
+      ui.resultEnemy?.setPosition(width * 0.72, 430).setDisplaySize(150, 200);
+    } else {
+      ui.resultHero?.setPosition(width * 0.26, 255).setDisplaySize(160, 214);
+      ui.resultEnemy?.setPosition(width * 0.74, 255).setDisplaySize(160, 214);
+    }
     const outcome = scene.lastOutcome;
+    if (ui.resultHero) {
+      ui.resultHero.clearTint().setAlpha(outcome === "playerWin" ? 0.92 : 0.28);
+      if (outcome === "enemyWin") ui.resultHero.setTint(0x777777);
+    }
+    if (ui.resultEnemy) {
+      ui.resultEnemy.clearTint().setAlpha(outcome === "enemyWin" ? 0.88 : 0.24);
+      if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
+    }
     ui.resultFinish
       .setPosition(width / 2, portrait ? 205 : 92)
       .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
