@@ -152,7 +152,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           # Pages 未設定のリポジトリでも自動で有効化する
           enablement: true
