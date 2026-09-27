@@ -34,3 +34,31 @@
 - Browser E2E / WebKit / build / typecheck / test are defined in GitHub Actions.
 - Latest-main workflow results are the source of truth for final validation.
 - Screenshot artifacts produced by Browser E2E / WebKit are the comparison source for final visual QA.
+
+
+## Final completion addendum — 2026-09-27
+
+Additional merged work after the original audit:
+- #184 Side final boss/slash + E2E visibility fix
+- #185 game-feel pass
+- #186 Potion onboarding
+- #187–#188 visual completion rounds
+- #189 Fist result stage + Karma E2E
+- #190 Side character presence
+- #191 Color result + WebKit
+- #192 Side touch UI theme
+- #193 Potion footer + Karma final
+- #194 Karma retry-position compatibility
+- #195 Karma route-fetch retry
+- #196 Side mobile readability
+- #197 Potion ambient-noise cleanup
+- #198 Side mobile GRD
+- #199 Karma final visual artifact
+- #200 Potion mobile brew CTA
+- #201–#202 Potion female-hero runtime alignment
+- #203 test alignment/stability
+- #204 final mobile spacing
+- #205 Fist mobile result stage
+
+Final gate: all five latest-main workflows passed on commit `4b351424515657ada138aa7f4304f37f17e62583`.
+Current release status is documented in [final-release-gate-2026-09-27.md](final-release-gate-2026-09-27.md).
