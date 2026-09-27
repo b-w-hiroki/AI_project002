@@ -3,7 +3,8 @@
 ## Result
 6タイトルの「モック寄せ + 見た目 + 遊びやすさ + モバイル操作」ラウンドを完了扱いとする。
 
-- release source commit: `4b351424515657ada138aa7f4304f37f17e62583`
+- visual-completion source commit: `4b351424515657ada138aa7f4304f37f17e62583`
+- rc1 gameplay/assets source after Karma cleanup: `07c08a65e2ac577b440272fc391eb077c8ff5f4b`
 - open PR: 0
 - GitHub Pages deployment: success
 - Browser E2E: success
@@ -31,7 +32,7 @@ Deploy workflow generated all six standalone ZIPs plus SHA256SUMS and BUILD-INFO
 
 - `color-match.zip` — ~1.2 MB
 - `fist-legend.zip` — ~4.8 MB
-- `karma-quest.zip` — ~94 MB
+- `karma-quest.zip` — ~66 MB
 - `potion-workshop.zip` — ~4.3 MB
 - `sangoku-tap.zip` — ~8.2 MB
 - `side-scroller.zip` — ~3.4 MB
@@ -84,3 +85,12 @@ The Pages deployment action reported the production URL and deployment success. 
   - `sangoku-tap/index.html`
 - Static HTML dependency check: 0 missing local script/link/image references across root + six game entry points.
 - Direct HTTP fetch of `github.io` is blocked by the external web inspection environment, so device/browser rendering on the public domain remains a manual smoke item rather than an automated failure.
+
+
+## Karma package reduction
+- Before cleanup: ~94 MB release ZIP.
+- After duplicate/legacy asset cleanup: ~66 MB release ZIP.
+- Reduction: ~28 MB.
+- Removed assets were unreferenced PNG duplicates or superseded outcome versions.
+- Current `public/images` has no duplicate basename PNG/WebP pairs.
+- CrazyGames initial-download behavior remains deferred and Readiness still passes.
