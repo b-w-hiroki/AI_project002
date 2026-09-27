@@ -80,8 +80,9 @@ jobs:
               zip -qr "../../../release-packages/$game.zip" .
             )
           done
+          TARGET_SHA="$(git rev-parse HEAD)"
           printf "version=%s\ncommit=%s\ngenerated_utc=%s\n" \
-            "$VERSION" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "$VERSION" "$TARGET_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             > release-packages/BUILD-INFO.txt
           (
             cd release-packages
@@ -102,12 +103,13 @@ jobs:
             exit 1
           fi
 
+          TARGET_SHA="$(git rev-parse HEAD)"
           args=(
             release create "$VERSION"
             release-packages/*.zip
             release-packages/BUILD-INFO.txt
             release-packages/SHA256SUMS.txt
-            --target "$GITHUB_SHA"
+            --target "$TARGET_SHA"
             --title "$VERSION"
           )
 
