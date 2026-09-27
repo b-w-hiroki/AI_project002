@@ -68,3 +68,19 @@ The workflow uploaded both `game-release-packages` and `github-pages` artifacts 
 
 ## Validation limitation
 The Pages deployment action reported the production URL and deployment success. The external web-fetch environment used in this review cannot directly open `github.io`, so production HTTP rendering could not be independently fetched here. Browser E2E/WebKit, build, packaging, and Pages deployment all passed in GitHub Actions.
+
+
+## Post-gate deployment verification
+- docs/review consolidation merge: `df2943054bf4682f6d48f5e1ba6b05c8b5827f1c`
+- Pages redeploy after docs-only merge: success.
+- `github-pages` artifact downloaded and unpacked.
+- Root `index.html`: present.
+- All six game entry points are present:
+  - `potion-workshop/index.html`
+  - `side-scroller/index.html`
+  - `color-match/index.html`
+  - `fist-legend/index.html`
+  - `karma-quest/index.html`
+  - `sangoku-tap/index.html`
+- Static HTML dependency check: 0 missing local script/link/image references across root + six game entry points.
+- Direct HTTP fetch of `github.io` is blocked by the external web inspection environment, so device/browser rendering on the public domain remains a manual smoke item rather than an automated failure.
