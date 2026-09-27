@@ -52,3 +52,13 @@ Latest measured release package sizes after Karma cleanup:
 - Sword Forest: ~3.4 MB
 
 Karma Quest was reduced from ~94 MB to ~66 MB by removing unreferenced duplicate/legacy art while preserving deferred runtime loading.
+
+
+## Release workflow
+After the human-device and portal gates pass, use GitHub Actions **Create GitHub Release**:
+1. Run the workflow manually.
+2. Enter `v1.0.0` (or a prerelease tag such as `v1.0.0-rc.1`).
+3. Choose prerelease true/false.
+4. Keep target_ref as `main` unless intentionally releasing another ref.
+
+The workflow rebuilds all six games, creates standalone ZIPs + SHA256SUMS + BUILD-INFO, creates the tag, and publishes the GitHub Release. It is manual-only so RC code does not auto-release before physical-device QA.
