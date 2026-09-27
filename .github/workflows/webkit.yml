@@ -55,7 +55,7 @@ jobs:
           fi
       - name: Upload WebKit visual QA
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.game }}-webkit-visual-qa
           path: games/${{ matrix.game }}/e2e/screenshots/

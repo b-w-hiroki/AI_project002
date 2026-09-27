@@ -188,7 +188,7 @@ jobs:
           test "$(stat -c%s "marketing/${{ matrix.game }}-preview-landscape.mp4")" -lt 52428800
           test "$(stat -c%s "marketing/${{ matrix.game }}-preview-portrait.mp4")" -lt 52428800
       - name: Upload CrazyGames marketing assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.game }}-crazygames-marketing
           path: games/${{ matrix.game }}/marketing/
