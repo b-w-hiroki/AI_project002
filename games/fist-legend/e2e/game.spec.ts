@@ -366,3 +366,14 @@ test("story mode persists cleared chapters and resumes from the next opponent", 
   await checkFrame(page, "portrait-story-complete");
 });
 
+
+
+test("corrupt persisted progress does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("fist_legend_currency_v1", "-999");
+    localStorage.setItem("fist_legend_team_v1", "{broken");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame);
+});

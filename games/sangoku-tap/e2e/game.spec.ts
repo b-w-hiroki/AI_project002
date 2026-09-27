@@ -269,3 +269,15 @@ test("campaign shows asynchronous army rating against ghost rivals", async ({ pa
   await checkFrame(page, "portrait-army-ranking");
 });
 
+
+
+test("corrupt persisted progress does not block startup", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("sangoku_tap_currency_v1", "-999");
+    localStorage.setItem("sangoku_tap_owned_generals_v1", "{broken");
+    localStorage.setItem("sangoku_expedition_v1", "{broken");
+  });
+  await page.reload();
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(() => !!window.__qaGame);
+});
