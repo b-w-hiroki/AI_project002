@@ -11,7 +11,7 @@ function loadNumber(key: string): number {
   const raw = localStorage.getItem(key);
   if (!raw) return 0;
   const n = Number(raw);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 export function loadCurrency(): number {
