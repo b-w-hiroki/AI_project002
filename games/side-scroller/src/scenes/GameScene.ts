@@ -1,4 +1,5 @@
 import { styleMultiplier, bossPhase, type CombatStyle } from "../logic/style";
+import { tacticalAdvice } from "../logic/tactics";
 import Phaser from "phaser";
 import {
   BuffKind,
@@ -233,6 +234,8 @@ export class GameScene extends Phaser.Scene {
   private styleChoosing = false;
   private lastStyleHit = -Infinity;
   private styleText!: Phaser.GameObjects.Text;
+  private tacticText!: Phaser.GameObjects.Text;
+  private currentWaveComposition?: import("../logic/waves").WaveComposition;
   private bossTell!: Phaser.GameObjects.Graphics;
   private playerState: PlayerState = newPlayer();
   private status: GameStatus = "playing";
@@ -404,6 +407,19 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(HUD_DEPTH);
+    this.tacticText = this.add
+      .text(400, 145, "", {
+        fontSize: "12px",
+        color: "#eef7e9",
+        backgroundColor: "#17362fe8",
+        padding: { x: 10, y: 4 },
+        align: "center",
+        wordWrap: { width: 560 },
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(HUD_DEPTH)
+      .setName("wave-tactic");
     this.lastStyleHit = -Infinity;
     this.chooseCombatStyle();
 
@@ -791,6 +807,7 @@ export class GameScene extends Phaser.Scene {
    */
   private spawnWave(wave: number): void {
     const composition = rollWaveComposition(wave);
+    this.currentWaveComposition = composition;
     this.waveEnemiesAlive = composition.enemies.length;
     this.waveActive = true;
     composition.enemies.forEach((spec, i) => {
@@ -802,6 +819,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.spawnWavePickups(wave);
     this.announceWave(wave, composition.kind);
+    this.refreshTacticalAdvice();
   }
 
   private announceWave(wave: number, kind: WaveKind): void {
@@ -1441,6 +1459,7 @@ export class GameScene extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(key) && this.playerState.equippedWeapon !== kind) {
         this.playerState = switchWeapon(this.playerState, kind);
         this.spawnFloatingText(this.player.x, this.player.y - 60, weaponLabel(this.lang, kind), "#7fd1ff");
+        this.refreshTacticalAdvice();
       }
     }
   }
@@ -2038,6 +2057,16 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  private refreshTacticalAdvice(): void {
+    if (!this.tacticText || !this.currentWaveComposition) return;
+    const advice = tacticalAdvice(
+      this.combatStyle,
+      this.playerState.equippedWeapon,
+      this.currentWaveComposition,
+    );
+    this.tacticText.setText(this.lang === "ja" ? advice.ja : advice.en);
+  }
+
   private chooseCombatStyle(): void {
     this.styleChoosing = true;
     this.physics.pause();
@@ -2092,6 +2121,7 @@ export class GameScene extends Phaser.Scene {
         this.combatStyle = style;
         this.styleChoosing = false;
         group.destroy(true);
+        this.refreshTacticalAdvice();
         this.physics.resume();
       });
       group.add([panel, label, tip, hit]);
