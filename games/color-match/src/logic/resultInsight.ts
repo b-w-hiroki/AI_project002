@@ -32,7 +32,7 @@ export function improvementFocus(results: readonly ChallengeResult[]): Improveme
     return "color";
   }
 
-  const summary = summarizeSession(results);
+  const summary = summarizeSession([...results]);
   if (summary.accuracy >= 0.85 && summary.avgReactionMs > 1000) return "speed";
   if (summary.accuracy < 0.85) {
     return contentAccuracy <= colorAccuracy ? "content" : "color";
