@@ -298,6 +298,14 @@ test("rival tell connects the counter move to the selected team and result next 
   });
   expect(stats).toContain("NEXT:");
   expect(stats).toContain("編成変更");
+  const visibleResultText = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return scene.children.list
+      .filter(node => node.visible && node.type === "Text")
+      .map(node => (node as Phaser.GameObjects.Text).text)
+      .join("\n");
+  });
+  expect(visibleResultText).toContain("編成変更");
   await checkFrame(page, "portrait-result-team-change-next");
 });
 
