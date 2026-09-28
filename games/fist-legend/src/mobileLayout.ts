@@ -1,9 +1,10 @@
 import Phaser from "phaser";
 import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
 import { MAX_HP, OUGI_GAUGE_MAX, type BattleOutcome, type BattleState, type MoveType } from "./logic/battle";
-import { OPPONENTS, type Opponent } from "./logic/opponent";
+import { OPPONENTS, plannedMove, type Opponent } from "./logic/opponent";
 import { loadCurrency, loadWinCount } from "./logic/progress";
 import { FIGHTERS, fighterById, type FighterId } from "./logic/team";
+import { teamTacticalRead } from "./logic/teamTactics";
 import {
   detectLang,
   fighterName,
@@ -482,8 +483,18 @@ function refresh(scene: Runtime): void {
       ? `${tr(lang, "物語", "Story")} ${Math.min(3, (scene.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${scene.storyProgress ?? 0}/3`
       : scene.seriesActive
         ? `${tr(lang, "3連戦", "Gauntlet")} ${scene.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (scene.seriesIndex ?? 0) + 1)}/3`
-        : tr(lang, "次は相手の構えをさらに読もう", "Read the rival's stance even more carefully next time.");
-    ui.resultStats.setPosition(width / 2, portrait ? 345 : 208).setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()}\n${modeText}`);
+        : "";
+    const firstMove = plannedMove(scene.opponent ?? "rush", 0, null);
+    const retryRead = teamTacticalRead(scene.selectedTeam ?? ["ryuga"], firstMove);
+    const tacticalNext = retryRead.specialist
+      ? `${tr(lang, "再挑戦", "Retry")}: ${fighterName(lang, retryRead.specialist)} → ${moveLabel(lang, retryRead.counterMove)} (+18%)`
+      : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)} ${tr(lang, "得意の拳士を追加", "specialist needed") }`;
+    const nextLine = outcome === "playerWin"
+      ? modeText || tr(lang, "同じ相手へ再挑戦", "Retry the same rival")
+      : `${modeText ? `${modeText}\n` : ""}${tacticalNext}`;
+    ui.resultStats
+      .setPosition(width / 2, portrait ? 338 : 202)
+      .setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()}\n${nextLine}`);
     const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
     if (retryLabel) {
       retryLabel.setText(

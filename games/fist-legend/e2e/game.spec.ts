@@ -298,6 +298,28 @@ test("rival tell connects the counter move to the selected team and result next 
   });
   expect(stats).toContain("NEXT:");
   expect(stats).toContain("編成変更");
+  const visibleResultText = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collect = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+      out: string[] = [],
+    ): string[] => {
+      for (const node of nodes) {
+        const visible = parentVisible && ("visible" in node
+          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
+          : true);
+        if (!visible) continue;
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") {
+          collect((node as Phaser.GameObjects.Container).list, visible, out);
+        }
+      }
+      return out;
+    };
+    return collect(scene.children.list).join("\n");
+  });
+  expect(visibleResultText).toContain("編成変更");
   await checkFrame(page, "portrait-result-team-change-next");
 });
 
