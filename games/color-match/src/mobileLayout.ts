@@ -20,6 +20,7 @@ import {
 } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
 import { tr, writingModeLabel, type Lang } from "./logic/i18n";
+import { improvementFocus, type ImprovementFocus } from "./logic/resultInsight";
 
 type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
@@ -151,6 +152,21 @@ function sky(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
     g.lineStyle(6, color, 0.2).beginPath().arc(397, 445, 300 - i * 8, Math.PI * 1.08, Math.PI * 1.92).strokePath();
   });
   root.add(g);
+}
+
+function improvementText(lang: Lang, focus: ImprovementFocus): string {
+  switch (focus) {
+    case "switch":
+      return tr(lang, "ルール切替直後の1問を丁寧に", "Stabilize the first answer after a rule switch");
+    case "content":
+      return tr(lang, "文字の意味判断を20秒練習", "Practice WORD MEANING for 20 seconds");
+    case "color":
+      return tr(lang, "文字の色判断を20秒練習", "Practice INK COLOR for 20 seconds");
+    case "speed":
+      return tr(lang, "正確さを保って1秒以内を狙う", "Keep accuracy and push below 1 second");
+    case "flow":
+      return tr(lang, "5連続高速正解でFLOWを伸ばす", "Build FLOW with 5 fast correct answers");
+  }
 }
 
 function build(scene: Runtime): LandscapeUi {
@@ -346,9 +362,10 @@ function refresh(scene: Runtime): void {
       const reaction = value.reactionSamples ? Math.round(metricAvgReaction(value)) : 0;
       return `${label} ${accuracy}%${reaction ? ` / ${reaction}ms` : ""}`;
     };
+    const focus = improvementFocus(scene.results ?? []);
     ui.resultStats.setText(
       `${scene.sessionMode === "practice" ? tr(scene.lang ?? "en", "20秒弱点練習", "20-Second Practice") : tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge")} · ${tr(scene.lang ?? "en", "正答率", "Accuracy")} ${Math.round(summary.accuracy * 100)}% · ${tr(scene.lang ?? "en", "平均", "Avg")} ${Math.round(summary.avgReactionMs)}ms\n` +
-      `${metric("content", tr(scene.lang ?? "en", "意味", "Word"))} · ${metric("color", tr(scene.lang ?? "en", "色", "Color"))} · ${metric("switch", tr(scene.lang ?? "en", "切替", "Switch"))}`,
+      `${metric("content", tr(scene.lang ?? "en", "意味", "Word"))} · ${metric("color", tr(scene.lang ?? "en", "色", "Color"))} · ${metric("switch", tr(scene.lang ?? "en", "切替", "Switch"))}\nNEXT: ${improvementText(scene.lang ?? "en", focus)}`,
     );
   }
 }
