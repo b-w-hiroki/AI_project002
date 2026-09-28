@@ -292,3 +292,28 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
 });
+
+
+test("wave tactics explain how the selected stance should fight", async ({ page }) => {
+  await page.goto("/?visualqa=battle");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+
+  const chainAdvice = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "combatStyle", "chain");
+    Reflect.get(scene, "refreshTacticalAdvice").call(scene);
+    return (scene.children.getByName("wave-tactic") as Phaser.GameObjects.Text | null)?.text ?? "";
+  });
+  const drawAdvice = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "combatStyle", "draw");
+    Reflect.get(scene, "refreshTacticalAdvice").call(scene);
+    return (scene.children.getByName("wave-tactic") as Phaser.GameObjects.Text | null)?.text ?? "";
+  });
+
+  expect(chainAdvice.length).toBeGreaterThan(10);
+  expect(drawAdvice.length).toBeGreaterThan(10);
+  expect(chainAdvice).not.toBe(drawAdvice);
+  await page.screenshot({ path: "e2e/screenshots/phone-wave-tactic.png", animations: "disabled" });
+});
