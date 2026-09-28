@@ -215,6 +215,23 @@ test("result names one improvement and retries in one tap", async ({ page }) => 
     return collect(scene.children.list).join("\n");
   });
   expect(visibleText).toContain("NEXT: ルール切替直後の1問を丁寧に");
+  const portraitNext = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "result-next-focus" && node.type === "Text") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const node = find(scene.children.list);
+    return node ? { text: node.text, visible: node.visible, depth: node.depth } : null;
+  });
+  expect(portraitNext?.visible).toBe(true);
+  expect(portraitNext?.text).toBe("NEXT: ルール切替直後の1問を丁寧に");
   await checkFrame(page, "portrait-result-next-focus");
 
   await tapPoint(page, 225, 510);
