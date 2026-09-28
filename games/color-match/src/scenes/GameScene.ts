@@ -34,7 +34,8 @@ import {
   saveWritingMode,
   weakestJudgeMode,
 } from "../logic/progress";
-import { detectLang, t, writingModeLabel, type Lang } from "../logic/i18n";
+import { detectLang, t, tr, writingModeLabel, type Lang } from "../logic/i18n";
+import { improvementFocus, type ImprovementFocus } from "../logic/resultInsight";
 import { cg } from "../platform/crazygames";
 import { sfx } from "../platform/audio";
 import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
@@ -1021,8 +1022,9 @@ export class GameScene extends Phaser.Scene {
     heading.setScale(0.78);
     this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
     if (grade === "S" || grade === "A") this.cameras.main.flash(120, 255, 222, 110);
+    const focus = improvementFocus(this.results);
     stats.setText(
-      `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt`,
+      `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt\nNEXT: ${improvementText(this.lang, focus)}`,
     );
     const metricText = (key: "content" | "color" | "switch", label: string) => {
       const metric = performance[key];
@@ -1038,6 +1040,21 @@ export class GameScene extends Phaser.Scene {
       );
 
     this.resultGroup.setVisible(true);
+  }
+}
+
+function improvementText(lang: Lang, focus: ImprovementFocus): string {
+  switch (focus) {
+    case "switch":
+      return tr(lang, "ルール切替直後の1問を丁寧に", "Stabilize the first answer after a rule switch");
+    case "content":
+      return tr(lang, "文字の意味判断を20秒練習", "Practice WORD MEANING for 20 seconds");
+    case "color":
+      return tr(lang, "文字の色判断を20秒練習", "Practice INK COLOR for 20 seconds");
+    case "speed":
+      return tr(lang, "正確さを保って1秒以内を狙う", "Keep accuracy and push below 1 second");
+    case "flow":
+      return tr(lang, "5連続高速正解でFLOWを伸ばす", "Build FLOW with 5 fast correct answers");
   }
 }
 
