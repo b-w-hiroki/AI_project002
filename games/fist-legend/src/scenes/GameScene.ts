@@ -48,6 +48,7 @@ import {
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
+import { teamTacticalRead } from "../logic/teamTactics";
 import {
   detectLang,
   fighterName,
@@ -528,6 +529,7 @@ export class GameScene extends Phaser.Scene {
     this.activeFighterIndex = (this.activeFighterIndex + 1) % this.selectedTeam.length;
     const active = fighterById(this.selectedTeam[this.activeFighterIndex] ?? "ryuga");
     this.refreshTeamSelection();
+    this.refreshTell();
     this.playSound(sfx.buttonTap);
 
     const ring = this.add
@@ -1093,8 +1095,10 @@ export class GameScene extends Phaser.Scene {
 
   private refreshTell(): void {
     this.refreshOpponentVisual();
+    const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
+    const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
     this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
+${tr(this.lang, "有利手", "COUNTER")}: ${moveLabel(this.lang, read.counterMove)} · ${specialist}${read.specialist ? " +18%" : ""}`);
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     this.tweens.add({
@@ -1244,7 +1248,14 @@ ${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(t
         ? `\n${tr(this.lang, "物語", "STORY")} COMPLETE · ${storyClear(this.lang, chapter.id, chapter.clearText)} · ${tr(this.lang, "ボーナス", "Bonus")} +${storyBonus}`
         : `\n${storyTitle(this.lang, chapter.id, chapter.title)} · ${outcome === "playerWin" ? storyClear(this.lang, chapter.id, chapter.clearText) : storyIntro(this.lang, chapter.id, chapter.intro)}`
       : "";
-    stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}`);
+    const retryRead = teamTacticalRead(this.selectedTeam, plannedMove(this.opponent, 0, null));
+    const retrySpecialist = retryRead.specialist ? fighterName(this.lang, retryRead.specialist) : null;
+    const nextDecision = outcome === "playerWin"
+      ? this.resultPrimaryLabel()
+      : retrySpecialist
+        ? `${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
+        : `${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
+    stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}\nNEXT: ${nextDecision}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
     const resultHero = this.resultGroup.getByName("resultHero") as Phaser.GameObjects.Image | null;
     const resultEnemy = this.resultGroup.getByName("resultEnemy") as Phaser.GameObjects.Image | null;
