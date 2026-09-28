@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import { WRITING_MODES, WRITING_MODE_LABEL, summarizeSession, type WritingMode } from "./logic/round";
 import type { ChallengeResult } from "./logic/challenge";
+import { improvementFocus, type ImprovementFocus } from "./logic/resultInsight";
 import { loadBestScore, loadBestTurbo } from "./logic/progress";
 import { GameScene } from "./scenes/GameScene";
 
@@ -22,9 +23,25 @@ type MockUi = {
   modeLabels: Phaser.GameObjects.Text[];
   score: Phaser.GameObjects.Text;
   stats: Phaser.GameObjects.Text;
+  nextGoal: Phaser.GameObjects.Text;
 };
 
 const uiByScene = new WeakMap<object, MockUi>();
+
+function improvementText(focus: ImprovementFocus): string {
+  switch (focus) {
+    case "switch":
+      return "ルール切替直後の1問を丁寧に";
+    case "content":
+      return "文字の意味判断を20秒練習";
+    case "color":
+      return "文字の色判断を20秒練習";
+    case "speed":
+      return "正確さを保って1秒以内を狙う";
+    case "flow":
+      return "5連続高速正解でFLOWを伸ばす";
+  }
+}
 
 function invoke(scene: Runtime, method: string, ...args: unknown[]): void {
   const fn = Reflect.get(scene, method);
@@ -106,9 +123,9 @@ function build(scene: Runtime): MockUi {
   if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 315, "cm-mascot").setDisplaySize(150, 150));
   const stats = label(scene, result, 225, 455, "", 17, "#ffffff");
   button(scene, result, 225, 650, 330, 64, "もう一度あそぶ", () => invoke(scene, "startSession"));
-  label(scene, result, 225, 712, "次は自己ベストを更新しよう", 13, "#173b63");
+  const nextGoal = label(scene, result, 225, 712, "", 13, "#173b63").setName("result-next-focus");
 
-  const ui = { root, title, result, modeLabels, score, stats };
+  const ui = { root, title, result, modeLabels, score, stats, nextGoal };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -138,6 +155,7 @@ function refresh(scene: Runtime): void {
     });
     ui.score.setText(`SCORE ${summary.score}`);
     ui.stats.setText(`正答率 ${Math.round(summary.accuracy * 100)}%\nMAX CHAIN ${maxStreak}\n平均反応 ${Math.round(summary.avgReactionMs)}ms\nTURBO ${scene.turboPoints ?? 0}pt`);
+    ui.nextGoal.setText(`NEXT: ${improvementText(improvementFocus(results))}`);
   }
 }
 
