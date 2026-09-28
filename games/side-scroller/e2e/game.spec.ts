@@ -20,7 +20,7 @@ async function canvasPoint(page: Page, x: number, y: number): Promise<{ x: numbe
 
 async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
   const point = await canvasPoint(page, x, y);
-  await page.touchscreen.tap(point.x, point.y);
+  await page.mouse.click(point.x, point.y);
 }
 
 async function enterBattleForVisualQa(page: Page): Promise<void> {
