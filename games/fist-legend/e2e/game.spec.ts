@@ -265,6 +265,43 @@ test("battle switch cycles through the selected team on touch controls", async (
   await checkFrame(page, "landscape-switch-gaku");
 });
 
+test("rival tell connects the counter move to the selected team and result next step", async ({ page }) => {
+  const reads = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "gaku"]);
+    Reflect.set(scene, "opponent", "rush");
+    Reflect.get(scene, "startBattle").call(scene);
+    const tell = Reflect.get(scene, "tell") as Phaser.GameObjects.Text;
+    const first = tell.text;
+
+    Reflect.set(scene, "selectedTeam", ["ryuga", "mei"]);
+    Reflect.set(scene, "nextEnemyMove", "kick");
+    Reflect.get(scene, "refreshTell").call(scene);
+    const second = tell.text;
+    return { first, second };
+  });
+
+  expect(reads.first).toContain("有利手: 蹴 · 岳 +18%");
+  expect(reads.second).toContain("有利手: 気 · 冥 +18%");
+  await checkFrame(page, "portrait-team-tactical-read");
+
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  const stats = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return ((Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text).text;
+  });
+  expect(stats).toContain("NEXT:");
+  expect(stats).toContain("編成変更");
+  await checkFrame(page, "portrait-result-team-change-next");
+});
+
+
 test("three-battle series advances through all opponents and clears", async ({ page }) => {
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
