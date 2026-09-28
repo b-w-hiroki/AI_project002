@@ -181,6 +181,46 @@ test("portrait result keeps the mock hierarchy", async ({ page }) => {
   await checkFrame(page, "portrait-result");
 });
 
+test("result names one improvement and retries in one tap", async ({ page }) => {
+  await tapPoint(page, 225, 705);
+  await expect.poll(() => phase(page)).toBe("playing");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "results", [
+      { correct: true, timedOut: false, reactionMs: 650, mode: "content", switched: false },
+      { correct: false, timedOut: false, reactionMs: 760, mode: "color", switched: true },
+      { correct: false, timedOut: false, reactionMs: 720, mode: "content", switched: true },
+      { correct: true, timedOut: false, reactionMs: 680, mode: "color", switched: false },
+    ]);
+    Reflect.get(scene, "endSession").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  const visibleText = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const collect = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+      out: string[] = [],
+    ): string[] => {
+      for (const node of nodes) {
+        const visible = parentVisible && ("visible" in node
+          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
+          : true);
+        if (!visible) continue;
+        if (node.type === "Text") out.push((node as Phaser.GameObjects.Text).text);
+        if (node.type === "Container") collect((node as Phaser.GameObjects.Container).list, visible, out);
+      }
+      return out;
+    };
+    return collect(scene.children.list).join("\n");
+  });
+  expect(visibleText).toContain("NEXT: ルール切替直後の1問を丁寧に");
+  await checkFrame(page, "portrait-result-next-focus");
+
+  await tapPoint(page, 225, 510);
+  await expect.poll(() => phase(page)).toBe("playing");
+});
+
 test("high-accuracy result shows an S grade in portrait and landscape", async ({ page }) => {
   await tapPoint(page, 225, 705);
   await expect.poll(() => phase(page)).toBe("playing");
