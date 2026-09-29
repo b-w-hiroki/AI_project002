@@ -142,19 +142,19 @@ function build(scene: Runtime): LandscapeUi {
   text(scene, root, 24, 25, tr(scene.lang ?? "en", "カルマクエスト", "Karma Quest"), 27, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#244b63", 5);
   text(scene, root, 26, 51, tr(scene.lang ?? "en", "CHOICE RPG — 選択が世界と勇者を変える", "CHOICE RPG — Your decisions shape the world and hero"), 9, "#eef8ff", "800").setOrigin(0, 0.5);
 
-  panel(scene, title, 260, 238, 440, 300, 0x14251e, 0xc8a45a, 0.9, 20);
+  panel(scene, title, 250, 238, 420, 300, 0x14251e, 0xc8a45a, 0.9, 20);
   if (scene.textures.exists("kq-hero-warrior")) {
-    const hero = scene.add.image(145, 238, "kq-hero-warrior");
-    hero.setScale(Math.min(190 / hero.width, 255 / hero.height));
+    const hero = scene.add.image(130, 238, "kq-hero-warrior");
+    hero.setScale(Math.min(215 / hero.width, 280 / hero.height));
     title.add(hero);
   }
-  text(scene, title, 340, 140, tr(scene.lang ?? "en", "12年の選択で\n自分だけの勇者伝説をつくる", "Twelve years of choices\ncreate your own hero legend"), 22, "#fff5dc", "900");
-  text(scene, title, 340, 225, tr(scene.lang ?? "en", "派閥の要望、道中の出来事、討伐の結果。\n何を選び、何を神へ報告したかで\n次の年の世界と勇者が変わる。", "Faction requests, road encounters, and hunt results.\nWhat you choose—and what you report—\nchanges the next year."), 13, "#dce9df", "700");
-  panel(scene, title, 650, 178, 250, 155, 0xf1e7ca, 0xb68c49, 0.98, 12);
-  text(scene, title, 650, 135, "LEGEND RECORD", 11, "#6b5431", "900");
-  text(scene, title, 650, 178, `${tr(scene.lang ?? "en", "最高到達", "Best Year")} ${loadBestStage()}`, 21, "#4c493f", "900");
-  text(scene, title, 650, 213, `${tr(scene.lang ?? "en", "累計評価", "Total Evaluation")} ${loadTotalEvaluation()}`, 13, "#76684f", "800");
-  button(scene, title, 650, 310, 250, 66, tr(scene.lang ?? "en", "旅を始める", "Begin Journey"), () => invoke(scene, "startRun"), 0x356f68);
+  text(scene, title, 330, 140, tr(scene.lang ?? "en", "12年の選択で\n自分だけの勇者伝説をつくる", "Twelve years of choices\ncreate your own hero legend"), 22, "#fff5dc", "900");
+  text(scene, title, 330, 225, tr(scene.lang ?? "en", "派閥の要望、道中の出来事、討伐の結果。\n何を選び、何を神へ報告したかで\n次の年の世界と勇者が変わる。", "Faction requests, road encounters, and hunt results.\nWhat you choose—and what you report—\nchanges the next year."), 13, "#dce9df", "700");
+  panel(scene, title, 660, 178, 220, 145, 0xf1e7ca, 0xb68c49, 0.98, 12);
+  text(scene, title, 660, 138, "LEGEND RECORD", 11, "#6b5431", "900");
+  text(scene, title, 660, 178, `${tr(scene.lang ?? "en", "最高到達", "Best Year")} ${loadBestStage()}`, 21, "#4c493f", "900");
+  text(scene, title, 660, 210, `${tr(scene.lang ?? "en", "累計評価", "Total Evaluation")} ${loadTotalEvaluation()}`, 13, "#76684f", "800");
+  button(scene, title, 660, 310, 230, 70, tr(scene.lang ?? "en", "旅を始める", "Begin Journey"), () => invoke(scene, "startRun"), 0x356f68);
 
   panel(scene, karma, 215, 246, 370, 330, 0x12231c, 0xc8a45a, 0.9, 18);
   let hero: Phaser.GameObjects.Image | undefined;
