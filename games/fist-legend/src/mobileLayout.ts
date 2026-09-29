@@ -286,7 +286,7 @@ function applySurface(scene: Runtime, width: number, height: number): void {
   const viewport = window.visualViewport;
   const portrait = height > width;
   const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
-  const availableHeight = (viewport?.height ?? window.innerHeight) - (portrait ? 82 : 8);
+  const availableHeight = (viewport?.height ?? window.innerHeight) - 8;
   const fit = Math.min(availableWidth / width, availableHeight / height);
   scene.scale.canvas.style.setProperty("width", `${Math.floor(width * fit)}px`, "important");
   scene.scale.canvas.style.setProperty("height", `${Math.floor(height * fit)}px`, "important");
