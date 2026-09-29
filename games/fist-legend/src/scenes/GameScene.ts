@@ -1098,7 +1098,7 @@ export class GameScene extends Phaser.Scene {
     const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
     const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
     this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${tr(this.lang, "有利手", "COUNTER")}: ${moveLabel(this.lang, read.counterMove)} · ${specialist}${read.specialist ? " +18%" : ""}`);
+${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     this.tweens.add({
