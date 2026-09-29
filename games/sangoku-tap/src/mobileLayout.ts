@@ -82,8 +82,13 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y
     const color = !enabled ? 0x373131 : down ? 0x7e221b : accent;
     g.fillStyle(0x000000, 0.3).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 13);
     g.fillStyle(color, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 13);
-    g.fillStyle(0xffffff, enabled ? 0.1 : 0.03).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.28, 10);
-    g.lineStyle(1.7, enabled ? 0xe7ba70 : 0x66605d, enabled ? 0.84 : 0.4).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    g.fillStyle(0x5b1713, enabled ? 0.34 : 0.08).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 9);
+    g.fillStyle(0xffffff, enabled ? 0.12 : 0.03).fillRoundedRect(x - w / 2 + 6, y - h / 2 + 5, w - 12, Math.max(6, h * 0.2), 8);
+    g.lineStyle(2.4, enabled ? 0xe7ba70 : 0x66605d, enabled ? 0.9 : 0.4).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    g.lineStyle(1, enabled ? 0xffe1a2 : 0x77706b, enabled ? 0.5 : 0.2).strokeRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 9);
+    if (enabled) {
+      g.fillStyle(0xe7ba70, 0.82).fillCircle(x - w / 2 + 10, y, 2.2).fillCircle(x + w / 2 - 10, y, 2.2);
+    }
   };
   paint();
   root.add(g);
