@@ -87,8 +87,11 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y
     const color = state === "pressed" ? Phaser.Display.Color.ValueToColor(accent).darken(12).color : accent;
     g.fillStyle(0x07110d, 0.28).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 13);
     g.fillStyle(color, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 13);
-    g.fillStyle(0xffffff, 0.12).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.26, 10);
-    g.lineStyle(1.6, 0xf0d394, 0.68).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    g.fillStyle(0x0c1712, 0.18).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 9);
+    g.fillStyle(0xffffff, 0.13).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, Math.max(7, h * 0.2), 8);
+    g.lineStyle(2.4, 0xf0d394, 0.78).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 13);
+    g.lineStyle(1, 0xffefc2, 0.4).strokeRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 9);
+    g.fillStyle(0xf0d394, 0.72).fillCircle(x - w / 2 + 10, y, 2).fillCircle(x + w / 2 - 10, y, 2);
     if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokeRoundedRect(x - w / 2 + 4, y - h / 2 + 4, w - 8, h - 8, 10);
     if (state === "processing") g.fillStyle(0x07110d, 0.42).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6, 10);
   };

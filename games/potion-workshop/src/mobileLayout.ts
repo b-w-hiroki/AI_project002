@@ -96,9 +96,13 @@ function background(scene: Phaser.Scene, root: Phaser.GameObjects.Container, wid
 
 function addButtonChrome(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, accent: number): void {
   const g = scene.add.graphics();
-  g.fillStyle(accent, 0.94).fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
-  g.fillStyle(0xffffff, 0.1).fillRoundedRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h * 0.25, 9);
-  g.lineStyle(1.4, 0xffffff, 0.42).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+  g.fillStyle(0x1b100c, 0.32).fillRoundedRect(x - w / 2 + 3, y - h / 2 + 4, w, h, 12);
+  g.fillStyle(accent, 0.96).fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+  g.fillStyle(0x172a27, 0.16).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 8);
+  g.fillStyle(0xffffff, 0.14).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, Math.max(7, h * 0.2), 8);
+  g.lineStyle(2, 0xf4dfae, 0.62).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+  g.lineStyle(1, 0xffffff, 0.28).strokeRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 8);
+  g.fillStyle(0xf4dfae, 0.7).fillCircle(x - w / 2 + 9, y, 2).fillCircle(x + w / 2 - 9, y, 2);
   root.add(g);
 }
 

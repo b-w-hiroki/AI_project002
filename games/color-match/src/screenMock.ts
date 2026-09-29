@@ -60,17 +60,23 @@ function label(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: num
 function panel(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, fill = 0x163f6b): void {
   const g = scene.add.graphics();
   g.fillStyle(0x0d2948, 0.25).fillRoundedRect(x - w / 2 + 4, y - h / 2 + 6, w, h, 20);
-  g.fillStyle(fill, 0.96).fillRoundedRect(x - w / 2, y - h / 2, w, h, 20);
-  g.lineStyle(2, 0x8ee8ff, 0.8).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 20);
+  g.fillStyle(0x0b2f57, 0.98).fillRoundedRect(x - w / 2, y - h / 2, w, h, 20);
+  g.fillStyle(fill, 0.9).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 16);
+  g.fillStyle(0xffffff, 0.1).fillRoundedRect(x - w / 2 + 8, y - h / 2 + 8, w - 16, Math.max(7, h * 0.12), 12);
+  g.lineStyle(3, 0x8ee8ff, 0.9).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 20);
+  g.lineStyle(1, 0xffffff, 0.3).strokeRoundedRect(x - w / 2 + 6, y - h / 2 + 6, w - 12, h - 12, 15);
   parent.add(g);
 }
 
 function button(scene: Runtime, parent: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, text: string, action: () => void): void {
   const g = scene.add.graphics();
+  g.fillStyle(0xa93c2a, 0.45).fillRoundedRect(x - w / 2 + 4, y - h / 2 + 6, w, h, 17);
   g.fillStyle(0xff713d, 1).fillRoundedRect(x - w / 2, y - h / 2, w, h, 17);
-  g.lineStyle(3, 0xffd469, 0.9).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 17);
+  g.fillStyle(0xffa35f, 0.8).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, Math.max(8, h * 0.22), 12);
+  g.lineStyle(4, 0xffd469, 0.96).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 17);
+  g.lineStyle(1, 0xffffff, 0.5).strokeRoundedRect(x - w / 2 + 6, y - h / 2 + 6, w - 12, h - 12, 12);
   parent.add(g);
-  label(scene, parent, x, y, text, 20);
+  label(scene, parent, x, y, text, 20).setStroke("#9d321f", 4);
   const hit = scene.add.zone(x, y, w, Math.max(52, h)).setInteractive({ useHandCursor: true });
   hit.on("pointerdown", action);
   parent.add(hit);
