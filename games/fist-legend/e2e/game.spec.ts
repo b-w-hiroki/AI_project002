@@ -281,8 +281,10 @@ test("rival tell connects the counter move to the selected team and result next 
     return { first, second };
   });
 
-  expect(reads.first).toContain("有利手: 蹴 · 岳 +18%");
-  expect(reads.second).toContain("有利手: 気 · 冥 +18%");
+  expect(reads.first).toContain("編成の得意: 岳 +18%");
+  expect(reads.first).not.toContain("有利手:");
+  expect(reads.second).toContain("編成の得意: 冥 +18%");
+  expect(reads.second).not.toContain("有利手:");
   await checkFrame(page, "portrait-team-tactical-read");
 
   await page.evaluate(() => {
