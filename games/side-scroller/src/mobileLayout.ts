@@ -97,12 +97,18 @@ function makeButton(
   onDown: () => void,
   onUp?: () => void,
 ): TouchButton {
+  const shadow = scene.add.circle(3, 5, Math.max(24, radius), 0x071018, 0.38);
+  const outer = scene.add.circle(0, 0, Math.max(24, radius), 0x142331, 0.98)
+    .setStrokeStyle(radius >= 34 ? 3 : 2, 0xd8eef7, 0.88);
   const bg = scene.add
-    .circle(0, 0, Math.max(24, radius), color, 0.86)
-    .setStrokeStyle(radius >= 34 ? 3 : 2, 0xe9f7ff, 0.84)
+    .circle(0, 0, Math.max(19, radius - 5), color, 0.92)
+    .setStrokeStyle(1.5, 0x7fb6c9, 0.78)
     .setInteractive({ useHandCursor: true });
-  const labelText = text(scene, 0, 0, label, radius >= 36 ? 17 : 13);
-  const buttonRoot = scene.add.container(x, y, [bg, labelText]);
+  const shine = scene.add.arc(0, -radius * 0.28, Math.max(10, radius * 0.52), 200, 340, false, 0xeafaff, 0.16);
+  const notchTop = scene.add.rectangle(0, -radius + 5, Math.max(10, radius * 0.34), 3, 0xd8eef7, 0.72);
+  const notchBottom = scene.add.rectangle(0, radius - 5, Math.max(10, radius * 0.34), 3, 0xd8eef7, 0.46);
+  const labelText = text(scene, 0, 0, label, radius >= 36 ? 17 : 13).setStroke("#071018", 4);
+  const buttonRoot = scene.add.container(x, y, [shadow, outer, bg, shine, notchTop, notchBottom, labelText]);
   buttonRoot.setSize(radius * 2, radius * 2);
 
   const release = () => {
