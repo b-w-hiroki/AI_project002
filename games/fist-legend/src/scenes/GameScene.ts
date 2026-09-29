@@ -110,7 +110,7 @@ const IMG = {
 } as const;
 
 const FIGHTER_ART: Readonly<Record<FighterId, string>> = {
-  ryuga: "fl-fighter-ryuga",
+  ryuga: IMG.hero,
   renka: "fl-fighter-renka",
   gaku: "fl-fighter-gaku",
   mei: "fl-fighter-mei",
