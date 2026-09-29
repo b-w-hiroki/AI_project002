@@ -39,7 +39,12 @@
       .hub-return { position:fixed; z-index:9999; top:calc(8px + env(safe-area-inset-top)); left:calc(8px + env(safe-area-inset-left)); min-height:34px; display:flex; align-items:center; padding:0 11px; border:1px solid rgba(255,255,255,.18); border-radius:999px; background:rgba(7,15,11,.74); backdrop-filter:blur(12px); color:#fff; text-decoration:none; font:800 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; letter-spacing:.04em; touch-action:manipulation; }
       @media (max-width:680px) { .game-rail, .hub-return, #game::before, #game::after { display:none; } #game { filter:none; } #game canvas { max-width:calc(100vw - 6px)!important; max-width:calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right) - 6px)!important; max-height:calc(100vh - 6px)!important; max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 6px)!important; border-radius:0; } }
       @media (max-height:520px) { .game-rail, .hub-return, #game::before, #game::after { display:none; } #game { filter:none; } #game canvas { max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 8px); } }
-    </style>
+          /* Mock-fidelity: the game artwork owns the viewport. Hub chrome stays out of play/review captures. */
+      .hub-return, .game-rail { display:none !important; }
+      #game { filter:none; }
+      #game canvas { max-width:100%; max-height:100%; border-radius:0; }
+      #game::before, #game::after { display:none; }
+</style>
   </head>
   <body>
     <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る" data-ja-aria="ゲーム一覧へ戻る" data-en-aria="Back to game list">← GAME LAB</a>
