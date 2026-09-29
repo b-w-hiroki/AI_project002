@@ -228,7 +228,7 @@ test("battle switch cycles through the selected team on touch controls", async (
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
-  const switchPoint = await page.evaluate(() => {
+  const readSwitchPoint = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const findByName = (
       nodes: Phaser.GameObjects.GameObject[],
@@ -251,7 +251,8 @@ test("battle switch cycles through the selected team on touch controls", async (
     const bounds = button.getBounds();
     return { x: bounds.centerX, y: bounds.centerY };
   });
-  expect(switchPoint).not.toBeNull();
+  await expect.poll(readSwitchPoint).not.toBeNull();
+  const switchPoint = await readSwitchPoint();
   await tapPoint(page, switchPoint!.x, switchPoint!.y);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
