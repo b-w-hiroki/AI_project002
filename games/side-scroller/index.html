@@ -57,7 +57,12 @@
       html[data-layout-mode="phone-landscape"] .game-rail--bottom {
         display:none !important;
       }
-    </style>
+          /* Mock-fidelity: the game artwork owns the viewport. Hub chrome stays out of play/review captures. */
+      .hub-return, .game-rail { display:none !important; }
+      #game { filter:none; }
+      #game canvas { max-width:100%; max-height:100%; border-radius:0; }
+      #game::before, #game::after { display:none; }
+</style>
   </head>
   <body>
     <a class="hub-return" href="../" aria-label="ゲーム一覧へ戻る" data-ja-aria="ゲーム一覧へ戻る" data-en-aria="Back to game list">← GAME LAB</a>
