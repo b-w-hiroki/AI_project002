@@ -156,37 +156,37 @@ function build(scene: Runtime): LandscapeUi {
   text(scene, title, 650, 213, `${tr(scene.lang ?? "en", "累計評価", "Total Evaluation")} ${loadTotalEvaluation()}`, 13, "#76684f", "800");
   button(scene, title, 650, 310, 250, 66, tr(scene.lang ?? "en", "旅を始める", "Begin Journey"), () => invoke(scene, "startRun"), 0x356f68);
 
-  panel(scene, karma, 238, 246, 420, 330, 0x12231c, 0xc8a45a, 0.9, 18);
+  panel(scene, karma, 215, 246, 370, 330, 0x12231c, 0xc8a45a, 0.9, 18);
   let hero: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("kq-hero-warrior")) {
-    hero = scene.add.image(150, 244, "kq-hero-warrior");
-    hero.setScale(Math.min(205 / hero.width, 274 / hero.height));
+    hero = scene.add.image(125, 244, "kq-hero-warrior");
+    hero.setScale(Math.min(225 / hero.width, 292 / hero.height));
     karma.add(hero);
   }
-  const dominantText = text(scene, karma, 275, 124, "", 11, "#f2d99c", "900");
-  const statsText = text(scene, karma, 292, 205, "", 13, "#eef5ee", "900");
-  text(scene, karma, 292, 286, tr(scene.lang ?? "en", "主人公と王都", "Hero and Capital"), 10, "#c9d7ce", "700");
+  const dominantText = text(scene, karma, 260, 124, "", 11, "#f2d99c", "900");
+  const statsText = text(scene, karma, 270, 205, "", 13, "#eef5ee", "900");
+  text(scene, karma, 270, 286, tr(scene.lang ?? "en", "主人公と王都", "Hero and Capital"), 10, "#c9d7ce", "700");
 
-  panel(scene, karma, 590, 145, 360, 155, 0xf2e8cc, 0xb58d48, 0.985, 10);
-  const requestFaction = text(scene, karma, 590, 93, "", 12, "#6c512b", "900");
-  const requestText = scene.add.text(590, 156, "", {
+  panel(scene, karma, 600, 145, 380, 165, 0xf2e8cc, 0xb58d48, 0.985, 10);
+  const requestFaction = text(scene, karma, 600, 88, "", 12, "#6c512b", "900");
+  const requestText = scene.add.text(600, 158, "", {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
     fontSize: "13px",
     fontStyle: "700",
     color: "#433d33",
     align: "center",
     lineSpacing: 5,
-    wordWrap: { width: 320, useAdvancedWrap: true },
+    wordWrap: { width: 340, useAdvancedWrap: true },
   }).setOrigin(0.5);
   karma.add(requestText);
 
-  panel(scene, karma, 590, 280, 360, 96, 0x11211e, 0xc2a058, 0.96, 11);
+  panel(scene, karma, 600, 286, 380, 92, 0x11211e, 0xc2a058, 0.96, 11);
   const bars = scene.add.graphics();
   karma.add(bars);
   const factionTexts = FACTIONS.map((_, i) => text(scene, karma, 485, 250 + i * 19, "", 9, "#e8ddc7", "800").setOrigin(0, 0.5));
 
-  button(scene, karma, 510, 385, 190, 56, tr(scene.lang ?? "en", "力を貸す", "Help Them"), () => invoke(scene, "onKarmaChoice", true), 0x3377ae);
-  button(scene, karma, 705, 385, 165, 56, tr(scene.lang ?? "en", "断る", "Decline"), () => invoke(scene, "onKarmaChoice", false), 0x56504a);
+  button(scene, karma, 500, 385, 180, 60, tr(scene.lang ?? "en", "力を貸す", "Help Them"), () => invoke(scene, "onKarmaChoice", true), 0x3377ae);
+  button(scene, karma, 700, 385, 180, 60, tr(scene.lang ?? "en", "断る", "Decline"), () => invoke(scene, "onKarmaChoice", false), 0x56504a);
   const acceptHint = text(scene, karma, 510, 425, "", 9, "#d8efff", "800");
   const declineHint = text(scene, karma, 705, 425, tr(scene.lang ?? "en", "別の道へ", "Choose another path"), 9, "#ddd0c2", "800");
 
