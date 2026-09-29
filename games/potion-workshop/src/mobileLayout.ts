@@ -208,21 +208,21 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const reputationText = text(scene, root, portrait ? 416 : 764, 49, "", 10, "#bff0cf", "900").setOrigin(1, 0.5);
   const townText = text(scene, root, portrait ? 110 : 694, 25, "", 10, "#f5dcae", "800");
 
-  const heroX = portrait ? 165 : 150;
-  const heroY = portrait ? 205 : 202;
-  const brewX = portrait ? 225 : 335;
-  const brewY = portrait ? 365 : 246;
+  const heroX = portrait ? 150 : 150;
+  const heroY = portrait ? 210 : 202;
+  const brewX = portrait ? 270 : 335;
+  const brewY = portrait ? 350 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
   const heroKey = scene.textures.exists("pw-hero-alchemist-female")
     ? "pw-hero-alchemist-female"
     : "pw-hero-alchemist";
   if (scene.textures.exists(heroKey)) {
-    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 250 : 230, portrait ? 250 : 230);
+    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 270 : 230, portrait ? 270 : 230);
     root.add(hero);
   }
   if (scene.textures.exists("pw-cauldron-icon")) {
-    cauldron = scene.add.image(brewX, brewY, "pw-cauldron-icon").setDisplaySize(portrait ? 155 : 170, portrait ? 155 : 170);
+    cauldron = scene.add.image(brewX, brewY, "pw-cauldron-icon").setDisplaySize(portrait ? 175 : 170, portrait ? 175 : 170);
     root.add(cauldron);
   } else {
     const pot = scene.add.graphics();
@@ -246,7 +246,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   );
   hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
 
-  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 493 : 390, "", 12, "#fff1d0", "900");
+  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 480 : 390, "", 12, "#fff1d0", "900");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
   const productionTexts: Phaser.GameObjects.Text[] = [];
@@ -258,7 +258,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   root.add(prestigeBar);
 
   if (portrait) {
-    panel(scene, root, 225, 562, 420, 112, 0x423124, 0xd4b36e, 0.92, 15);
+    panel(scene, root, 225, 550, 420, 104, 0x423124, 0xd4b36e, 0.92, 15);
     text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;

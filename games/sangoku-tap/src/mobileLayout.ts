@@ -150,14 +150,14 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
 
   header(scene, root, tr(scene.lang ?? "en", "三国ポチポチ", "Sangoku Tap"), tr(scene.lang ?? "en", "戦略地図 — 武将を率い、天下への道を選べ", "Strategy Map — Lead your generals toward unification"));
 
-  panel(scene, root, 285, 243, 520, 332, 0x17110f, region.accent, 0.62, 16);
+  panel(scene, root, 300, 243, 550, 332, 0x17110f, region.accent, 0.62, 16);
   const map = scene.add.graphics();
   root.add(map);
-  const pts = [{ x: 115, y: 330 }, { x: 285, y: 245 }, { x: 455, y: 145 }];
-  map.lineStyle(5, 0xf0c06a, 0.7).beginPath().moveTo(115, 330).lineTo(285, 245).lineTo(455, 145).strokePath();
+  const pts = [{ x: 110, y: 330 }, { x: 295, y: 245 }, { x: 480, y: 145 }];
+  map.lineStyle(5, 0xf0c06a, 0.7).beginPath().moveTo(110, 330).lineTo(295, 245).lineTo(480, 145).strokePath();
   for (let i = 0; i < 24; i++) {
     const t = i / 23;
-    const x = t < 0.5 ? 115 + (285 - 115) * (t * 2) : 285 + (455 - 285) * ((t - 0.5) * 2);
+    const x = t < 0.5 ? 110 + (295 - 110) * (t * 2) : 295 + (480 - 295) * ((t - 0.5) * 2);
     const y = t < 0.5 ? 330 + (245 - 330) * (t * 2) : 245 + (145 - 245) * ((t - 0.5) * 2);
     map.fillStyle(0xffe7ac, 0.8).fillCircle(x, y, i % 5 === 0 ? 4 : 2);
   }
@@ -181,7 +181,7 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
     });
   });
 
-  panel(scene, root, 665, 218, 240, 286, 0x141111, region.accent, 0.94, 15);
+  panel(scene, root, 680, 218, 210, 286, 0x141111, region.accent, 0.94, 15);
   label(scene, root, 665, 93, `${tr(scene.lang ?? "en", "第", "Chapter ")}${REGIONS.findIndex((item) => item.id === region.id) + 1}${tr(scene.lang ?? "en", "章", "")}`, 10, "#dcb977", "900");
   label(scene, root, 665, 119, regionText(scene.lang ?? "en", region).name, 23, "#fff0d1", "900");
   label(scene, root, 665, 148, regionText(scene.lang ?? "en", region).subtitle, 10, "#dac6a7", "700");
@@ -190,15 +190,15 @@ function renderCamp(scene: Runtime, root: Phaser.GameObjects.Container): void {
   label(scene, root, 665, 239, `${tr(scene.lang ?? "en", "収穫", "Reward")} ×${region.reward.toFixed(1)}\n${tr(scene.lang ?? "en", "初踏破 功績+5 / Rare装備", "First Clear: Merit +5 / Rare Gear")}`, 11, "#ebd6b0", "700");
 
   const party = scene.party ?? [];
-  party.slice(0, 3).forEach((id, i) => portrait(scene, root, id, 596 + i * 70, 303, 62, 82));
+  party.slice(0, 3).forEach((id, i) => portrait(scene, root, id, 622 + i * 58, 303, 52, 76));
   if (!party.length) label(scene, root, 665, 303, tr(scene.lang ?? "en", "編成で武将を選ぼう", "Choose generals in Formation"), 11, "#bfae92", "700");
   const arena = troop ? arenaSnapshot(troop as never, scene.campaign, loadBestDistance()) : null;
   if (arena) {
     label(scene, root, 665, 344, arenaSummary(arena), 9, arena.rank <= 3 ? "#f2cf86" : "#bfcdbf", "800");
   }
 
-  button(scene, root, 596, 389, 100, 50, tr(scene.lang ?? "en", "編成", "Formation"), () => { scene.view = "formation"; invoke(scene, "render"); }, true, 0x3d4b50);
-  button(scene, root, 700, 389, 184, 54, tr(scene.lang ?? "en", "出陣", "Sortie"), () => {
+  button(scene, root, 615, 389, 84, 50, tr(scene.lang ?? "en", "編成", "Formation"), () => { scene.view = "formation"; invoke(scene, "render"); }, true, 0x3d4b50);
+  button(scene, root, 710, 389, 166, 58, tr(scene.lang ?? "en", "出陣", "Sortie"), () => {
     if (!troop || !canSortie || !scene.selectedRegion) return;
     scene.run = newExpedition(troop as never, scene.selectedRegion);
     saveExpedition(scene.run);
