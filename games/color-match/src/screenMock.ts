@@ -101,15 +101,15 @@ function build(scene: Runtime): MockUi {
 
   label(scene, title, 225, 74, "カラーマッチ", 36).setStroke("#2259b0", 7);
   label(scene, title, 225, 112, "60秒 COLOR × WORD ARCADE", 13, "#e9fbff");
-  if (scene.textures.exists("cm-mascot")) title.add(scene.add.image(225, 225, "cm-mascot").setDisplaySize(190, 190));
-  panel(scene, title, 225, 370, 382, 116);
-  label(scene, title, 225, 345, "今のルールを読み、正しい色をタップ", 17);
-  label(scene, title, 225, 388, "意味と色が切り替わる。CHAINを伸ばそう！", 13, "#cceeff");
-  label(scene, title, 225, 465, "出題の表記", 14, "#173b63");
+  if (scene.textures.exists("cm-mascot")) title.add(scene.add.image(225, 225, "cm-mascot").setDisplaySize(220, 220));
+  panel(scene, title, 225, 382, 382, 96);
+  label(scene, title, 225, 360, "今のルールを読み、正しい色をタップ", 18);
+  label(scene, title, 225, 398, "意味と色が切り替わる。CHAINを伸ばそう！", 12, "#cceeff");
+  label(scene, title, 225, 458, "出題の表記", 13, "#173b63");
   const modeLabels: Phaser.GameObjects.Text[] = [];
   WRITING_MODES.forEach((mode, i) => {
     const x = 125 + (i % 2) * 200;
-    const y = 515 + Math.floor(i / 2) * 62;
+    const y = 505 + Math.floor(i / 2) * 58;
     const g = scene.add.graphics();
     g.fillStyle(0xffffff, 0.94).fillRoundedRect(x - 86, y - 24, 172, 48, 13);
     g.lineStyle(2, 0x3e91cf, 0.8).strokeRoundedRect(x - 86, y - 24, 172, 48, 13);
@@ -120,8 +120,8 @@ function build(scene: Runtime): MockUi {
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
     title.add(hit);
   });
-  label(scene, title, 225, 635, `BEST ${loadBestScore()}  ·  TURBO ${loadBestTurbo()}pt`, 14, "#173b63");
-  button(scene, title, 225, 705, 350, 64, "ゲームスタート", () => invoke(scene, "startSession"));
+  label(scene, title, 225, 620, `BEST ${loadBestScore()}  ·  TURBO ${loadBestTurbo()}pt`, 13, "#173b63");
+  button(scene, title, 225, 692, 360, 70, "ゲームスタート", () => invoke(scene, "startSession"));
 
   label(scene, result, 225, 82, "CHALLENGE RESULT", 27).setStroke("#2259b0", 6);
   panel(scene, result, 225, 360, 390, 480);
