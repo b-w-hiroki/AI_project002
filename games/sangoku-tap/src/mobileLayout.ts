@@ -357,7 +357,7 @@ function bindExpeditionOrientation(scene: Runtime): void {
       scene.scale.resize(target.width, target.height);
     }
     const availableWidth = Math.max(1, layout.contentWidth - 18);
-    const availableHeight = Math.max(1, layout.contentHeight - (layout.isPortrait ? 82 : 8));
+    const availableHeight = Math.max(1, layout.contentHeight - 8);
     const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
     scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
     scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
