@@ -124,12 +124,12 @@ function build(scene: Runtime): MockUi {
   button(scene, title, 225, 692, 360, 70, "ゲームスタート", () => invoke(scene, "startSession"));
 
   label(scene, result, 225, 82, "CHALLENGE RESULT", 27).setStroke("#2259b0", 6);
-  panel(scene, result, 225, 360, 390, 480);
-  const score = label(scene, result, 225, 205, "SCORE 0", 39, "#ffe46c");
-  if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 315, "cm-mascot").setDisplaySize(150, 150));
-  const stats = label(scene, result, 225, 455, "", 17, "#ffffff");
-  button(scene, result, 225, 650, 330, 64, "もう一度あそぶ", () => invoke(scene, "startSession"));
-  const nextGoal = label(scene, result, 225, 712, "", 13, "#173b63").setName("result-next-focus");
+  panel(scene, result, 225, 365, 370, 450);
+  const score = label(scene, result, 225, 190, "SCORE 0", 42, "#ffe46c");
+  if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 315, "cm-mascot").setDisplaySize(172, 172));
+  const stats = label(scene, result, 225, 462, "", 16, "#ffffff");
+  button(scene, result, 225, 642, 350, 68, "もう一度あそぶ", () => invoke(scene, "startSession"));
+  const nextGoal = label(scene, result, 225, 704, "", 13, "#173b63").setName("result-next-focus");
 
   const ui = { root, title, result, modeLabels, score, stats, nextGoal };
   uiByScene.set(scene, ui);
