@@ -313,11 +313,11 @@ function rebuildControls(scene: Runtime, ui: MobileUi, portrait: boolean): void 
     keyButton(scene, ui.controls, 98, 646, 27, "↑", scene.cursors?.up, 0x355d78);
     keyButton(scene, ui.controls, 98, 766, 27, "↓", scene.cursors?.down, 0x355d78);
 
-    keyButton(scene, ui.controls, 332, 696, 43, tr(scene.lang ?? "en", "斬", "ATK"), scene.attackKey, 0xd94f5b);
-    keyButton(scene, ui.controls, 397, 632, 27, tr(scene.lang ?? "en", "跳", "JMP"), scene.cursors?.up, 0x42677f);
-    keyButton(scene, ui.controls, 397, 700, 31, tr(scene.lang ?? "en", "技", "SKL"), scene.skillKey, 0x227fc5);
-    keyButton(scene, ui.controls, 268, 752, 24, tr(scene.lang ?? "en", "守", "GRD"), scene.guardKey, 0x56677d);
-    ui.ougiButton = makeButton(scene, ui.controls, 397, 766, 32, tr(scene.lang ?? "en", "奥義", "OUGI"), 0xb97a16, () => triggerOugi(scene));
+    keyButton(scene, ui.controls, 332, 706, 40, tr(scene.lang ?? "en", "斬", "ATK"), scene.attackKey, 0xd94f5b);
+    keyButton(scene, ui.controls, 397, 640, 29, tr(scene.lang ?? "en", "跳", "JMP"), scene.cursors?.up, 0x42677f);
+    keyButton(scene, ui.controls, 397, 708, 29, tr(scene.lang ?? "en", "技", "SKL"), scene.skillKey, 0x227fc5);
+    keyButton(scene, ui.controls, 268, 756, 26, tr(scene.lang ?? "en", "守", "GRD"), scene.guardKey, 0x56677d);
+    ui.ougiButton = makeButton(scene, ui.controls, 397, 770, 34, tr(scene.lang ?? "en", "奥義", "OUGI"), 0xb97a16, () => triggerOugi(scene));
   } else {
     // 横持ちは戦場を最大化。操作は左右の下端へ追いやる。
     keyButton(scene, ui.controls, 72, 378, 27, "←", scene.cursors?.left, 0x233d50);
