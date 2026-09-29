@@ -203,8 +203,8 @@ function buildUi(scene: Runtime): MobileUi {
   button(scene, titleGroup, 225, 630, 330, 46, tr(lang, "ガチャ", "Gacha"), 0x334c70, () => scene.openGacha?.());
 
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
-  const battleTell = text(scene, 225, 112, "", 16, "#ffe2a8");
-  const battleGauge = text(scene, 225, 162, "", 13, "#fff0a0");
+  const battleTell = text(scene, 225, 104, "", 17, "#ffe2a8");
+  const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   battleGroup.add([battleStatus, battleTell, battleGauge]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
@@ -213,10 +213,10 @@ function buildUi(scene: Runtime): MobileUi {
     { move: "ki", label: moveLabel(lang, "ki"), color: 0x315d91 },
   ];
   moveButtons.forEach(({ move, label, color }, index) => {
-    const b = button(scene, battleGroup, 92 + index * 133, 690, 110, 62, label, color, () => scene.onPlayerMove?.(move));
+    const b = button(scene, battleGroup, 92 + index * 133, 684, 112, 66, label, color, () => scene.onPlayerMove?.(move));
     b.setName(`mobile-move-${move}`);
   });
-  const ougi = button(scene, battleGroup, 225, 764, 350, 56, tr(lang, "奥義", "SPECIAL"), 0x9b7119, () => scene.onPlayerOugi?.());
+  const ougi = button(scene, battleGroup, 225, 760, 360, 60, tr(lang, "奥義", "SPECIAL"), 0x9b7119, () => scene.onPlayerOugi?.());
   ougi.setName("mobile-ougi");
   const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, () => scene.onPlayerOugi?.());
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
