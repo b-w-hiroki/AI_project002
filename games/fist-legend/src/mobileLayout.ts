@@ -123,15 +123,21 @@ function button(
   color: number,
   onTap: () => void,
 ): Phaser.GameObjects.Container {
-  const bg = scene.add
-    .rectangle(0, 0, width, height, color, 0.92)
-    .setStrokeStyle(2, 0xffe0a3, 0.6);
-  const labelText = text(scene, 0, 0, label, height >= 56 ? 20 : 15);
+  const shadow = scene.add.rectangle(3, 5, width, height, 0x120b09, 0.38).setStrokeStyle(1, 0x000000, 0.22);
+  const bg = scene.add.rectangle(0, 0, width, height, color, 0.96).setStrokeStyle(3, 0x2b1713, 0.82);
+  const rim = scene.add.rectangle(0, 0, width - 7, height - 7, color, 0).setStrokeStyle(1.5, 0xffd68c, 0.78);
+  const shine = scene.add.rectangle(0, -height * 0.31, width - 12, Math.max(5, height * 0.16), 0xffffff, 0.13);
+  const leftStud = scene.add.circle(-width / 2 + 10, 0, 2.5, 0xffd68c, 0.82);
+  const rightStud = scene.add.circle(width / 2 - 10, 0, 2.5, 0xffd68c, 0.82);
+  const labelText = text(scene, 0, 0, label, height >= 56 ? 20 : 15).setStroke("#351713", 3);
   const hit = scene.add.zone(0, 0, width, Math.max(48, height)).setInteractive({ useHandCursor: true });
   const container = scene.add
-    .container(x, y, [bg, labelText, hit])
+    .container(x, y, [shadow, bg, rim, shine, leftStud, rightStud, labelText, hit])
     .setSize(width, Math.max(48, height));
-  hit.on("pointerdown", onTap);
+  const release = () => container.setScale(1);
+  hit.on("pointerdown", () => { container.setScale(0.97); onTap(); });
+  hit.on("pointerup", release);
+  hit.on("pointerout", release);
   root.add(container);
   return container;
 }
