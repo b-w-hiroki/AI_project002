@@ -20,20 +20,64 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
-test("six individual answer parts are visible and interactive during play", async ({ page }) => {
-  await tapPoint(page, 225, 705);
+test("six individual answer parts are visible and operable in landscape play", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSession").call(scene);
+  });
   await expect.poll(() => phase(page)).toBe("playing");
+
   const answerState = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const visible = scene.children.list.filter(node =>
-      node.name?.startsWith("answer-card-") && "visible" in node && (node as Phaser.GameObjects.Graphics).visible
-    ).length;
-    const interactive = scene.children.list.filter(node =>
-      node.name?.startsWith("answer-hit-") && (node as Phaser.GameObjects.Zone).input?.enabled
-    ).length;
-    return { visible, interactive };
+    const answers: Array<{
+      name: string;
+      visible: boolean;
+      interactive: boolean;
+      center: { x: number; y: number } | null;
+    }> = [];
+    const visit = (nodes: Phaser.GameObjects.GameObject[], parentVisible = true): void => {
+      for (const node of nodes) {
+        const ownVisible = "visible" in node
+          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
+          : true;
+        const visible = parentVisible && ownVisible;
+        if (node.name?.startsWith("answer-card-")) {
+          answers.push({ name: node.name, visible, interactive: false, center: null });
+        }
+        if (node.name?.startsWith("answer-hit-")) {
+          const zone = node as Phaser.GameObjects.Zone;
+          const bounds = zone.getBounds();
+          answers.push({
+            name: node.name,
+            visible,
+            interactive: Boolean(zone.input?.enabled),
+            center: { x: bounds.centerX, y: bounds.centerY },
+          });
+        }
+        if (node.type === "Container") {
+          visit((node as Phaser.GameObjects.Container).list, visible);
+        }
+      }
+    };
+    visit(scene.children.list);
+    return answers;
   });
-  expect(answerState).toEqual({ visible: 6, interactive: 6 });
+
+  const cards = answerState.filter(answer => answer.name.startsWith("answer-card-"));
+  const hits = answerState.filter(answer => answer.name.startsWith("answer-hit-"));
+  expect(cards).toHaveLength(6);
+  expect(hits).toHaveLength(6);
+  expect(cards.every(answer => answer.visible)).toBe(true);
+  expect(hits.every(answer => answer.visible && answer.interactive)).toBe(true);
+
+  const firstHit = hits[0]!;
+  expect(firstHit.center).not.toBeNull();
+  await tapPoint(page, firstHit.center!.x, firstHit.center!.y);
+  await expect.poll(() => page.evaluate(() =>
+    Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting")
+  )).toBe(false);
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
