@@ -13,10 +13,8 @@ import { GameScene } from "./scenes/GameScene";
 
 installColorMatchPresentation();
 installColorConceptArtPass();
-installColorVisualPolish();
 installColorMobileLayout();
 installColorScreenMock();
-installColorArtFidelity();
 installColorFantasyBackground();
 
 await initCrazyGames();
