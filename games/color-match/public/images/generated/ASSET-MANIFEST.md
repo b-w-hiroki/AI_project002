@@ -1,7 +1,7 @@
 # Color Match generated asset manifest — 2026-09-25
 
 ## Runtime assets
-- `generated/ui/cm-answer-buttons.webp` — 6色回答UIの2×3ビジュアルシート。既存の当たり判定・ラベル・ゲームロジックの背面に配置する。
+- 回答UIは現在 code-native の6個別ボタンを正とする。旧 `generated/ui/cm-answer-buttons.webp` は破損した2×3シートのため削除し、今後画像化する場合も6色を個別透過パーツとして管理する。
 
 ## Existing assets retained
 - `cm-mascot.png`
