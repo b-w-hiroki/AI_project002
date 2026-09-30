@@ -204,9 +204,10 @@ export class GameScene extends Phaser.Scene {
     this.load.image(IMG.hero, "images/fl-hero-fighter.png");
     this.load.image(IMG.enemy, "images/fl-enemy-fighter.png");
     this.load.image(IMG.ryuga, "images/fl-gacha-char-ryuga.png");
-    for (const key of Object.values(FIGHTER_ART)) {
-      this.load.svg(key, `images/${key}.svg`);
-    }
+    (["renka", "gaku", "mei"] as const).forEach((id) => {
+      const key = FIGHTER_ART[id];
+      this.load.image(key, `images/generated/characters/${key}.webp`);
+    });
   }
 
   /**
