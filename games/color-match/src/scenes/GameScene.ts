@@ -55,7 +55,6 @@ const PRACTICE_MS = 20_000;
 /** 画像アセットのキー（docs/art-assets.md の asset-id と一致させる） */
 const MASCOT_KEY = "cm-mascot";
 const TURBO_BADGE_KEY = "cm-turbo-badge";
-const ANSWER_BUTTONS_KEY = "cm-answer-buttons";
 
 interface TargetBoxView {
   colorId: string;
@@ -124,7 +123,6 @@ export class GameScene extends Phaser.Scene {
     // 画像はいずれも任意。読み込みに失敗しても textures.exists() で判定し、従来の Graphics/Text 表現にフォールバックする
     this.load.image(MASCOT_KEY, `images/${MASCOT_KEY}.png`);
     this.load.image(TURBO_BADGE_KEY, `images/${TURBO_BADGE_KEY}.png`);
-    this.load.image(ANSWER_BUTTONS_KEY, "images/generated/ui/cm-answer-buttons.webp");
   }
 
   create(): void {
@@ -425,14 +423,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private buildTargetBoxes(): void {
-    if (this.textures.exists(ANSWER_BUTTONS_KEY)) {
-      const answerArt = this.add
-        .image(CX, 526, ANSWER_BUTTONS_KEY)
-        .setDisplaySize(370, 282)
-        .setAlpha(0.96);
-      this.playGroup.add(answerArt);
-    }
-
     const cols = 2;
     const gapX = 20;
     const gapY = 16;
