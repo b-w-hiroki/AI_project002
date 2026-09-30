@@ -197,10 +197,10 @@ function buildUi(scene: Runtime): MobileUi {
     );
     teamButtons.push(b);
   });
-  button(scene, titleGroup, 82, 565, 118, 54, tr(lang, "対戦", "Battle"), 0xa9402d, () => scene.startSingleBattle?.());
-  button(scene, titleGroup, 225, 565, 118, 54, tr(lang, "3連戦", "Gauntlet"), 0x8a6118, () => scene.startSeries?.());
-  button(scene, titleGroup, 368, 565, 118, 54, tr(lang, "物語", "Story"), 0x5d3e76, () => scene.startStory?.());
-  button(scene, titleGroup, 225, 630, 330, 46, tr(lang, "ガチャ", "Gacha"), 0x334c70, () => scene.openGacha?.());
+  button(scene, titleGroup, 82, 565, 118, 54, tr(lang, "対戦", "Battle"), 0xa9402d, () => scene.startSingleBattle?.()).setName("title-battle");
+  button(scene, titleGroup, 225, 565, 118, 54, tr(lang, "3連戦", "Gauntlet"), 0x8a6118, () => scene.startSeries?.()).setName("title-series");
+  button(scene, titleGroup, 368, 565, 118, 54, tr(lang, "物語", "Story"), 0x5d3e76, () => scene.startStory?.()).setName("title-story");
+  button(scene, titleGroup, 225, 630, 330, 46, tr(lang, "ガチャ", "Gacha"), 0x334c70, () => scene.openGacha?.()).setName("title-gacha");
 
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
   const battleTell = text(scene, 225, 104, "", 17, "#ffe2a8");
@@ -278,6 +278,13 @@ function buildUi(scene: Runtime): MobileUi {
   return ui;
 }
 
+function portraitSurfaceHeight(): number {
+  const viewport = window.visualViewport;
+  const availableWidth = Math.max(320, (viewport?.width ?? window.innerWidth) - 18);
+  const availableHeight = Math.max(640, (viewport?.height ?? window.innerHeight) - 8);
+  return Phaser.Math.Clamp(Math.round(450 * availableHeight / availableWidth), 860, 1040);
+}
+
 function applySurface(scene: Runtime, width: number, height: number): void {
   const current = scene.scale.gameSize;
   if (current.width !== width || current.height !== height) {
@@ -316,7 +323,7 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
     return;
   }
 
-  applySurface(scene, layout.isPortrait ? 450 : 800, layout.isPortrait ? 800 : 450);
+  applySurface(scene, layout.isPortrait ? 450 : 800, layout.isPortrait ? portraitSurfaceHeight() : 450);
 }
 
 function fitFighter(sprite: FighterSprite, height: number): void {
@@ -329,9 +336,10 @@ function positionFighters(scene: Runtime, portrait: boolean): void {
   const enemy = scene.enemySprite;
   if (!player || !enemy) return;
   if (portrait) {
-    player.setPosition(225, 500);
+    const extra = portraitSurfaceHeight() - 800;
+    player.setPosition(225, 500 + extra * 0.34);
     fitFighter(player, 200);
-    enemy.setPosition(225, 270);
+    enemy.setPosition(225, 270 + extra * 0.08);
     fitFighter(enemy, 200);
   } else {
     player.setPosition(185, 245);
@@ -358,28 +366,49 @@ function refresh(scene: Runtime): void {
   ui.root.setVisible(true);
   const portrait = ui.portrait;
   const width = portrait ? 450 : 800;
-  const height = portrait ? 800 : 450;
+  const height = portrait ? portraitSurfaceHeight() : 450;
+  const extra = portrait ? height - 800 : 0;
   applySurface(scene, width, height);
 
   ui.titleGroup.setVisible(scene.phase === "title");
   ui.battleGroup.setVisible(scene.phase === "battle");
   ui.resultGroup.setVisible(scene.phase === "result");
+  if (portrait && scene.phase === "result") {
+    ui.resultBackdrop?.setPosition(225, height / 2).setDisplaySize(450, height);
+    ui.resultHero?.setPosition(118, 430 + extra * 0.28);
+    ui.resultEnemy?.setPosition(332, 430 + extra * 0.28);
+    ui.resultFinish.setPosition(225, 205 + extra * 0.10);
+    ui.resultHeading.setPosition(225, 285 + extra * 0.14);
+    ui.resultStats.setPosition(225, 345 + extra * 0.18);
+    ui.resultRetry.setPosition(225, height - 245);
+    ui.resultTitle.setPosition(225, height - 175);
+  }
 
   ui.chrome.clear();
   if (scene.phase === "title") {
     ui.chrome.fillStyle(0x140a08, 0.97).fillRect(0, 0, width, height);
-    ui.chrome.fillStyle(0x40201a, 0.72).fillRoundedRect(18, 70, width - 36, portrait ? 570 : 340, 24);
+    ui.chrome.fillStyle(0x40201a, 0.72).fillRoundedRect(18, 70, width - 36, portrait ? height - 140 : 340, 24);
     ui.titleStatus.setPosition(width / 2, portrait ? 225 : 120);
-    ui.titleHint.setPosition(width / 2, portrait ? 444 : 324);
+    ui.titleHint.setPosition(width / 2, portrait ? 444 + extra * 0.34 : 324);
     const team = scene.selectedTeam?.length ? scene.selectedTeam : (["ryuga"] as FighterId[]);
     ui.titleStatus.setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()} · ${tr(lang, "勝利", "Wins")} ${loadWinCount()}`);
     ui.titleHint.setText(opponentHint(lang, scene.opponent ?? "rush"));
-    ui.teamText.setPosition(width / 2, portrait ? 474 : 350).setText(`TEAM ${team.length}/3 · ${team.map(id => fighterName(lang, id)).join(" / ")} · ${tr(lang, "先頭が出場", "leader starts")}`);
-    ui.opponentButtons.forEach((b, index) => b.setAlpha(OPPONENTS[index]?.id === scene.opponent ? 1 : 0.62));
+    ui.teamText.setPosition(width / 2, portrait ? 474 + extra * 0.42 : 350).setText(`TEAM ${team.length}/3 · ${team.map(id => fighterName(lang, id)).join(" / ")} · ${tr(lang, "先頭が出場", "leader starts")}`);
+    ui.opponentButtons.forEach((b, index) => {
+      if (portrait) b.setPosition(225, 292 + index * 58 + extra * 0.12);
+      b.setAlpha(OPPONENTS[index]?.id === scene.opponent ? 1 : 0.62);
+    });
     ui.teamButtons.forEach((b, index) => {
       const fighter = FIGHTERS[index];
+      if (portrait) b.setPosition(57 + index * 112, 507 + extra * 0.52);
       b.setAlpha(fighter && team.includes(fighter.id) ? 1 : 0.42);
     });
+    if (portrait) {
+      (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(82, 565 + extra * 0.69);
+      (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(225, 565 + extra * 0.69);
+      (ui.titleGroup.getByName("title-story") as Phaser.GameObjects.Container | null)?.setPosition(368, 565 + extra * 0.69);
+      (ui.titleGroup.getByName("title-gacha") as Phaser.GameObjects.Container | null)?.setPosition(225, 630 + extra * 0.84);
+    }
     if (!portrait) {
       // 横持ちは既存タイトルを活かし、モバイル専用タイトル面を隠す。
       ui.titleGroup.setVisible(false);
@@ -408,23 +437,27 @@ function refresh(scene: Runtime): void {
     ui.chrome.lineStyle(2, opponentVisual.glow, 0.45).strokeRoundedRect(enemyX - 3, hpY - 4, width * 0.38 + 6, 20, 9);
     ui.chrome.fillStyle(opponentVisual.glow, portrait ? 0.055 : 0.04).fillCircle(portrait ? 225 : 615, portrait ? 270 : 245, portrait ? 116 : 132);
     if (portrait) {
-      ui.chrome.fillStyle(0x120a08, 0.95).fillRect(0, 620, 450, 180);
-      ui.chrome.lineStyle(1, 0xffd68a, 0.32).lineBetween(0, 620, 450, 620);
-      ui.chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365, 340, 58, 14);
-      ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365, 340, 58, 14);
-      ui.battleTell.setPosition(225, 394);
+      const controlsTop = Math.max(610, height - 300);
+      ui.chrome.fillStyle(0x2a160f, 0.98).fillRect(0, 600, 450, Math.max(0, controlsTop - 600));
+      ui.chrome.fillStyle(0x1b0d09, 0.98).fillRect(0, controlsTop, 450, height - controlsTop);
+      ui.chrome.lineStyle(1, 0xffd68a, 0.28).lineBetween(0, 600, 450, 600);
+      ui.chrome.lineStyle(1, 0xffd68a, 0.36).lineBetween(0, controlsTop, 450, controlsTop);
+      ui.chrome.lineStyle(1, 0x7b3f2b, 0.24).lineBetween(20, controlsTop - 22, 430, controlsTop - 22);
+      ui.chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
+      ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
+      ui.battleTell.setPosition(225, 394 + extra * 0.18);
       ui.battleGauge.setPosition(225, 90);
       const canSwitch = (scene.selectedTeam?.length ?? 1) > 1;
       (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)
-        ?.setPosition(225, 715).setScale(1).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
+        ?.setPosition(225, controlsTop + 205).setScale(1).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
       (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)?.setVisible(false);
-      const movePositions = [{ x: 120, y: 680 }, { x: 330, y: 680 }, { x: 120, y: 750 }];
+      const movePositions = [{ x: 120, y: controlsTop + 70 }, { x: 330, y: controlsTop + 70 }, { x: 120, y: controlsTop + 145 }];
       (["punch", "kick", "ki"] as const).forEach((move, index) => {
         const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
         b?.setPosition(movePositions[index]!.x, movePositions[index]!.y).setScale(1).setVisible(true);
       });
       (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
-      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(330, 750).setScale(1).setVisible(true);
+      (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(330, controlsTop + 145).setScale(1).setVisible(true);
     } else {
       ui.chrome.fillStyle(0x100806, 0.84).fillRoundedRect(270, 101, 260, 58, 14);
       ui.chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(270, 101, 260, 58, 14);
