@@ -3,9 +3,7 @@ import { installLocalTelemetry } from "../../shared/localTelemetry";
 import { installResponsiveGame } from "../../shared/mobile";
 import { installColorMatchPresentation } from "./presentation";
 import { installColorConceptArtPass } from "./conceptArt";
-import { installColorArtFidelity } from "./artFidelity";
 import { installColorFantasyBackground } from "./fantasyBackground";
-import { installColorVisualPolish } from "./visualPolish";
 import { installColorMobileLayout } from "./mobileLayout";
 import { installColorScreenMock } from "./screenMock";
 import { initCrazyGames } from "./platform/crazygames";
@@ -13,10 +11,8 @@ import { GameScene } from "./scenes/GameScene";
 
 installColorMatchPresentation();
 installColorConceptArtPass();
-installColorVisualPolish();
 installColorMobileLayout();
 installColorScreenMock();
-installColorArtFidelity();
 installColorFantasyBackground();
 
 await initCrazyGames();
