@@ -20,34 +20,20 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
-test("generated answer UI is loaded and visible during play", async ({ page }) => {
+test("six individual answer parts are visible and interactive during play", async ({ page }) => {
   await tapPoint(page, 225, 705);
   await expect.poll(() => phase(page)).toBe("playing");
-  const assetState = await page.evaluate(() => {
+  const answerState = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const textureLoaded = scene.textures.exists("cm-answer-buttons");
-    const hasVisibleImage = (
-      nodes: Phaser.GameObjects.GameObject[],
-      parentVisible = true,
-    ): boolean =>
-      nodes.some(node => {
-        const visible = parentVisible && ("visible" in node
-          ? Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible)
-          : true);
-        if (!visible) return false;
-        if (
-          node.type === "Image" &&
-          (node as Phaser.GameObjects.Image).texture.key === "cm-answer-buttons"
-        ) return true;
-        if (node.type === "Container") {
-          return hasVisibleImage((node as Phaser.GameObjects.Container).list, visible);
-        }
-        return false;
-      });
-    const visibleImage = hasVisibleImage(scene.children.list);
-    return { textureLoaded, visibleImage };
+    const visible = scene.children.list.filter(node =>
+      node.name?.startsWith("answer-card-") && "visible" in node && (node as Phaser.GameObjects.Graphics).visible
+    ).length;
+    const interactive = scene.children.list.filter(node =>
+      node.name?.startsWith("answer-hit-") && (node as Phaser.GameObjects.Zone).input?.enabled
+    ).length;
+    return { visible, interactive };
   });
-  expect(assetState).toEqual({ textureLoaded: true, visibleImage: true });
+  expect(answerState).toEqual({ visible: 6, interactive: 6 });
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
