@@ -44,6 +44,9 @@
       #game { filter:none; }
       #game canvas { max-width:100%; max-height:100%; border-radius:0; }
       #game::before, #game::after { display:none; }
+      /* Mock-fidelity: neutral world-tone continuation outside the fixed design canvas; zero extra asset downloads. */
+      body { background: radial-gradient(circle at 50% 38%, #365d45 0%, #1b3428 45%, #0b1711 100%); }
+      body::before { display:none; }
 </style>
   </head>
   <body>
