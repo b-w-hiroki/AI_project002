@@ -241,6 +241,7 @@ function buildUi(scene: Runtime): MobileUi {
   ]);
 
   const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
+    .setFontFamily('"Arial Black", "Arial", "Segoe UI", sans-serif')
     .setStroke("#3a1a12", 7)
     .setAngle(-5);
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
@@ -352,6 +353,7 @@ function positionFighters(scene: Runtime, portrait: boolean): void {
 function refresh(scene: Runtime): void {
   const lang = detectLang();
   const ui = buildUi(scene);
+  (scene.children.getByName("presentation-result-summary") as Phaser.GameObjects.Text | null)?.setVisible(!ui.phone);
   if (!ui.phone) return;
 
   hideLegacyOrientationWarning(scene);

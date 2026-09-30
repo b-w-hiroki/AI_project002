@@ -258,7 +258,8 @@ function showResultSummary(scene: FistRuntime): void {
       },
     )
     .setOrigin(0.5)
-    .setDepth(1800);
+    .setDepth(1800)
+    .setName("presentation-result-summary");
   resultTextByScene.set(scene, line);
 }
 
