@@ -236,13 +236,13 @@ function build(scene: Runtime): LandscapeUi {
   COLORS.forEach((color, i) => {
     const x = xs[i % 3]!;
     const y = ys[Math.floor(i / 3)]!;
-    const bg = scene.add.graphics();
+    const bg = scene.add.graphics().setName(`answer-card-${i}`);
     bg.fillStyle(0x15325c, 0.16).fillRoundedRect(x - 56 + 3, y - 40 + 5, 112, 80, 14);
     bg.fillStyle(0xffffff, 0.97).fillRoundedRect(x - 56, y - 40, 112, 80, 14);
     bg.lineStyle(4, color.hex, 0.96).strokeRoundedRect(x - 56, y - 40, 112, 80, 14);
     play.add(bg);
     const answerText = text(scene, play, x, y, "", 18, `#${color.hex.toString(16).padStart(6, "0")}`, "900");
-    const hit = scene.add.zone(x, y, 116, 84).setInteractive({ useHandCursor: true });
+    const hit = scene.add.zone(x, y, 116, 84).setName(`answer-hit-${i}`).setInteractive({ useHandCursor: true });
     play.add(hit);
     hit.on("pointerdown", () => {
       if (scene.phase !== "playing" || scene.accepting === false) return;
