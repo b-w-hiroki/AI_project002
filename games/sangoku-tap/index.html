@@ -39,6 +39,9 @@
       #game { filter:none; }
       #game canvas { max-width:100%; max-height:100%; border-radius:0; }
       #game::before, #game::after { display:none; }
+      /* Mock-fidelity: continue the title's world outside the fixed design canvas on tall phones. */
+      body { background: #24140e url("images/generated/backgrounds/st-bg-capital.webp") center / cover fixed no-repeat; }
+      body::before { display:none; }
 </style>
   </head>
   <body>
