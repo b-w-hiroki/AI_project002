@@ -33,6 +33,28 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("portrait phone uses the available viewport height", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? {
+      top: box.y,
+      bottomGap: 844 - (box.y + box.height),
+      height: box.height,
+    } : null;
+  }).toMatchObject({
+    top: expect.any(Number),
+    bottomGap: expect.any(Number),
+    height: expect.any(Number),
+  });
+
+  const box = await page.locator("canvas").boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.height).toBeGreaterThan(820);
+  expect(box!.y).toBeLessThanOrEqual(12);
+  expect(844 - (box!.y + box!.height)).toBeLessThanOrEqual(12);
+});
+
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
