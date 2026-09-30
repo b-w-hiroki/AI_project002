@@ -200,6 +200,20 @@ test("three-fighter team persists and leader appears in battle", async ({ page }
     };
   })).toEqual({ label: "PLAYER · 蓮花 [1/3]", texture: "fl-fighter-renka" });
   await checkFrame(page, "portrait-team-leader-battle");
+
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "activeFighterIndex", 2);
+    Reflect.get(scene, "refreshTeamSelection").call(scene);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      label: (Reflect.get(scene, "playerLabel") as Phaser.GameObjects.Text).text,
+      texture: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).texture.key,
+    };
+  })).toEqual({ label: "PLAYER · 冥 [3/3]", texture: "fl-fighter-mei" });
+  await checkFrame(page, "portrait-team-mei-battle");
 });
 
 test("battle switch cycles through the selected team on touch controls", async ({ page }) => {
