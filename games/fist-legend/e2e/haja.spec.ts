@@ -11,6 +11,13 @@ const errors = new WeakMap<Page, string[]>();
 
 test.use({ hasTouch: true, locale: "ja-JP", viewport: { width: 390, height: 844 } });
 
+async function waitForSceneReady(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const scene = window.__qaGame?.scene?.getScene("GameScene");
+    return !!scene && scene.sys.isActive() && !!Reflect.get(scene, "titleGroup");
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   const messages: string[] = [];
   errors.set(page, messages);
@@ -22,6 +29,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
+  await waitForSceneReady(page);
 });
 
 test.afterEach(async ({ page }) => {
