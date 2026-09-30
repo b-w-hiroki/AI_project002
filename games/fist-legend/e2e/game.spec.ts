@@ -220,7 +220,28 @@ test("battle switch cycles through the selected team on touch controls", async (
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "activeFighterIndex"))).toBe(0);
 
-  await tapPoint(page, 225, 715);
+  const portraitSwitchPoint = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const findByName = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const found = findByName((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const button = findByName(scene.children.list, "mobile-switch") as Phaser.GameObjects.Container | null;
+    if (!button || !button.visible || !button.parentContainer?.visible) return null;
+    const bounds = button.getBounds();
+    return { x: bounds.centerX, y: bounds.centerY };
+  });
+  expect(portraitSwitchPoint).not.toBeNull();
+  await tapPoint(page, portraitSwitchPoint!.x, portraitSwitchPoint!.y);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return {
