@@ -152,6 +152,16 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   await expect.poll(() => phase(page)).toBe("battle");
   await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "finishBattle").call(window.__qaGame.scene.getScene("GameScene"), true));
   await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const summary = scene.children.getByName("presentation-result-summary") as Phaser.GameObjects.Text | null;
+    return summary?.visible ?? false;
+  })).toBe(false);
+  const mobileFinish = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
+  });
+  expect(mobileFinish).toBe("DRAW");
   await checkFrame(page, "portrait-result");
 
   await page.setViewportSize({ width: 844, height: 390 });
