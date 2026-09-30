@@ -12,9 +12,7 @@ import { GameScene } from "./scenes/GameScene";
 
 installFistLegendPresentation();
 installFistConceptArtPass();
-installFistVisualPolish();
 installFistMobileLayout();
-installFistArtFidelity();
 installFistHajaMode();
 
 await initCrazyGames();

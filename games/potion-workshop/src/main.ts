@@ -15,9 +15,7 @@ await initCrazyGames();
 installLocalTelemetry("potion-workshop");
 installPotionPresentation();
 installPotionConceptArtPass();
-installPotionVisualPolish();
 installPotionMobileLayout();
-installPotionArtFidelity();
 installWallClockPersistence();
 
 const game = new Phaser.Game({
