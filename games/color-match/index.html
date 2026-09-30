@@ -39,6 +39,9 @@
       #game { filter:none; }
       #game canvas { max-width:100%; max-height:100%; border-radius:0; }
       #game::before, #game::after { display:none; }
+      /* Mock-fidelity: neutral world-tone continuation outside the fixed design canvas; zero extra asset downloads. */
+      body { background: radial-gradient(circle at 50% 42%, #214f79 0%, #102943 42%, #071522 100%); }
+      body::before { display:none; }
 </style>
   </head>
   <body>
