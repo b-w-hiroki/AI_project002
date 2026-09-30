@@ -5,8 +5,6 @@ import { initCrazyGames } from "./platform/crazygames";
 import { installWallClockPersistence } from "./persistence";
 import { installPotionPresentation } from "./presentation";
 import { installPotionConceptArtPass } from "./conceptArt";
-import { installPotionArtFidelity } from "./artFidelity";
-import { installPotionVisualPolish } from "./visualPolish";
 import { installPotionMobileLayout } from "./mobileLayout";
 import { IdleScene } from "./scenes/IdleScene";
 
