@@ -129,6 +129,7 @@ export class IdleScene extends Phaser.Scene {
   preload(): void {
     this.load.image("pw-bg-workshop", "images/pw-bg-workshop.png");
     this.load.image("pw-hero-alchemist", "images/pw-hero-alchemist.png");
+    this.load.image("pw-approved-cat-visible", "images/mock-extracts/pw-approved-cat-visible.png");
     this.load.image("pw-cauldron-icon", "images/pw-cauldron-icon.png");
     this.load.image("pw-dragon-icon", "images/pw-dragon-icon.png");
   }

@@ -238,6 +238,14 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       .setName("workshop-hero");
     root.add(hero);
   }
+  if (portrait && scene.textures.exists("pw-approved-cat-visible")) {
+    root.add(
+      scene.add
+        .image(102, 408, "pw-approved-cat-visible")
+        .setDisplaySize(150, 164)
+        .setName("approved-workshop-cat"),
+    );
+  }
   if (scene.textures.exists("pw-cauldron-icon")) {
     cauldron = scene.add
       .image(brewX, brewY, "pw-cauldron-icon")
@@ -310,6 +318,22 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       magic.lineStyle(1, 0xffffff, 0.68).strokeCircle(x, y, radius);
     });
     root.add(magic);
+
+    const speech = scene.add.graphics();
+    speech.fillStyle(0xfffbef, 0.96).fillRoundedRect(72, 126, 132, 74, 18);
+    speech.fillTriangle(176, 194, 196, 190, 187, 211);
+    speech.lineStyle(2, 0xd2a75a, 0.92).strokeRoundedRect(72, 126, 132, 74, 18);
+    root.add(speech);
+    text(
+      scene,
+      root,
+      138,
+      162,
+      lang === "ja" ? "\u4eca\u65e5\u3082\u7d20\u6575\u306a\n\u30dd\u30fc\u30b7\u30e7\u30f3\u3092!" : "Let's brew something\nwonderful today!",
+      10,
+      "#4b3528",
+      "900",
+    );
   }
 
   const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 12, "#fff1d0", "900");
@@ -349,6 +373,13 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
 
     panel(scene, root, 225, 728, 420, 70, 0x2f2927, 0x9b7d57, 0.9, 13);
     const mgmtX = [85, 225, 365];
+    const bottomNav = scene.add.graphics();
+    mgmtX.forEach((x, index) => {
+      bottomNav.fillStyle(index === 0 ? 0x164f60 : 0x33271f, 0.96).fillCircle(x, 718, 31);
+      bottomNav.lineStyle(2, 0xe0b761, 0.92).strokeCircle(x, 718, 31);
+      bottomNav.lineStyle(1, 0xffedba, 0.4).strokeCircle(x, 718, 25);
+    });
+    root.add(bottomNav);
     clickUpgradeText = text(scene, root, mgmtX[0]!, 718, "", 9, "#f9e8c9", "900");
     offlineText = text(scene, root, mgmtX[1]!, 718, "", 9, "#d7ecff", "900");
     prestigeText = text(scene, root, mgmtX[2]!, 718, "", 9, "#ead5ff", "900");

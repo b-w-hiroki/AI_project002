@@ -56,6 +56,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(responsiveLabels.labels).toContain("TAP TO BREW");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
   expect(responsiveLabels.labels).toContain("UPGRADE");
+  expect(responsiveLabels.labels).toContain("Let's brew something\nwonderful today!");
 
   const modalLabels = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
@@ -102,6 +103,7 @@ test("official alchemist texture decodes and survives scene re-entry", async ({ 
     return {
       heroTexture: hero?.texture.key,
       officialLoaded: scene.textures.exists("pw-hero-alchemist"),
+      approvedCatLoaded: scene.textures.exists("pw-approved-cat-visible"),
       invalidDuplicateLoaded: scene.textures.exists("pw-hero-alchemist-female"),
       sourceWidth: source.naturalWidth || source.width,
       sourceHeight: source.naturalHeight || source.height,
@@ -111,6 +113,7 @@ test("official alchemist texture decodes and survives scene re-entry", async ({ 
   await expect.poll(readHero).toEqual({
     heroTexture: "pw-hero-alchemist",
     officialLoaded: true,
+    approvedCatLoaded: true,
     invalidDuplicateLoaded: false,
     sourceWidth: 512,
     sourceHeight: 512,
@@ -120,6 +123,7 @@ test("official alchemist texture decodes and survives scene re-entry", async ({ 
   await expect.poll(readHero).toEqual({
     heroTexture: "pw-hero-alchemist",
     officialLoaded: true,
+    approvedCatLoaded: true,
     invalidDuplicateLoaded: false,
     sourceWidth: 512,
     sourceHeight: 512,
@@ -221,6 +225,7 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     };
     const hero = findNamed(scene.children.list, "workshop-hero")!;
     const cauldron = findNamed(scene.children.list, "workshop-cauldron")!;
+    const cat = findNamed(scene.children.list, "approved-workshop-cat")!;
     const findObject = (
       nodes: Phaser.GameObjects.GameObject[],
       name: string,
@@ -241,6 +246,7 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     return {
       hero: { x: hero.x, y: hero.y, width: hero.displayWidth, height: hero.displayHeight },
       cauldron: { x: cauldron.x, y: cauldron.y, width: cauldron.displayWidth, height: cauldron.displayHeight },
+      cat: { x: cat.x, y: cat.y, width: cat.displayWidth, height: cat.displayHeight },
       brewTarget: { width: brewTarget.width, height: brewTarget.height, interactive: !!brewTarget.input?.enabled },
       navTargets: navTargets.map(zone => ({ width: zone.width, height: zone.height, interactive: !!zone.input?.enabled })),
     };
@@ -248,6 +254,7 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
   expect(portraitComposition).toEqual({
     hero: { x: 225, y: 325, width: 360, height: 360 },
     cauldron: { x: 225, y: 440, width: 260, height: 260 },
+    cat: { x: 102, y: 408, width: 150, height: 164 },
     brewTarget: { width: 230, height: 220, interactive: true },
     navTargets: Array.from({ length: 4 }, () => ({ width: 52, height: 52, interactive: true })),
   });

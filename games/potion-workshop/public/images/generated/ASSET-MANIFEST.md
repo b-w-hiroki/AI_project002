@@ -9,6 +9,7 @@
 ## Runtime assets
 
 - `pw-hero-alchemist.png` — official protagonist and single runtime hero texture.
+- `mock-extracts/pw-approved-cat-visible.png` — source-pixel cutout of the visible approved-home cat; no hidden body generated.
 - `pw-bg-workshop.png` — workshop background.
 - `pw-cauldron-icon.png` — brewing prop.
 - `pw-dragon-icon.png` — progression and rare prop.
