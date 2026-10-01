@@ -26,13 +26,24 @@ async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
 async function enterBattleForVisualQa(page: Page): Promise<void> {
   // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
   // LoadoutScene の開始ボタンを押したあと、GameScene と player の生成完了まで待つ。
-  await tapGamePoint(page, 400, 545);
-  await expect.poll(() => page.evaluate(() => {
-    const game = window.__qaGame;
-    if (!game.scene.isActive("GameScene")) return false;
-    const scene = game.scene.getScene("GameScene");
-    return !!Reflect.get(scene, "player");
-  }), { timeout: 15_000, intervals: [100, 200, 400, 800] }).toBe(true);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const ready = await page.evaluate(() => {
+      const game = window.__qaGame;
+      return game.scene.isActive("GameScene") && !!Reflect.get(game.scene.getScene("GameScene"), "player");
+    });
+    if (ready) return;
+    await tapGamePoint(page, 400, 545);
+    try {
+      await page.waitForFunction(() => {
+        const game = window.__qaGame;
+        return game.scene.isActive("GameScene") && !!Reflect.get(game.scene.getScene("GameScene"), "player");
+      }, undefined, { timeout: 5_000 });
+      return;
+    } catch {
+      // A click can land before the loadout button finishes its first layout on slower engines.
+    }
+  }
+  throw new Error("GameScene did not start after three loadout attempts");
 }
 
 test.beforeEach(async ({ page }) => {
