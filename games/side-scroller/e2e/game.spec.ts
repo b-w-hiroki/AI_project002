@@ -192,6 +192,68 @@ test.describe("phone visual QA", () => {
     });
   });
 
+  test("approved forest, hero, and boss remain separate live game objects", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const sceneState = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const current = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+      }>;
+      current.forEach(enemy => enemy.sprite.destroy());
+      Reflect.set(scene, "enemies", []);
+      Reflect.set(scene, "wave", 5);
+      Reflect.get(scene, "spawnWave").call(scene, 5);
+
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const enemies = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        boss: boolean;
+      }>;
+      const boss = enemies.find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss was not spawned");
+
+      scene.cameras.main.stopFollow();
+      scene.cameras.main.setScroll(0, 0);
+      player.setPosition(300, 430).setVisible(true);
+      boss.sprite.setPosition(610, 400).setVisible(true);
+      scene.physics.pause();
+
+      const background = scene.children.list.find(child =>
+        child.type === "Image"
+        && (child as Phaser.GameObjects.Image).texture.key === "sf-approved-forest-battle-v2");
+      const body = boss.sprite.body as Phaser.Physics.Arcade.Body;
+      return {
+        textures: {
+          background: scene.textures.exists("sf-approved-forest-battle-v2"),
+          hero: scene.textures.exists("sf-approved-hero-lunge-v2"),
+          boss: scene.textures.exists("sf-approved-boss-ogre-v2"),
+        },
+        backgroundIsSeparate: !!background,
+        playerTexture: player.texture.key,
+        bossTexture: boss.sprite.texture.key,
+        bossBody: { width: body.width, height: body.height, enabled: body.enable },
+      };
+    });
+
+    expect(sceneState).toEqual({
+      textures: { background: true, hero: true, boss: true },
+      backgroundIsSeparate: true,
+      playerTexture: "hero-art",
+      bossTexture: "forest-guardian-art",
+      bossBody: { width: 27, height: 45, enabled: true },
+    });
+    await page.waitForTimeout(100);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-battle-v2-844x390.png",
+      animations: "disabled",
+    });
+  });
+
   test("visual QA: attack pose and slash read clearly", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");

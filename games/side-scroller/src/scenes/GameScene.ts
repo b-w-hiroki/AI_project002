@@ -140,7 +140,9 @@ interface EnemySprite {
  * 読み込めなかった場合は従来どおり Graphics で描いたプレースホルダーにフォールバックする。
  */
 const ART_BG_KEY = "sf-bg-forest";
+const APPROVED_BG_KEY = "sf-approved-forest-battle-v2";
 const ART_HERO_KEY = "sf-hero-swordsman";
+const APPROVED_HERO_KEY = "sf-approved-hero-lunge-v2";
 const ART_HERO_ATTACK_KEY = "sf-hero-swordsman-attack";
 const ART_HERO_HURT_KEY = "sf-hero-swordsman-hurt";
 const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
@@ -148,6 +150,7 @@ const ART_ENEMY_AGILE_KEY = "sf-enemy-agile";
 const ART_ENEMY_TANK_KEY = "sf-enemy-tank";
 const ART_BOSS_KEY = "sf-boss-forest-guardian";
 const GENERATED_BOSS_KEY = "sf-generated-boss-guardian";
+const APPROVED_BOSS_KEY = "sf-approved-boss-ogre-v2";
 const GENERATED_SLASH_KEY = "sf-generated-slash";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
 const HERO_ART_TEXTURE = "hero-art";
@@ -173,6 +176,8 @@ const BG_SCROLL_FACTOR = 0.4;
  * ジャンプ初速と最下段の足場も合わせて調整し、重力は1200を維持する。
  */
 const CHAR_SCALE = 2.0;
+const APPROVED_HERO_ART_SIZE = { w: 320, h: 160 };
+const APPROVED_BOSS_ART_SIZE = { w: 440, h: 293 };
 /** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
 const HUMANOID_BASE = { w: 30, h: 42 };
 const HERO_ART_SIZE = { w: 36 * CHAR_SCALE, h: 54 * CHAR_SCALE }; // 54×81
@@ -193,6 +198,8 @@ function bodyOffsetFor(tex: { w: number; h: number }, body: { w: number; h: numb
 const HUMANOID_TEX = { w: HUMANOID_BASE.w * CHAR_SCALE, h: HUMANOID_BASE.h * CHAR_SCALE }; // 45×63
 const PLAYER_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, PLAYER_BODY), art: bodyOffsetFor(HERO_ART_SIZE, PLAYER_BODY) };
 const ENEMY_BODY_OFFSET = { fallback: bodyOffsetFor(HUMANOID_TEX, ENEMY_BODY), art: bodyOffsetFor(ENEMY_ART_SIZE, ENEMY_BODY) };
+const APPROVED_PLAYER_BODY_OFFSET = bodyOffsetFor(APPROVED_HERO_ART_SIZE, PLAYER_BODY);
+const APPROVED_BOSS_BODY_OFFSET = bodyOffsetFor(APPROVED_BOSS_ART_SIZE, ENEMY_BODY);
 
 /** 専用アートが読めない場合だけ使うタイプ別フォールバックティント */
 const ENEMY_TYPE_TINT: Readonly<Record<EnemyType, number>> = {
@@ -336,8 +343,10 @@ export class GameScene extends Phaser.Scene {
     // 404 などで読み込めなくても Phaser はエラーで止まらないので、使用箇所で textures.exists() を確認して
     // Graphics 描画のプレースホルダーにフォールバックする。
     this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
+    this.load.image(APPROVED_BG_KEY, "images/generated/backgrounds/sf-approved-forest-battle-v2.jpg");
     this.load.image("sf-approved-hero-avatar", "images/mock-extracts/sf-approved-hero-avatar.png");
     this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
+    this.load.image(APPROVED_HERO_KEY, "images/generated/characters/sf-hero-approved-lunge-v2.png");
     this.load.svg(ART_HERO_ATTACK_KEY, "images/sf-hero-swordsman-attack.svg");
     this.load.svg(ART_HERO_HURT_KEY, "images/sf-hero-swordsman-hurt.svg");
     this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
@@ -345,6 +354,7 @@ export class GameScene extends Phaser.Scene {
     this.load.svg(ART_ENEMY_TANK_KEY, "images/sf-enemy-tank.svg");
     this.load.svg(ART_BOSS_KEY, "images/sf-boss-forest-guardian.svg");
     this.load.image(GENERATED_BOSS_KEY, "images/generated/characters/sf-boss-forest-guardian.webp");
+    this.load.image(APPROVED_BOSS_KEY, "images/generated/characters/sf-boss-approved-ogre-v2.png");
     this.load.image(GENERATED_SLASH_KEY, "images/generated/effects/sf-fx-slash.webp");
   }
 
@@ -547,14 +557,19 @@ export class GameScene extends Phaser.Scene {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
-    this.buildArtTexture(ART_HERO_KEY, HERO_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
-    this.buildArtTexture(ART_HERO_ATTACK_KEY, HERO_ATTACK_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
-    this.buildArtTexture(ART_HERO_HURT_KEY, HERO_HURT_ART_TEXTURE, HERO_ART_SIZE.w, HERO_ART_SIZE.h);
+    const heroSource = this.textures.exists(APPROVED_HERO_KEY) ? APPROVED_HERO_KEY : ART_HERO_KEY;
+    const heroSize = heroSource === APPROVED_HERO_KEY ? APPROVED_HERO_ART_SIZE : HERO_ART_SIZE;
+    this.buildArtTexture(heroSource, HERO_ART_TEXTURE, heroSize.w, heroSize.h);
+    this.buildArtTexture(heroSource, HERO_ATTACK_ART_TEXTURE, heroSize.w, heroSize.h);
+    this.buildArtTexture(heroSource, HERO_HURT_ART_TEXTURE, heroSize.w, heroSize.h);
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
-    const bossSource = this.textures.exists(GENERATED_BOSS_KEY) ? GENERATED_BOSS_KEY : ART_BOSS_KEY;
-    this.buildArtTexture(bossSource, BOSS_ART_TEXTURE, 180, 180);
+    const bossSource = this.textures.exists(APPROVED_BOSS_KEY)
+      ? APPROVED_BOSS_KEY
+      : this.textures.exists(GENERATED_BOSS_KEY) ? GENERATED_BOSS_KEY : ART_BOSS_KEY;
+    const bossSize = bossSource === APPROVED_BOSS_KEY ? APPROVED_BOSS_ART_SIZE : { w: 180, h: 180 };
+    this.buildArtTexture(bossSource, BOSS_ART_TEXTURE, bossSize.w, bossSize.h);
 
     const tile = this.make.graphics({ x: 0, y: 0 }, false);
     tile.fillStyle(0xffffff, 1);
@@ -680,10 +695,16 @@ export class GameScene extends Phaser.Scene {
 
   /** 固定ゴールへ向かうステージ制から、ウェーブ式サバイバル用の固定サイズアリーナに変更した */
   private buildLevel(): void {
-    if (this.textures.exists(ART_BG_KEY)) {
+    const backgroundKey = this.textures.exists(APPROVED_BG_KEY) ? APPROVED_BG_KEY : ART_BG_KEY;
+    if (this.textures.exists(backgroundKey)) {
       // 森ステージのイラスト背景（1920×600）。カメラより遅く流してパララックスにする。
       // 表示幅 = 800 + (ARENA_WIDTH - 800) * BG_SCROLL_FACTOR = 1120px < 1920px なので全域をカバーできる
-      this.add.image(0, 0, ART_BG_KEY).setOrigin(0, 0).setDisplaySize(1920, 600).setScrollFactor(BG_SCROLL_FACTOR).setDepth(-2);
+      const approved = backgroundKey === APPROVED_BG_KEY;
+      this.add.image(0, approved ? -300 : 0, backgroundKey)
+        .setOrigin(0, 0)
+        .setDisplaySize(1920, approved ? 1080 : 600)
+        .setScrollFactor(BG_SCROLL_FACTOR)
+        .setDepth(-2);
     } else {
       // フォールバック: 淡い青空グラデーション。ソシャゲ調の明るいファンタジー基調にする
       const sky = this.add.graphics();
@@ -696,8 +717,8 @@ export class GameScene extends Phaser.Scene {
     for (let x = 0; x < ARENA_WIDTH; x += 64) {
       this.platforms.create(x + 32, GROUND_Y + 32, "solid").setVisible(false);
     }
-    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y + 32, ARENA_WIDTH, 64, 0x8b6b47);
-    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y, ARENA_WIDTH, 4, 0x5cb85c);
+    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y + 32, ARENA_WIDTH, 64, 0x18251c, 0.82);
+    this.add.rectangle(ARENA_WIDTH / 2, GROUND_Y, ARENA_WIDTH, 4, 0x9bd35f, 0.9);
 
     // 地上からのジャンプ到達高さ（117px）で乗れるのは y=420（上面 410）の足場。
     // y=340/360 の足場は隣の y=420 の足場から段差で登る。（260 の足場は元 y=400 で地上から届かなかったため 420 に下げた）
@@ -710,8 +731,8 @@ export class GameScene extends Phaser.Scene {
     ];
     for (const p of floatingPlatforms) {
       // 雲のようなプラットフォームで空・ファンタジー感を強める
-      const rect = this.add.rectangle(p.x, p.y, 140, 20, 0xffffff, 0.9);
-      rect.setStrokeStyle(2, 0x9ecbef);
+      const rect = this.add.rectangle(p.x, p.y, 140, 20, 0x25392a, 0.76);
+      rect.setStrokeStyle(3, 0x83bb58, 0.88);
       rect.setDepth(1);
       this.platforms
         .create(p.x, p.y, "solid")
@@ -749,7 +770,8 @@ export class GameScene extends Phaser.Scene {
   /** 使用中のプレイヤーテクスチャに応じた当たり判定オフセット（判定サイズ自体はどちらも同じ） */
   private playerBodyOffset(): { x: number; y: number } {
     const artKeys = [HERO_ART_TEXTURE, HERO_ATTACK_ART_TEXTURE, HERO_HURT_ART_TEXTURE];
-    return artKeys.includes(this.player.texture.key) ? PLAYER_BODY_OFFSET.art : PLAYER_BODY_OFFSET.fallback;
+    if (!artKeys.includes(this.player.texture.key)) return PLAYER_BODY_OFFSET.fallback;
+    return this.textures.exists(APPROVED_HERO_KEY) ? APPROVED_PLAYER_BODY_OFFSET : PLAYER_BODY_OFFSET.art;
   }
 
   /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
@@ -765,17 +787,18 @@ export class GameScene extends Phaser.Scene {
     const useArt = !!artTexture && this.textures.exists(artTexture);
     const sprite = this.physics.add.sprite(
       x,
-      GROUND_Y - (boss ? 66 : 45),
+      GROUND_Y - (boss && this.textures.exists(APPROVED_BOSS_KEY) ? APPROVED_BOSS_ART_SIZE.h / 2 : boss ? 66 : 45),
       useArt ? artTexture! : "goblin",
     );
     sprite.setCollideWorldBounds(true);
     sprite.setDepth(2);
-    const off = useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
+    const approvedBoss = boss && useArt && this.textures.exists(APPROVED_BOSS_KEY);
+    const off = approvedBoss ? APPROVED_BOSS_BODY_OFFSET : useArt ? ENEMY_BODY_OFFSET.art : ENEMY_BODY_OFFSET.fallback;
     sprite.setSize(ENEMY_BODY.w, ENEMY_BODY.h).setOffset(off.x, off.y);
     if (!useArt) sprite.setTint(ENEMY_TYPE_TINT[spec.type]);
     if (spec.type === "agile") sprite.setScale(0.96);
     if (spec.type === "tank" && !boss) sprite.setScale(1.28);
-    if (boss) sprite.setScale(1.18);
+    if (boss) sprite.setScale(approvedBoss ? 1 : 1.18);
     this.physics.add.collider(sprite, this.platforms);
 
     const patrolRadius = 80 * spec.speedMul;
@@ -1735,7 +1758,7 @@ export class GameScene extends Phaser.Scene {
         enemy.dir = enemy.bossDir;
         enemy.lastBossPhase = phase;
       } else body.setVelocityX(enemy.dir * 60 * enemy.speedMul);
-      enemy.sprite.setFlipX(enemy.dir < 0);
+      enemy.sprite.setFlipX(enemy.boss && this.textures.exists(APPROVED_BOSS_KEY) ? enemy.dir > 0 : enemy.dir < 0);
     }
   }
 
