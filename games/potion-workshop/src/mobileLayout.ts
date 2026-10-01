@@ -208,21 +208,27 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const reputationText = text(scene, root, portrait ? 416 : 764, 49, "", 10, "#bff0cf", "900").setOrigin(1, 0.5);
   const townText = text(scene, root, portrait ? 110 : 694, 25, "", 10, "#f5dcae", "800");
 
-  const heroX = portrait ? 145 : 150;
-  const heroY = portrait ? 228 : 202;
-  const brewX = portrait ? 270 : 335;
-  const brewY = portrait ? 366 : 246;
+  const heroX = portrait ? 225 : 150;
+  const heroY = portrait ? 325 : 202;
+  const brewX = portrait ? 225 : 335;
+  const brewY = portrait ? 440 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
   const heroKey = scene.textures.exists("pw-hero-alchemist-female")
     ? "pw-hero-alchemist-female"
     : "pw-hero-alchemist";
   if (scene.textures.exists(heroKey)) {
-    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 304 : 230, portrait ? 304 : 230);
+    hero = scene.add
+      .image(heroX, heroY, heroKey)
+      .setDisplaySize(portrait ? 360 : 230, portrait ? 360 : 230)
+      .setName("workshop-hero");
     root.add(hero);
   }
   if (scene.textures.exists("pw-cauldron-icon")) {
-    cauldron = scene.add.image(brewX, brewY, "pw-cauldron-icon").setDisplaySize(portrait ? 208 : 170, portrait ? 208 : 170);
+    cauldron = scene.add
+      .image(brewX, brewY, "pw-cauldron-icon")
+      .setDisplaySize(portrait ? 260 : 170, portrait ? 260 : 170)
+      .setName("workshop-cauldron");
     root.add(cauldron);
   } else {
     const pot = scene.add.graphics();
@@ -231,15 +237,15 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     root.add(pot);
   }
   const glow = scene.add.graphics();
-  glow.fillStyle(0x7de6b0, 0.16).fillCircle(brewX, brewY, portrait ? 90 : 100);
-  glow.lineStyle(2, 0xd5ffd8, 0.48).strokeCircle(brewX, brewY, portrait ? 82 : 92);
+  glow.fillStyle(0x7de6b0, 0.16).fillCircle(brewX, brewY, portrait ? 116 : 100);
+  glow.lineStyle(2, 0xd5ffd8, 0.48).strokeCircle(brewX, brewY, portrait ? 108 : 92);
   root.add(glow);
-  if (portrait) addButtonChrome(scene, root, brewX, brewY + 102, 196, 48, 0x1689a8);
+  if (portrait) addButtonChrome(scene, root, brewX, brewY + 25, 196, 48, 0x1689a8);
   text(
     scene,
     root,
     brewX,
-    brewY + (portrait ? 102 : 110),
+    brewY + (portrait ? 25 : 110),
     lang === "ja" ? "大釜をタップして調合" : "TAP TO BREW",
     15,
     "#b8ffd7",
@@ -247,7 +253,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   );
   hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
 
-  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 494 : 390, "", 12, "#fff1d0", "900");
+  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 12, "#fff1d0", "900");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
   const productionTexts: Phaser.GameObjects.Text[] = [];
@@ -259,14 +265,14 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   root.add(prestigeBar);
 
   if (portrait) {
-    panel(scene, root, 225, 550, 420, 104, 0x423124, 0xd4b36e, 0.92, 15);
+    panel(scene, root, 225, 562, 420, 96, 0x423124, 0xd4b36e, 0.92, 15);
     text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
-      addButtonChrome(scene, root, x, 564, 190, 66, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const labelNode = text(scene, root, x, 564, "", 10, "#ffffff", "900");
+      addButtonChrome(scene, root, x, 574, 190, 58, index === 0 ? 0x3e765d : 0x4c6e8c);
+      const labelNode = text(scene, root, x, 574, "", 10, "#ffffff", "900");
       orderTexts.push(labelNode);
-      hitButton(scene, root, x, 564, 190, 66, () => {
+      hitButton(scene, root, x, 574, 190, 58, () => {
         if (!scene.state) return;
         updateState(scene, fulfillContract(scene.state, index));
       });

@@ -84,7 +84,7 @@ async function clickBrew(page: import("@playwright/test").Page): Promise<void> {
   const box = (await canvas.boundingBox())!;
   const logical = await canvasSize(page);
   const portrait = logical.height > logical.width;
-  const brew = portrait ? { x: 225, y: 365 } : { x: 335, y: 246 };
+  const brew = portrait ? { x: 225, y: 440 } : { x: 335, y: 246 };
   await page.mouse.click(
     box.x + brew.x * (box.width / logical.width),
     box.y + brew.y * (box.height / logical.height),
@@ -137,6 +137,32 @@ test("進行状況が localStorage に自動セーブされる", async ({ page }
 test("portrait and landscape workshop are captured for visual QA", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await canvasSize(page)).height).toBe(800);
+  const portraitComposition = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const findNamed = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.Image | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Image;
+        if (node.type === "Container") {
+          const found = findNamed((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const hero = findNamed(scene.children.list, "workshop-hero")!;
+    const cauldron = findNamed(scene.children.list, "workshop-cauldron")!;
+    return {
+      hero: { x: hero.x, y: hero.y, width: hero.displayWidth, height: hero.displayHeight },
+      cauldron: { x: cauldron.x, y: cauldron.y, width: cauldron.displayWidth, height: cauldron.displayHeight },
+    };
+  });
+  expect(portraitComposition).toEqual({
+    hero: { x: 225, y: 325, width: 360, height: 360 },
+    cauldron: { x: 225, y: 440, width: 260, height: 260 },
+  });
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-workshop.png", animations: "disabled" });
 
   await page.setViewportSize({ width: 844, height: 390 });
