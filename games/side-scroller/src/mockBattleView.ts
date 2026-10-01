@@ -168,7 +168,7 @@ class SideBattleView {
   constructor(private readonly scene: Runtime) {
     this.adapter = new BattleInputAdapter(scene);
     this.chrome = scene.add.graphics();
-    this.heroPortrait = scene.add.image(0, 0, "hero-art").setDisplaySize(32, 48);
+    this.heroPortrait = scene.add.image(0, 0, "sf-approved-hero-avatar").setDisplaySize(42, 42);
     this.title = makeText(scene, "BLADE WOODS", 10, "#e8f8ff");
     this.hpText = makeText(scene, "", 11);
     this.scoreText = makeText(scene, "", 9, "#f3d88d");

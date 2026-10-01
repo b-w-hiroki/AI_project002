@@ -336,6 +336,7 @@ export class GameScene extends Phaser.Scene {
     // 404 などで読み込めなくても Phaser はエラーで止まらないので、使用箇所で textures.exists() を確認して
     // Graphics 描画のプレースホルダーにフォールバックする。
     this.load.image(ART_BG_KEY, "images/sf-bg-forest.png");
+    this.load.image("sf-approved-hero-avatar", "images/mock-extracts/sf-approved-hero-avatar.png");
     this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
     this.load.svg(ART_HERO_ATTACK_KEY, "images/sf-hero-swordsman-attack.svg");
     this.load.svg(ART_HERO_HURT_KEY, "images/sf-hero-swordsman-hurt.svg");
