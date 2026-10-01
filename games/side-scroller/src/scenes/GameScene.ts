@@ -143,6 +143,9 @@ const ART_BG_KEY = "sf-bg-forest";
 const APPROVED_BG_KEY = "sf-approved-forest-battle-v2";
 const ART_HERO_KEY = "sf-hero-swordsman";
 const APPROVED_HERO_KEY = "sf-approved-hero-lunge-v2";
+const APPROVED_HERO_IDLE_KEY = "sf-approved-hero-idle-v3";
+const APPROVED_HERO_RUN_KEY = "sf-approved-hero-run-v3";
+const APPROVED_HERO_ATTACK_KEY = "sf-approved-hero-attack-v3";
 const ART_HERO_ATTACK_KEY = "sf-hero-swordsman-attack";
 const ART_HERO_HURT_KEY = "sf-hero-swordsman-hurt";
 const ART_ENEMY_NORMAL_KEY = "sf-enemy-normal";
@@ -154,6 +157,7 @@ const APPROVED_BOSS_KEY = "sf-approved-boss-ogre-v2";
 const GENERATED_SLASH_KEY = "sf-generated-slash";
 /** 元画像をゲーム内サイズへ縮小した派生テクスチャのキー（scale=1 のまま既存のスケール演出を使い回すため） */
 const HERO_ART_TEXTURE = "hero-art";
+const HERO_RUN_ART_TEXTURE = "hero-run-art";
 const HERO_ATTACK_ART_TEXTURE = "hero-attack-art";
 const HERO_HURT_ART_TEXTURE = "hero-hurt-art";
 const ENEMY_NORMAL_ART_TEXTURE = "goblin-art";
@@ -266,6 +270,8 @@ export class GameScene extends Phaser.Scene {
   private crouching = false;
   private wasCrouching = false;
   private airJumpsUsed = 0;
+  private playerPoseLockedUntil = 0;
+  private reducedMotion = false;
 
   private enemies: EnemySprite[] = [];
   private projectiles: Projectile[] = [];
@@ -346,7 +352,9 @@ export class GameScene extends Phaser.Scene {
     this.load.image(APPROVED_BG_KEY, "images/generated/backgrounds/sf-approved-forest-battle-v2.jpg");
     this.load.image("sf-approved-hero-avatar", "images/mock-extracts/sf-approved-hero-avatar.png");
     this.load.image(ART_HERO_KEY, "images/sf-hero-swordsman.png");
-    this.load.image(APPROVED_HERO_KEY, "images/generated/characters/sf-hero-approved-lunge-v2.png");
+    this.load.image(APPROVED_HERO_IDLE_KEY, "images/generated/characters/sf-hero-approved-idle-v3.png");
+    this.load.image(APPROVED_HERO_RUN_KEY, "images/generated/characters/sf-hero-approved-run-v3.png");
+    this.load.image(APPROVED_HERO_ATTACK_KEY, "images/generated/characters/sf-hero-approved-attack-v3.png");
     this.load.svg(ART_HERO_ATTACK_KEY, "images/sf-hero-swordsman-attack.svg");
     this.load.svg(ART_HERO_HURT_KEY, "images/sf-hero-swordsman-hurt.svg");
     this.load.image(ART_ENEMY_NORMAL_KEY, "images/sf-enemy-normal.png");
@@ -364,6 +372,8 @@ export class GameScene extends Phaser.Scene {
     this.enemies = [];
     this.projectiles = [];
     this.commandBuffer = [];
+    this.playerPoseLockedUntil = 0;
+    this.reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     this.tipsVisible = false;
     this.runWeaponStates = {};
     this.items = { potion: 0, power_charm: 0, haste_charm: 0 };
@@ -557,11 +567,17 @@ export class GameScene extends Phaser.Scene {
     this.drawHumanoidTexture("hero", 0x4ecca3, 0x2f7d64);
     this.drawHumanoidTexture("goblin", 0xff6b6b, 0xa63c3c);
     // イラスト版（読み込めていれば）をゲーム内サイズに縮小した派生テクスチャを作る
-    const heroSource = this.textures.exists(APPROVED_HERO_KEY) ? APPROVED_HERO_KEY : ART_HERO_KEY;
-    const heroSize = heroSource === APPROVED_HERO_KEY ? APPROVED_HERO_ART_SIZE : HERO_ART_SIZE;
-    this.buildArtTexture(heroSource, HERO_ART_TEXTURE, heroSize.w, heroSize.h);
-    this.buildArtTexture(heroSource, HERO_ATTACK_ART_TEXTURE, heroSize.w, heroSize.h);
-    this.buildArtTexture(heroSource, HERO_HURT_ART_TEXTURE, heroSize.w, heroSize.h);
+    const legacyHeroSource = this.textures.exists(APPROVED_HERO_KEY) ? APPROVED_HERO_KEY : ART_HERO_KEY;
+    const hasApprovedPose = [APPROVED_HERO_IDLE_KEY, APPROVED_HERO_RUN_KEY, APPROVED_HERO_ATTACK_KEY]
+      .some((key) => this.textures.exists(key));
+    const heroSize = hasApprovedPose || legacyHeroSource === APPROVED_HERO_KEY ? APPROVED_HERO_ART_SIZE : HERO_ART_SIZE;
+    const idleSource = this.textures.exists(APPROVED_HERO_IDLE_KEY) ? APPROVED_HERO_IDLE_KEY : legacyHeroSource;
+    const runSource = this.textures.exists(APPROVED_HERO_RUN_KEY) ? APPROVED_HERO_RUN_KEY : idleSource;
+    const attackSource = this.textures.exists(APPROVED_HERO_ATTACK_KEY) ? APPROVED_HERO_ATTACK_KEY : legacyHeroSource;
+    this.buildArtTexture(idleSource, HERO_ART_TEXTURE, heroSize.w, heroSize.h);
+    this.buildArtTexture(runSource, HERO_RUN_ART_TEXTURE, heroSize.w, heroSize.h);
+    this.buildArtTexture(attackSource, HERO_ATTACK_ART_TEXTURE, heroSize.w, heroSize.h);
+    this.buildArtTexture(idleSource, HERO_HURT_ART_TEXTURE, heroSize.w, heroSize.h);
     this.buildArtTexture(ART_ENEMY_NORMAL_KEY, ENEMY_NORMAL_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_AGILE_KEY, ENEMY_AGILE_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
     this.buildArtTexture(ART_ENEMY_TANK_KEY, ENEMY_TANK_ART_TEXTURE, ENEMY_ART_SIZE.w, ENEMY_ART_SIZE.h);
@@ -742,6 +758,33 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.platforms.refresh();
+    this.buildForegroundFoliage();
+  }
+
+  /** A small live foreground layer adds mock-like depth without baking actors or effects into the background. */
+  private buildForegroundFoliage(): void {
+    const clusters = [90, 315, 610, 910, 1240, 1510];
+    clusters.forEach((x, clusterIndex) => {
+      const foliage = this.add.graphics({ x, y: GROUND_Y + 7 });
+      foliage.setName("side-foreground-foliage").setDepth(4).setScrollFactor(0.82).setAlpha(0.72);
+      foliage.fillStyle(clusterIndex % 2 === 0 ? 0x183c2b : 0x26563a, 0.9);
+      for (let blade = 0; blade < 7; blade += 1) {
+        const offsetX = blade * 10 - 30;
+        const height = 22 + ((blade * 11 + clusterIndex * 7) % 24);
+        foliage.fillTriangle(offsetX - 5, 8, offsetX, -height, offsetX + 5, 8);
+      }
+      foliage.fillStyle(0x6fa54b, 0.5).fillEllipse(0, -8, 82, 18);
+      if (!this.reducedMotion) {
+        this.tweens.add({
+          targets: foliage,
+          angle: clusterIndex % 2 === 0 ? 1.5 : -1.5,
+          duration: 1700 + clusterIndex * 90,
+          ease: "Sine.easeInOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      }
+    });
   }
 
   private buildPlayer(): void {
@@ -769,9 +812,13 @@ export class GameScene extends Phaser.Scene {
 
   /** 使用中のプレイヤーテクスチャに応じた当たり判定オフセット（判定サイズ自体はどちらも同じ） */
   private playerBodyOffset(): { x: number; y: number } {
-    const artKeys = [HERO_ART_TEXTURE, HERO_ATTACK_ART_TEXTURE, HERO_HURT_ART_TEXTURE];
+    const artKeys = [HERO_ART_TEXTURE, HERO_RUN_ART_TEXTURE, HERO_ATTACK_ART_TEXTURE, HERO_HURT_ART_TEXTURE];
     if (!artKeys.includes(this.player.texture.key)) return PLAYER_BODY_OFFSET.fallback;
-    return this.textures.exists(APPROVED_HERO_KEY) ? APPROVED_PLAYER_BODY_OFFSET : PLAYER_BODY_OFFSET.art;
+    const approvedPoseLoaded = [APPROVED_HERO_IDLE_KEY, APPROVED_HERO_RUN_KEY, APPROVED_HERO_ATTACK_KEY]
+      .some((key) => this.textures.exists(key));
+    return approvedPoseLoaded || this.textures.exists(APPROVED_HERO_KEY)
+      ? APPROVED_PLAYER_BODY_OFFSET
+      : PLAYER_BODY_OFFSET.art;
   }
 
   /** 1体の敵を、抽選済みのスペックで指定位置にスポーンする */
@@ -1396,6 +1443,7 @@ export class GameScene extends Phaser.Scene {
       this.player.setFlipX(false);
     }
     body.setVelocityX(vx);
+    this.syncPlayerLocomotionPose(vx, grounded);
 
     if (this.cursors.up.isDown && grounded) {
       body.setVelocityY(JUMP_VELOCITY);
@@ -1426,6 +1474,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** しゃがみ状態が切り替わった時だけ当たり判定・見た目のサイズを更新する */
+  /** Keep the visual pose in step with live movement without changing movement or collision rules. */
+  private syncPlayerLocomotionPose(vx: number, grounded: boolean): void {
+    if (this.time.now < this.playerPoseLockedUntil) return;
+    const moving = grounded && Math.abs(vx) > 5 && !this.guarding && !this.crouching;
+    const nextTexture = moving && this.textures.exists(HERO_RUN_ART_TEXTURE)
+      ? HERO_RUN_ART_TEXTURE
+      : this.textures.exists(HERO_ART_TEXTURE) ? HERO_ART_TEXTURE : "hero";
+    if (this.player.texture.key === nextTexture) return;
+    this.player.setTexture(nextTexture);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const off = this.playerBodyOffset();
+    body.setSize(PLAYER_BODY.w, this.crouching ? PLAYER_BODY.crouchH / CROUCH_SCALE_Y : PLAYER_BODY.h)
+      .setOffset(off.x, off.y);
+  }
+
   private applyCrouchVisual(crouching: boolean): void {
     if (crouching === this.wasCrouching) return;
     this.wasCrouching = crouching;
@@ -1501,6 +1564,7 @@ export class GameScene extends Phaser.Scene {
   /** 専用アクション立ち絵へ一時的に差し替える。当たり判定は通常時と同じ。 */
   private showPlayerActionPose(textureKey: string, durationMs: number): void {
     if (!this.textures.exists(textureKey)) return;
+    this.playerPoseLockedUntil = Math.max(this.playerPoseLockedUntil, this.time.now + durationMs);
     this.player.setTexture(textureKey);
     const body = this.player.body as Phaser.Physics.Arcade.Body;
     const off = this.playerBodyOffset();
@@ -1508,11 +1572,8 @@ export class GameScene extends Phaser.Scene {
       .setOffset(off.x, off.y);
     this.time.delayedCall(durationMs, () => {
       if (this.player.texture.key !== textureKey) return;
-      const normal = this.textures.exists(HERO_ART_TEXTURE) ? HERO_ART_TEXTURE : "hero";
-      this.player.setTexture(normal);
-      const normalOff = this.playerBodyOffset();
-      body.setSize(PLAYER_BODY.w, this.crouching ? PLAYER_BODY.crouchH / CROUCH_SCALE_Y : PLAYER_BODY.h)
-        .setOffset(normalOff.x, normalOff.y);
+      this.playerPoseLockedUntil = 0;
+      this.syncPlayerLocomotionPose(body.velocity.x, body.blocked.down);
     });
   }
 
@@ -1575,6 +1636,26 @@ export class GameScene extends Phaser.Scene {
       .setFlipX(facing < 0)
       .setScale(Math.max(0.55, weapon.range / 150), 0.72)
       .setAlpha(0.95);
+    if (!this.reducedMotion) {
+      [1, 2].forEach((step) => {
+        const afterimage = this.add
+          .image(this.player.x + facing * (26 - step * 13), this.player.y - 8 + step * 3, COMBAT_SLASH_TEXTURE)
+          .setName("side-slash-afterimage")
+          .setDepth(COMBAT_FX_DEPTH - step)
+          .setTint(step === 1 ? 0x91efff : 0x4f8fff)
+          .setFlipX(facing < 0)
+          .setScale(Math.max(0.5, weapon.range / 165) * (1 - step * 0.08), 0.62)
+          .setAlpha(step === 1 ? 0.34 : 0.18);
+        this.tweens.add({
+          targets: afterimage,
+          x: afterimage.x + facing * (11 + step * 5),
+          alpha: 0,
+          duration: 110 + step * 35,
+          ease: "Cubic.easeOut",
+          onComplete: () => afterimage.destroy(),
+        });
+      });
+    }
     this.tweens.add({
       targets: slashSprite,
       x: slashSprite.x + facing * 20,

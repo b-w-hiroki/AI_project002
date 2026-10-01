@@ -44,11 +44,21 @@ $hero = New-ResizedBitmap (Join-Path $sourceRoot "sf-hero-approved-lunge-v2-sour
 try { $hero.Save((Join-Path $characterDir "sf-hero-approved-lunge-v2.png"), [Drawing.Imaging.ImageFormat]::Png) }
 finally { $hero.Dispose() }
 
+@("idle", "run", "attack") | ForEach-Object {
+  $pose = $_
+  $poseBitmap = New-ResizedBitmap (Join-Path $sourceRoot "sf-hero-approved-$pose-v3-source.png") 640 320 $false
+  try { $poseBitmap.Save((Join-Path $characterDir "sf-hero-approved-$pose-v3.png"), [Drawing.Imaging.ImageFormat]::Png) }
+  finally { $poseBitmap.Dispose() }
+}
+
 $boss = New-ResizedBitmap (Join-Path $sourceRoot "sf-boss-approved-ogre-v2-source.png") 576 384 $false
 try { $boss.Save((Join-Path $characterDir "sf-boss-approved-ogre-v2.png"), [Drawing.Imaging.ImageFormat]::Png) }
 finally { $boss.Dispose() }
 
 Get-Item (Join-Path $backgroundDir "sf-approved-forest-battle-v2.jpg"),
   (Join-Path $characterDir "sf-hero-approved-lunge-v2.png"),
+  (Join-Path $characterDir "sf-hero-approved-idle-v3.png"),
+  (Join-Path $characterDir "sf-hero-approved-run-v3.png"),
+  (Join-Path $characterDir "sf-hero-approved-attack-v3.png"),
   (Join-Path $characterDir "sf-boss-approved-ogre-v2.png") |
   Select-Object FullName, Length
