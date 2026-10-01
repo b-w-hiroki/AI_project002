@@ -148,10 +148,10 @@ function build(scene: Runtime): ArcadeUi {
   const ruleText = text(scene, root, 270, 149, "", 18, "#ffffff", "900");
   text(scene, root, 270, 178, tr(scene.lang ?? "en", "正しい色カードをタップ！", "Tap the correct color card!"), 10, "#d7f2ff", "800");
 
-  panel(scene, root, 225, 278, 250, 112, 0xffffff, 0x8ac8f4, 0.97, 16);
+  panel(scene, root, 225, 278, 250, 112, 0xfffbec, 0xf4c85f, 0.98, 16);
   const promptText = text(scene, root, 225, 278, "", 46, "#273d5b", "900");
 
-  const chainText = text(scene, root, 82, 670, "0\nCHAIN!", 21, "#ff5f8f", "900").setStroke("#ffffff", 4).setAngle(-4);
+  const chainText = text(scene, root, 365, 326, "0\nCHAIN!", 24, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-7);
 
   const cardXs = [128, 322];
   const cardYs = [390, 490, 590];
@@ -162,14 +162,15 @@ function build(scene: Runtime): ArcadeUi {
     const bg = scene.add.graphics();
     const paint = (pressed = false) => {
       bg.clear();
-      bg.fillStyle(0x14375b, 0.12).fillRoundedRect(x - 78 + 3, y - 38 + 5, 156, 76, 14);
-      bg.fillStyle(0xffffff, pressed ? 0.84 : 0.96).fillRoundedRect(x - 78, y - 38, 156, 76, 14);
-      bg.fillStyle(color.hex, 0.07).fillCircle(x + 49, y - 16, 19);
-      bg.lineStyle(pressed ? 5 : 3, color.hex, 0.95).strokeRoundedRect(x - 78, y - 38, 156, 76, 14);
+      bg.fillStyle(0x102a49, 0.34).fillRoundedRect(x - 78 + 4, y - 38 + 7, 156, 76, 14);
+      bg.fillStyle(color.hex, pressed ? 0.78 : 0.96).fillRoundedRect(x - 78, y - 38, 156, 76, 14);
+      bg.fillStyle(0xffffff, 0.2).fillRoundedRect(x - 72, y - 32, 144, 14, 10);
+      bg.lineStyle(pressed ? 5 : 3, 0xffe58a, 0.96).strokeRoundedRect(x - 78, y - 38, 156, 76, 14);
+      bg.lineStyle(1, 0xffffff, 0.55).strokeRoundedRect(x - 72, y - 32, 144, 64, 10);
     };
     paint();
     root.add(bg);
-    const label = text(scene, root, x, y, "", 20, `#${color.hex.toString(16).padStart(6, "0")}`, "900");
+    const label = text(scene, root, x, y, "", 21, "#ffffff", "900").setStroke("#173453", 3);
     const hit = scene.add.zone(x, y, 156, 76).setInteractive({ useHandCursor: true });
     root.add(hit);
     hit.on("pointerdown", () => {
@@ -184,9 +185,9 @@ function build(scene: Runtime): ArcadeUi {
 
   let mascot: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("cm-mascot")) {
-    mascot = scene.add.image(394, 670, "cm-mascot").setDisplaySize(72, 72);
+    mascot = scene.add.image(78, 656, "cm-mascot").setDisplaySize(112, 112);
     root.add(mascot);
-    scene.tweens.add({ targets: mascot, y: 664, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    scene.tweens.add({ targets: mascot, y: 649, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
   panel(scene, root, 225, 748, 398, 58, 0x153d68, 0x79cff7, 0.94, 14);
   text(scene, root, 42, 732, "NEXT", 10, "#bdeaff", "900").setOrigin(0, 0.5);

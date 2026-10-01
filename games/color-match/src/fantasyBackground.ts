@@ -51,7 +51,10 @@ export function installColorFantasyBackground(): void {
     proto.__fantasyBackgroundPreload = originalPreload ?? (() => undefined);
     proto.preload = function (this: Phaser.Scene, ...args: unknown[]): unknown {
       const result = originalPreload?.apply(this, args);
-      this.load.svg(PORTRAIT_KEY, `images/${PORTRAIT_KEY}.svg`);
+      // Chromium/WebKit can expose a stale black texture when Phaser rasterizes this
+      // gradient-heavy SVG into WebGL. Use the checked-in 450x800 raster at the
+      // approved portrait viewport so the intended world art is always visible.
+      this.load.image(PORTRAIT_KEY, `images/${PORTRAIT_KEY}.png`);
       this.load.svg(LANDSCAPE_KEY, `images/${LANDSCAPE_KEY}.svg`);
       return result;
     };
