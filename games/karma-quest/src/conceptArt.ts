@@ -565,14 +565,44 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   hudPlate(scene, root, 332, 67, 190, 42);
   text(scene, root, 332, 59, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setStroke("#091420", 1);
   text(scene, root, 332, 76, "王都ルナディス", 12, "#fff6dd", "700").setStroke("#091420", 0);
+  // Chapter header and live status row mirror the approved home hierarchy.
+  // They intentionally cover the earlier compact header without replacing any
+  // progress source: lifetime evaluation and best stage remain live values.
+  const chapter = scene.add.graphics();
+  chapter.fillGradientStyle(0x07131e, 0x18374c, 0x07131e, 0x102a3e, 1, 1, 1, 1)
+    .fillRoundedRect(12, 12, 426, 100, 10);
+  chapter.lineStyle(2, 0xd5ad60, 0.96).strokeRoundedRect(12, 12, 426, 100, 10);
+  chapter.lineStyle(1, 0xffe4a0, 0.45).strokeRoundedRect(17, 17, 416, 90, 7);
+  chapter.fillStyle(0xd5ad60, 1).fillPoints([
+    new Phaser.Math.Vector2(48, 22), new Phaser.Math.Vector2(78, 54),
+    new Phaser.Math.Vector2(48, 86), new Phaser.Math.Vector2(18, 54),
+  ], true);
+  chapter.fillStyle(0x18374c, 1).fillPoints([
+    new Phaser.Math.Vector2(48, 28), new Phaser.Math.Vector2(72, 54),
+    new Phaser.Math.Vector2(48, 80), new Phaser.Math.Vector2(24, 54),
+  ], true);
+  root.add(chapter);
+  text(scene, root, 48, 54, "1", 31, "#fff3ce", "900");
+  text(scene, root, 110, 42, "王都ホーム", 30, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#091420", 2);
+  text(scene, root, 112, 78, "美しい王都を拠点に、世界の人々と出会う", 15, "#fff2c4", "700", 300).setOrigin(0, 0.5).setStroke("#091420", 0);
+  hudPlate(scene, root, 108, 151, 184, 66);
+  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 124, 52, 54, 0.6);
+  text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
+  text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
+  hudPlate(scene, root, 332, 132, 204, 34);
+  text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
+  hudPlate(scene, root, 332, 173, 190, 42);
+  text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
+  text(scene, root, 332, 182, "王都ルナティス", 12, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
+
   const rail = scene.add.graphics();
-  rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 108, 62, 338, 8);
-  rail.lineStyle(1.5, 0xe0bb69, 0.72).strokeRoundedRect(12, 108, 62, 338, 8);
-  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.18, 0, 0.18, 0).fillRect(15, 116, 16, 318);
-  for (const y of [180, 249, 318, 387]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
+  rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 214, 62, 456, 8);
+  rail.lineStyle(1.5, 0xe0bb69, 0.72).strokeRoundedRect(12, 214, 62, 456, 8);
+  rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.18, 0, 0.18, 0).fillRect(15, 222, 16, 438);
+  for (const y of [302, 390, 478, 566]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
   root.add(rail);
   for (const [index, label] of ["メニュー", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
-    const y = 125 + index * 69;
+    const y = 241 + index * 88;
     const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
     if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
     if (index === 1) {
@@ -598,25 +628,29 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     root.add(ink.setX(8));
     text(scene, root, 47, y + 25, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
   }
-  text(scene, root, 330, 180, "この世界の\n物語は、", 30, "#35281e", "900", 200);
-  text(scene, root, 322, 237, "あなたの選択から。", 22, "#35281e", "900", 228);
+  text(scene, root, 330, 286, "この世界の\n物語は、", 30, "#35281e", "900", 200);
+  text(scene, root, 322, 353, "あなたの選択から。", 22, "#35281e", "900", 228);
   // The home mock shows a close foreground hero, with the lower body behind HUD.
-  const homeHero = fitted(scene, root, HERO_BACK_KEY, 150, 565, 480, 634);
-  registerHeroKarmaVisual(scene, root, homeHero, 150, 470, 310, 450, 132, 318);
-  hudPlate(scene, root, 186, 581, 314, 38);
-  text(scene, root, 186, 581, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
-  requestCard(scene, root, 225, 656, 414, 112);
-  requesterPortrait(scene, root, 31, 618, 82, 78, true);
-  const homeRequestTitle = text(scene, root, 260, 629, "", 21, "#3c2a1e", "900");
-  const homeRequestBody = text(scene, root, 263, 674, "", 21, "#43382e", "700", 276);
+  const homeHero = fitted(scene, root, HERO_BACK_KEY, 150, 770, 480, 634);
+  registerHeroKarmaVisual(scene, root, homeHero, 150, 650, 330, 440, 142, 475);
+  hudPlate(scene, root, 186, 621, 314, 38);
+  text(scene, root, 186, 621, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
+  requestCard(scene, root, 225, 682, 414, 92);
+  requesterPortrait(scene, root, 31, 648, 72, 66, true);
+  const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
+  const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
     if (scene.journeyPending) homeRequestTitle.setText("旅の準備中…");
     else if (scene.journeyError) homeRequestTitle.setText("読込失敗・押して再試行");
-    homeRequestBody.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
+    const requestCopy = scene.homeRequest?.text ?? "王都であなたの決断を待っています。";
+    homeRequestBody
+      .setFontSize(requestCopy.length > 44 ? 15 : requestCopy.length > 30 ? 18 : 21)
+      .setLineSpacing(requestCopy.length > 30 ? 2 : 5)
+      .setText(requestCopy);
   });
-  text(scene, root, 418, 657, "›", 34, "#8a6726", "900");
+  text(scene, root, 418, 682, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
   nav.fillStyle(0x07131e, 0.9).fillRect(8, 734, 434, 58);
   nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.48).fillRect(10, 737, 430, 52);
@@ -643,7 +677,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
   root.add(icons);
   // Availability is visible before opening the explanatory modal.
-  for (const [x, y] of [[47, 332], [400, 746]] as const) {
+  for (const [x, y] of [[47, 505], [400, 746]] as const) {
     root.add(scene.add.graphics().fillStyle(0x07131e, 0.9).fillRoundedRect(x - 24, y - 9, 48, 18, 4));
     text(scene, root, x, y, "準備中", 12, "#d8c9ab", "700").setStroke("#091420", 0);
   }
@@ -651,7 +685,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 16, "#fff0c8", "800").setStroke("#091420", 0);
   }
   screenFrame(scene, root);
-  const start = scene.add.zone(225, 660, 420, 112).setInteractive({ useHandCursor: true });
+  const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });
   let startArmed = false;
   start.on("pointerdown", () => { startArmed = true; });
   start.on("pointerout", () => { startArmed = false; });
@@ -705,7 +739,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("持ち物", "持ち物の管理は\n現在は利用できません。\n\n装備なしで冒険を開始できます。"),
     () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
   ];
-  railRoutes.forEach((route, i) => addRoute(47, 137 + i * 69, 76, 66, route));
+  railRoutes.forEach((route, i) => addRoute(47, 253 + i * 88, 76, 82, route));
   root.add(modal);
   return root;
 }
