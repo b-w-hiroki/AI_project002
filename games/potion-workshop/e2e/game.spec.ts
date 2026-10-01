@@ -85,7 +85,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(modalLabels.some(label => label.includes("Ascend to This Town"))).toBe(true);
 });
 
-test("official alchemist texture decodes and survives scene re-entry", async ({ page }) => {
+test("official and stirring alchemist textures decode and survive scene re-entry", async ({ page }) => {
   const readHero = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
     const findHero = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Image | undefined => {
@@ -100,33 +100,43 @@ test("official alchemist texture decodes and survives scene re-entry", async ({ 
     };
     const hero = findHero(scene.children.list);
     const source = scene.textures.get("pw-hero-alchemist").getSourceImage() as HTMLImageElement;
+    const stirringSource = scene.textures.get("pw-hero-stirring-v2").getSourceImage() as HTMLImageElement;
     return {
       heroTexture: hero?.texture.key,
       officialLoaded: scene.textures.exists("pw-hero-alchemist"),
+      stirringLoaded: scene.textures.exists("pw-hero-stirring-v2"),
       approvedCatLoaded: scene.textures.exists("pw-approved-cat-visible"),
       invalidDuplicateLoaded: scene.textures.exists("pw-hero-alchemist-female"),
       sourceWidth: source.naturalWidth || source.width,
       sourceHeight: source.naturalHeight || source.height,
+      stirringWidth: stirringSource.naturalWidth || stirringSource.width,
+      stirringHeight: stirringSource.naturalHeight || stirringSource.height,
     };
   });
 
   await expect.poll(readHero).toEqual({
-    heroTexture: "pw-hero-alchemist",
+    heroTexture: "pw-hero-stirring-v2",
     officialLoaded: true,
+    stirringLoaded: true,
     approvedCatLoaded: true,
     invalidDuplicateLoaded: false,
     sourceWidth: 512,
     sourceHeight: 512,
+    stirringWidth: 640,
+    stirringHeight: 640,
   });
 
   await page.evaluate(() => window.__qaGame.scene.getScene("idle").scene.restart());
   await expect.poll(readHero).toEqual({
-    heroTexture: "pw-hero-alchemist",
+    heroTexture: "pw-hero-stirring-v2",
     officialLoaded: true,
+    stirringLoaded: true,
     approvedCatLoaded: true,
     invalidDuplicateLoaded: false,
     sourceWidth: 512,
     sourceHeight: 512,
+    stirringWidth: 640,
+    stirringHeight: 640,
   });
 });
 
@@ -243,20 +253,23 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     const navTargets = [0, 1, 2, 3].map(index =>
       findObject(scene.children.list, `workshop-nav-${index}`) as Phaser.GameObjects.Zone,
     );
+    const blackboard = findObject(scene.children.list, "workshop-blackboard-text") as Phaser.GameObjects.Text;
     return {
-      hero: { x: hero.x, y: hero.y, width: hero.displayWidth, height: hero.displayHeight },
+      hero: { texture: hero.texture.key, x: hero.x, y: hero.y, width: hero.displayWidth, height: hero.displayHeight },
       cauldron: { x: cauldron.x, y: cauldron.y, width: cauldron.displayWidth, height: cauldron.displayHeight },
       cat: { x: cat.x, y: cat.y, width: cat.displayWidth, height: cat.displayHeight },
+      blackboard: { visible: blackboard.visible, text: blackboard.text },
       brewTarget: { width: brewTarget.width, height: brewTarget.height, interactive: !!brewTarget.input?.enabled },
       navTargets: navTargets.map(zone => ({ width: zone.width, height: zone.height, interactive: !!zone.input?.enabled })),
     };
   });
   expect(portraitComposition).toEqual({
-    hero: { x: 225, y: 325, width: 360, height: 360 },
+    hero: { texture: "pw-hero-stirring-v2", x: 230, y: 292, width: 350, height: 350 },
     cauldron: { x: 225, y: 440, width: 260, height: 260 },
     cat: { x: 102, y: 408, width: 150, height: 164 },
+    blackboard: { visible: true, text: expect.stringMatching(/次の依頼|NEXT ORDER/) },
     brewTarget: { width: 230, height: 220, interactive: true },
-    navTargets: Array.from({ length: 4 }, () => ({ width: 52, height: 52, interactive: true })),
+    navTargets: Array.from({ length: 4 }, () => ({ width: 100, height: 68, interactive: true })),
   });
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-workshop.png", animations: "disabled" });
 
@@ -274,6 +287,67 @@ test("visual QA: brewing shows a magical burst", async ({ page }) => {
     path: "e2e/screenshots/portrait-brew-burst.png",
     animations: "disabled",
   });
+});
+
+test("portrait management nav keeps orders, upgrades, equipment, and ascension functional", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  const result = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const findNamed = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const found = findNamed((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", {
+      ...state,
+      potions: 2_000_000,
+      totalBrewed: 1_000_000,
+      lifetimeBrewed: Math.max(Number(state.lifetimeBrewed ?? 0), 1_000_000),
+    });
+    const zones = [0, 1, 2, 3].map(index =>
+      findNamed(scene.children.list, `workshop-nav-${index}`) as Phaser.GameObjects.Zone,
+    );
+
+    zones[0]!.emit("pointerdown");
+    const ordersOpened = !!Reflect.get(scene, "contractModal");
+    (Reflect.get(scene, "contractModal") as Phaser.GameObjects.Container | null)?.destroy(true);
+    Reflect.set(scene, "contractModal", null);
+
+    const beforeUpgrade = Reflect.get(scene, "state") as { clickPower: number };
+    zones[1]!.emit("pointerdown");
+    const afterUpgrade = Reflect.get(scene, "state") as { clickPower: number; counts: Record<string, number> };
+    const equipmentBefore = Object.values(afterUpgrade.counts).reduce((sum, value) => sum + value, 0);
+    zones[2]!.emit("pointerdown");
+    const afterEquipment = Reflect.get(scene, "state") as { counts: Record<string, number> };
+    const equipmentAfter = Object.values(afterEquipment.counts).reduce((sum, value) => sum + value, 0);
+
+    zones[3]!.emit("pointerdown");
+    return {
+      ordersOpened,
+      clickPowerDelta: afterUpgrade.clickPower - beforeUpgrade.clickPower,
+      equipmentDelta: equipmentAfter - equipmentBefore,
+      ascensionOpened: !!Reflect.get(scene, "townChoiceModal"),
+    };
+  });
+  expect(result).toEqual({
+    ordersOpened: true,
+    clickPowerDelta: 1,
+    equipmentDelta: 1,
+    ascensionOpened: true,
+  });
+  const persisted = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? "{}"), SAVE_KEY);
+  expect(persisted.state.clickPower).toBeGreaterThan(1);
+  expect(Object.values(persisted.state.counts as Record<string, number>).reduce((sum, value) => sum + value, 0)).toBeGreaterThan(0);
 });
 
 

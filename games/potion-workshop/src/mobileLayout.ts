@@ -41,6 +41,7 @@ type MobileUi = {
   prestigeText: Phaser.GameObjects.Text;
   productionTexts: Phaser.GameObjects.Text[];
   prestigeBar: Phaser.GameObjects.Graphics;
+  blackboardText?: Phaser.GameObjects.Text;
   hero?: Phaser.GameObjects.Image;
   cauldron?: Phaser.GameObjects.Image;
   brewX: number;
@@ -103,6 +104,65 @@ function addButtonChrome(scene: Phaser.Scene, root: Phaser.GameObjects.Container
   g.lineStyle(2, 0xf4dfae, 0.62).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
   g.lineStyle(1, 0xffffff, 0.28).strokeRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, h - 10, 8);
   g.fillStyle(0xf4dfae, 0.7).fillCircle(x - w / 2 + 9, y, 2).fillCircle(x + w / 2 - 9, y, 2);
+  root.add(g);
+}
+
+function addNavIcon(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  kind: "orders" | "upgrade" | "equipment" | "ascend",
+): void {
+  const g = scene.add.graphics();
+  g.lineStyle(2.3, 0xffedba, 0.92);
+  g.fillStyle(0xffedba, 0.16);
+  if (kind === "orders") {
+    g.fillRoundedRect(x - 10, y - 10, 20, 22, 3);
+    g.strokeRoundedRect(x - 10, y - 10, 20, 22, 3);
+    g.lineBetween(x - 6, y - 4, x + 6, y - 4);
+    g.lineBetween(x - 6, y + 2, x + 4, y + 2);
+  } else if (kind === "upgrade") {
+    g.lineBetween(x - 9, y + 9, x + 8, y - 8);
+    g.strokeCircle(x - 8, y + 9, 4);
+    g.fillTriangle(x + 4, y - 10, x + 12, y - 12, x + 10, y - 4);
+  } else if (kind === "equipment") {
+    g.fillRoundedRect(x - 12, y - 7, 24, 17, 4);
+    g.strokeRoundedRect(x - 12, y - 7, 24, 17, 4);
+    g.strokeRect(x - 5, y - 12, 10, 5);
+    g.lineBetween(x, y - 6, x, y + 9);
+  } else {
+    const points = Array.from({ length: 10 }, (_, index) => {
+      const angle = -Math.PI / 2 + (Math.PI * index) / 5;
+      const radius = index % 2 === 0 ? 12 : 5;
+      return new Phaser.Math.Vector2(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+    });
+    g.fillPoints(points, true);
+    g.strokePoints(points, true);
+  }
+  root.add(g);
+}
+
+function addWorkshopProps(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
+  const g = scene.add.graphics();
+  // Foreground bottles and ingredient jars echo the approved home without
+  // baking interactive UI into a single screenshot.
+  const bottles: Array<[number, number, number, number]> = [
+    [18, 392, 0x75e4ff, 18],
+    [37, 405, 0xc78cff, 23],
+    [414, 382, 0x78efae, 20],
+    [433, 399, 0xffcc6f, 26],
+  ];
+  for (const [x, y, color, h] of bottles) {
+    g.fillStyle(0x31231b, 0.88).fillRect(x - 3, y - h / 2 - 5, 6, 6);
+    g.fillStyle(color, 0.72).fillRoundedRect(x - 7, y - h / 2, 14, h, 5);
+    g.lineStyle(1.2, 0xfff0c7, 0.72).strokeRoundedRect(x - 7, y - h / 2, 14, h, 5);
+    g.fillStyle(0xffffff, 0.38).fillCircle(x - 3, y - h / 2 + 5, 2);
+  }
+  g.fillStyle(0x65442c, 0.9).fillRoundedRect(364, 458, 76, 28, 4);
+  g.lineStyle(1.5, 0xd9ad58, 0.65).strokeRoundedRect(364, 458, 76, 28, 4);
+  g.lineBetween(402, 458, 402, 486);
+  g.lineBetween(364, 472, 440, 472);
   root.add(g);
 }
 
@@ -230,11 +290,13 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const brewY = portrait ? 440 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
-  const heroKey = "pw-hero-alchemist";
+  const heroKey = scene.textures.exists("pw-hero-stirring-v2")
+    ? "pw-hero-stirring-v2"
+    : "pw-hero-alchemist";
   if (scene.textures.exists(heroKey)) {
     hero = scene.add
-      .image(heroX, heroY, heroKey)
-      .setDisplaySize(portrait ? 360 : 230, portrait ? 360 : 230)
+      .image(portrait ? 230 : heroX, portrait ? 292 : heroY, heroKey)
+      .setDisplaySize(portrait ? 350 : 238, portrait ? 350 : 238)
       .setName("workshop-hero");
     root.add(hero);
   }
@@ -277,33 +339,6 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     .setName("brew-hit-target");
 
   if (portrait) {
-    const rail = scene.add.graphics();
-    rail.fillStyle(0x120d0a, 0.9).fillRoundedRect(5, 126, 58, 244, 16);
-    rail.lineStyle(2, 0xd9ad58, 0.86).strokeRoundedRect(5, 126, 58, 244, 16);
-    root.add(rail);
-    const fulfillOrder = (index: number) => {
-      if (scene.state) updateState(scene, fulfillContract(scene.state, index));
-    };
-    const railItems = [
-      { y: 158, label: lang === "ja" ? "\u8abf\u5408" : "BREW", action: () => brew(scene, uiByScene.get(scene)!) },
-      { y: 218, label: lang === "ja" ? "\u4f9d\u983c1" : "ORDER 1", action: () => fulfillOrder(0) },
-      { y: 278, label: lang === "ja" ? "\u4f9d\u983c2" : "ORDER 2", action: () => fulfillOrder(1) },
-      {
-        y: 338,
-        label: lang === "ja" ? "\u5f37\u5316" : "UPGRADE",
-        action: () => {
-          if (!scene.state) return;
-          const rec = recommended(scene.state);
-          updateState(scene, buyGenerator(scene.state, rec.id));
-        },
-      },
-    ];
-    railItems.forEach((item, index) => {
-      addButtonChrome(scene, root, 34, item.y, 46, 48, index === 0 ? 0x167f82 : 0x55402c);
-      text(scene, root, 34, item.y, item.label, 7, "#fff3d0", "900");
-      hitButton(scene, root, 34, item.y, 48, 52, item.action).setName(`workshop-nav-${index}`);
-    });
-
     const magic = scene.add.graphics();
     const bubbles: Array<[number, number, number, number]> = [
       [112, 355, 5, 0x88ffd0],
@@ -318,6 +353,26 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       magic.lineStyle(1, 0xffffff, 0.68).strokeCircle(x, y, radius);
     });
     root.add(magic);
+
+    addWorkshopProps(scene, root);
+
+    const board = scene.add.graphics();
+    board.fillStyle(0x291f19, 0.96).fillRoundedRect(12, 449, 122, 70, 6);
+    board.lineStyle(5, 0x745035, 1).strokeRoundedRect(12, 449, 122, 70, 6);
+    board.lineStyle(1, 0xe8cf9d, 0.4).strokeRoundedRect(18, 455, 110, 58, 3);
+    board.lineStyle(4, 0x68442c, 1).lineBetween(26, 521, 16, 539).lineBetween(120, 521, 130, 539);
+    root.add(board);
+    const blackboardText = scene.add.text(73, 484, "", {
+      fontFamily: '"Segoe Print", "Yu Gothic", sans-serif',
+      fontSize: "9px",
+      fontStyle: "700",
+      color: "#fff7d7",
+      align: "center",
+      lineSpacing: 2,
+      wordWrap: { width: 104, useAdvancedWrap: true },
+    }).setOrigin(0.5).setName("workshop-blackboard-text");
+    root.add(blackboardText);
+    root.setData("blackboardText", blackboardText);
 
     const speech = scene.add.graphics();
     speech.fillStyle(0xfffbef, 0.96).fillRoundedRect(72, 126, 132, 74, 18);
@@ -371,32 +426,60 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       updateState(scene, buyGenerator(scene.state, rec.id));
     });
 
-    panel(scene, root, 225, 728, 420, 70, 0x2f2927, 0x9b7d57, 0.9, 13);
-    const mgmtX = [85, 225, 365];
-    const bottomNav = scene.add.graphics();
-    mgmtX.forEach((x, index) => {
-      bottomNav.fillStyle(index === 0 ? 0x164f60 : 0x33271f, 0.96).fillCircle(x, 718, 31);
-      bottomNav.lineStyle(2, 0xe0b761, 0.92).strokeCircle(x, 718, 31);
-      bottomNav.lineStyle(1, 0xffedba, 0.4).strokeCircle(x, 718, 25);
+    panel(scene, root, 225, 744, 430, 78, 0x2f2927, 0x9b7d57, 0.94, 13);
+    // Approved-home hierarchy: one large brew CTA plus four compact management tabs.
+    // Every tab retains a real game action and a >= 44 px target.
+    const navItems = [
+      {
+        x: 62,
+        kind: "orders" as const,
+        ja: "依頼",
+        en: "ORDERS",
+        action: () => {
+          const show = Reflect.get(scene, "showContracts");
+          if (typeof show === "function") show.call(scene);
+        },
+      },
+      {
+        x: 171,
+        kind: "upgrade" as const,
+        ja: "強化",
+        en: "UPGRADE",
+        action: () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)),
+      },
+      {
+        x: 280,
+        kind: "equipment" as const,
+        ja: "設備",
+        en: "EQUIP",
+        action: () => {
+          if (!scene.state) return;
+          const rec = recommended(scene.state);
+          updateState(scene, buyGenerator(scene.state, rec.id));
+        },
+      },
+      {
+        x: 389,
+        kind: "ascend" as const,
+        ja: "転生",
+        en: "ASCEND",
+        action: () => {
+          if (!scene.state || essenceOnPrestige(scene.state) <= 0) return;
+          const show = Reflect.get(scene, "showTownChoice");
+          if (typeof show === "function") show.call(scene);
+        },
+      },
+    ];
+    navItems.forEach((item, index) => {
+      addButtonChrome(scene, root, item.x, 744, 100, 68, index === 0 ? 0x165f70 : 0x453126);
+      addNavIcon(scene, root, item.x, 732, item.kind);
+      text(scene, root, item.x, 763, lang === "ja" ? item.ja : item.en, 9, "#fff3d0", "900");
+      hitButton(scene, root, item.x, 744, 100, 68, item.action).setName(`workshop-nav-${index}`);
     });
-    root.add(bottomNav);
-    clickUpgradeText = text(scene, root, mgmtX[0]!, 718, "", 9, "#f9e8c9", "900");
-    offlineText = text(scene, root, mgmtX[1]!, 718, "", 9, "#d7ecff", "900");
-    prestigeText = text(scene, root, mgmtX[2]!, 718, "", 9, "#ead5ff", "900");
-    hitButton(scene, root, mgmtX[0]!, 718, 118, 54, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
-    hitButton(scene, root, mgmtX[1]!, 718, 118, 54, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
-    hitButton(scene, root, mgmtX[2]!, 718, 118, 54, () => {
-      if (!scene.state || essenceOnPrestige(scene.state) <= 0) return;
-      const show = Reflect.get(scene, "showTownChoice");
-      if (typeof show === "function") show.call(scene);
-    });
+    clickUpgradeText = text(scene, root, 171, 780, "", 1, "#f9e8c9", "900").setVisible(false);
+    offlineText = text(scene, root, 280, 780, "", 1, "#d7ecff", "900").setVisible(false);
+    prestigeText = text(scene, root, 389, 780, "", 1, "#ead5ff", "900").setVisible(false);
 
-    const prodY = 780;
-    GENERATORS.slice(0, 4).forEach((def, i) => {
-      const x = 58 + i * 112;
-      const p = text(scene, root, x, prodY, "", 8, "#fff7e5", "800");
-      productionTexts.push(p);
-    });
   } else {
     panel(scene, root, 588, 170, 388, 190, 0x423124, 0xd4b36e, 0.93, 16);
     text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
@@ -456,6 +539,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     prestigeText,
     productionTexts,
     prestigeBar,
+    blackboardText: root.getData("blackboardText") as Phaser.GameObjects.Text | undefined,
     hero,
     cauldron,
     brewX,
@@ -500,6 +584,19 @@ function refresh(scene: Runtime): void {
   });
 
   ui.recommendationText.setText(`${lang === "ja" ? "おすすめ" : "Recommended"}  ${generatorName(lang, rec.id)} Lv.${rec.count}\n${lang === "ja" ? "次" : "Next"} ${formatNumber(rec.cost)}`);
+  if (ui.blackboardText) {
+    const nextOrder = [0, 1].find(index => !state.completedContracts.includes(index));
+    if (nextOrder === undefined) {
+      ui.blackboardText.setText(lang === "ja" ? "本日の依頼\nすべて納品済み ✓" : "TODAY'S ORDERS\nALL DELIVERED ✓");
+    } else {
+      const cost = contractCost(state, nextOrder);
+      ui.blackboardText.setText(
+        lang === "ja"
+          ? `次の依頼\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\n評判 +${nextOrder === 0 ? 1 : 3}`
+          : `NEXT ORDER\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\nREP +${nextOrder === 0 ? 1 : 3}`,
+      );
+    }
+  }
   const clickCost = (() => {
     const next = buyClickUpgrades({ ...state, potions: Number.MAX_SAFE_INTEGER }, 1);
     if (!next) return 0;
