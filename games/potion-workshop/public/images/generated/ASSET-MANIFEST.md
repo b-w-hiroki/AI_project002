@@ -1,21 +1,27 @@
-# Potion Workshop visual asset manifest — 2026-09-25
+# Potion Workshop visual asset manifest — 2026-10-01
 
 ## Mock fidelity baseline
-- female alchemist is the official protagonist visual.
-- workshop management / brewing loop remains unchanged.
-- dense workshop props are decorative; economy logic stays code-driven.
+
+- The female alchemist is the official protagonist visual.
+- The workshop management and brewing loop remain unchanged.
+- Dense workshop props are decorative; economy logic stays code-driven.
 
 ## Runtime assets
-- generated/characters/pw-hero-alchemist-female.webp — official protagonist
-- pw-bg-workshop.png — workshop background
-- pw-cauldron-icon.png — brewing prop
-- pw-dragon-icon.png — progression/rare prop
-- existing Phaser UI/theme — request/reward, recipe, generator and resource UI
+
+- `pw-hero-alchemist.png` — official protagonist and single runtime hero texture.
+- `pw-bg-workshop.png` — workshop background.
+- `pw-cauldron-icon.png` — brewing prop.
+- `pw-dragon-icon.png` — progression and rare prop.
+- Existing Phaser UI/theme — request/reward, recipe, generator, and resource UI.
+
+The invalid duplicate `generated/characters/pw-hero-alchemist-female.webp` was retired. It was not a decodable WebP and the runtime had always fallen back to the official PNG above.
 
 ## Remaining source-sheet roles
-The recovered artboard is the reference for black cat, town, furniture, ingredients, recipe cards, UI frames, FX, props and branding. These are not duplicated until a runtime screen needs a separate texture.
+
+The recovered artboard is the reference for the black cat, town, furniture, ingredients, recipe cards, UI frames, FX, props, and branding. These are not duplicated until a runtime screen needs a separate texture.
 
 ## Rules
-- no genre change.
-- keep idle/brewing/economy loop.
-- preserve readable resource hierarchy and large protagonist/cauldron focus.
+
+- No genre change.
+- Keep the idle, brewing, and economy loop.
+- Preserve readable resource hierarchy and large protagonist/cauldron focus.

@@ -182,7 +182,7 @@ function findHero(scene: IdleRuntime): Phaser.GameObjects.Image | null {
   for (const child of scene.children.list) {
     if (
       child instanceof Phaser.GameObjects.Image &&
-      ["pw-hero-alchemist-female", "pw-hero-alchemist"].includes(child.texture.key)
+      child.texture.key === "pw-hero-alchemist"
     ) return child;
   }
   return null;
@@ -433,6 +433,11 @@ function buildConceptUi(scene: IdleRuntime): WorkshopConceptUi {
     activeDrawer: null,
   };
   uiByScene.set(scene, ui);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    uiByScene.delete(scene);
+    heroByScene.delete(scene);
+    tapState.delete(scene);
+  });
   refreshConceptUi(scene);
   return ui;
 }

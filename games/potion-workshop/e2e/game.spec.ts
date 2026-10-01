@@ -5,8 +5,16 @@ import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 declare global { interface Window { __qaGame: Phaser.Game } }
 
 const SAVE_KEY = "ai_project002_save_v1";
+const runtimeErrors = new WeakMap<import("@playwright/test").Page, string[]>();
 
 test.beforeEach(async ({ page }) => {
+  const errors: string[] = [];
+  runtimeErrors.set(page, errors);
+  page.on("console", message => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", error => errors.push(`page: ${error.message}`));
+  page.on("requestfailed", request => errors.push(`request: ${request.url()} ${request.failure()?.errorText ?? "failed"}`));
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     const response = await route.fetch();
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
@@ -15,6 +23,10 @@ test.beforeEach(async ({ page }) => {
   await page.locator("canvas").waitFor();
   await page.waitForFunction(() => !!window.__qaGame);
   await page.waitForTimeout(600);
+});
+
+test.afterEach(async ({ page }) => {
+  expect(runtimeErrors.get(page)).toEqual([]);
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
@@ -70,6 +82,48 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(modalLabels).toContain("Choose Your Next Town");
   expect(modalLabels.some(label => label.includes("Orsha, City by the Water"))).toBe(true);
   expect(modalLabels.some(label => label.includes("Ascend to This Town"))).toBe(true);
+});
+
+test("official alchemist texture decodes and survives scene re-entry", async ({ page }) => {
+  const readHero = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const findHero = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Image | undefined => {
+      for (const node of nodes) {
+        if (node.name === "workshop-hero") return node as Phaser.GameObjects.Image;
+        if (node.type === "Container") {
+          const found = findHero((node as Phaser.GameObjects.Container).list);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const hero = findHero(scene.children.list);
+    const source = scene.textures.get("pw-hero-alchemist").getSourceImage() as HTMLImageElement;
+    return {
+      heroTexture: hero?.texture.key,
+      officialLoaded: scene.textures.exists("pw-hero-alchemist"),
+      invalidDuplicateLoaded: scene.textures.exists("pw-hero-alchemist-female"),
+      sourceWidth: source.naturalWidth || source.width,
+      sourceHeight: source.naturalHeight || source.height,
+    };
+  });
+
+  await expect.poll(readHero).toEqual({
+    heroTexture: "pw-hero-alchemist",
+    officialLoaded: true,
+    invalidDuplicateLoaded: false,
+    sourceWidth: 512,
+    sourceHeight: 512,
+  });
+
+  await page.evaluate(() => window.__qaGame.scene.getScene("idle").scene.restart());
+  await expect.poll(readHero).toEqual({
+    heroTexture: "pw-hero-alchemist",
+    officialLoaded: true,
+    invalidDuplicateLoaded: false,
+    sourceWidth: 512,
+    sourceHeight: 512,
+  });
 });
 
 async function canvasSize(page: import("@playwright/test").Page): Promise<{ width: number; height: number }> {
@@ -154,14 +208,35 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     };
     const hero = findNamed(scene.children.list, "workshop-hero")!;
     const cauldron = findNamed(scene.children.list, "workshop-cauldron")!;
+    const findObject = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const found = findObject((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const brewTarget = findObject(scene.children.list, "brew-hit-target") as Phaser.GameObjects.Zone;
+    const navTargets = [0, 1, 2, 3].map(index =>
+      findObject(scene.children.list, `workshop-nav-${index}`) as Phaser.GameObjects.Zone,
+    );
     return {
       hero: { x: hero.x, y: hero.y, width: hero.displayWidth, height: hero.displayHeight },
       cauldron: { x: cauldron.x, y: cauldron.y, width: cauldron.displayWidth, height: cauldron.displayHeight },
+      brewTarget: { width: brewTarget.width, height: brewTarget.height, interactive: !!brewTarget.input?.enabled },
+      navTargets: navTargets.map(zone => ({ width: zone.width, height: zone.height, interactive: !!zone.input?.enabled })),
     };
   });
   expect(portraitComposition).toEqual({
     hero: { x: 225, y: 325, width: 360, height: 360 },
     cauldron: { x: 225, y: 440, width: 260, height: 260 },
+    brewTarget: { width: 230, height: 220, interactive: true },
+    navTargets: Array.from({ length: 4 }, () => ({ width: 52, height: 52, interactive: true })),
   });
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-workshop.png", animations: "disabled" });
 

@@ -199,14 +199,30 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   root.add(blocker);
 
   const lang = scene.lang ?? "en";
-  const titleX = portrait ? 108 : 104;
-  text(scene, root, titleX, 26, t(lang, "title"), portrait ? 23 : 25, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
+  if (portrait) {
+    const header = scene.add.graphics();
+    const badgePoints = [
+      new Phaser.Math.Vector2(35, 8),
+      new Phaser.Math.Vector2(62, 35),
+      new Phaser.Math.Vector2(35, 62),
+      new Phaser.Math.Vector2(8, 35),
+    ];
+    header.fillStyle(0x130d0a, 0.88).fillRect(0, 0, 450, 106);
+    header.lineStyle(2, 0xd9ad58, 0.88).lineBetween(0, 104, 450, 104);
+    header.lineStyle(1, 0xffe4a7, 0.42).lineBetween(70, 67, 438, 67);
+    header.fillStyle(0x1d4e75, 0.96).fillPoints(badgePoints, true);
+    header.lineStyle(3, 0xe5bd67, 0.96).strokePoints(badgePoints, true);
+    root.add(header);
+    text(scene, root, 35, 35, "1", 26, "#fff4d2", "900").setStroke("#17334b", 3);
+  }
+  const titleX = portrait ? 78 : 104;
+  text(scene, root, titleX, 24, t(lang, "title"), portrait ? 21 : 25, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
   text(scene, root, titleX, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
 
-  const potionText = text(scene, root, portrait ? 340 : 545, 25, "", portrait ? 15 : 16, "#fff2cd", "900");
-  const essenceText = text(scene, root, portrait ? 340 : 665, 49, "", 10, "#e3c4ff", "900");
-  const reputationText = text(scene, root, portrait ? 416 : 764, 49, "", 10, "#bff0cf", "900").setOrigin(1, 0.5);
-  const townText = text(scene, root, portrait ? 110 : 694, 25, "", 10, "#f5dcae", "800");
+  const potionText = text(scene, root, portrait ? 370 : 545, 22, "", portrait ? 12 : 16, "#fff2cd", "900").setOrigin(1, 0.5);
+  const essenceText = text(scene, root, portrait ? 350 : 665, 48, "", 9, "#e3c4ff", "900").setOrigin(1, 0.5);
+  const reputationText = text(scene, root, portrait ? 438 : 764, 48, "", 9, "#bff0cf", "900").setOrigin(1, 0.5);
+  const townText = text(scene, root, portrait ? 225 : 694, portrait ? 84 : 25, "", 10, "#f5dcae", "800");
 
   const heroX = portrait ? 225 : 150;
   const heroY = portrait ? 325 : 202;
@@ -214,9 +230,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const brewY = portrait ? 440 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
-  const heroKey = scene.textures.exists("pw-hero-alchemist-female")
-    ? "pw-hero-alchemist-female"
-    : "pw-hero-alchemist";
+  const heroKey = "pw-hero-alchemist";
   if (scene.textures.exists(heroKey)) {
     hero = scene.add
       .image(heroX, heroY, heroKey)
@@ -251,7 +265,52 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     "#b8ffd7",
     "900",
   );
-  hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
+  hitButton(scene, root, brewX, brewY, portrait ? 230 : 210, 220, () => brew(scene, uiByScene.get(scene)!))
+    .setName("brew-hit-target");
+
+  if (portrait) {
+    const rail = scene.add.graphics();
+    rail.fillStyle(0x120d0a, 0.9).fillRoundedRect(5, 126, 58, 244, 16);
+    rail.lineStyle(2, 0xd9ad58, 0.86).strokeRoundedRect(5, 126, 58, 244, 16);
+    root.add(rail);
+    const fulfillOrder = (index: number) => {
+      if (scene.state) updateState(scene, fulfillContract(scene.state, index));
+    };
+    const railItems = [
+      { y: 158, label: lang === "ja" ? "\u8abf\u5408" : "BREW", action: () => brew(scene, uiByScene.get(scene)!) },
+      { y: 218, label: lang === "ja" ? "\u4f9d\u983c1" : "ORDER 1", action: () => fulfillOrder(0) },
+      { y: 278, label: lang === "ja" ? "\u4f9d\u983c2" : "ORDER 2", action: () => fulfillOrder(1) },
+      {
+        y: 338,
+        label: lang === "ja" ? "\u5f37\u5316" : "UPGRADE",
+        action: () => {
+          if (!scene.state) return;
+          const rec = recommended(scene.state);
+          updateState(scene, buyGenerator(scene.state, rec.id));
+        },
+      },
+    ];
+    railItems.forEach((item, index) => {
+      addButtonChrome(scene, root, 34, item.y, 46, 48, index === 0 ? 0x167f82 : 0x55402c);
+      text(scene, root, 34, item.y, item.label, 7, "#fff3d0", "900");
+      hitButton(scene, root, 34, item.y, 48, 52, item.action).setName(`workshop-nav-${index}`);
+    });
+
+    const magic = scene.add.graphics();
+    const bubbles: Array<[number, number, number, number]> = [
+      [112, 355, 5, 0x88ffd0],
+      [145, 392, 3, 0x84d8ff],
+      [310, 350, 4, 0xe0b4ff],
+      [328, 405, 6, 0x8fffd2],
+      [119, 452, 3, 0xffdf86],
+      [333, 463, 4, 0x8edcff],
+    ];
+    bubbles.forEach(([x, y, radius, color]) => {
+      magic.fillStyle(color, 0.72).fillCircle(x, y, radius);
+      magic.lineStyle(1, 0xffffff, 0.68).strokeCircle(x, y, radius);
+    });
+    root.add(magic);
+  }
 
   const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 12, "#fff1d0", "900");
 
@@ -372,6 +431,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     brewY,
   };
   uiByScene.set(scene, ui);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => uiByScene.delete(scene));
   return ui;
 }
 
