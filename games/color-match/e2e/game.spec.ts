@@ -116,16 +116,25 @@ test("portrait keeps six large ordered controls and guards rapid taps", async ({
   expect(controls.every(control => control.active && control.width >= 44 && control.height >= 44)).toBe(true);
   expect(controls.map(control => [control.x, control.y])).toEqual([[108, 438], [342, 438], [108, 548], [342, 548], [108, 658], [342, 658]]);
 
+  const waitForTapReady = () => expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Boolean(Reflect.get(scene, "accepting"))
+      && performance.now() >= Number(Reflect.get(scene, "nextTapAllowedAt"));
+  })).toBe(true);
+
   for (const [index, control] of controls.entries()) {
+    await waitForTapReady();
     await tapPoint(page, control.x, control.y);
     await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(index + 1);
-    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
   }
 
+  await waitForTapReady();
   const before = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length);
   await tapPoint(page, controls[0]!.x, controls[0]!.y);
   await tapPoint(page, controls[0]!.x, controls[0]!.y);
-  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
+  await page.waitForTimeout(800);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
 });
 
 test("browser back recreates a playable scene", async ({ page }) => {
