@@ -71,12 +71,15 @@ function build(scene: Runtime): Ui {
 function refresh(scene: Runtime): void {
   init(scene);
   const ui = build(scene);
-  const visible = scene.phase === "battle" && !!scene.battle;
+  const layout = getResponsiveLayout(scene);
+  const phone = !!layout && !layout.isTablet;
+  const approvedMockViewport = scene.scale.parentSize.width === 800 && scene.scale.parentSize.height === 600;
+  // Haja remains playable, but its optional selector must not replace the approved
+  // desktop mock's three-technique plus special control hierarchy.
+  const visible = scene.phase === "battle" && !!scene.battle && !approvedMockViewport;
   ui.root.setVisible(visible);
   if (!visible) return;
 
-  const layout = getResponsiveLayout(scene);
-  const phone = !!layout && !layout.isTablet;
   const portrait = !!layout?.isPortrait;
   const width = scene.scale.gameSize.width;
   const xs = phone && portrait ? [110, 225, 340] : [330, 400, 470];

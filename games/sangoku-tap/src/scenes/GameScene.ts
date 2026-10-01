@@ -74,6 +74,8 @@ const GENERAL_ART: Readonly<Record<string, string>> = {
 };
 const BG_KEY = "st-bg-battlefield";
 const GENERATED_HERO_KEY = "st-generated-hero";
+const APPROVED_HOME_HERO_KEY = "st-approved-home-hero";
+const APPROVED_LORD_AVATAR_KEY = "st-approved-lord-avatar";
 const GENERATED_CAPITAL_BG_KEY = "st-generated-capital-bg";
 const GENERATED_DEPLOY_UI_KEY = "st-generated-deploy-ui";
 /** 立ち絵の縦横比（384:512） */
@@ -123,6 +125,8 @@ export class GameScene extends Phaser.Scene {
     // textures.exists() を確認して Graphics 描画にフォールバックする
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
     this.load.image(GENERATED_HERO_KEY, "images/generated/characters/st-hero-protagonist.webp");
+    this.load.image(APPROVED_HOME_HERO_KEY, "images/mock-extracts/st-approved-home-hero-visible.png");
+    this.load.image(APPROVED_LORD_AVATAR_KEY, "images/mock-extracts/st-approved-lord-avatar.png");
     this.load.image(GENERATED_CAPITAL_BG_KEY, "images/generated/backgrounds/st-bg-capital.webp");
     this.load.image(GENERATED_DEPLOY_UI_KEY, "images/generated/ui/st-ui-deploy-button.webp");
     for (const key of Object.values(GENERAL_ART))
@@ -166,6 +170,11 @@ export class GameScene extends Phaser.Scene {
   // ---------- タイトル ----------
 
   private buildTitleScreen(): void {
+    const legacyHome = new URLSearchParams(window.location.search).get("legacyHome") === "1";
+    if (!legacyHome && this.textures.exists(APPROVED_HOME_HERO_KEY)) {
+      this.buildApprovedTitleScreen();
+      return;
+    }
     this.titleGroup = this.add.container(0, 0);
     const hasArt = this.textures.exists(BG_KEY);
     const hasGeneratedHero = this.textures.exists(GENERATED_HERO_KEY);
@@ -303,6 +312,166 @@ export class GameScene extends Phaser.Scene {
     this.titleGroup.setData("bestPill", bestPill);
   }
 
+  /** Approved-mock home composition; actions remain wired to the existing scene methods. */
+  private buildApprovedTitleScreen(): void {
+    this.titleGroup = this.add.container(0, 0).setName("mock-home-view");
+
+    if (this.textures.exists(GENERATED_CAPITAL_BG_KEY)) {
+      this.titleGroup.add(
+        this.add.image(CX, 330, GENERATED_CAPITAL_BG_KEY).setDisplaySize(450, 360).setAlpha(0.72),
+      );
+    }
+    this.titleGroup.add(
+      this.add.image(CX, 400, APPROVED_HOME_HERO_KEY).setDisplaySize(450, 800).setName("approved-home-hero"),
+    );
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(0x090604, 0.82);
+    topBar.fillRect(0, 0, 450, 108);
+    topBar.lineStyle(2, 0xc89855, 0.88);
+    topBar.lineBetween(0, 107, 450, 107);
+
+    const title = this.add
+      .text(22, 28, tr(this.lang, "1  ホーム・拠点", "1  BASE"), {
+        ...TYPE.h2,
+        fontFamily: "serif",
+        fontSize: "22px",
+        color: THEME.textPrimary,
+      })
+      .setOrigin(0, 0.5);
+    const subtitle = this.add
+      .text(24, 68, tr(this.lang, "英雄とともに、天下への一歩を。", "Take the first step toward conquest."), {
+        ...TYPE.small,
+        color: THEME.textMuted,
+      })
+      .setOrigin(0, 0.5);
+    const coinPill = drawPill(this, 300, 27, 96, 30, "");
+    const bestPill = drawPill(this, 392, 67, 92, 30, "");
+
+    const statusPanel = this.add.graphics();
+    statusPanel.fillStyle(0x160d09, 0.9);
+    statusPanel.fillRoundedRect(8, 116, 434, 104, 12);
+    statusPanel.lineStyle(2, 0xd5a555, 0.9);
+    statusPanel.strokeRoundedRect(8, 116, 434, 104, 12);
+    statusPanel.lineStyle(1, 0xffdda0, 0.55);
+    statusPanel.lineBetween(104, 126, 104, 210);
+    statusPanel.fillStyle(0x8f1d16, 0.92);
+    statusPanel.fillRoundedRect(116, 128, 310, 34, 7);
+    statusPanel.lineStyle(1, 0xf2c46e, 0.9);
+    statusPanel.strokeRoundedRect(116, 128, 310, 34, 7);
+
+    const lordAvatar = this.add
+      .image(56, 168, APPROVED_LORD_AVATAR_KEY)
+      .setDisplaySize(80, 80)
+      .setName("approved-lord-avatar");
+    const lordTitle = this.add
+      .text(126, 145, tr(this.lang, "\u4e3b\u516c\u306e\u672c\u9663", "LORD'S COMMAND"), {
+        ...TYPE.h2,
+        fontFamily: "serif",
+        fontSize: "17px",
+        color: "#fff1c8",
+      })
+      .setOrigin(0, 0.5);
+    const homeStatusText = this.add
+      .text(126, 187, "", {
+        ...TYPE.small,
+        fontSize: "13px",
+        color: "#f7d99b",
+      })
+      .setOrigin(0, 0.5);
+    const statusOrnaments = this.add
+      .text(420, 187, "◆\n◆", {
+        fontFamily: "serif",
+        fontSize: "13px",
+        color: "#d6a24e",
+        align: "center",
+        lineSpacing: 6,
+      })
+      .setOrigin(0.5);
+
+    const tagline = this.add
+      .text(CX + 14, 340, tr(this.lang, "乱世を駆け、\n英雄を集めよ", "Ride through chaos.\nGather your heroes."), {
+        fontFamily: "serif",
+        fontSize: "30px",
+        fontStyle: "800",
+        color: "#fff2cf",
+        stroke: "#170c07",
+        strokeThickness: 6,
+        align: "center",
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5);
+
+    const openExpedition = () => {
+      this.playSound(sfx.tap);
+      this.scene.start("ExpeditionScene");
+    };
+    const questBtn = makeButton(this, CX, 680, 190, 110, tr(this.lang, "出陣", "DEPLOY"), openExpedition, {
+      fontSize: "24px",
+      fillColor: THEME.accent,
+      borderColor: 0xffd28c,
+      radius: 50,
+    });
+
+    const gachaBtn = makeButton(this, 43, 260, 72, 62, tr(this.lang, "武将", "General Gacha"), () => {
+      this.playSound(sfx.tap);
+      this.showGacha();
+    }, { fontSize: "10px" });
+    const breedBtn = makeButton(this, 43, 338, 72, 62, tr(this.lang, "強化", "Equipment Fusion"), () => {
+      this.playSound(sfx.tap);
+      this.showBreeding();
+    }, { fontSize: "10px" });
+    const rosterBtn = makeButton(this, 43, 416, 72, 62, tr(this.lang, "編成", "Generals"), () => {
+      this.playSound(sfx.tap);
+      this.showRoster();
+    }, { fontSize: "10px" });
+
+    const navPanel = drawPanel(this, CX, 778, 450, 46, { radius: 0, fillAlpha: 0.95, shadow: false });
+    const navButtons = [
+      makeButton(this, 45, 778, 82, 38, tr(this.lang, "ホーム", "Home"), () => this.showTitle(), { fontSize: "10px" }).container,
+      makeButton(this, 135, 778, 82, 38, tr(this.lang, "天下地図", "Campaign"), openExpedition, { fontSize: "10px" }).container,
+      makeButton(this, 225, 778, 82, 38, tr(this.lang, "武将", "Generals"), () => this.showRoster(), { fontSize: "10px" }).container,
+      makeButton(this, 315, 778, 82, 38, tr(this.lang, "ガチャ", "Gacha"), () => this.showGacha(), { fontSize: "10px" }).container,
+      makeButton(this, 405, 778, 82, 38, tr(this.lang, "メニュー", "Menu"), () => this.showBreeding(), { fontSize: "10px" }).container,
+    ];
+
+    this.soundIcon = drawSpeakerIcon(this, 428, 27, this.soundOn, 16);
+    const soundHit = this.add.rectangle(428, 27, 36, 36, 0x000000, 0).setInteractive({ useHandCursor: true });
+    soundHit.on("pointerdown", () => {
+      this.soundOn = !this.soundOn;
+      localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+      this.soundIcon.destroy();
+      this.soundIcon = drawSpeakerIcon(this, 428, 27, this.soundOn, 16);
+      this.titleGroup.add(this.soundIcon);
+      this.playSound(sfx.tap);
+    });
+
+    this.titleGroup.add([
+      topBar,
+      title,
+      subtitle,
+      coinPill.container,
+      bestPill.container,
+      statusPanel,
+      lordAvatar,
+      lordTitle,
+      homeStatusText,
+      statusOrnaments,
+      tagline,
+      gachaBtn.container,
+      breedBtn.container,
+      rosterBtn.container,
+      questBtn.container,
+      navPanel,
+      ...navButtons,
+      this.soundIcon,
+      soundHit,
+    ]);
+    this.titleGroup.setData("coinPill", coinPill);
+    this.titleGroup.setData("bestPill", bestPill);
+    this.titleGroup.setData("homeStatusText", homeStatusText);
+  }
+
   private playSound(fn: () => void): void {
     if (this.soundOn) fn();
   }
@@ -347,6 +516,12 @@ export class GameScene extends Phaser.Scene {
     const bestPill = this.titleGroup.getData("bestPill") as {
       setText: (t: string) => void;
     };
+    const homeStatusText = this.titleGroup.getData("homeStatusText") as Phaser.GameObjects.Text | undefined;
+    const generalCount = Object.values(loadOwnedGenerals()).reduce((sum, count) => sum + count, 0);
+    homeStatusText?.setText(
+      `${tr(this.lang, "\u6b66\u5c06", "Generals")} ${generalCount}   ` +
+        `${tr(this.lang, "\u9060\u5f81\u8a18\u9332", "Best march")} ${loadBestDistance()}`,
+    );
     coinPill.setText(`${tr(this.lang, "銭", "Coins")} ${loadCurrency()}`);
     bestPill.setText(`${tr(this.lang, "最高", "Best")} ${loadBestDistance()}`);
   }

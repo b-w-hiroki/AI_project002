@@ -7,11 +7,18 @@ import { OUTCOME_ART, outcomeArtKey } from "../src/outcomeArt";
 declare global { interface Window { __qaGame: Phaser.Game } }
 
 const errors = new WeakMap<Page, string[]>();
+const allowedConsoleErrors = new WeakMap<Page, RegExp[]>();
 test.use({ hasTouch: true, locale: "ja-JP", viewport: { width: 390, height: 844 } });
 test.beforeEach(async ({ page }) => {
   const messages: string[] = [];
   errors.set(page, messages);
+  allowedConsoleErrors.set(page, []);
   page.on("pageerror", error => messages.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error" && !allowedConsoleErrors.get(page)?.some(pattern => pattern.test(message.text()))) {
+      messages.push(`console: ${message.text()}`);
+    }
+  });
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     let lastError: unknown;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -34,6 +41,93 @@ test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
   await expectResponsiveCanvas(page);
+});
+
+test("home keeps live progress values, capital context, and long request copy", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_eval_v1", "9876");
+    localStorage.setItem("karma_quest_best_stage_v1", "12");
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const read = (name: string) => {
+      let value = "";
+      const visit = (node: Phaser.GameObjects.GameObject): void => {
+        if (node.name === name && node.type === "Text" && Reflect.get(node, "visible") !== false) value = (node as Phaser.GameObjects.Text).text;
+        if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      scene.children.list.forEach(visit);
+      return value;
+    };
+    return { total: read("home-total-evaluation"), best: read("home-best-stage"), capital: read("home-capital") };
+  })).toEqual({ total: "累計評価 9876", best: "最高到達 12年", capital: "王都ルナティス" });
+  await expect.poll(() => page.evaluate(() => {
+    const keys: string[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject, visible = true): void => {
+      const ownVisible = visible && Reflect.get(node, "visible") !== false;
+      if (!ownVisible) return;
+      if (node.type === "Image") keys.push((node as Phaser.GameObjects.Image).texture.key);
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(child => visit(child, ownVisible));
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(node => visit(node));
+    return keys;
+  })).toContain("kq-approved-avatar-visible");
+  const avatarLayers = await page.evaluate(() => {
+    const result: Array<{ key: string; name: string; x: number; y: number; alpha: number; rootDepth: number; rootIndex: number; childIndex: number }> = [];
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const visit = (node: Phaser.GameObjects.GameObject, rootDepth: number, rootIndex: number, childIndex: number, visible = true): void => {
+      const ownVisible = visible && Reflect.get(node, "visible") !== false;
+      if (!ownVisible) return;
+      if (node.type === "Image") {
+        const image = node as Phaser.GameObjects.Image;
+        if (image.texture.key.includes("hero") || image.texture.key.includes("avatar")) {
+          result.push({ key: image.texture.key, name: image.name, x: image.x, y: image.y, alpha: image.alpha, rootDepth, rootIndex, childIndex });
+        }
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach((child, index) => visit(child, rootDepth, rootIndex, index, ownVisible));
+    };
+    scene.children.list.forEach((node, index) => visit(node, Number(Reflect.get(node, "depth") ?? 0), index, index));
+    return result;
+  });
+  const approvedAvatar = avatarLayers.find(layer => layer.key === "kq-approved-avatar-visible");
+  const placeholderAvatar = avatarLayers.find(layer => layer.key === "kq-dialogue-hero-v1");
+  expect(approvedAvatar).toEqual(expect.objectContaining({ name: "approved-home-avatar", x: 48, y: 151, alpha: 1 }));
+  expect(approvedAvatar!.rootDepth).toBeGreaterThanOrEqual(placeholderAvatar!.rootDepth);
+  expect(approvedAvatar!.childIndex).toBeGreaterThan(placeholderAvatar!.childIndex);
+
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", {
+    id: "merchant_monster", faction: "merchant", karmaDelta: 8,
+    text: "王都へ続く街道に魔物が現れ、荷車も旅人も安全に通れません。護衛を派遣していただけませんか？",
+  }));
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let result: { left: number; right: number; top: number; bottom: number } | null = null;
+    const visit = (node: Phaser.GameObjects.GameObject): void => {
+      if (node.name === "home-request-body" && Reflect.get(node, "visible") !== false) {
+        const box = (node as Phaser.GameObjects.Text).getBounds();
+        result = { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return result ? {
+      visible: true,
+      insideCard: result.left >= 120 && result.right <= 415 && result.top >= 618 && result.bottom <= 724,
+    } : { visible: false, insideCard: false };
+  })).toEqual({ visible: true, insideCard: true });
+});
+
+test("browser back recreates the home and starts one journey", async ({ page }) => {
+  await page.goto("/?visit=second");
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await page.goBack();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(() => phase(page)).toBe("title");
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
 });
 
 test("English responsive UI contains no Japanese", async ({ page }) => {
@@ -113,7 +207,7 @@ test("sound preference is operable in both home layouts and survives reload", as
   });
   await page.reload();
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
-  await tapPoint(page, 47, 140);
+  await tapPoint(page, 47, 253);
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-portrait.png" });
   await tapPoint(page, 225, 475);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("off");
@@ -234,15 +328,15 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await checkFrame(page, "portrait-karma");
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-  const before = await page.locator("canvas").screenshot();
-  await tapPoint(page, 510, 385);
-  await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
-  await expect.poll(() => phase(page)).not.toBe("karma");
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 591, 301);
+  await expect.poll(() => phase(page), { timeout: 15000 }).toBe("reaction");
   await expect.poll(() => page.locator("canvas").evaluate(node => ({
     width: (node as HTMLCanvasElement).width,
     height: (node as HTMLCanvasElement).height,
   }))).toEqual({ width: 800, height: 450 });
   await checkFrame(page, "landscape-after-choice");
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
 test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
@@ -269,6 +363,8 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
 
 async function useNativePortrait(page: Page) {
   await page.setViewportSize({ width: 456, height: 806 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
 
 test("hero appearance follows dominant karma in portrait and landscape", async ({ page }) => {
@@ -450,7 +546,7 @@ test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
-    animations: "disabled", maxDiffPixelRatio: 0.035,
+    animations: "disabled", maxDiffPixelRatio: 0.001,
   });
 });
 
@@ -902,6 +998,7 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
 
 
 test("result images load on demand and retry without duplicate choices", async ({ page }) => {
+  allowedConsoleErrors.get(page)?.push(/Failed to load resource: net::ERR_FAILED/);
   await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").sys.isActive());
   expect(await page.evaluate(() => performance.getEntriesByType("resource").filter(r => r.name.includes("kq-outcome-")).length)).toBe(0);
   const key = "kq-outcome-warrior_iron-accept-v2";
@@ -996,6 +1093,7 @@ test("boot progress survives rotation and clears when assets are ready", async (
 });
 
 test("home loads only its artwork and journey preparation retries safely", async ({ page }) => {
+  allowedConsoleErrors.get(page)?.push(/Failed to load resource: net::ERR_FAILED/);
   const initial = await page.evaluate(() => {
     const images = performance.getEntriesByType("resource").filter(r => r.name.includes("/images/")) as PerformanceResourceTiming[];
     return { hasDialogue: images.some(r => r.name.includes("kq-bg-dialogue-arcade")), bytes: images.reduce((sum, r) => sum + r.encodedBodySize, 0) };

@@ -26,13 +26,24 @@ async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
 async function enterBattleForVisualQa(page: Page): Promise<void> {
   // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
   // LoadoutScene の開始ボタンを押したあと、GameScene と player の生成完了まで待つ。
-  await tapGamePoint(page, 400, 545);
-  await expect.poll(() => page.evaluate(() => {
-    const game = window.__qaGame;
-    if (!game.scene.isActive("GameScene")) return false;
-    const scene = game.scene.getScene("GameScene");
-    return !!Reflect.get(scene, "player");
-  }), { timeout: 15_000, intervals: [100, 200, 400, 800] }).toBe(true);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const ready = await page.evaluate(() => {
+      const game = window.__qaGame;
+      return game.scene.isActive("GameScene") && !!Reflect.get(game.scene.getScene("GameScene"), "player");
+    });
+    if (ready) return;
+    await tapGamePoint(page, 400, 545);
+    try {
+      await page.waitForFunction(() => {
+        const game = window.__qaGame;
+        return game.scene.isActive("GameScene") && !!Reflect.get(game.scene.getScene("GameScene"), "player");
+      }, undefined, { timeout: 5_000 });
+      return;
+    } catch {
+      // A click can land before the loadout button finishes its first layout on slower engines.
+    }
+  }
+  throw new Error("GameScene did not start after three loadout attempts");
 }
 
 test.beforeEach(async ({ page }) => {
@@ -130,6 +141,29 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
   });
+
+  test("mock battle view has one owner and legacy rollback remains available", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const modern = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return scene.children.list.filter(child => child.name === "side-mock-battle-view").length;
+    });
+    expect(modern).toBe(1);
+
+    await page.goto("/?visualqa=battle&legacyView=1");
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    const legacy = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return scene.children.list.some(child => child.name === "side-mock-battle-view");
+    });
+    expect(legacy).toBe(false);
+  });
   test("visual QA: normal agile and tank use distinct art", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");
@@ -165,6 +199,254 @@ test.describe("phone visual QA", () => {
     await page.waitForTimeout(250);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-enemy-variants-844x390.png",
+      animations: "disabled",
+    });
+  });
+
+  test("approved forest, hero, and boss remain separate live game objects", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const sceneState = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const current = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+      }>;
+      current.forEach(enemy => enemy.sprite.destroy());
+      Reflect.set(scene, "enemies", []);
+      Reflect.set(scene, "wave", 5);
+      Reflect.get(scene, "spawnWave").call(scene, 5);
+
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const enemies = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        boss: boolean;
+      }>;
+      const boss = enemies.find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss was not spawned");
+
+      scene.cameras.main.stopFollow();
+      scene.cameras.main.setScroll(0, 0);
+      player.setPosition(300, 430).setVisible(true);
+      boss.sprite.setPosition(610, 400).setVisible(true);
+      scene.physics.pause();
+
+      const background = scene.children.list.find(child =>
+        child.type === "Image"
+        && (child as Phaser.GameObjects.Image).texture.key === "sf-approved-forest-battle-v2");
+      const body = boss.sprite.body as Phaser.Physics.Arcade.Body;
+      return {
+        textures: {
+          background: scene.textures.exists("sf-approved-forest-battle-v2"),
+          heroIdle: scene.textures.exists("sf-approved-hero-idle-v3"),
+          heroRun: scene.textures.exists("sf-approved-hero-run-v3"),
+          heroAttack: scene.textures.exists("sf-approved-hero-attack-v3"),
+          boss: scene.textures.exists("sf-approved-boss-ogre-v2"),
+        },
+        backgroundIsSeparate: !!background,
+        playerTexture: player.texture.key,
+        bossTexture: boss.sprite.texture.key,
+        bossBody: { width: body.width, height: body.height, enabled: body.enable },
+      };
+    });
+
+    expect(sceneState).toEqual({
+      textures: { background: true, heroIdle: true, heroRun: true, heroAttack: true, boss: true },
+      backgroundIsSeparate: true,
+      playerTexture: "hero-art",
+      bossTexture: "forest-guardian-art",
+      bossBody: { width: 27, height: 45, enabled: true },
+    });
+    await page.waitForTimeout(100);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-battle-v2-844x390.png",
+      animations: "disabled",
+    });
+  });
+
+  test("hero switches idle, run, attack, guard, and hurt poses without moving the live hitbox", async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 700 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const readPose = () => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const body = player.body as Phaser.Physics.Arcade.Body;
+      return {
+        texture: player.texture.key,
+        body: { width: body.width, height: body.height, bottom: Math.round(body.bottom) },
+        guarding: Reflect.get(scene, "guarding") as boolean,
+      };
+    });
+
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      return (player.body as Phaser.Physics.Arcade.Body).blocked.down;
+    })).toBe(true);
+    await page.locator("canvas").focus();
+    await expect.poll(readPose).toMatchObject({ texture: "hero-art", body: { width: 27, height: 48 } });
+    const idle = await readPose();
+
+    let runStarted = false;
+    for (let attempt = 0; attempt < 3 && !runStarted; attempt += 1) {
+      await page.locator("canvas").focus();
+      await page.keyboard.down("ArrowRight");
+      try {
+        await page.waitForFunction(() => {
+          const scene = window.__qaGame.scene.getScene("GameScene");
+          const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+          return player.texture.key === "hero-run-art";
+        }, undefined, { timeout: 1_500 });
+        runStarted = true;
+      } catch {
+        await page.keyboard.up("ArrowRight");
+        await page.waitForTimeout(80);
+      }
+    }
+    expect(runStarted).toBe(true);
+    const running = await readPose();
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-hero-run-v3-800x600.png",
+      animations: "disabled",
+    });
+
+    await page.keyboard.press("x", { delay: 30 });
+    await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
+    const attackFx = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return scene.children.list.filter(child => child.name === "side-slash-afterimage").length;
+    });
+    expect(attackFx).toBeGreaterThan(0);
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-hero-attack-v3-800x600.png",
+      animations: "disabled",
+    });
+    await page.keyboard.up("ArrowRight");
+    await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
+
+    await page.keyboard.down("Shift");
+    await expect.poll(readPose).toMatchObject({ texture: "hero-art", guarding: true });
+    await page.keyboard.up("Shift");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      Reflect.get(scene, "playPlayerDamageFx").call(scene, player.x + 100);
+    });
+    await expect.poll(readPose).toMatchObject({ texture: "hero-hurt-art" });
+    await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
+
+    for (const pose of [idle, running]) {
+      expect(pose.body.width).toBe(27);
+      expect(pose.body.height).toBe(48);
+      expect(Math.abs(pose.body.bottom - idle.body.bottom)).toBeLessThanOrEqual(3);
+    }
+  });
+
+  test("melee range endpoint visually reaches the live boss and deals damage", async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 700 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const before = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const current = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+      }>;
+      current.forEach(enemy => enemy.sprite.destroy());
+      Reflect.set(scene, "enemies", []);
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const state = Reflect.get(scene, "playerState") as Record<string, unknown>;
+      Reflect.set(scene, "playerState", {
+        ...state,
+        facing: 1,
+        equippedWeapon: "melee",
+        customWeapons: {},
+        attackingUntil: 0,
+        lastAttackAt: -100_000,
+        ougiActiveUntil: 0,
+        hiougiActiveUntil: 0,
+        skillActiveUntil: 0,
+      });
+      Reflect.get(scene, "spawnWave").call(scene, 5);
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss was not spawned");
+      scene.cameras.main.stopFollow();
+      scene.cameras.main.setScroll(0, 0);
+      player.setPosition(300, 430).setVisible(true);
+      boss.sprite.setPosition(390, 430).setVisible(true);
+      const playerBody = player.body as Phaser.Physics.Arcade.Body;
+      const bossBody = boss.sprite.body as Phaser.Physics.Arcade.Body;
+      playerBody.setAllowGravity(false).setVelocity(0, 0);
+      bossBody.setAllowGravity(false).setVelocity(0, 0);
+      playerBody.moves = false;
+      bossBody.moves = false;
+      return { health: boss.state.health, distance: boss.sprite.x - player.x };
+    });
+
+    await page.keyboard.down("x");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      return boss?.state.health ?? Number.POSITIVE_INFINITY;
+    })).toBeLessThan(before.health);
+    const after = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss disappeared");
+      return {
+        health: boss.state.health,
+        heroPose: player.texture.key,
+        slashVisible: scene.children.list.some(child =>
+          child.type === "Image"
+          && (child as Phaser.GameObjects.Image).texture.key === "combat-slash-fx"),
+      };
+    });
+    expect(before.distance).toBe(90);
+    expect(after.health).toBeLessThan(before.health);
+    expect(after).toMatchObject({ heroPose: "hero-attack-art", slashVisible: true });
+    await page.keyboard.up("x");
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-melee-contact-v2-800x600.png",
+      animations: "disabled",
+    });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss disappeared");
+      const debug = scene.add.graphics().setDepth(100);
+      for (const sprite of [player, boss.sprite]) {
+        const body = sprite.body as Phaser.Physics.Arcade.Body;
+        debug.lineStyle(3, 0xff3158, 1).strokeRect(body.x, body.y, body.width, body.height);
+        debug.fillStyle(0x31f0ff, 1).fillCircle(sprite.x, sprite.y, 4);
+      }
+    });
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-melee-contact-debug-v2-800x600.png",
       animations: "disabled",
     });
   });
@@ -274,12 +556,44 @@ test.describe("phone visual QA", () => {
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const controls = Reflect.get(scene, "virtualControls") as Phaser.GameObjects.Container | undefined;
-      return controls?.visible ?? false;
-    })).toBe(false);
+      const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container | null;
+      return { legacyControls: controls?.visible ?? false, mockVisible: mock?.visible ?? false };
+    })).toEqual({ legacyControls: false, mockVisible: false });
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-game-over-844x390.png",
       animations: "disabled",
     });
+  });
+});
+
+test.describe("reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+
+  test("keeps foreground depth but disables foliage sway and slash afterimages", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    const state = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const foliage = scene.children.list.filter(child => child.name === "side-foreground-foliage");
+      Reflect.get(scene, "spawnAttackFx").call(scene, {
+        kind: "melee",
+        range: 90,
+        damage: 1,
+        cooldownMs: 350,
+        attackWindowMs: 150,
+        projectile: false,
+      });
+      return {
+        reducedMotion: Reflect.get(scene, "reducedMotion") as boolean,
+        foliage: foliage.length,
+        foliageTweens: foliage.filter(child => scene.tweens.getTweensOf(child).length > 0).length,
+        afterimages: scene.children.list.filter(child => child.name === "side-slash-afterimage").length,
+      };
+    });
+    expect(state).toEqual({ reducedMotion: true, foliage: 6, foliageTweens: 0, afterimages: 0 });
   });
 });
 

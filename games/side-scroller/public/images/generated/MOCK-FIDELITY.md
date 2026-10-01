@@ -1,7 +1,10 @@
-# 剣戟の森 mock-fidelity pass — 2026-09-25
+# Blade Woods mock-fidelity pass — 2026-10-01
 
-- 主人公を一段大きくし、背景に埋もれないプレゼンスへ調整。
-- 通常敵は抑え、5waveごとのボスは専用 guardian art を大きく表示。
-- 攻撃/被弾差分と既存 combat FX を維持。
-- 武器/スキル/ロードアウト/ウェーブ制のゲーム性は変更しない。
-- 背景・主人公・通常敵・agile/tank・bossが実装用素材として揃っている。
+- The approved mock defines identity, palette, lighting, materials, and silhouette.
+- The background was regenerated rather than cropped because every battle crop contains actors, HP bars, controls, and slash effects.
+- Hero idle, run, and attack are separate transparent pose assets from one identity-preserving generation chain; they are not full-screen animation frames.
+- The attack slash and two subtle afterimages remain live game objects. Reduced-motion mode disables the afterimages.
+- A small code-native foreground foliage layer adds depth. Reduced-motion mode keeps the layer static.
+- No actor, boss, HUD, or combat effect is baked into the background.
+- Movement, collision, attack, guard, specials, boss tell/charge, damage, and enemy state continue to use the existing live rules.
+- Existing code-native and legacy art assets remain fallbacks when the approved-fidelity assets fail to load.

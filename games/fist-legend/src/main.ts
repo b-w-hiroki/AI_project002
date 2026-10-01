@@ -14,12 +14,20 @@ installFistLegendPresentation();
 installFistConceptArtPass();
 installFistMobileLayout();
 installFistHajaMode();
+installFistArtFidelity();
+installFistVisualPolish();
 
 await initCrazyGames();
 installLocalTelemetry("fist-legend");
 
+// WebKit can lose the WebGL back buffer when the viewport rotates between the
+// portrait and landscape canvas sizes. Canvas keeps the battle visible there;
+// Chromium-family browsers retain the normal AUTO renderer.
+const webKitCanvasFallback = /AppleWebKit/i.test(navigator.userAgent)
+  && !/(Chrome|Chromium|CriOS|Edg|OPR)/i.test(navigator.userAgent);
+
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: webKitCanvasFallback ? Phaser.CANVAS : Phaser.AUTO,
   parent: "game",
   width: 800,
   height: 600,

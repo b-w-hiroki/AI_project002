@@ -10,6 +10,10 @@ test.beforeEach(async ({ page }) => {
   const messages: string[] = [];
   errors.set(page, messages);
   page.on("pageerror", error => messages.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error") messages.push(`console: ${message.text()}`);
+  });
+  page.on("requestfailed", request => messages.push(`request: ${request.url()} ${request.failure()?.errorText ?? "failed"}`));
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     const response = await route.fetch();
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
@@ -78,6 +82,65 @@ test("six individual answer parts are visible and operable in landscape play", a
   await expect.poll(() => page.evaluate(() =>
     Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting")
   )).toBe(false);
+});
+
+test("portrait keeps six large ordered controls and guards rapid taps", async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSession").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("playing");
+
+  const readControls = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const found: Array<{ name: string; x: number; y: number; width: number; height: number; active: boolean }> = [];
+    const visit = (nodes: Phaser.GameObjects.GameObject[], parentVisible = true): void => {
+      for (const node of nodes) {
+        const visible = parentVisible && (!("visible" in node) || Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible));
+        if (visible && node.name?.startsWith("portrait-answer-hit-")) {
+          const zone = node as Phaser.GameObjects.Zone;
+          const bounds = zone.getBounds();
+          found.push({ name: node.name, x: bounds.centerX, y: bounds.centerY, width: bounds.width, height: bounds.height, active: Boolean(zone.input?.enabled) });
+        }
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, visible);
+      }
+    };
+    visit(scene.children.list);
+    return found.sort((a, b) => a.name.localeCompare(b.name));
+  });
+  await expect.poll(async () => (await readControls()).length).toBe(6);
+  const controls = await readControls();
+
+  expect(controls.map(control => control.name.split("-").at(-1))).toEqual(["red", "blue", "yellow", "green", "purple", "orange"]);
+  expect(controls).toHaveLength(6);
+  expect(controls.every(control => control.active && control.width >= 44 && control.height >= 44)).toBe(true);
+  expect(controls.map(control => [control.x, control.y])).toEqual([[108, 438], [342, 438], [108, 548], [342, 548], [108, 658], [342, 658]]);
+
+  for (const [index, control] of controls.entries()) {
+    await tapPoint(page, control.x, control.y);
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(index + 1);
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  }
+
+  const before = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length);
+  await tapPoint(page, controls[0]!.x, controls[0]!.y);
+  await tapPoint(page, controls[0]!.x, controls[0]!.y);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
+});
+
+test("browser back recreates a playable scene", async ({ page }) => {
+  await page.goto("/?visit=second");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await page.goBack();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSession").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("playing");
+  await tapPoint(page, 108, 438);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(1);
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
@@ -193,13 +256,14 @@ test("touch starts a challenge and rotation preserves play", async ({ page }) =>
   await expect.poll(() => phase(page)).toBe("playing");
   await checkFrame(page, "portrait-play");
   const portraitBefore = await page.locator("canvas").screenshot();
-  await tapPoint(page, 128, 390);
+  await tapPoint(page, 108, 438);
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(portraitBefore)).toBe(true);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-  const before = await page.locator("canvas").screenshot();
+  const before = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length);
   await tapPoint(page, 470, 170);
-  await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
   await checkFrame(page, "landscape-play");
 });
 

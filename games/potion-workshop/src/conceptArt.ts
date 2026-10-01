@@ -87,6 +87,7 @@ function build(scene: Runtime): WorkshopChrome {
 
   const ui = { root, potionsText, essenceText, repText };
   uiByScene.set(scene, ui);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => uiByScene.delete(scene));
   return ui;
 }
 

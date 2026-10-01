@@ -129,12 +129,32 @@ export class IdleScene extends Phaser.Scene {
   preload(): void {
     this.load.image("pw-bg-workshop", "images/pw-bg-workshop.png");
     this.load.image("pw-hero-alchemist", "images/pw-hero-alchemist.png");
-    this.load.image("pw-hero-alchemist-female", "images/generated/characters/pw-hero-alchemist-female.webp");
+    this.load.image(
+      "pw-hero-stirring-v2",
+      "images/generated/characters/pw-hero-stirring-v2.png",
+    );
+    this.load.image("pw-approved-cat-visible", "images/mock-extracts/pw-approved-cat-visible.png");
     this.load.image("pw-cauldron-icon", "images/pw-cauldron-icon.png");
     this.load.image("pw-dragon-icon", "images/pw-dragon-icon.png");
   }
 
   create(): void {
+    // A Phaser Scene instance is reused after restart. Drop references to objects
+    // destroyed by the previous shutdown before rebuilding the live UI.
+    this.qtyButtons = [];
+    this.rows = [];
+    this.refreshCallbacks = [];
+    this.brewText = null;
+    this.brewHint = null;
+    this.contractModal = null;
+    this.townChoiceModal = null;
+    this.workshopSignature = "";
+    this.lastTownIndex = -1;
+    this.prestigeGlowTween = undefined;
+    this.prestigeWasAffordable = false;
+    this.welcomeGained = 0;
+    this.lastSave = 0;
+
     this.analytics = recordSessionStart(
       loadAnalytics(localStorage),
       Date.now(),
@@ -250,7 +270,7 @@ export class IdleScene extends Phaser.Scene {
    * （画像が無い場合は buildBrewArea() 側が単色円のフォールバックボタンを描く）
    */
   private buildAlchemistMascot(): Phaser.GameObjects.Image | null {
-    const key = this.textures.exists("pw-hero-alchemist-female") ? "pw-hero-alchemist-female" : "pw-hero-alchemist";
+    const key = "pw-hero-alchemist";
     if (!this.textures.exists(key)) return null;
     return this.add.image(145, 218, key).setDisplaySize(238, 258).setOrigin(0.5, 0.55);
   }
@@ -669,9 +689,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private showWelcomeModal(gained: number): void {
-    const heroKey = this.textures.exists("pw-hero-alchemist-female")
-      ? "pw-hero-alchemist-female"
-      : "pw-hero-alchemist";
+    const heroKey = "pw-hero-alchemist";
     this.showModal(
       `${t(this.lang, "welcomeTitle")}\n\n${t(this.lang, "welcomeBack", { n: formatNumber(gained) })}`,
       undefined,

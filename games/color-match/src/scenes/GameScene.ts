@@ -44,6 +44,7 @@ import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
 const CX = 225;
 
 const FEEDBACK_DELAY_MS = 320;
+const RAPID_TAP_GUARD_MS = 720;
 const CARD_W = 176;
 const CARD_H = 112;
 const CARD_HOME_X = CX;
@@ -89,6 +90,7 @@ export class GameScene extends Phaser.Scene {
   private pendingRound?: Phaser.Time.TimerEvent;
   private currentRound: Round | null = null;
   private roundStartedAt = 0;
+  private nextTapAllowedAt = 0;
   private accepting = false;
   private timeLimitMs = 0;
   private timeRemainingMs = 0;
@@ -651,6 +653,7 @@ export class GameScene extends Phaser.Scene {
     this.level = 0;
     this.roundIndex = 0;
     this.results = [];
+    this.nextTapAllowedAt = 0;
     this.turboStreak = 0;
     this.turboPoints = 0;
     this.turboText.setVisible(false);
@@ -736,9 +739,12 @@ export class GameScene extends Phaser.Scene {
 
   /** colorId が null ならタイムアウト扱い */
   private finishRound(colorId: string | null): void {
+    const now = performance.now();
+    if (colorId !== null && now < this.nextTapAllowedAt) return;
     if (!this.accepting || !this.currentRound) return;
+    if (colorId !== null) this.nextTapAllowedAt = now + RAPID_TAP_GUARD_MS;
     this.accepting = false;
-    const reactionMs = performance.now() - this.roundStartedAt;
+    const reactionMs = now - this.roundStartedAt;
     const timedOut = colorId === null;
     const correct = !timedOut && colorId === this.currentRound.correctColorId;
     this.results.push({
