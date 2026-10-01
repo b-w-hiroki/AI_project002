@@ -558,17 +558,20 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
   text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
-  // Keep progress visible without competing with the hero and request card.
-  hudPlate(scene, root, 332, 40, 204, 48);
-  text(scene, root, 332, 31, `評価 ${loadTotalEvaluation()} · 最高 ${loadBestStage()}年`, 16, "#fff2c4", "900").setStroke("#091420", 1);
-  text(scene, root, 332, 51, "王都ルナディス", 14, "#fff6dd", "700").setStroke("#091420", 0);
+  // Separate lifetime progress from the current location so both scan like
+  // the approved resource and season rows without covering the hero.
+  hudPlate(scene, root, 332, 26, 204, 34);
+  text(scene, root, 332, 26, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setStroke("#091420", 1);
+  hudPlate(scene, root, 332, 67, 190, 42);
+  text(scene, root, 332, 59, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setStroke("#091420", 1);
+  text(scene, root, 332, 76, "王都ルナディス", 12, "#fff6dd", "700").setStroke("#091420", 0);
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 108, 62, 338, 8);
   rail.lineStyle(1.5, 0xe0bb69, 0.72).strokeRoundedRect(12, 108, 62, 338, 8);
   rail.fillGradientStyle(0x79643f, 0x08131d, 0x79643f, 0x08131d, 0.18, 0, 0.18, 0).fillRect(15, 116, 16, 318);
   for (const y of [180, 249, 318, 387]) rail.lineStyle(1, 0xb79451, 0.4).lineBetween(23, y, 71, y);
   root.add(rail);
-  for (const [index, label] of ["案内", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
+  for (const [index, label] of ["メニュー", "依頼", "仲間", "持ち物", "図鑑"].entries()) {
     const y = 125 + index * 69;
     const ink = scene.add.graphics().lineStyle(2, 0xf4dfaa, 1).fillStyle(0xf4dfaa, 1);
     if (index === 0) for (const dy of [-8, 0, 8]) ink.lineBetween(27, y + dy, 51, y + dy);
