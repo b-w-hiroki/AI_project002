@@ -20,10 +20,10 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
-test("generated title assets are loaded and visible", async ({ page }) => {
+test("approved home hero is visible and legacy home remains available", async ({ page }) => {
   const state = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const keys = ["st-generated-hero", "st-generated-capital-bg"];
+    const loadedKeys = ["st-generated-hero", "st-generated-capital-bg", "st-approved-home-hero"];
     const collectVisibleImages = (
       nodes: Phaser.GameObjects.GameObject[],
       parentVisible = true,
@@ -45,12 +45,30 @@ test("generated title assets are loaded and visible", async ({ page }) => {
     };
     const visible = collectVisibleImages(scene.children.list);
     return {
-      loaded: keys.every(key => scene.textures.exists(key)),
-      visible: keys.every(key => visible.includes(key)),
+      loaded: loadedKeys.every(key => scene.textures.exists(key)),
+      approvedVisible: visible.includes("st-approved-home-hero"),
+      legacyVisible: visible.includes("st-generated-hero"),
+      ownerCount: scene.children.list.filter(child => child.name === "mock-home-view").length,
     };
   });
-  expect(state).toEqual({ loaded: true, visible: true });
+  expect(state).toEqual({ loaded: true, approvedVisible: true, legacyVisible: false, ownerCount: 1 });
   await checkFrame(page, "portrait-title-generated-assets");
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/mock-current-home-450x800.png",
+    animations: "disabled",
+  });
+
+  await page.evaluate(() => Reflect.deleteProperty(window, "__qaGame"));
+  await page.goto("/?legacyHome=1");
+  await page.waitForFunction(() => !!window.__qaGame);
+  const legacyState = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      search: window.location.search,
+      mockOwner: scene.children.list.some(child => child.name === "mock-home-view"),
+    };
+  });
+  expect(legacyState).toEqual({ search: "?legacyHome=1", mockOwner: false });
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
@@ -60,7 +78,7 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
 test("English fallback localizes home and campaign", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
-  const homeLabels = await expect.poll(async () => page.evaluate(() => {
+  await expect.poll(async () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
       for (const node of nodes) {
@@ -70,7 +88,7 @@ test("English fallback localizes home and campaign", async ({ page }) => {
       return out;
     };
     return collect(scene.children.list);
-  })).toEqual(expect.arrayContaining(["Sangoku Tap", "General Gacha", "Equipment Fusion"]));
+  })).toEqual(expect.arrayContaining(["1  BASE", "General Gacha", "Equipment Fusion"]));
 
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");

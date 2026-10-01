@@ -74,6 +74,7 @@ const GENERAL_ART: Readonly<Record<string, string>> = {
 };
 const BG_KEY = "st-bg-battlefield";
 const GENERATED_HERO_KEY = "st-generated-hero";
+const APPROVED_HOME_HERO_KEY = "st-approved-home-hero";
 const GENERATED_CAPITAL_BG_KEY = "st-generated-capital-bg";
 const GENERATED_DEPLOY_UI_KEY = "st-generated-deploy-ui";
 /** 立ち絵の縦横比（384:512） */
@@ -123,6 +124,7 @@ export class GameScene extends Phaser.Scene {
     // textures.exists() を確認して Graphics 描画にフォールバックする
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
     this.load.image(GENERATED_HERO_KEY, "images/generated/characters/st-hero-protagonist.webp");
+    this.load.image(APPROVED_HOME_HERO_KEY, "images/mock-extracts/st-approved-home-hero-visible.png");
     this.load.image(GENERATED_CAPITAL_BG_KEY, "images/generated/backgrounds/st-bg-capital.webp");
     this.load.image(GENERATED_DEPLOY_UI_KEY, "images/generated/ui/st-ui-deploy-button.webp");
     for (const key of Object.values(GENERAL_ART))
@@ -166,6 +168,11 @@ export class GameScene extends Phaser.Scene {
   // ---------- タイトル ----------
 
   private buildTitleScreen(): void {
+    const legacyHome = new URLSearchParams(window.location.search).get("legacyHome") === "1";
+    if (!legacyHome && this.textures.exists(APPROVED_HOME_HERO_KEY)) {
+      this.buildApprovedTitleScreen();
+      return;
+    }
     this.titleGroup = this.add.container(0, 0);
     const hasArt = this.textures.exists(BG_KEY);
     const hasGeneratedHero = this.textures.exists(GENERATED_HERO_KEY);
@@ -296,6 +303,119 @@ export class GameScene extends Phaser.Scene {
       gachaBtn.container,
       breedBtn.container,
       rosterBtn.container,
+      this.soundIcon,
+      soundHit,
+    ]);
+    this.titleGroup.setData("coinPill", coinPill);
+    this.titleGroup.setData("bestPill", bestPill);
+  }
+
+  /** Approved-mock home composition; actions remain wired to the existing scene methods. */
+  private buildApprovedTitleScreen(): void {
+    this.titleGroup = this.add.container(0, 0).setName("mock-home-view");
+
+    if (this.textures.exists(GENERATED_CAPITAL_BG_KEY)) {
+      this.titleGroup.add(
+        this.add.image(CX, 338, GENERATED_CAPITAL_BG_KEY).setDisplaySize(450, 320).setAlpha(0.46),
+      );
+    }
+    this.titleGroup.add(
+      this.add.image(CX, 400, APPROVED_HOME_HERO_KEY).setDisplaySize(450, 800).setName("approved-home-hero"),
+    );
+
+    const topBar = this.add.graphics();
+    topBar.fillStyle(0x090604, 0.82);
+    topBar.fillRect(0, 0, 450, 108);
+    topBar.lineStyle(2, 0xc89855, 0.88);
+    topBar.lineBetween(0, 107, 450, 107);
+
+    const title = this.add
+      .text(22, 28, tr(this.lang, "1  ホーム・拠点", "1  BASE"), {
+        ...TYPE.h2,
+        fontFamily: "serif",
+        fontSize: "22px",
+        color: THEME.textPrimary,
+      })
+      .setOrigin(0, 0.5);
+    const subtitle = this.add
+      .text(24, 68, tr(this.lang, "英雄とともに、天下への一歩を。", "Take the first step toward conquest."), {
+        ...TYPE.small,
+        color: THEME.textMuted,
+      })
+      .setOrigin(0, 0.5);
+    const coinPill = drawPill(this, 300, 27, 96, 30, "");
+    const bestPill = drawPill(this, 392, 67, 92, 30, "");
+
+    const tagline = this.add
+      .text(CX + 14, 340, tr(this.lang, "乱世を駆け、\n英雄を集めよ", "Ride through chaos.\nGather your heroes."), {
+        fontFamily: "serif",
+        fontSize: "30px",
+        fontStyle: "800",
+        color: "#fff2cf",
+        stroke: "#170c07",
+        strokeThickness: 6,
+        align: "center",
+        lineSpacing: 8,
+      })
+      .setOrigin(0.5);
+
+    const openExpedition = () => {
+      this.playSound(sfx.tap);
+      this.scene.start("ExpeditionScene");
+    };
+    const questBtn = makeButton(this, CX, 680, 190, 110, tr(this.lang, "出陣", "DEPLOY"), openExpedition, {
+      fontSize: "24px",
+      fillColor: THEME.accent,
+      borderColor: 0xffd28c,
+      radius: 50,
+    });
+
+    const gachaBtn = makeButton(this, 43, 260, 72, 62, tr(this.lang, "武将", "General Gacha"), () => {
+      this.playSound(sfx.tap);
+      this.showGacha();
+    }, { fontSize: "10px" });
+    const breedBtn = makeButton(this, 43, 338, 72, 62, tr(this.lang, "強化", "Equipment Fusion"), () => {
+      this.playSound(sfx.tap);
+      this.showBreeding();
+    }, { fontSize: "10px" });
+    const rosterBtn = makeButton(this, 43, 416, 72, 62, tr(this.lang, "編成", "Generals"), () => {
+      this.playSound(sfx.tap);
+      this.showRoster();
+    }, { fontSize: "10px" });
+
+    const navPanel = drawPanel(this, CX, 778, 450, 46, { radius: 0, fillAlpha: 0.95, shadow: false });
+    const navButtons = [
+      makeButton(this, 45, 778, 82, 38, tr(this.lang, "ホーム", "Home"), () => this.showTitle(), { fontSize: "10px" }).container,
+      makeButton(this, 135, 778, 82, 38, tr(this.lang, "天下地図", "Campaign"), openExpedition, { fontSize: "10px" }).container,
+      makeButton(this, 225, 778, 82, 38, tr(this.lang, "武将", "Generals"), () => this.showRoster(), { fontSize: "10px" }).container,
+      makeButton(this, 315, 778, 82, 38, tr(this.lang, "ガチャ", "Gacha"), () => this.showGacha(), { fontSize: "10px" }).container,
+      makeButton(this, 405, 778, 82, 38, tr(this.lang, "メニュー", "Menu"), () => this.showBreeding(), { fontSize: "10px" }).container,
+    ];
+
+    this.soundIcon = drawSpeakerIcon(this, 428, 27, this.soundOn, 16);
+    const soundHit = this.add.rectangle(428, 27, 36, 36, 0x000000, 0).setInteractive({ useHandCursor: true });
+    soundHit.on("pointerdown", () => {
+      this.soundOn = !this.soundOn;
+      localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+      this.soundIcon.destroy();
+      this.soundIcon = drawSpeakerIcon(this, 428, 27, this.soundOn, 16);
+      this.titleGroup.add(this.soundIcon);
+      this.playSound(sfx.tap);
+    });
+
+    this.titleGroup.add([
+      topBar,
+      title,
+      subtitle,
+      coinPill.container,
+      bestPill.container,
+      tagline,
+      gachaBtn.container,
+      breedBtn.container,
+      rosterBtn.container,
+      questBtn.container,
+      navPanel,
+      ...navButtons,
       this.soundIcon,
       soundHit,
     ]);
