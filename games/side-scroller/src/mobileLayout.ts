@@ -420,20 +420,28 @@ function refresh(scene: Runtime): void {
     ui.chrome.lineStyle(1.5, 0xffa197, 0.68).strokeRoundedRect(barX, y, barW, 12, 6);
   }
 
-  // Portraitだけ下部に薄い操作帯を置く。Landscapeでは戦場を最後まで見せる。
+  // Portraitはモック通り「戦場 → 状況帯 → 操作帯」の3段にする。
+  // 戦場と操作の間に残っていた無目的な空白を、判断に必要な情報だけへ使う。
   if (portrait) {
-    ui.chrome.fillStyle(0x06131d, 0.82).fillRect(0, 606, 450, 194);
-    ui.chrome.lineStyle(1, 0x72cbe8, 0.24).lineBetween(0, 606, 450, 606);
+    ui.chrome.fillStyle(0x0a1b26, 0.9).fillRoundedRect(10, 540, 430, 58, 14);
+    ui.chrome.lineStyle(1, 0x72cbe8, 0.3).strokeRoundedRect(10, 540, 430, 58, 14);
+    ui.chrome.fillStyle(0x06131d, 0.88).fillRect(0, 606, 450, 194);
+    ui.chrome.lineStyle(1, 0x72cbe8, 0.28).lineBetween(0, 606, 450, 606);
   }
 
   ui.playerStatus.setPosition(18, portrait ? 31 : 27).setText(`HP ${hp}/${maxHp}`);
   ui.stage.setPosition(width / 2, portrait ? 28 : 24).setText(`WAVE ${scene.wave ?? 1}`);
   ui.objective
-    .setPosition(width - 18, portrait ? 31 : 27)
-    .setText(boss ? "BOSS" : `${tr(scene.lang ?? "en", "残敵", "ENEMIES")} ${remaining}`);
+    .setPosition(portrait ? 225 : width - 18, portrait ? 558 : 27)
+    .setOrigin(portrait ? 0.5 : 1, 0.5)
+    .setText(portrait
+      ? (boss ? tr(scene.lang ?? "en", "BOSSの予兆を読んで斬り返せ", "Read the BOSS tell and counter") : `${tr(scene.lang ?? "en", "残敵", "ENEMIES")} ${remaining} · ${combo > 0 ? `${combo} COMBO · ` : ""}${tr(scene.lang ?? "en", "奥義", "OUGI")} ${Math.round(gaugeRatio * 100)}%`)
+      : (boss ? "BOSS" : `${tr(scene.lang ?? "en", "残敵", "ENEMIES")} ${remaining}`));
   ui.ougiStatus
-    .setPosition(portrait ? 325 : 337, portrait ? 80 : 48)
-    .setText(gaugeRatio >= 1 ? `${tr(scene.lang ?? "en", "奥義", "OUGI")} READY` : `${tr(scene.lang ?? "en", "奥義", "OUGI")} ${Math.round(gaugeRatio * 100)}%`);
+    .setPosition(portrait ? 225 : 337, portrait ? 582 : 48)
+    .setText(portrait
+      ? (gaugeRatio >= 1 ? `${tr(scene.lang ?? "en", "奥義", "OUGI")} READY` : "")
+      : (gaugeRatio >= 1 ? `${tr(scene.lang ?? "en", "奥義", "OUGI")} READY` : `${tr(scene.lang ?? "en", "奥義", "OUGI")} ${Math.round(gaugeRatio * 100)}%`));
 
   if (boss) {
     const phase = bossPhase(scene.time.now - (boss.bornAt ?? scene.time.now));
