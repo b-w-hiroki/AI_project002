@@ -56,6 +56,7 @@ const HOME_BG_KEY = "kq-bg-capital-home-v3";
 const HERO_BACK_KEY = "kq-hero-warrior-back";
 const ELDER_KEY = "kq-npc-elder";
 const HERO_DIALOGUE_KEY = "kq-dialogue-hero-v1";
+const APPROVED_AVATAR_KEY = "kq-approved-avatar-visible";
 const DIALOGUE_BG_KEY = "kq-bg-dialogue-arcade-v1";
 const REQUESTER_ART = {
   warrior: "kq-dialogue-warrior-v3", merchant: "kq-dialogue-merchant-v1",
@@ -586,7 +587,6 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 110, 42, "王都ホーム", 30, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#091420", 2);
   text(scene, root, 112, 78, "美しい王都を拠点に、世界の人々と出会う", 15, "#fff2c4", "700", 300).setOrigin(0, 0.5).setStroke("#091420", 0);
   hudPlate(scene, root, 108, 151, 184, 66);
-  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 124, 52, 54, 0.6);
   text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 332, 132, 204, 34);
@@ -684,6 +684,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   for (const [i, label] of ["王都", "ワールド", "キャラ", "リーグ", "ショップ"].entries()) {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 16, "#fff0c8", "800").setStroke("#091420", 0);
   }
+  // Draw the approved visible-only portrait last so the live player card masks
+  // the old placeholder portrait while retaining its text and interactions.
+  fitted(scene, root, APPROVED_AVATAR_KEY, 48, 151, 52, 52)?.setName("approved-home-avatar");
   screenFrame(scene, root);
   const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });
   let startArmed = false;
@@ -1377,6 +1380,7 @@ export function installKarmaConceptArtPass(): void {
       this.load.image(HOME_BG_KEY, `images/delivery/${HOME_BG_KEY}.webp`);
       this.load.image(HERO_BACK_KEY, `images/delivery/${HERO_BACK_KEY}.webp`);
       this.load.image(HERO_DIALOGUE_KEY, `images/delivery/${HERO_DIALOGUE_KEY}.webp`);
+      this.load.image(APPROVED_AVATAR_KEY, `images/mock-extracts/${APPROVED_AVATAR_KEY}.png`);
       const request = (this as Runtime).homeRequest;
       const requester = request ? REQUESTER_ART[request.faction] : ELDER_KEY;
       this.load.image(requester, `images/delivery/${requester}.webp`);

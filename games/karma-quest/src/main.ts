@@ -17,8 +17,14 @@ installKarmaKingdomBackground();
 await initCrazyGames();
 installLocalTelemetry("karma-quest");
 
+// WebKit can lose the WebGL surface when the responsive controller swaps the
+// portrait and landscape backing sizes. Canvas keeps Safari/WebKit rendering
+// visible across rotation; Chromium-family browsers retain the normal AUTO path.
+const webKitCanvasFallback = /AppleWebKit/i.test(navigator.userAgent)
+  && !/(Chrome|Chromium|CriOS|Edg|OPR)/i.test(navigator.userAgent);
+
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: webKitCanvasFallback ? Phaser.CANVAS : Phaser.AUTO,
   parent: "game",
   width: 450,
   height: 800,
