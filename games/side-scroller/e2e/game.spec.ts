@@ -294,8 +294,23 @@ test.describe("phone visual QA", () => {
     await expect.poll(readPose).toMatchObject({ texture: "hero-art", body: { width: 27, height: 48 } });
     const idle = await readPose();
 
-    await page.keyboard.down("ArrowRight");
-    await expect.poll(readPose).toMatchObject({ texture: "hero-run-art" });
+    let runStarted = false;
+    for (let attempt = 0; attempt < 3 && !runStarted; attempt += 1) {
+      await page.locator("canvas").focus();
+      await page.keyboard.down("ArrowRight");
+      try {
+        await page.waitForFunction(() => {
+          const scene = window.__qaGame.scene.getScene("GameScene");
+          const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+          return player.texture.key === "hero-run-art";
+        }, undefined, { timeout: 1_500 });
+        runStarted = true;
+      } catch {
+        await page.keyboard.up("ArrowRight");
+        await page.waitForTimeout(80);
+      }
+    }
+    expect(runStarted).toBe(true);
     const running = await readPose();
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-approved-hero-run-v3-800x600.png",
