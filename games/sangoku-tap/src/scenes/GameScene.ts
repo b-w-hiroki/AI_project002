@@ -75,6 +75,7 @@ const GENERAL_ART: Readonly<Record<string, string>> = {
 const BG_KEY = "st-bg-battlefield";
 const GENERATED_HERO_KEY = "st-generated-hero";
 const APPROVED_HOME_HERO_KEY = "st-approved-home-hero";
+const APPROVED_LORD_AVATAR_KEY = "st-approved-lord-avatar";
 const GENERATED_CAPITAL_BG_KEY = "st-generated-capital-bg";
 const GENERATED_DEPLOY_UI_KEY = "st-generated-deploy-ui";
 /** 立ち絵の縦横比（384:512） */
@@ -125,6 +126,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(BG_KEY, "images/st-bg-battlefield.png");
     this.load.image(GENERATED_HERO_KEY, "images/generated/characters/st-hero-protagonist.webp");
     this.load.image(APPROVED_HOME_HERO_KEY, "images/mock-extracts/st-approved-home-hero-visible.png");
+    this.load.image(APPROVED_LORD_AVATAR_KEY, "images/mock-extracts/st-approved-lord-avatar.png");
     this.load.image(GENERATED_CAPITAL_BG_KEY, "images/generated/backgrounds/st-bg-capital.webp");
     this.load.image(GENERATED_DEPLOY_UI_KEY, "images/generated/ui/st-ui-deploy-button.webp");
     for (const key of Object.values(GENERAL_ART))
@@ -316,7 +318,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.textures.exists(GENERATED_CAPITAL_BG_KEY)) {
       this.titleGroup.add(
-        this.add.image(CX, 338, GENERATED_CAPITAL_BG_KEY).setDisplaySize(450, 320).setAlpha(0.46),
+        this.add.image(CX, 330, GENERATED_CAPITAL_BG_KEY).setDisplaySize(450, 360).setAlpha(0.72),
       );
     }
     this.titleGroup.add(
@@ -345,6 +347,47 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0, 0.5);
     const coinPill = drawPill(this, 300, 27, 96, 30, "");
     const bestPill = drawPill(this, 392, 67, 92, 30, "");
+
+    const statusPanel = this.add.graphics();
+    statusPanel.fillStyle(0x160d09, 0.9);
+    statusPanel.fillRoundedRect(8, 116, 434, 104, 12);
+    statusPanel.lineStyle(2, 0xd5a555, 0.9);
+    statusPanel.strokeRoundedRect(8, 116, 434, 104, 12);
+    statusPanel.lineStyle(1, 0xffdda0, 0.55);
+    statusPanel.lineBetween(104, 126, 104, 210);
+    statusPanel.fillStyle(0x8f1d16, 0.92);
+    statusPanel.fillRoundedRect(116, 128, 310, 34, 7);
+    statusPanel.lineStyle(1, 0xf2c46e, 0.9);
+    statusPanel.strokeRoundedRect(116, 128, 310, 34, 7);
+
+    const lordAvatar = this.add
+      .image(56, 168, APPROVED_LORD_AVATAR_KEY)
+      .setDisplaySize(80, 80)
+      .setName("approved-lord-avatar");
+    const lordTitle = this.add
+      .text(126, 145, tr(this.lang, "\u4e3b\u516c\u306e\u672c\u9663", "LORD'S COMMAND"), {
+        ...TYPE.h2,
+        fontFamily: "serif",
+        fontSize: "17px",
+        color: "#fff1c8",
+      })
+      .setOrigin(0, 0.5);
+    const homeStatusText = this.add
+      .text(126, 187, "", {
+        ...TYPE.small,
+        fontSize: "13px",
+        color: "#f7d99b",
+      })
+      .setOrigin(0, 0.5);
+    const statusOrnaments = this.add
+      .text(420, 187, "◆\n◆", {
+        fontFamily: "serif",
+        fontSize: "13px",
+        color: "#d6a24e",
+        align: "center",
+        lineSpacing: 6,
+      })
+      .setOrigin(0.5);
 
     const tagline = this.add
       .text(CX + 14, 340, tr(this.lang, "乱世を駆け、\n英雄を集めよ", "Ride through chaos.\nGather your heroes."), {
@@ -409,6 +452,11 @@ export class GameScene extends Phaser.Scene {
       subtitle,
       coinPill.container,
       bestPill.container,
+      statusPanel,
+      lordAvatar,
+      lordTitle,
+      homeStatusText,
+      statusOrnaments,
       tagline,
       gachaBtn.container,
       breedBtn.container,
@@ -421,6 +469,7 @@ export class GameScene extends Phaser.Scene {
     ]);
     this.titleGroup.setData("coinPill", coinPill);
     this.titleGroup.setData("bestPill", bestPill);
+    this.titleGroup.setData("homeStatusText", homeStatusText);
   }
 
   private playSound(fn: () => void): void {
@@ -467,6 +516,12 @@ export class GameScene extends Phaser.Scene {
     const bestPill = this.titleGroup.getData("bestPill") as {
       setText: (t: string) => void;
     };
+    const homeStatusText = this.titleGroup.getData("homeStatusText") as Phaser.GameObjects.Text | undefined;
+    const generalCount = Object.values(loadOwnedGenerals()).reduce((sum, count) => sum + count, 0);
+    homeStatusText?.setText(
+      `${tr(this.lang, "\u6b66\u5c06", "Generals")} ${generalCount}   ` +
+        `${tr(this.lang, "\u9060\u5f81\u8a18\u9332", "Best march")} ${loadBestDistance()}`,
+    );
     coinPill.setText(`${tr(this.lang, "銭", "Coins")} ${loadCurrency()}`);
     bestPill.setText(`${tr(this.lang, "最高", "Best")} ${loadBestDistance()}`);
   }

@@ -9,6 +9,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "e2e" / "screenshots" / "mock-comparison-450x800.png"
 OUTPUT = ROOT / "public" / "images" / "mock-extracts" / "st-approved-home-hero-visible.png"
+AVATAR_OUTPUT = ROOT / "public" / "images" / "mock-extracts" / "st-approved-lord-avatar.png"
 
 
 def main() -> None:
@@ -18,6 +19,13 @@ def main() -> None:
 
     # The left column below its 44 px review heading is the approved 450x800 viewport.
     viewport = source[44:844, 0:450].copy()
+    avatar = cv2.cvtColor(viewport[112:200, 0:88], cv2.COLOR_BGR2BGRA)
+    avatar_alpha = np.zeros((88, 88), dtype=np.uint8)
+    cv2.circle(avatar_alpha, (44, 44), 42, 255, thickness=-1, lineType=cv2.LINE_AA)
+    avatar[:, :, 3] = avatar_alpha
+    AVATAR_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    if not cv2.imwrite(str(AVATAR_OUTPUT), avatar):
+        raise RuntimeError(f"failed to write {AVATAR_OUTPUT}")
     mask = np.full(viewport.shape[:2], cv2.GC_BGD, dtype=np.uint8)
 
     # Only the visible back-facing rider is eligible. The deployment medallion and
@@ -91,6 +99,7 @@ def main() -> None:
         raise RuntimeError(f"failed to write {OUTPUT}")
 
     print(f"wrote {OUTPUT} ({int(np.count_nonzero(alpha))} retained source pixels)")
+    print(f"wrote {AVATAR_OUTPUT}")
 
 
 if __name__ == "__main__":

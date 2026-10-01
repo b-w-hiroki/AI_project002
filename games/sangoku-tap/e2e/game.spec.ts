@@ -23,7 +23,12 @@ test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 test("approved home hero is visible and legacy home remains available", async ({ page }) => {
   const state = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const loadedKeys = ["st-generated-hero", "st-generated-capital-bg", "st-approved-home-hero"];
+    const loadedKeys = [
+      "st-generated-hero",
+      "st-generated-capital-bg",
+      "st-approved-home-hero",
+      "st-approved-lord-avatar",
+    ];
     const collectVisibleImages = (
       nodes: Phaser.GameObjects.GameObject[],
       parentVisible = true,
@@ -44,14 +49,25 @@ test("approved home hero is visible and legacy home remains available", async ({
       return out;
     };
     const visible = collectVisibleImages(scene.children.list);
+    const home = scene.children.list.find(child => child.name === "mock-home-view") as Phaser.GameObjects.Container;
+    const statusText = home.getData("homeStatusText") as Phaser.GameObjects.Text;
     return {
       loaded: loadedKeys.every(key => scene.textures.exists(key)),
       approvedVisible: visible.includes("st-approved-home-hero"),
+      avatarVisible: visible.includes("st-approved-lord-avatar"),
       legacyVisible: visible.includes("st-generated-hero"),
       ownerCount: scene.children.list.filter(child => child.name === "mock-home-view").length,
+      statusText: statusText.text,
     };
   });
-  expect(state).toEqual({ loaded: true, approvedVisible: true, legacyVisible: false, ownerCount: 1 });
+  expect(state).toEqual({
+    loaded: true,
+    approvedVisible: true,
+    avatarVisible: true,
+    legacyVisible: false,
+    ownerCount: 1,
+    statusText: "武将 0   遠征記録 0",
+  });
   await checkFrame(page, "portrait-title-generated-assets");
   await page.locator("canvas").screenshot({
     path: "e2e/screenshots/mock-current-home-450x800.png",
