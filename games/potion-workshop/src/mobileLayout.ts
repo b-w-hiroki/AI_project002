@@ -208,21 +208,21 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const reputationText = text(scene, root, portrait ? 416 : 764, 49, "", 10, "#bff0cf", "900").setOrigin(1, 0.5);
   const townText = text(scene, root, portrait ? 110 : 694, 25, "", 10, "#f5dcae", "800");
 
-  const heroX = portrait ? 150 : 150;
-  const heroY = portrait ? 210 : 202;
+  const heroX = portrait ? 145 : 150;
+  const heroY = portrait ? 228 : 202;
   const brewX = portrait ? 270 : 335;
-  const brewY = portrait ? 350 : 246;
+  const brewY = portrait ? 366 : 246;
   let hero: Phaser.GameObjects.Image | undefined;
   let cauldron: Phaser.GameObjects.Image | undefined;
   const heroKey = scene.textures.exists("pw-hero-alchemist-female")
     ? "pw-hero-alchemist-female"
     : "pw-hero-alchemist";
   if (scene.textures.exists(heroKey)) {
-    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 270 : 230, portrait ? 270 : 230);
+    hero = scene.add.image(heroX, heroY, heroKey).setDisplaySize(portrait ? 304 : 230, portrait ? 304 : 230);
     root.add(hero);
   }
   if (scene.textures.exists("pw-cauldron-icon")) {
-    cauldron = scene.add.image(brewX, brewY, "pw-cauldron-icon").setDisplaySize(portrait ? 175 : 170, portrait ? 175 : 170);
+    cauldron = scene.add.image(brewX, brewY, "pw-cauldron-icon").setDisplaySize(portrait ? 208 : 170, portrait ? 208 : 170);
     root.add(cauldron);
   } else {
     const pot = scene.add.graphics();
@@ -234,11 +234,12 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   glow.fillStyle(0x7de6b0, 0.16).fillCircle(brewX, brewY, portrait ? 90 : 100);
   glow.lineStyle(2, 0xd5ffd8, 0.48).strokeCircle(brewX, brewY, portrait ? 82 : 92);
   root.add(glow);
+  if (portrait) addButtonChrome(scene, root, brewX, brewY + 102, 196, 48, 0x1689a8);
   text(
     scene,
     root,
     brewX,
-    brewY + (portrait ? 104 : 110),
+    brewY + (portrait ? 102 : 110),
     lang === "ja" ? "大釜をタップして調合" : "TAP TO BREW",
     15,
     "#b8ffd7",
@@ -246,7 +247,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   );
   hitButton(scene, root, brewX, brewY, portrait ? 190 : 210, portrait ? 205 : 220, () => brew(scene, uiByScene.get(scene)!));
 
-  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 480 : 390, "", 12, "#fff1d0", "900");
+  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 494 : 390, "", 12, "#fff1d0", "900");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
   const productionTexts: Phaser.GameObjects.Text[] = [];
