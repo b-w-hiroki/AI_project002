@@ -302,7 +302,7 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
 
-    await page.keyboard.down("x");
+    await page.keyboard.press("x", { delay: 30 });
     await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
     const attackFx = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -313,7 +313,6 @@ test.describe("phone visual QA", () => {
       path: "e2e/screenshots/side-approved-hero-attack-v3-800x600.png",
       animations: "disabled",
     });
-    await page.keyboard.up("x");
     await page.keyboard.up("ArrowRight");
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
