@@ -7,16 +7,24 @@ import { installSideConceptArtPass } from "./conceptArt";
 import { installSideArtFidelity } from "./artFidelity";
 import { installSideMobileLayout } from "./mobileLayout";
 import { installSideMobileScenePolish } from "./mobileScenePolish";
+import { installSideMockBattleView } from "./mockBattleView";
 import { GameScene } from "./scenes/GameScene";
 import { LoadoutScene } from "./scenes/LoadoutScene";
 
 await initCrazyGames();
 installLocalTelemetry("side-scroller");
-installSideScrollerPresentation();
-installSideConceptArtPass();
-installSideMobileLayout();
-installSideArtFidelity();
-installSideMobileScenePolish();
+const useLegacyView = new URLSearchParams(window.location.search).get("legacyView") === "1"
+  || window.localStorage.getItem("side-scroller:legacy-view") === "1";
+
+if (useLegacyView) {
+  installSideScrollerPresentation();
+  installSideConceptArtPass();
+  installSideMobileLayout();
+  installSideArtFidelity();
+  installSideMobileScenePolish();
+} else {
+  installSideMockBattleView();
+}
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

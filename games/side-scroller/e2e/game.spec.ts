@@ -130,6 +130,29 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
   });
+
+  test("mock battle view has one owner and legacy rollback remains available", async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const modern = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return scene.children.list.filter(child => child.name === "side-mock-battle-view").length;
+    });
+    expect(modern).toBe(1);
+
+    await page.goto("/?visualqa=battle&legacyView=1");
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+    const legacy = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return scene.children.list.some(child => child.name === "side-mock-battle-view");
+    });
+    expect(legacy).toBe(false);
+  });
   test("visual QA: normal agile and tank use distinct art", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");
@@ -274,8 +297,9 @@ test.describe("phone visual QA", () => {
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const controls = Reflect.get(scene, "virtualControls") as Phaser.GameObjects.Container | undefined;
-      return controls?.visible ?? false;
-    })).toBe(false);
+      const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container | null;
+      return { legacyControls: controls?.visible ?? false, mockVisible: mock?.visible ?? false };
+    })).toEqual({ legacyControls: false, mockVisible: false });
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-game-over-844x390.png",
       animations: "disabled",
