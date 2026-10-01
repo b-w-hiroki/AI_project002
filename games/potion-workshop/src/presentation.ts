@@ -277,17 +277,23 @@ function buildConceptUi(scene: IdleRuntime): WorkshopConceptUi {
   });
   const cauldron = makeCauldron(scene);
   const brewCtaBg = scene.add.graphics();
-  brewCtaBg.fillStyle(0x8f4b2d, 0.95);
-  brewCtaBg.fillRoundedRect(125, 501, 160, 44, 18);
-  brewCtaBg.fillStyle(0xffffff, 0.18);
-  brewCtaBg.fillRoundedRect(128, 504, 154, 12, 14);
-  brewCtaBg.lineStyle(2, 0xf6d495, 0.85);
-  brewCtaBg.strokeRoundedRect(125, 501, 160, 44, 18);
-  const brewCta = text(scene, 205, 523, ja(scene, "ポーション製造  TAP!", "BREW POTION  TAP!"), 14, "#fff7df", "900");
-
-  cauldron.on("pointerdown", () => {
-    invoke(scene, "onBrewTap", [cauldron]);
-  });
+  const paintBrewCta = (down = false) => {
+    brewCtaBg.clear();
+    brewCtaBg.fillStyle(down ? 0x71351f : 0x8f4b2d, 0.98);
+    brewCtaBg.fillRoundedRect(105, 494, 200, 58, 20);
+    brewCtaBg.fillStyle(0xffffff, down ? 0.08 : 0.2);
+    brewCtaBg.fillRoundedRect(109, 498, 192, 15, 15);
+    brewCtaBg.lineStyle(2.5, 0xf6d495, 0.92);
+    brewCtaBg.strokeRoundedRect(105, 494, 200, 58, 20);
+  };
+  paintBrewCta();
+  const brewCta = text(scene, 205, 523, ja(scene, "ポーション製造  TAP!", "BREW POTION  TAP!"), 16, "#fff7df", "900");
+  const brewHit = scene.add.zone(205, 523, 200, 58).setInteractive({ useHandCursor: true });
+  const brew = () => invoke(scene, "onBrewTap", [cauldron]);
+  cauldron.on("pointerdown", brew);
+  brewHit.on("pointerdown", () => { paintBrewCta(true); brew(); });
+  brewHit.on("pointerup", () => paintBrewCta(false));
+  brewHit.on("pointerout", () => paintBrewCta(false));
 
   const workshopLabel = text(scene, 462, 124, "", 12, "#82683e", "900").setOrigin(0, 0.5);
   const repText = text(scene, 748, 124, "", 12, "#2f8f68", "900").setOrigin(1, 0.5);
@@ -383,6 +389,7 @@ function buildConceptUi(scene: IdleRuntime): WorkshopConceptUi {
     speechText,
     brewCtaBg,
     brewCta,
+    brewHit,
     workshopLabel,
     repText,
     ordersBox,
