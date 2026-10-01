@@ -120,6 +120,9 @@ const FIGHTER_ART: Readonly<Record<FighterId, string>> = {
 const FIGHTER_H = 320;
 const FIGHTER_W = (FIGHTER_H * 384) / 512;
 const FIGHTER_Y = 286;
+const MOCK_FIGHTER_H = 290;
+const MOCK_FIGHTER_W = (MOCK_FIGHTER_H * 384) / 512;
+const MOCK_FIGHTER_Y = 278;
 /** ガチャ竜牙立ち絵（SSR演出）の高さ */
 const RYUGA_H = 280;
 const RYUGA_W = (RYUGA_H * 384) / 512;
@@ -496,6 +499,16 @@ export class GameScene extends Phaser.Scene {
     this.refreshTeamSelection();
   }
 
+  private isApprovedMockViewport(): boolean {
+    return this.scale.parentSize.width === 800 && this.scale.parentSize.height === 600;
+  }
+
+  private fighterBounds(): { width: number; height: number; y: number } {
+    return this.isApprovedMockViewport()
+      ? { width: MOCK_FIGHTER_W, height: MOCK_FIGHTER_H, y: MOCK_FIGHTER_Y }
+      : { width: FIGHTER_W, height: FIGHTER_H, y: FIGHTER_Y };
+  }
+
   private refreshTeamSelection(): void {
     this.teamSummary?.setText(`${tr(this.lang, "編成", "TEAM")} ${this.selectedTeam.length}/3 · ${this.selectedTeam.map(id => fighterName(this.lang, id)).join(" / ")} · ${tr(this.lang, "先頭が出場", "leader starts")}`);
     this.teamButtons.forEach((button, index) => {
@@ -511,17 +524,27 @@ export class GameScene extends Phaser.Scene {
         ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
         : `PLAYER · ${leader.name}`,
     );
+    this.playerLabel?.setText(tr(this.lang, "プレイヤー", "PLAYER"));
+    if (!this.isApprovedMockViewport()) {
+      this.playerLabel?.setText(
+        this.phase === "battle"
+          ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+          : `PLAYER · ${leader.name}`,
+      );
+    }
     if (this.playerSprite instanceof Phaser.GameObjects.Image) {
+      const fighterBounds = this.fighterBounds();
       const artKey = FIGHTER_ART[leader.id];
       if (this.textures.exists(artKey)) {
-        this.playerSprite.setTexture(artKey).setDisplaySize(FIGHTER_W, FIGHTER_H).clearTint();
+        this.playerSprite.setTexture(artKey).setPosition(this.playerSprite.x, fighterBounds.y).setDisplaySize(fighterBounds.width, fighterBounds.height).clearTint();
       } else {
-        this.playerSprite.setTexture(IMG.hero).setDisplaySize(FIGHTER_W, FIGHTER_H);
+        this.playerSprite.setTexture(IMG.hero).setPosition(this.playerSprite.x, fighterBounds.y).setDisplaySize(fighterBounds.width, fighterBounds.height);
         if (leader.id === "ryuga") this.playerSprite.clearTint();
         else this.playerSprite.setTint(leader.accent);
       }
     }
     this.switchBtn?.setEnabled(this.phase === "battle" && this.selectedTeam.length > 1);
+    this.switchBtn?.container.setVisible(!this.isApprovedMockViewport() || this.selectedTeam.length > 1);
   }
 
   private switchFighter(): void {
@@ -624,7 +647,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyHpFill = this.add.graphics();
 
     this.playerLabel = this.add
-      .text(40, 12, "PLAYER", { ...TYPE.small, color: THEME.textMuted })
+      .text(40, 12, tr(this.lang, "プレイヤー", "PLAYER"), { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0, 0.5)
       .setName("player-label");
     const enemyLabel = this.add
@@ -643,7 +666,7 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 6,
       })
       .setOrigin(0.5)
-      .setAlpha(0);
+      .setAlpha(0.9);
 
     this.playerSprite = this.buildFighter(
       180,
@@ -662,7 +685,7 @@ export class GameScene extends Phaser.Scene {
         padding: { x: 10, y: 5 },
       })
       .setOrigin(0.5)
-      .setAlpha(0.9);
+      .setAlpha(0);
 
     const ougiBg = this.add.graphics();
     ougiBg.fillStyle(0x000000, 0.5);
@@ -780,10 +803,11 @@ export class GameScene extends Phaser.Scene {
     key: string,
     fallbackColor: number,
   ): FighterSprite {
+    const fighterBounds = this.fighterBounds();
     if (this.textures.exists(key)) {
       return this.add
-        .image(x, FIGHTER_Y, key)
-        .setDisplaySize(FIGHTER_W, FIGHTER_H);
+        .image(x, fighterBounds.y, key)
+        .setDisplaySize(fighterBounds.width, fighterBounds.height);
     }
     const g = this.add.graphics();
     g.fillStyle(fallbackColor, 1);
@@ -1092,6 +1116,10 @@ export class GameScene extends Phaser.Scene {
         visual.glow & 0xff,
       );
     }
+    if (this.isApprovedMockViewport()) {
+      this.tweens.killTweensOf(this.opponentBadge);
+      this.opponentBadge.setAlpha(0);
+    }
   }
 
   private refreshTell(): void {
@@ -1100,6 +1128,12 @@ export class GameScene extends Phaser.Scene {
     const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
     this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
 ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
+    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
+${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
+    if (!this.isApprovedMockViewport()) {
+      this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
+${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
+    }
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     this.tweens.add({

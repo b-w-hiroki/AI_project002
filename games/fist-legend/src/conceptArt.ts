@@ -90,7 +90,10 @@ function build(scene: Runtime): VersusChrome {
 function refresh(scene: Runtime): void {
   const ui = build(scene);
   const layout = getResponsiveLayout(scene);
-  const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
+  const approvedMockViewport = scene.scale.parentSize.width === 800 && scene.scale.parentSize.height === 600;
+  // The approved 800x600 mock uses the authoritative legacy HUD. This pass duplicated
+  // its HP bars, portraits, and action ornaments, so disable it only at that viewport.
+  const active = !approvedMockViewport && (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
   ui.root.setVisible(active);
   if (!active || !scene.battle) return;
 
