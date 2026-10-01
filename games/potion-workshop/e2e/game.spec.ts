@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 
@@ -6,6 +6,21 @@ declare global { interface Window { __qaGame: Phaser.Game } }
 
 const SAVE_KEY = "ai_project002_save_v1";
 const runtimeErrors = new WeakMap<import("@playwright/test").Page, string[]>();
+
+async function waitForSceneObjects(page: Page, names: string[]): Promise<void> {
+  await expect.poll(() => page.evaluate((requiredNames) => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const found = new Set<string>();
+    const visit = (nodes: Phaser.GameObjects.GameObject[]): void => {
+      for (const node of nodes) {
+        if (node.name) found.add(node.name);
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list);
+      }
+    };
+    visit(scene.children.list);
+    return requiredNames.every(name => found.has(name));
+  }, names), { timeout: 10_000 }).toBe(true);
+}
 
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
@@ -36,6 +51,7 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
 test("English locale covers responsive workshop and town choice", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  await waitForSceneObjects(page, ["approved-workshop-cat", "workshop-nav-0", "workshop-nav-3"]);
 
   const responsiveLabels = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
@@ -218,6 +234,16 @@ test("進行状況が localStorage に自動セーブされる", async ({ page }
 test("portrait and landscape workshop are captured for visual QA", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await canvasSize(page)).height).toBe(800);
+  await waitForSceneObjects(page, [
+    "workshop-hero",
+    "workshop-cauldron",
+    "approved-workshop-cat",
+    "brew-hit-target",
+    "workshop-nav-0",
+    "workshop-nav-1",
+    "workshop-nav-2",
+    "workshop-nav-3",
+  ]);
   const portraitComposition = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
     const findNamed = (
@@ -292,6 +318,7 @@ test("visual QA: brewing shows a magical burst", async ({ page }) => {
 test("portrait management nav keeps orders, upgrades, equipment, and ascension functional", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  await waitForSceneObjects(page, ["workshop-nav-0", "workshop-nav-1", "workshop-nav-2", "workshop-nav-3"]);
   const result = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
     const findNamed = (
