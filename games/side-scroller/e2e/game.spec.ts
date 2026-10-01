@@ -373,14 +373,24 @@ test.describe("phone visual QA", () => {
       scene.cameras.main.setScroll(0, 0);
       player.setPosition(300, 430).setVisible(true);
       boss.sprite.setPosition(390, 430).setVisible(true);
-      (player.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setVelocity(0, 0);
-      (boss.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setVelocity(0, 0);
+      const playerBody = player.body as Phaser.Physics.Arcade.Body;
+      const bossBody = boss.sprite.body as Phaser.Physics.Arcade.Body;
+      playerBody.setAllowGravity(false).setVelocity(0, 0);
+      bossBody.setAllowGravity(false).setVelocity(0, 0);
+      playerBody.moves = false;
+      bossBody.moves = false;
       return { health: boss.state.health, distance: boss.sprite.x - player.x };
     });
 
     await page.keyboard.down("x");
-    await page.waitForTimeout(60);
-    await page.keyboard.up("x");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      return boss?.state.health ?? Number.POSITIVE_INFINITY;
+    })).toBeLessThan(before.health);
     const after = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
@@ -401,6 +411,7 @@ test.describe("phone visual QA", () => {
     expect(before.distance).toBe(90);
     expect(after.health).toBeLessThan(before.health);
     expect(after).toMatchObject({ heroPose: "hero-attack-art", slashVisible: true });
+    await page.keyboard.up("x");
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-approved-boss-melee-contact-v2-800x600.png",
       animations: "disabled",
