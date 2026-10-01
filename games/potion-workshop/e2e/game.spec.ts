@@ -126,6 +126,19 @@ test("official alchemist texture decodes and survives scene re-entry", async ({ 
   });
 });
 
+test("browser back returns to an error-free workshop", async ({ page }) => {
+  await page.goto("/?return-check=1");
+  await page.locator("canvas").waitFor();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await page.goBack();
+  await page.locator("canvas").waitFor();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    return scene.scene.isActive() && scene.textures.exists("pw-hero-alchemist");
+  })).toBe(true);
+});
+
 async function canvasSize(page: import("@playwright/test").Page): Promise<{ width: number; height: number }> {
   return page.locator("canvas").evaluate((canvas) => ({
     width: (canvas as HTMLCanvasElement).width,
