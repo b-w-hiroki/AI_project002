@@ -938,8 +938,10 @@ export class GameScene extends Phaser.Scene {
     );
     this.showClash(result.clash, move, enemyMove);
     if (result.clash === "advantage") {
-      this.cameras.main.shake(95, 0.0045);
-      this.cameras.main.flash(70, 255, 190, 90);
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        this.cameras.main.shake(95, 0.0045);
+        this.cameras.main.flash(70, 255, 190, 90);
+      }
       const impactRing = this.add
         .circle(400, 270, 34, 0xffc85a, 0)
         .setStrokeStyle(5, 0xffc85a, 0.8)
@@ -954,8 +956,10 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => impactRing.destroy(),
       });
     } else if (result.clash === "disadvantage") {
-      this.cameras.main.shake(120, 0.0065);
-      this.cameras.main.flash(65, 110, 145, 210);
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        this.cameras.main.shake(120, 0.0065);
+        this.cameras.main.flash(65, 110, 145, 210);
+      }
     }
     this.flashHit(this.enemySprite, result.playerDamageDealt);
     this.flashHit(this.playerSprite, result.enemyDamageDealt);
@@ -1038,8 +1042,10 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(BEAT_COOLDOWN_MS, () => {
       if (this.phase === "battle") this.accepting = true;
     });
-    this.cameras.main.flash(110, 255, 207, 130);
-    this.cameras.main.shake(180, 0.009);
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      this.cameras.main.flash(110, 255, 207, 130);
+      this.cameras.main.shake(180, 0.009);
+    }
     for (const radius of [42, 72, 104]) {
       const ring = this.add.circle(this.enemySprite.x, this.enemySprite.y - 24, radius, 0xffd76a, 0)
         .setStrokeStyle(4, 0xffd76a, 0.82);
@@ -1109,12 +1115,16 @@ export class GameScene extends Phaser.Scene {
       .setStyle({ backgroundColor: `#${visual.accent.toString(16).padStart(6, "0")}` });
     if (intro) {
       this.opponentBadge.setAlpha(0).setScale(0.82);
-      this.tweens.add({ targets: this.opponentBadge, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
-      this.cameras.main.flash(90,
-        (visual.glow >> 16) & 0xff,
-        (visual.glow >> 8) & 0xff,
-        visual.glow & 0xff,
-      );
+      if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        this.opponentBadge.setAlpha(1).setScale(1);
+      } else {
+        this.tweens.add({ targets: this.opponentBadge, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
+        this.cameras.main.flash(90,
+          (visual.glow >> 16) & 0xff,
+          (visual.glow >> 8) & 0xff,
+          visual.glow & 0xff,
+        );
+      }
     }
     if (this.isApprovedMockViewport()) {
       this.tweens.killTweensOf(this.opponentBadge);
@@ -1136,37 +1146,45 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     }
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
-    this.tweens.add({
-      targets: this.enemySprite,
-      x: 610,
-      duration: 500,
-      yoyo: true,
-    });
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      this.tweens.add({
+        targets: this.enemySprite,
+        x: 610,
+        duration: 500,
+        yoyo: true,
+      });
+    }
   }
 
   private flashHit(sprite: FighterSprite, damage: number): void {
     if (damage <= 0) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
     this.tweens.killTweensOf(sprite);
     sprite.setX(sprite === this.playerSprite ? 180 : 620);
-    this.tweens.add({
-      targets: sprite,
-      x: sprite.x + (sprite === this.playerSprite ? -16 : 16),
-      duration: 80,
-      yoyo: true,
-    });
+    if (!reduce) {
+      this.tweens.add({
+        targets: sprite,
+        x: sprite.x + (sprite === this.playerSprite ? -16 : 16),
+        duration: 80,
+        yoyo: true,
+      });
+    }
     const spark = this.add.graphics({ x: sprite.x, y: sprite.y });
     spark
       .lineStyle(3, 0xffd083)
       .lineBetween(-25, -25, 25, 25)
       .lineBetween(-25, 25, 25, -25);
     this.battleGroup.add(spark);
-    this.tweens.add({
-      targets: spark,
-      alpha: 0,
-      scale: 1.8,
-      duration: 180,
-      onComplete: () => spark.destroy(),
-    });
+    if (reduce) this.time.delayedCall(180, () => spark.destroy());
+    else {
+      this.tweens.add({
+        targets: spark,
+        alpha: 0,
+        scale: 1.8,
+        duration: 180,
+        onComplete: () => spark.destroy(),
+      });
+    }
   }
 
   private spawnDamageText(

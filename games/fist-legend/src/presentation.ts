@@ -43,6 +43,11 @@ const hudByScene = new WeakMap<object, BattleHud>();
 const statsByScene = new WeakMap<object, ReadStats>();
 const resultTextByScene = new WeakMap<object, Phaser.GameObjects.Text>();
 
+function reducedMotion(): boolean {
+  return typeof window !== "undefined"
+    && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
+
 function newStats(): ReadStats {
   return { wins: 0, losses: 0, streak: 0, maxStreak: 0, ougiUsed: false };
 }
@@ -163,6 +168,7 @@ function refreshBattleHud(scene: FistRuntime): void {
 
 function showReadWin(scene: Phaser.Scene): void {
   const lang = detectLang();
+  const reduce = reducedMotion();
   const flash = scene.add.graphics().setDepth(2000).setAlpha(0.9);
   flash.fillStyle(0xffd36a, 0.16);
   flash.fillRect(0, 0, 800, 600);
@@ -191,13 +197,15 @@ function showReadWin(scene: Phaser.Scene): void {
     .setOrigin(0.5)
     .setDepth(2002);
 
-  scene.cameras.main.shake(85, 0.004);
-  scene.tweens.add({ targets: label, scale: 1.08, duration: 120, ease: "Back.Out", yoyo: true });
+  if (!reduce) {
+    scene.cameras.main.shake(85, 0.004);
+    scene.tweens.add({ targets: label, scale: 1.08, duration: 120, ease: "Back.Out", yoyo: true });
+  }
   scene.tweens.add({
     targets: [flash, slash, label, sub],
     alpha: 0,
-    duration: 360,
-    delay: 230,
+    duration: reduce ? 120 : 360,
+    delay: reduce ? 120 : 230,
     ease: "Sine.easeIn",
     onComplete: () => {
       flash.destroy();
@@ -210,6 +218,7 @@ function showReadWin(scene: Phaser.Scene): void {
 
 function showReadLoss(scene: Phaser.Scene): void {
   const lang = detectLang();
+  const reduce = reducedMotion();
   const warning = scene.add.graphics().setDepth(1999).setAlpha(0.85);
   warning.lineStyle(8, 0xb63a32, 0.72).strokeRect(6, 6, 788, 588);
   const label = scene.add
@@ -222,8 +231,8 @@ function showReadLoss(scene: Phaser.Scene): void {
     })
     .setOrigin(0.5)
     .setDepth(2000);
-  scene.cameras.main.shake(110, 0.006);
-  scene.tweens.add({ targets: [warning, label], alpha: 0, duration: 300, delay: 140, onComplete: () => {
+  if (!reduce) scene.cameras.main.shake(110, 0.006);
+  scene.tweens.add({ targets: [warning, label], alpha: 0, duration: reduce ? 120 : 300, delay: reduce ? 100 : 140, onComplete: () => {
     warning.destroy();
     label.destroy();
   } });

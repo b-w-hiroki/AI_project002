@@ -14,6 +14,8 @@ installFistLegendPresentation();
 installFistConceptArtPass();
 installFistMobileLayout();
 installFistHajaMode();
+installFistArtFidelity();
+installFistVisualPolish();
 
 await initCrazyGames();
 installLocalTelemetry("fist-legend");

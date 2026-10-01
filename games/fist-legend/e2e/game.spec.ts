@@ -18,6 +18,14 @@ test.beforeEach(async ({ page }) => {
   const messages: string[] = [];
   errors.set(page, messages);
   page.on("pageerror", error => messages.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error") messages.push(`console: ${message.text()}`);
+  });
+  page.on("requestfailed", request => {
+    if (request.url().startsWith("http://localhost:15176")) {
+      messages.push(`request: ${request.url()} ${request.failure()?.errorText ?? "failed"}`);
+    }
+  });
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     const response = await route.fetch();
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
@@ -137,6 +145,69 @@ test("touch starts battle and a move advances the beat after rotation", async ({
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
   await expect.poll(async () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
   await checkFrame(page, "landscape-battle");
+});
+
+test("live attack, hit, and guard visuals follow the resolved clash", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startBattle").call(window.__qaGame.scene.getScene("GameScene")));
+
+  const resolve = async (enemyMove: "punch" | "kick" | "ki") => {
+    const baseline = await page.evaluate(enemyMove => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "startBattle").call(scene);
+      Reflect.set(scene, "nextEnemyMove", enemyMove);
+      const positions = {
+        playerX: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).x,
+        enemyX: (Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image).x,
+      };
+      Reflect.get(scene, "onPlayerMove").call(scene, "punch");
+      return positions;
+    }, enemyMove);
+    await page.waitForTimeout(55);
+    const state = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.getByName("combat-state-fx") as Phaser.GameObjects.Container | null;
+      return {
+        attack: root?.getByName("combat-attack-trail")?.visible ?? false,
+        hit: root?.getByName("combat-hit-burst")?.visible ?? false,
+        guard: root?.getByName("combat-guard-ring")?.visible ?? false,
+        playerX: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).x,
+        enemyX: (Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image).x,
+      };
+    });
+    return { baseline, state };
+  };
+
+  const advantage = await resolve("ki");
+  expect(advantage.state).toMatchObject({ attack: true, hit: true, guard: false });
+  expect(advantage.state.playerX).toBeGreaterThan(advantage.baseline.playerX);
+  await checkFrame(page, "approved-battle-attack-hit");
+
+  const disadvantage = await resolve("kick");
+  expect(disadvantage.state).toMatchObject({ attack: true, hit: true, guard: false });
+  expect(disadvantage.state.enemyX).toBeLessThan(disadvantage.baseline.enemyX);
+
+  const tie = await resolve("punch");
+  expect(tie.state).toMatchObject({ attack: false, hit: false, guard: true });
+});
+
+test("reduced motion keeps the state cue without fighter or camera motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 800, height: 600 });
+  const state = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    Reflect.set(scene, "nextEnemyMove", "ki");
+    Reflect.get(scene, "onPlayerMove").call(scene, "punch");
+    const root = scene.children.getByName("combat-state-fx") as Phaser.GameObjects.Container | null;
+    return {
+      cue: root?.getByName("combat-hit-burst")?.visible ?? false,
+      playerX: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).x,
+      enemyX: (Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image).x,
+      cameraFx: scene.cameras.main.flashEffect.isRunning || scene.cameras.main.shakeEffect.isRunning,
+    };
+  });
+  expect(state).toEqual({ cue: true, playerX: 180, enemyX: 620, cameraFx: false });
 });
 
 test("gacha and result screens are included in visual QA", async ({ page }) => {
