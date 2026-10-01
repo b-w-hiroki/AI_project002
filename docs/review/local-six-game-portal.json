@@ -1,0 +1,38 @@
+[
+  {
+    "game": "potion-workshop",
+    "images": 5,
+    "portalReturn": true,
+    "storage": true
+  },
+  {
+    "game": "side-scroller",
+    "images": 1,
+    "portalReturn": true,
+    "storage": true
+  },
+  {
+    "game": "sangoku-tap",
+    "images": 10,
+    "portalReturn": true,
+    "storage": true
+  },
+  {
+    "game": "fist-legend",
+    "images": 4,
+    "portalReturn": true,
+    "storage": true
+  },
+  {
+    "game": "karma-quest",
+    "images": 10,
+    "portalReturn": true,
+    "storage": true
+  },
+  {
+    "game": "color-match",
+    "images": 3,
+    "portalReturn": true,
+    "storage": true
+  }
+]

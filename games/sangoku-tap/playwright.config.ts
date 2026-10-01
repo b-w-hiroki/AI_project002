@@ -12,6 +12,6 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 15178",
     url: "http://localhost:15178",
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.PW_REUSE_SERVER === "1",
   },
 });

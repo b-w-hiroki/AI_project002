@@ -363,6 +363,8 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
 
 async function useNativePortrait(page: Page) {
   await page.setViewportSize({ width: 456, height: 806 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
 
 test("hero appearance follows dominant karma in portrait and landscape", async ({ page }) => {

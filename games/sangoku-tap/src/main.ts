@@ -17,8 +17,14 @@ installSangokuArtFidelity();
 installSangokuVisualPolish();
 installSangokuMobileLayout();
 
+// Safari/WebKit can lose the WebGL back buffer while switching between the
+// portrait and landscape canvas sizes. Canvas keeps the campaign operable;
+// Chromium-family browsers keep the normal AUTO renderer.
+const webKitCanvasFallback = /AppleWebKit/i.test(navigator.userAgent)
+  && !/(Chrome|Chromium|CriOS|Edg|OPR)/i.test(navigator.userAgent);
+
 const game = new Phaser.Game({
-  type: Phaser.AUTO,
+  type: webKitCanvasFallback ? Phaser.CANVAS : Phaser.AUTO,
   parent: "game",
   width: 450,
   height: 800,

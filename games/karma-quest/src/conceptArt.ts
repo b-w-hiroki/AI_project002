@@ -726,15 +726,14 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage()))),
     () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
   ];
-  const addRoute = (x: number, y: number, w: number, h: number, action: () => void) => {
-    const hit = scene.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
-    let armed = false;
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+  const addRoute = (x: number, y: number, w: number, h: number, name: string, action: () => void) => {
+    const hit = scene.add.zone(x, y, w, h).setName(name).setInteractive({ useHandCursor: true });
+    // Navigation has no destructive action. Activate on pointerdown so a
+    // resize/render frame between touchstart and touchend cannot drop the tap.
+    hit.on("pointerdown", action);
     root.add(hit);
   };
-  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, route));
+  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, `home-nav:${i}`, route));
   const railRoutes = [
     () => show("冒険の案内", "依頼カードを押して出発。\n依頼への返答を選び、\n世界の反応を確認します。\n\n選択は指を離したときに確定。"),
     () => invoke(scene, "startRun"),
@@ -742,7 +741,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("持ち物", "持ち物の管理は\n現在は利用できません。\n\n装備なしで冒険を開始できます。"),
     () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
   ];
-  railRoutes.forEach((route, i) => addRoute(47, 253 + i * 88, 76, 82, route));
+  railRoutes.forEach((route, i) => addRoute(47, 253 + i * 88, 76, 82, `home-rail:${i}`, route));
   root.add(modal);
   return root;
 }
@@ -1107,10 +1106,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     text(scene, root, x, unavailable ? y - 7 : y, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
     if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
-    let armed = false;
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => { if (armed) { armed = false; action(); } });
+    hit.on("pointerdown", action);
     root.add(hit);
   });
   root.add(modal);
