@@ -254,6 +254,97 @@ test.describe("phone visual QA", () => {
     });
   });
 
+  test("melee range endpoint visually reaches the live boss and deals damage", async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 700 });
+    await page.goto("/?visualqa=battle");
+    await page.locator("canvas").waitFor();
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page);
+
+    const before = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const current = Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+      }>;
+      current.forEach(enemy => enemy.sprite.destroy());
+      Reflect.set(scene, "enemies", []);
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const state = Reflect.get(scene, "playerState") as Record<string, unknown>;
+      Reflect.set(scene, "playerState", {
+        ...state,
+        facing: 1,
+        equippedWeapon: "melee",
+        customWeapons: {},
+        attackingUntil: 0,
+        lastAttackAt: -100_000,
+        ougiActiveUntil: 0,
+        hiougiActiveUntil: 0,
+        skillActiveUntil: 0,
+      });
+      Reflect.get(scene, "spawnWave").call(scene, 5);
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss was not spawned");
+      scene.cameras.main.stopFollow();
+      scene.cameras.main.setScroll(0, 0);
+      player.setPosition(300, 430).setVisible(true);
+      boss.sprite.setPosition(390, 430).setVisible(true);
+      (player.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setVelocity(0, 0);
+      (boss.sprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false).setVelocity(0, 0);
+      return { health: boss.state.health, distance: boss.sprite.x - player.x };
+    });
+
+    await page.keyboard.down("x");
+    await page.waitForTimeout(60);
+    await page.keyboard.up("x");
+    const after = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        state: { health: number };
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss disappeared");
+      return {
+        health: boss.state.health,
+        heroPose: player.texture.key,
+        slashVisible: scene.children.list.some(child =>
+          child.type === "Image"
+          && (child as Phaser.GameObjects.Image).texture.key === "combat-slash-fx"),
+      };
+    });
+    expect(before.distance).toBe(90);
+    expect(after.health).toBeLessThan(before.health);
+    expect(after).toMatchObject({ heroPose: "hero-attack-art", slashVisible: true });
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-melee-contact-v2-800x600.png",
+      animations: "disabled",
+    });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const boss = (Reflect.get(scene, "enemies") as Array<{
+        sprite: Phaser.Physics.Arcade.Sprite;
+        boss: boolean;
+      }>).find(enemy => enemy.boss);
+      if (!boss) throw new Error("wave 5 boss disappeared");
+      const debug = scene.add.graphics().setDepth(100);
+      for (const sprite of [player, boss.sprite]) {
+        const body = sprite.body as Phaser.Physics.Arcade.Body;
+        debug.lineStyle(3, 0xff3158, 1).strokeRect(body.x, body.y, body.width, body.height);
+        debug.fillStyle(0x31f0ff, 1).fillCircle(sprite.x, sprite.y, 4);
+      }
+    });
+    await page.locator("canvas").screenshot({
+      path: "e2e/screenshots/side-approved-boss-melee-contact-debug-v2-800x600.png",
+      animations: "disabled",
+    });
+  });
+
   test("visual QA: attack pose and slash read clearly", async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await page.goto("/?visualqa=battle");

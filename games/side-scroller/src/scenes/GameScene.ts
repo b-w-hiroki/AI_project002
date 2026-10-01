@@ -176,8 +176,8 @@ const BG_SCROLL_FACTOR = 0.4;
  * ジャンプ初速と最下段の足場も合わせて調整し、重力は1200を維持する。
  */
 const CHAR_SCALE = 2.0;
-const APPROVED_HERO_ART_SIZE = { w: 320, h: 160 };
-const APPROVED_BOSS_ART_SIZE = { w: 440, h: 293 };
+const APPROVED_HERO_ART_SIZE = { w: 260, h: 130 };
+const APPROVED_BOSS_ART_SIZE = { w: 300, h: 200 };
 /** フォールバック（Graphics描画）の人型テクスチャの元サイズ。CHAR_SCALE 倍して生成する */
 const HUMANOID_BASE = { w: 30, h: 42 };
 const HERO_ART_SIZE = { w: 36 * CHAR_SCALE, h: 54 * CHAR_SCALE }; // 54×81
