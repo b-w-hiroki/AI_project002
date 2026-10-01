@@ -17,6 +17,7 @@ type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
   lang?: Lang;
   phase?: "title" | "playing" | "result";
+  sessionMode?: "challenge" | "practice";
   sessionRemaining?: number;
   currentRound?: Round | null;
   roundIndex?: number;
@@ -28,6 +29,7 @@ type Runtime = Phaser.Scene & {
 };
 
 type CardView = {
+  colorId: string;
   bg: Phaser.GameObjects.Graphics;
   label: Phaser.GameObjects.Text;
   hit: Phaser.GameObjects.Zone;
@@ -38,6 +40,7 @@ type ArcadeUi = {
   timerRing: Phaser.GameObjects.Graphics;
   timerText: Phaser.GameObjects.Text;
   scoreText: Phaser.GameObjects.Text;
+  progressText: Phaser.GameObjects.Text;
   ruleText: Phaser.GameObjects.Text;
   promptText: Phaser.GameObjects.Text;
   chainText: Phaser.GameObjects.Text;
@@ -138,10 +141,25 @@ function build(scene: Runtime): ArcadeUi {
   text(scene, root, 352, 29, "SCORE", 9, "#d8ecff", "900");
   const scoreText = text(scene, root, 352, 48, "0000", 23, "#fff0a6", "900");
 
+  // Approved mock header, drawn above the legacy title chrome.
+  const header = scene.add.graphics();
+  header.fillGradientStyle(0x172e63, 0x204d8a, 0x142956, 0x18386c, 1, 1, 1, 1).fillRect(0, 0, 450, 92);
+  header.lineStyle(3, 0xffd66f, 0.9).lineBetween(0, 90, 450, 90);
+  header.fillStyle(0xffd66f, 1).fillCircle(44, 44, 29);
+  header.fillStyle(0x254c89, 1).fillCircle(44, 44, 23);
+  root.add(header);
+  text(scene, root, 44, 44, "2", 27, "#fff6c7", "900");
+  text(scene, root, 82, 33, tr(scene.lang ?? "en", "メインゲーム", "MAIN GAME"), 23, "#ffffff", "900").setOrigin(0, 0.5);
+  text(scene, root, 84, 62, tr(scene.lang ?? "en", "色とことばを見極めよう", "JUDGMENT PLAY"), 11, "#cdeaff", "800").setOrigin(0, 0.5);
+  panel(scene, root, 374, 46, 126, 58, 0x102f5c, 0xffd463, 0.96, 12);
+  text(scene, root, 374, 31, "SCORE", 9, "#d8ecff", "900");
+  const approvedScoreText = text(scene, root, 374, 53, "0000", 23, "#fff0a6", "900");
+  scoreText.setVisible(false);
+
   const timerRing = scene.add.graphics();
   root.add(timerRing);
-  const timerText = text(scene, root, 70, 151, "60", 36, "#ffffff", "900");
-  text(scene, root, 70, 119, "TIME", 9, "#d7f3ff", "900");
+  const timerText = text(scene, root, 86, 158, "60", 36, "#ffffff", "900");
+  text(scene, root, 86, 123, "TIME", 9, "#d7f3ff", "900");
 
   panel(scene, root, 270, 151, 280, 100, 0x144f82, 0x8ce5ff, 0.96, 15);
   text(scene, root, 270, 122, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#d8f5ff", "900");
@@ -151,27 +169,39 @@ function build(scene: Runtime): ArcadeUi {
   panel(scene, root, 225, 278, 250, 112, 0xfffbec, 0xf4c85f, 0.98, 16);
   const promptText = text(scene, root, 225, 278, "", 46, "#273d5b", "900");
 
-  const chainText = text(scene, root, 365, 326, "0\nCHAIN!", 24, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-7);
+  // Larger status and problem cards follow the approved hierarchy.
+  panel(scene, root, 292, 150, 266, 88, 0x144f82, 0x8ce5ff, 0.98, 15);
+  const progressText = text(scene, root, 292, 121, "QUESTION 1", 10, "#d8f5ff", "900");
+  const approvedRuleText = text(scene, root, 292, 150, "", 18, "#ffffff", "900");
+  text(scene, root, 292, 177, "Tap the correct color!", 10, "#d7f2ff", "800");
+  panel(scene, root, 225, 287, 330, 126, 0xfffbec, 0xf4c85f, 0.99, 20);
+  const approvedPromptText = text(scene, root, 225, 288, "", 50, "#273d5b", "900");
+  ruleText.setVisible(false);
+  promptText.setVisible(false);
 
-  const cardXs = [128, 322];
-  const cardYs = [390, 490, 590];
+  const chainText = text(scene, root, 373, 344, "0\nCHAIN!", 21, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-7);
+
+  const cardXs = [108, 342];
+  const cardYs = [438, 548, 658];
+  const displayColors = [COLORS[0]!, COLORS[1]!, COLORS[3]!, COLORS[2]!, COLORS[4]!, COLORS[5]!];
   const cards: CardView[] = [];
-  COLORS.forEach((color, i) => {
+  displayColors.forEach((color, i) => {
     const x = cardXs[i % 2]!;
     const y = cardYs[Math.floor(i / 2)]!;
     const bg = scene.add.graphics();
     const paint = (pressed = false) => {
       bg.clear();
-      bg.fillStyle(0x102a49, 0.34).fillRoundedRect(x - 78 + 4, y - 38 + 7, 156, 76, 14);
-      bg.fillStyle(color.hex, pressed ? 0.78 : 0.96).fillRoundedRect(x - 78, y - 38, 156, 76, 14);
-      bg.fillStyle(0xffffff, 0.2).fillRoundedRect(x - 72, y - 32, 144, 14, 10);
-      bg.lineStyle(pressed ? 5 : 3, 0xffe58a, 0.96).strokeRoundedRect(x - 78, y - 38, 156, 76, 14);
-      bg.lineStyle(1, 0xffffff, 0.55).strokeRoundedRect(x - 72, y - 32, 144, 64, 10);
+      bg.fillStyle(0x102a49, 0.34).fillRoundedRect(x - 90 + 5, y - 44 + 8, 180, 88, 17);
+      bg.fillStyle(color.hex, pressed ? 0.78 : 0.96).fillRoundedRect(x - 90, y - 44, 180, 88, 17);
+      bg.fillStyle(0xffffff, 0.22).fillRoundedRect(x - 83, y - 37, 166, 17, 11);
+      bg.lineStyle(pressed ? 5 : 3, 0xffe58a, 0.96).strokeRoundedRect(x - 90, y - 44, 180, 88, 17);
+      bg.lineStyle(1, 0xffffff, 0.55).strokeRoundedRect(x - 83, y - 37, 166, 74, 12);
     };
     paint();
     root.add(bg);
     const label = text(scene, root, x, y, "", 21, "#ffffff", "900").setStroke("#173453", 3);
-    const hit = scene.add.zone(x, y, 156, 76).setInteractive({ useHandCursor: true });
+    bg.setName(`portrait-answer-card-${i}-${color.id}`);
+    const hit = scene.add.zone(x, y, 180, 88).setName(`portrait-answer-hit-${i}-${color.id}`).setInteractive({ useHandCursor: true });
     root.add(hit);
     hit.on("pointerdown", () => {
       if (scene.phase !== "playing" || scene.accepting === false) return;
@@ -180,21 +210,22 @@ function build(scene: Runtime): ArcadeUi {
     });
     hit.on("pointerup", () => paint(false));
     hit.on("pointerout", () => paint(false));
-    cards.push({ bg, label, hit });
+    cards.push({ colorId: color.id, bg, label, hit });
   });
 
   let mascot: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("cm-mascot")) {
-    mascot = scene.add.image(78, 656, "cm-mascot").setDisplaySize(112, 112);
+    mascot = scene.add.image(52, 754, "cm-mascot").setDisplaySize(72, 72);
     root.add(mascot);
-    scene.tweens.add({ targets: mascot, y: 649, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    scene.tweens.add({ targets: mascot, y: 748, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
-  panel(scene, root, 225, 748, 398, 58, 0x153d68, 0x79cff7, 0.94, 14);
-  text(scene, root, 42, 732, "NEXT", 10, "#bdeaff", "900").setOrigin(0, 0.5);
-  const nextText = text(scene, root, 225, 752, "", 13, "#ffffff", "900");
+  panel(scene, root, 270, 760, 330, 48, 0x153d68, 0x79cff7, 0.94, 14);
+  text(scene, root, 120, 747, "NEXT", 9, "#bdeaff", "900").setOrigin(0, 0.5);
+  const nextText = text(scene, root, 278, 764, "", 11, "#ffffff", "900");
 
-  const ui = { root, timerRing, timerText, scoreText, ruleText, promptText, chainText, nextText, cards, mascot };
+  const ui = { root, timerRing, timerText, scoreText: approvedScoreText, progressText, ruleText: approvedRuleText, promptText: approvedPromptText, chainText, nextText, cards, mascot };
   uiByScene.set(scene, ui);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => uiByScene.delete(scene));
   return ui;
 }
 
@@ -217,18 +248,19 @@ function refresh(scene: Runtime): void {
   const score = correct * 100 + (scene.turboPoints ?? 0) * 10;
 
   ui.timerRing.clear();
-  ui.timerRing.fillStyle(0x103a64, 0.94).fillCircle(70, 151, 49);
-  ui.timerRing.lineStyle(8, danger ? 0xff5f78 : 0x74e9ff, 0.28).strokeCircle(70, 151, 48);
-  ui.timerRing.lineStyle(8, danger ? 0xff5f78 : 0x39d8ff, 1).beginPath().arc(70, 151, 48, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).strokePath();
+  ui.timerRing.fillStyle(0x103a64, 0.94).fillCircle(86, 158, 49);
+  ui.timerRing.lineStyle(8, danger ? 0xff5f78 : 0x74e9ff, 0.28).strokeCircle(86, 158, 48);
+  ui.timerRing.lineStyle(8, danger ? 0xff5f78 : 0x39d8ff, 1).beginPath().arc(86, 158, 48, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).strokePath();
   ui.timerText.setText(String(secs));
   ui.timerText.setColor(danger ? "#ffd0d8" : "#ffffff");
   ui.scoreText.setText(String(score).padStart(4, "0"));
+  ui.progressText.setText(`${scene.sessionMode === "practice" ? "PRACTICE" : "QUESTION"} ${scene.roundIndex ?? 1}`);
   ui.ruleText.setText(round.judgeMode === "color" ? tr(scene.lang ?? "en", "『文字の色』を見る", "Watch INK COLOR") : tr(scene.lang ?? "en", "『文字の意味』を見る", "Watch WORD MEANING"));
   ui.promptText.setText(nameForColorId(round.promptWord, mode)).setColor(`#${hexForColorId(round.promptInk).toString(16).padStart(6, "0")}`);
   ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`);
   ui.chainText.setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
   ui.nextText.setText(until <= 2000 ? tr(scene.lang ?? "en", "ルール切替まもなく！", "RULE SHIFT SOON!") : `${tr(scene.lang ?? "en", "次のルールまで", "NEXT RULE IN")} ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`);
-  ui.cards.forEach((card, i) => card.label.setText(nameForColorId(COLORS[i]!.id, mode)));
+  ui.cards.forEach((card) => card.label.setText(nameForColorId(card.colorId, mode)));
 }
 
 export function installColorConceptArtPass(): void {
