@@ -1528,7 +1528,9 @@ export class GameScene extends Phaser.Scene {
 
   /** ガードの構え状態を更新する。攻撃・移動より先に呼び、他の処理から `this.guarding` を参照できるようにする */
   private handleGuard(): void {
-    this.guarding = this.guardKey.isDown && !this.crouching;
+    // A held guard must win over a stale/down joystick state. handleMovement
+    // clears crouching in the same frame once guarding becomes active.
+    this.guarding = this.guardKey.isDown;
     this.guardIcon.setVisible(this.guarding);
     if (this.guarding) {
       const facing = this.playerState.facing;

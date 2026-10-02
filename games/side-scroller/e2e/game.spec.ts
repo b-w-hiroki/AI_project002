@@ -529,6 +529,13 @@ test.describe("phone visual QA", () => {
     await page.waitForFunction(() => !!window.__qaGame);
     await enterBattleForVisualQa(page);
 
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+    });
+    await expect.poll(() => page.evaluate(() =>
+      Reflect.get(window.__qaGame.scene.getScene("GameScene"), "crouching") as boolean
+    )).toBe(false);
+
     const guardPoint = await canvasPoint(page, 268, 756);
     await page.mouse.move(guardPoint.x, guardPoint.y);
     await page.mouse.down();
@@ -537,8 +544,9 @@ test.describe("phone visual QA", () => {
       return {
         keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
         guarding: Reflect.get(scene, "guarding") as boolean,
+        crouching: Reflect.get(scene, "crouching") as boolean,
       };
-    })).toEqual({ keyDown: true, guarding: true });
+    })).toEqual({ keyDown: true, guarding: true, crouching: false });
 
     await page.mouse.up();
     await expect.poll(() => page.evaluate(() => {
