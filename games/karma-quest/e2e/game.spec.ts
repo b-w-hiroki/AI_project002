@@ -553,7 +553,10 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
-  await checkFrame(page, "portrait-title-approved");
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-title-approved.png",
+    animations: "disabled",
+  });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
     // This baseline comes from the approved October composition rendered by
     // the same Node 22/Linux browser stack used in CI.
