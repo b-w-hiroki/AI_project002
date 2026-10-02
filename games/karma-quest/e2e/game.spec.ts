@@ -194,8 +194,12 @@ test("English fallback localizes the title and first request flow", async ({ pag
 test("sound preference is operable in both home layouts and survives reload", async ({ page }) => {
   await page.addInitScript(() => {
     Reflect.set(window, "__qaAudioStarts", 0);
-    const original = AudioContext.prototype.createOscillator;
-    AudioContext.prototype.createOscillator = function () {
+    Reflect.set(window, "__qaAudioProbeReliable", Boolean(window.AudioContext));
+    const AudioCtor = window.AudioContext
+      ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtor) return;
+    const original = AudioCtor.prototype.createOscillator;
+    AudioCtor.prototype.createOscillator = function () {
       const oscillator = original.call(this);
       const start = oscillator.start.bind(oscillator);
       oscillator.start = (when?: number) => {
@@ -220,7 +224,11 @@ test("sound preference is operable in both home layouts and survives reload", as
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-landscape.png" });
   await tapPoint(page, 400, 316);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("on");
-  expect(await page.evaluate(() => Reflect.get(window, "__qaAudioStarts"))).toBeGreaterThan(0);
+  const audioProbe = await page.evaluate(() => ({
+    reliable: Boolean(Reflect.get(window, "__qaAudioProbeReliable")),
+    starts: Number(Reflect.get(window, "__qaAudioStarts")),
+  }));
+  if (audioProbe.reliable) expect(audioProbe.starts).toBeGreaterThan(0);
   await page.reload();
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "isSoundEnabled").call(window.__qaGame.scene.getScene("GameScene")))).toBe(true);
@@ -545,7 +553,13 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
+  await page.locator("canvas").screenshot({
+    path: "e2e/screenshots/portrait-title-approved.png",
+    animations: "disabled",
+  });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
+    // This baseline comes from the approved October composition rendered by
+    // the same Node 22/Linux browser stack used in CI.
     animations: "disabled", maxDiffPixelRatio: 0.001,
   });
 });

@@ -33,7 +33,7 @@ test("six individual answer parts are visible and operable in landscape play", a
   });
   await expect.poll(() => phase(page)).toBe("playing");
 
-  const answerState = await page.evaluate(() => {
+  const readAnswerState = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const answers: Array<{
       name: string;
@@ -68,6 +68,17 @@ test("six individual answer parts are visible and operable in landscape play", a
     visit(scene.children.list);
     return answers;
   });
+
+  await expect.poll(async () => {
+    const answers = await readAnswerState();
+    const cards = answers.filter(answer => answer.name.startsWith("answer-card-"));
+    const hits = answers.filter(answer => answer.name.startsWith("answer-hit-"));
+    return cards.length === 6 && hits.length === 6
+      && cards.every(answer => answer.visible)
+      && hits.every(answer => answer.visible && answer.interactive);
+  }).toBe(true);
+
+  const answerState = await readAnswerState();
 
   const cards = answerState.filter(answer => answer.name.startsWith("answer-card-"));
   const hits = answerState.filter(answer => answer.name.startsWith("answer-hit-"));
@@ -116,16 +127,24 @@ test("portrait keeps six large ordered controls and guards rapid taps", async ({
   expect(controls.every(control => control.active && control.width >= 44 && control.height >= 44)).toBe(true);
   expect(controls.map(control => [control.x, control.y])).toEqual([[108, 438], [342, 438], [108, 548], [342, 548], [108, 658], [342, 658]]);
 
+  const waitForTapReady = () => expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Boolean(Reflect.get(scene, "accepting"))
+      && performance.now() >= Number(Reflect.get(scene, "nextTapAllowedAt"));
+  })).toBe(true);
+
   for (const [index, control] of controls.entries()) {
+    await waitForTapReady();
     await tapPoint(page, control.x, control.y);
     await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(index + 1);
-    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
   }
 
+  await waitForTapReady();
   const before = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length);
-  await tapPoint(page, controls[0]!.x, controls[0]!.y);
-  await tapPoint(page, controls[0]!.x, controls[0]!.y);
-  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
+  await tapPointTwiceRapidly(page, controls[0]!.x, controls[0]!.y);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
+  await page.waitForTimeout(800);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
 });
 
 test("browser back recreates a playable scene", async ({ page }) => {
@@ -232,6 +251,18 @@ async function tapPoint(page: Page, x: number, y: number) {
   const box = (await canvas.boundingBox())!;
   const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
   await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+}
+
+async function tapPointTwiceRapidly(page: Page, x: number, y: number) {
+  const canvas = page.locator("canvas");
+  const box = (await canvas.boundingBox())!;
+  const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+  const clientX = box.x + x * box.width / size.width;
+  const clientY = box.y + y * box.height / size.height;
+  await Promise.all([
+    page.touchscreen.tap(clientX, clientY),
+    page.touchscreen.tap(clientX, clientY),
+  ]);
 }
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));

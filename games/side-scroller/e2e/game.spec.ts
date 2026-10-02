@@ -317,7 +317,14 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
 
-    await page.keyboard.press("x", { delay: 30 });
+    await page.keyboard.up("ArrowRight");
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+    });
+    await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
+
+    await page.locator("canvas").focus();
+    await page.keyboard.down("x");
     await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
     const attackFx = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -328,7 +335,10 @@ test.describe("phone visual QA", () => {
       path: "e2e/screenshots/side-approved-hero-attack-v3-800x600.png",
       animations: "disabled",
     });
-    await page.keyboard.up("ArrowRight");
+    await page.keyboard.up("x");
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+    });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
     await page.keyboard.down("Shift");
@@ -519,6 +529,13 @@ test.describe("phone visual QA", () => {
     await page.waitForFunction(() => !!window.__qaGame);
     await enterBattleForVisualQa(page);
 
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+    });
+    await expect.poll(() => page.evaluate(() =>
+      Reflect.get(window.__qaGame.scene.getScene("GameScene"), "crouching") as boolean
+    )).toBe(false);
+
     const guardPoint = await canvasPoint(page, 268, 756);
     await page.mouse.move(guardPoint.x, guardPoint.y);
     await page.mouse.down();
@@ -527,8 +544,9 @@ test.describe("phone visual QA", () => {
       return {
         keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
         guarding: Reflect.get(scene, "guarding") as boolean,
+        crouching: Reflect.get(scene, "crouching") as boolean,
       };
-    })).toEqual({ keyDown: true, guarding: true });
+    })).toEqual({ keyDown: true, guarding: true, crouching: false });
 
     await page.mouse.up();
     await expect.poll(() => page.evaluate(() => {
