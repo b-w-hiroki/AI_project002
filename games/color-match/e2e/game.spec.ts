@@ -130,8 +130,7 @@ test("portrait keeps six large ordered controls and guards rapid taps", async ({
 
   await waitForTapReady();
   const before = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length);
-  await tapPoint(page, controls[0]!.x, controls[0]!.y);
-  await tapPoint(page, controls[0]!.x, controls[0]!.y);
+  await tapPointTwiceRapidly(page, controls[0]!.x, controls[0]!.y);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
   await page.waitForTimeout(800);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "results").length)).toBe(before + 1);
@@ -241,6 +240,18 @@ async function tapPoint(page: Page, x: number, y: number) {
   const box = (await canvas.boundingBox())!;
   const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
   await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+}
+
+async function tapPointTwiceRapidly(page: Page, x: number, y: number) {
+  const canvas = page.locator("canvas");
+  const box = (await canvas.boundingBox())!;
+  const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+  const clientX = box.x + x * box.width / size.width;
+  const clientY = box.y + y * box.height / size.height;
+  await Promise.all([
+    page.touchscreen.tap(clientX, clientY),
+    page.touchscreen.tap(clientX, clientY),
+  ]);
 }
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));

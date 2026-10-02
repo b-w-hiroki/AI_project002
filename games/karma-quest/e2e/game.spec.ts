@@ -555,10 +555,9 @@ test("portrait title keeps the approved visual mock", async ({ page }) => {
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
   await checkFrame(page, "portrait-title-approved");
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
-    // Linux and Windows rasterize the Japanese system font differently. Keep
-    // the approved composition locked while allowing only that small platform
-    // text-rendering variance (the stale hierarchy differed by 36%).
-    animations: "disabled", maxDiffPixelRatio: 0.01,
+    // This baseline comes from the approved October composition rendered by
+    // the same Node 22/Linux browser stack used in CI.
+    animations: "disabled", maxDiffPixelRatio: 0.001,
   });
 });
 
