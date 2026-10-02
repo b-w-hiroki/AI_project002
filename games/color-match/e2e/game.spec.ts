@@ -33,7 +33,7 @@ test("six individual answer parts are visible and operable in landscape play", a
   });
   await expect.poll(() => phase(page)).toBe("playing");
 
-  const answerState = await page.evaluate(() => {
+  const readAnswerState = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const answers: Array<{
       name: string;
@@ -68,6 +68,17 @@ test("six individual answer parts are visible and operable in landscape play", a
     visit(scene.children.list);
     return answers;
   });
+
+  await expect.poll(async () => {
+    const answers = await readAnswerState();
+    const cards = answers.filter(answer => answer.name.startsWith("answer-card-"));
+    const hits = answers.filter(answer => answer.name.startsWith("answer-hit-"));
+    return cards.length === 6 && hits.length === 6
+      && cards.every(answer => answer.visible)
+      && hits.every(answer => answer.visible && answer.interactive);
+  }).toBe(true);
+
+  const answerState = await readAnswerState();
 
   const cards = answerState.filter(answer => answer.name.startsWith("answer-card-"));
   const hits = answerState.filter(answer => answer.name.startsWith("answer-hit-"));
