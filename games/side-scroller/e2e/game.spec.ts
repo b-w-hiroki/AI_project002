@@ -317,6 +317,12 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
 
+    await page.keyboard.up("ArrowRight");
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+    });
+    await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
+
     await page.locator("canvas").focus();
     await page.keyboard.down("x");
     await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
@@ -330,7 +336,6 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
     await page.keyboard.up("x");
-    await page.keyboard.up("ArrowRight");
     await page.evaluate(() => {
       window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
     });
