@@ -553,6 +553,7 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));
+  await checkFrame(page, "portrait-title-approved");
   await expect(page.locator("canvas")).toHaveScreenshot("karma-title-mock.png", {
     // Linux and Windows rasterize the Japanese system font differently. Keep
     // the approved composition locked while allowing only that small platform
