@@ -28,8 +28,8 @@ describe("detectLang / toggleLang", () => {
   it("ja系は ja、それ以外は en", () => {
     expect(detectLang("ja")).toBe("ja");
     expect(detectLang("ja-JP")).toBe("ja");
-    expect(detectLang("en-US")).toBe("en");
-    expect(detectLang("fr")).toBe("en");
+    expect(detectLang("en-US")).toBe("ja");
+    expect(detectLang("fr")).toBe("ja");
   });
   it("トグルで切り替わる", () => {
     expect(toggleLang("ja")).toBe("en");

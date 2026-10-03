@@ -6,6 +6,7 @@ type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
   state?: GameState;
+  lang?: "ja" | "en";
   titleText?: Phaser.GameObjects.Text;
   potionText?: Phaser.GameObjects.Text;
   rateText?: Phaser.GameObjects.Text;
@@ -101,9 +102,10 @@ function refresh(scene: Runtime): void {
   scene.rateText?.setVisible(false);
   scene.essenceText?.setVisible(false);
 
-  ui.potionsText.setText(`${formatNumber(scene.state.potions)} potions`);
-  ui.essenceText.setText(`Essence ${formatNumber(scene.state.essence)}`);
-  ui.repText.setText(`REP ${scene.state.reputation}`);
+  const japanese = scene.lang !== "en";
+  ui.potionsText.setText(`${formatNumber(scene.state.potions)} ${japanese ? "ポーション" : "potions"}`);
+  ui.essenceText.setText(`${japanese ? "エッセンス" : "Essence"} ${formatNumber(scene.state.essence)}`);
+  ui.repText.setText(`${japanese ? "評判" : "REP"} ${scene.state.reputation}`);
 
   // Enlarge the existing hero and cauldron from the presentation layer; keep their input behavior intact.
   for (const child of scene.children.list) {

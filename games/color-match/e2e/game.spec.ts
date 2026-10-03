@@ -292,6 +292,9 @@ async function namedBounds(page: Page, name: string) {
 }
 
 async function tapNamed(page: Page, name: string): Promise<void> {
+  await expect.poll(() => namedBounds(page, name), {
+    message: `${name} should become visible`,
+  }).not.toBeNull();
   const bounds = await namedBounds(page, name);
   expect(bounds, `${name} should be visible`).not.toBeNull();
   await tapPoint(page, bounds!.x, bounds!.y);
@@ -444,7 +447,7 @@ test("result names one improvement and retries in one tap", async ({ page }) => 
     };
     return collect(scene.children.list).join("\n");
   });
-  expect(visibleText).toContain("NEXT: ルール切替直後の1問を丁寧に");
+  expect(visibleText).toContain("次の目標: ルール切替直後の1問を丁寧に");
   const portraitNext = async () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
@@ -460,7 +463,7 @@ test("result names one improvement and retries in one tap", async ({ page }) => 
     const node = find(scene.children.list);
     return node ? { text: node.text, visible: node.visible, depth: node.depth } : null;
   });
-  await expect.poll(async () => (await portraitNext())?.text).toBe("NEXT: ルール切替直後の1問を丁寧に");
+  await expect.poll(async () => (await portraitNext())?.text).toBe("次の目標: ルール切替直後の1問を丁寧に");
   expect((await portraitNext())?.visible).toBe(true);
   await checkFrame(page, "portrait-result-next-focus");
 

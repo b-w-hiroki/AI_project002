@@ -578,7 +578,7 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
 test("phone landscape keeps every title mode visible and tappable", async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
-  const title = await page.evaluate(() => {
+  const readTitle = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const labels: string[] = [];
     const named: Record<string, Array<{ visible: boolean; input: boolean; y: number }>> = {};
@@ -595,9 +595,13 @@ test("phone landscape keeps every title mode visible and tappable", async ({ pag
     scene.children.list.forEach(node => visit(node));
     return { labels, named };
   });
+  await expect.poll(async () => {
+    const title = await readTitle();
+    return ["title-battle", "title-series", "title-story", "title-gacha"].every(name =>
+      title.named[name]?.some(item => item.visible && item.input && item.y <= 400),
+    );
+  }).toBe(true);
+  const title = await readTitle();
   expect(title.labels).toEqual(expect.arrayContaining(["対戦", "3連戦", "物語", "ガチャ"]));
-  for (const name of ["title-battle", "title-series", "title-story", "title-gacha"]) {
-    expect(title.named[name]?.some(item => item.visible && item.input && item.y <= 400)).toBe(true);
-  }
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-title.png", animations: "disabled" });
 });

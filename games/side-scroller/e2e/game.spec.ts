@@ -298,6 +298,11 @@ test.describe("phone visual QA", () => {
     for (let attempt = 0; attempt < 3 && !runStarted; attempt += 1) {
       await page.locator("canvas").focus();
       await page.keyboard.down("ArrowRight");
+      await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        code: "ArrowRight",
+        bubbles: true,
+      })));
       try {
         await page.waitForFunction(() => {
           const scene = window.__qaGame.scene.getScene("GameScene");
@@ -655,7 +660,7 @@ test("wave tactics explain how the selected stance should fight", async ({ page 
 
 test("battle HUD reports the live wave without a false level or wave cap", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/?visualqa=battle&lang=en");
+  await page.goto("/?visualqa=battle");
   await page.waitForFunction(() => !!window.__qaGame);
   await enterBattleForVisualQa(page);
   const labels = await page.evaluate(() => {
@@ -664,7 +669,7 @@ test("battle HUD reports the live wave without a false level or wave cap", async
     return root.list.filter(node => node.type === "Text").map(node => (node as Phaser.GameObjects.Text).text);
   });
   expect(labels.some(label => /^HP \d+\/\d+$/.test(label))).toBe(true);
-  expect(labels.some(label => /^WAVE \d+$/.test(label))).toBe(true);
+  expect(labels.some(label => /^第\d+波$/.test(label))).toBe(true);
   expect(labels.join(" ")).not.toMatch(/LV\.28|WAVE \d+\/3/);
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/side-live-hud-390x844.png", animations: "disabled" });
 });

@@ -10,10 +10,10 @@ import {
 } from "../src/logic/i18n";
 
 describe("Fist Legend i18n", () => {
-  it("uses Japanese only for Japanese locales and English otherwise", () => {
+  it("uses Japanese by default regardless of browser locale", () => {
     expect(detectLang("", "ja-JP")).toBe("ja");
-    expect(detectLang("", "en-US")).toBe("en");
-    expect(detectLang("", "fr-FR")).toBe("en");
+    expect(detectLang("", "en-US")).toBe("ja");
+    expect(detectLang("", "fr-FR")).toBe("ja");
   });
 
   it("supports query override for QA", () => {

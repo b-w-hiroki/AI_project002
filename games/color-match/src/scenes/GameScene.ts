@@ -1054,7 +1054,7 @@ export class GameScene extends Phaser.Scene {
         : t(this.lang, "practice"),
     );
     stats.setText(
-      `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt\nNEXT: ${improvementText(this.lang, focus)}`,
+      `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt\n${this.lang === "ja" ? "次の目標" : "NEXT"}: ${improvementText(this.lang, focus)}`,
     );
     const metricText = (key: "content" | "color" | "switch", label: string) => {
       const metric = performance[key];

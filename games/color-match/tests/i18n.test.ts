@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { detectLang, t, writingModeLabel } from "../src/logic/i18n";
 
 describe("Color Match i18n", () => {
-  it("uses Japanese only for Japanese browser locales and English otherwise", () => {
+  it("uses Japanese by default regardless of browser locale", () => {
     expect(detectLang("", "ja-JP")).toBe("ja");
-    expect(detectLang("", "en-US")).toBe("en");
-    expect(detectLang("", "fr-FR")).toBe("en");
+    expect(detectLang("", "en-US")).toBe("ja");
+    expect(detectLang("", "fr-FR")).toBe("ja");
   });
 
   it("query parameter overrides browser locale for QA", () => {
