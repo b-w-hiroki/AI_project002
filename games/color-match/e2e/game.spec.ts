@@ -292,6 +292,9 @@ async function namedBounds(page: Page, name: string) {
 }
 
 async function tapNamed(page: Page, name: string): Promise<void> {
+  await expect.poll(() => namedBounds(page, name), {
+    message: `${name} should become visible`,
+  }).not.toBeNull();
   const bounds = await namedBounds(page, name);
   expect(bounds, `${name} should be visible`).not.toBeNull();
   await tapPoint(page, bounds!.x, bounds!.y);
