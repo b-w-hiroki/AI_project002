@@ -254,9 +254,9 @@ class SideBattleView {
       this.chrome.fillStyle(0xef4d51, 1).fillRoundedRect(x, y, w * vm.bossHpRatio, 10, 3);
     }
 
-    this.hpText.setText(`LV.28   HP ${vm.hp}/${vm.maxHp}`);
+    this.hpText.setText(`HP ${vm.hp}/${vm.maxHp}`);
     this.scoreText.setText(`SCORE ${vm.score.toLocaleString("en-US")}`);
-    this.stageText.setText(`WAVE ${vm.wave}/3`);
+    this.stageText.setText(`WAVE ${vm.wave}`);
     this.missionText.setText(`${vm.enemies} ENEMIES  ·  OUGI ${Math.round(ougiRatio * 100)}%`);
     this.comboText.setText(vm.combo >= 2 ? `${vm.combo} COMBO!` : "");
 

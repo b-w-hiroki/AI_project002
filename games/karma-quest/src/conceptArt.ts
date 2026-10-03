@@ -726,14 +726,14 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage()))),
     () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。"),
   ];
-  const addRoute = (x: number, y: number, w: number, h: number, name: string, action: () => void) => {
-    const hit = scene.add.zone(x, y, w, h).setName(name).setInteractive({ useHandCursor: true });
+  const addRoute = (x: number, y: number, w: number, h: number, name: string, action: () => void, available = true) => {
+    const hit = scene.add.zone(x, y, w, h).setName(name).setInteractive({ useHandCursor: available });
     // Navigation has no destructive action. Activate on pointerdown so a
     // resize/render frame between touchstart and touchend cannot drop the tap.
     hit.on("pointerdown", action);
     root.add(hit);
   };
-  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, `home-nav:${i}`, route));
+  routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, `home-nav:${i}`, route, i !== 4));
   const railRoutes = [
     () => show("冒険の案内", "依頼カードを押して出発。\n依頼への返答を選び、\n世界の反応を確認します。\n\n選択は指を離したときに確定。"),
     () => invoke(scene, "startRun"),
@@ -1105,7 +1105,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     const unavailable = ["持ち物", "ショップ"].includes(label);
     text(scene, root, x, unavailable ? y - 7 : y, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
     if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
-    const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: true });
+    const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: !unavailable });
     hit.on("pointerdown", action);
     root.add(hit);
   });

@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
-import { contractCost, demandGenerator, fulfillContract } from "./logic/contracts";
+import { contractCost, contractReward, demandGenerator, fulfillContract } from "./logic/contracts";
 import {
   GENERATORS,
   PRESTIGE_UNLOCK,
@@ -579,7 +579,7 @@ function refresh(scene: Runtime): void {
       : (index === 0 ? "Village supplies" : "Caravan shipment");
     node.setText(done
       ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
-      : `${orderName}  ${formatNumber(cost)}\n+${index === 0 ? 1 : 3} ${lang === "ja" ? "評判" : "REP"}`);
+      : `${orderName}  ${formatNumber(cost)}\n+${contractReward(state, index)} ${lang === "ja" ? "評判" : "REP"}`);
     node.setAlpha(done ? 0.55 : 1);
   });
 
@@ -592,8 +592,8 @@ function refresh(scene: Runtime): void {
       const cost = contractCost(state, nextOrder);
       ui.blackboardText.setText(
         lang === "ja"
-          ? `次の依頼\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\n評判 +${nextOrder === 0 ? 1 : 3}`
-          : `NEXT ORDER\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\nREP +${nextOrder === 0 ? 1 : 3}`,
+          ? `次の依頼\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\n評判 +${contractReward(state, nextOrder)}`
+          : `NEXT ORDER\n${formatNumber(Math.min(state.potions, cost))} / ${formatNumber(cost)}\nREP +${contractReward(state, nextOrder)}`,
       );
     }
   }

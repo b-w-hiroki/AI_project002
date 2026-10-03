@@ -356,3 +356,30 @@ test("route fork shows risk, expected loot, and squad fit", async ({ page }) => 
   expect(preview.mountain).toMatch(/高リスク|High Risk|編成相性|Squad Fit|安定|Stable/);
   await checkFrame(page, "portrait-route-preview");
 });
+
+test("defeat result shows secured coins instead of projected loot", async ({ page }) => {
+  await tapPoint(page, 225, 635);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 700, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+  const labels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const run = Reflect.get(scene, "run") as Record<string, unknown>;
+    Reflect.set(scene, "run", { ...run, status: "defeat", loot: 99, step: 4 });
+    Reflect.set(scene, "view", "result");
+    Reflect.get(scene, "render").call(scene);
+    const values: string[] = [];
+    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (node.type === "Text") values.push((node as Phaser.GameObjects.Text).text);
+      if (node.type === "Container") (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    root.list.forEach(visit);
+    return values;
+  });
+  expect(labels.some(label => label.includes("49") && /持ち帰り|Secured/.test(label))).toBe(true);
+  expect(labels.some(label => label.includes("99") && /銭|Coins/.test(label))).toBe(false);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-defeat-result.png", animations: "disabled" });
+});

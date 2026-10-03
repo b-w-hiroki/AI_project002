@@ -485,3 +485,23 @@ test("next objective guides the workshop loop", async ({ page }) => {
   });
   expect(ascension).toMatch(/転生|Ascend/i);
 });
+
+test("responsive order rewards follow the current town multiplier", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", { ...state, townIndex: 2, prestigeCount: 0, completedContracts: [], potions: 0 });
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const values: string[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (node.type === "Text" && Reflect.get(node, "visible") !== false) values.push((node as Phaser.GameObjects.Text).text);
+      if (node.type === "Container") (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return values;
+  })).toEqual(expect.arrayContaining([expect.stringMatching(/(?:REP|評判) \+2/)]));
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-town-reward.png", animations: "disabled" });
+});
