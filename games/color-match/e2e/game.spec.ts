@@ -267,6 +267,57 @@ async function tapPointTwiceRapidly(page: Page, x: number, y: number) {
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
 
+async function namedBounds(page: Page, name: string) {
+  return page.evaluate((targetName) => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+    ): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        const visible = parentVisible && (!("visible" in node) || Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible));
+        if (visible && node.name === targetName) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, visible);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const node = find(scene.children.list);
+    if (!node || !("getBounds" in node)) return null;
+    const bounds = (node as Phaser.GameObjects.Zone).getBounds();
+    return { x: bounds.centerX, y: bounds.centerY, width: bounds.width, height: bounds.height };
+  }, name);
+}
+
+async function tapNamed(page: Page, name: string): Promise<void> {
+  const bounds = await namedBounds(page, name);
+  expect(bounds, `${name} should be visible`).not.toBeNull();
+  await tapPoint(page, bounds!.x, bounds!.y);
+}
+
+async function namedText(page: Page, name: string): Promise<string | null> {
+  return page.evaluate((targetName) => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (
+      nodes: Phaser.GameObjects.GameObject[],
+      parentVisible = true,
+    ): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        const visible = parentVisible && (!("visible" in node) || Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible));
+        if (visible && node.name === targetName && node.type === "Text") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, visible);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return find(scene.children.list)?.text ?? null;
+  }, name);
+}
+
 async function checkFrame(page: Page, name: string) {
   await expect.poll(async () => {
     const box = await page.locator("canvas").boundingBox();
@@ -281,9 +332,63 @@ async function checkFrame(page: Page, name: string) {
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
 }
 
+test("visible practice and replay actions keep their promised session mode", async ({ page }) => {
+  await expect.poll(() => namedBounds(page, "portrait-practice-action")).not.toBeNull();
+  const titlePractice = await namedBounds(page, "portrait-practice-action");
+  expect(titlePractice!.height).toBeGreaterThanOrEqual(52);
+  await tapNamed(page, "portrait-practice-action");
+  await expect.poll(() => phase(page)).toBe("playing");
+
+  const practiceState = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      mode: Reflect.get(scene, "sessionMode"),
+      duration: Reflect.get(scene, "sessionDurationMs"),
+      remaining: Reflect.get(scene, "sessionRemaining"),
+    };
+  });
+  expect(practiceState.mode).toBe("practice");
+  expect(practiceState.duration).toBe(20_000);
+  expect(practiceState.remaining).toBeLessThanOrEqual(20_000);
+  expect(practiceState.remaining).toBeGreaterThan(18_000);
+  await expect.poll(() => namedText(page, "portrait-session-context")).toBe("PRACTICE");
+  await expect.poll(() => namedText(page, "portrait-session-guidance")).not.toContain("次のルールまで");
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "sessionMode"))).toBe("practice");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
+  await expect.poll(() => phase(page)).toBe("result");
+  await page.waitForTimeout(750);
+  expect(await phase(page)).toBe("result");
+  await expect.poll(() => namedBounds(page, "landscape-result-primary-action")).not.toBeNull();
+  await expect.poll(() => namedBounds(page, "landscape-result-secondary-action")).not.toBeNull();
+
+  await tapNamed(page, "landscape-result-primary-action");
+  await expect.poll(() => phase(page)).toBe("playing");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "sessionDurationMs"))).toBe(20_000);
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
+  await expect.poll(() => phase(page)).toBe("result");
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(() => namedBounds(page, "portrait-result-primary-action")).not.toBeNull();
+  await expect.poll(() => namedBounds(page, "portrait-result-secondary-action")).not.toBeNull();
+  await tapNamed(page, "portrait-result-secondary-action");
+  await expect.poll(() => phase(page)).toBe("playing");
+  const challengeState = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      mode: Reflect.get(scene, "sessionMode"),
+      duration: Reflect.get(scene, "sessionDurationMs"),
+    };
+  });
+  expect(challengeState).toEqual({ mode: "challenge", duration: 60_000 });
+});
+
 test("touch starts a challenge and rotation preserves play", async ({ page }) => {
   await checkFrame(page, "portrait-title");
-  await tapPoint(page, 225, 705);
+  await tapNamed(page, "portrait-challenge-action");
   await expect.poll(() => phase(page)).toBe("playing");
   await checkFrame(page, "portrait-play");
   const portraitBefore = await page.locator("canvas").screenshot();
@@ -299,7 +404,7 @@ test("touch starts a challenge and rotation preserves play", async ({ page }) =>
 });
 
 test("portrait result keeps the mock hierarchy", async ({ page }) => {
-  await tapPoint(page, 225, 705);
+  await tapNamed(page, "portrait-challenge-action");
   await expect.poll(() => phase(page)).toBe("playing");
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "sessionRemaining", 1));
   await expect.poll(() => phase(page)).toBe("result");
@@ -307,7 +412,7 @@ test("portrait result keeps the mock hierarchy", async ({ page }) => {
 });
 
 test("result names one improvement and retries in one tap", async ({ page }) => {
-  await tapPoint(page, 225, 705);
+  await tapNamed(page, "portrait-challenge-action");
   await expect.poll(() => phase(page)).toBe("playing");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -359,12 +464,12 @@ test("result names one improvement and retries in one tap", async ({ page }) => 
   expect((await portraitNext())?.visible).toBe(true);
   await checkFrame(page, "portrait-result-next-focus");
 
-  await tapPoint(page, 225, 510);
+  await tapNamed(page, "portrait-result-primary-action");
   await expect.poll(() => phase(page)).toBe("playing");
 });
 
 test("high-accuracy result shows an S grade in portrait and landscape", async ({ page }) => {
-  await tapPoint(page, 225, 705);
+  await tapNamed(page, "portrait-challenge-action");
   await expect.poll(() => phase(page)).toBe("playing");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");

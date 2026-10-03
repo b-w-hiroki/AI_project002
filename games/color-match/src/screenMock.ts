@@ -9,6 +9,7 @@ import { GameScene } from "./scenes/GameScene";
 type Runtime = Phaser.Scene & {
   lang?: "ja" | "en";
   phase?: "title" | "playing" | "result";
+  sessionMode?: "challenge" | "practice";
   writingMode?: WritingMode;
   results?: ChallengeResult[];
   turboPoints?: number;
@@ -21,9 +22,12 @@ type MockUi = {
   title: Phaser.GameObjects.Container;
   result: Phaser.GameObjects.Container;
   modeLabels: Phaser.GameObjects.Text[];
+  resultHeading: Phaser.GameObjects.Text;
   score: Phaser.GameObjects.Text;
   stats: Phaser.GameObjects.Text;
   nextGoal: Phaser.GameObjects.Text;
+  resultPrimaryLabel: Phaser.GameObjects.Text;
+  resultSecondaryLabel: Phaser.GameObjects.Text;
 };
 
 const uiByScene = new WeakMap<object, MockUi>();
@@ -68,18 +72,33 @@ function panel(scene: Phaser.Scene, parent: Phaser.GameObjects.Container, x: num
   parent.add(g);
 }
 
-function button(scene: Runtime, parent: Phaser.GameObjects.Container, x: number, y: number, w: number, h: number, text: string, action: () => void): void {
+function button(
+  scene: Runtime,
+  parent: Phaser.GameObjects.Container,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  text: string,
+  action: () => void,
+  options: { kind?: "primary" | "secondary"; name?: string; fontSize?: number } = {},
+): Phaser.GameObjects.Text {
+  const secondary = options.kind === "secondary";
   const g = scene.add.graphics();
-  g.fillStyle(0xa93c2a, 0.45).fillRoundedRect(x - w / 2 + 4, y - h / 2 + 6, w, h, 17);
-  g.fillStyle(0xff713d, 1).fillRoundedRect(x - w / 2, y - h / 2, w, h, 17);
-  g.fillStyle(0xffa35f, 0.8).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, Math.max(8, h * 0.22), 12);
-  g.lineStyle(4, 0xffd469, 0.96).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 17);
+  g.fillStyle(secondary ? 0x123d68 : 0xa93c2a, 0.45).fillRoundedRect(x - w / 2 + 4, y - h / 2 + 6, w, h, 17);
+  g.fillStyle(secondary ? 0x2f76b8 : 0xff713d, 1).fillRoundedRect(x - w / 2, y - h / 2, w, h, 17);
+  g.fillStyle(secondary ? 0x64a9de : 0xffa35f, 0.8).fillRoundedRect(x - w / 2 + 5, y - h / 2 + 5, w - 10, Math.max(8, h * 0.22), 12);
+  g.lineStyle(secondary ? 3 : 4, secondary ? 0xa8e8ff : 0xffd469, 0.96).strokeRoundedRect(x - w / 2, y - h / 2, w, h, 17);
   g.lineStyle(1, 0xffffff, 0.5).strokeRoundedRect(x - w / 2 + 6, y - h / 2 + 6, w - 12, h - 12, 12);
   parent.add(g);
-  label(scene, parent, x, y, text, 20).setStroke("#9d321f", 4);
-  const hit = scene.add.zone(x, y, w, Math.max(52, h)).setInteractive({ useHandCursor: true });
+  const textNode = label(scene, parent, x, y, text, options.fontSize ?? (secondary ? 16 : 20))
+    .setStroke(secondary ? "#174774" : "#9d321f", secondary ? 3 : 4);
+  const hit = scene.add.zone(x, y, w, Math.max(52, h));
+  if (options.name) hit.setName(options.name);
+  hit.setInteractive({ useHandCursor: true });
   hit.on("pointerdown", action);
   parent.add(hit);
+  return textNode;
 }
 
 function background(scene: Phaser.Scene, parent: Phaser.GameObjects.Container): void {
@@ -120,18 +139,47 @@ function build(scene: Runtime): MockUi {
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
     title.add(hit);
   });
-  label(scene, title, 225, 620, `BEST ${loadBestScore()}  ·  TURBO ${loadBestTurbo()}pt`, 13, "#173b63");
-  button(scene, title, 225, 692, 360, 70, "ゲームスタート", () => invoke(scene, "startSession"));
+  label(scene, title, 225, 610, `BEST ${loadBestScore()}  ·  TURBO ${loadBestTurbo()}pt`, 13, "#173b63");
+  button(scene, title, 225, 664, 360, 64, "60秒チャレンジ", () => invoke(scene, "startSession", "challenge"), {
+    name: "portrait-challenge-action",
+    fontSize: 18,
+  });
+  button(scene, title, 225, 736, 360, 54, "20秒 弱点練習", () => invoke(scene, "startPractice"), {
+    kind: "secondary",
+    name: "portrait-practice-action",
+    fontSize: 16,
+  });
 
-  label(scene, result, 225, 82, "CHALLENGE RESULT", 27).setStroke("#2259b0", 6);
-  panel(scene, result, 225, 365, 370, 450);
-  const score = label(scene, result, 225, 190, "SCORE 0", 42, "#ffe46c");
-  if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 315, "cm-mascot").setDisplaySize(172, 172));
-  const stats = label(scene, result, 225, 462, "", 16, "#ffffff");
-  button(scene, result, 225, 642, 350, 68, "もう一度あそぶ", () => invoke(scene, "startSession"));
-  const nextGoal = label(scene, result, 225, 704, "", 13, "#173b63").setName("result-next-focus");
+  const resultHeading = label(scene, result, 225, 76, "CHALLENGE RESULT", 27).setStroke("#2259b0", 6);
+  panel(scene, result, 225, 350, 370, 430);
+  const score = label(scene, result, 225, 178, "SCORE 0", 42, "#ffe46c");
+  if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 285, "cm-mascot").setDisplaySize(164, 164));
+  const stats = label(scene, result, 225, 424, "", 16, "#ffffff");
+  const nextGoal = label(scene, result, 225, 540, "", 12, "#d9f4ff").setName("result-next-focus");
+  const resultPrimaryLabel = button(
+    scene,
+    result,
+    225,
+    630,
+    350,
+    60,
+    "もう一度60秒",
+    () => scene.sessionMode === "practice" ? invoke(scene, "startPractice") : invoke(scene, "startSession", "challenge"),
+    { name: "portrait-result-primary-action", fontSize: 18 },
+  );
+  const resultSecondaryLabel = button(
+    scene,
+    result,
+    225,
+    704,
+    350,
+    54,
+    "弱点を20秒練習",
+    () => scene.sessionMode === "practice" ? invoke(scene, "startSession", "challenge") : invoke(scene, "startPractice"),
+    { kind: "secondary", name: "portrait-result-secondary-action", fontSize: 16 },
+  );
 
-  const ui = { root, title, result, modeLabels, score, stats, nextGoal };
+  const ui = { root, title, result, modeLabels, resultHeading, score, stats, nextGoal, resultPrimaryLabel, resultSecondaryLabel };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -162,6 +210,10 @@ function refresh(scene: Runtime): void {
     ui.score.setText(`SCORE ${summary.score}`);
     ui.stats.setText(`正答率 ${Math.round(summary.accuracy * 100)}%\nMAX CHAIN ${maxStreak}\n平均反応 ${Math.round(summary.avgReactionMs)}ms\nTURBO ${scene.turboPoints ?? 0}pt`);
     ui.nextGoal.setText(`NEXT: ${improvementText(improvementFocus(results))}`);
+    const practice = scene.sessionMode === "practice";
+    ui.resultHeading.setText(practice ? "PRACTICE RESULT" : "CHALLENGE RESULT");
+    ui.resultPrimaryLabel.setText(practice ? "もう一度20秒" : "もう一度60秒");
+    ui.resultSecondaryLabel.setText(practice ? "60秒チャレンジ" : "弱点を20秒練習");
   }
 }
 
