@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
 import { OUGI_GAUGE_MAX, type PlayerState } from "./logic/combat";
+import { tr, type Lang } from "./logic/i18n";
 import { fakeKeyEvent } from "./ui/touch";
 import { GameScene } from "./scenes/GameScene";
 
@@ -8,6 +9,7 @@ type BattleStatus = "playing" | "gameover" | "clear";
 type Direction = "left" | "right" | "up" | "down";
 
 type Runtime = Phaser.Scene & {
+  lang?: Lang;
   playerState?: PlayerState;
   status?: BattleStatus;
   styleChoosing?: boolean;
@@ -255,10 +257,15 @@ class SideBattleView {
     }
 
     this.hpText.setText(`HP ${vm.hp}/${vm.maxHp}`);
-    this.scoreText.setText(`SCORE ${vm.score.toLocaleString("en-US")}`);
-    this.stageText.setText(`WAVE ${vm.wave}`);
-    this.missionText.setText(`${vm.enemies} ENEMIES  ·  OUGI ${Math.round(ougiRatio * 100)}%`);
-    this.comboText.setText(vm.combo >= 2 ? `${vm.combo} COMBO!` : "");
+    const lang = this.scene.lang ?? "ja";
+    this.scoreText.setText(`${tr(lang, "得点", "SCORE")} ${vm.score.toLocaleString("en-US")}`);
+    this.stageText.setText(tr(lang, `第${vm.wave}波`, `WAVE ${vm.wave}`));
+    this.missionText.setText(tr(
+      lang,
+      `敵 ${vm.enemies}体  ·  奥義 ${Math.round(ougiRatio * 100)}%`,
+      `${vm.enemies} ENEMIES  ·  OUGI ${Math.round(ougiRatio * 100)}%`,
+    ));
+    this.comboText.setText(vm.combo >= 2 ? tr(lang, `${vm.combo}連撃!`, `${vm.combo} COMBO!`) : "");
 
     if (this.ougiButton) {
       this.ougiButton.root.setAlpha(vm.ougiReady ? 1 : 0.48);
@@ -291,20 +298,21 @@ class SideBattleView {
 
   private rebuildControls(): void {
     this.controls.removeAll(true);
+    const lang = this.scene.lang ?? "ja";
     if (this.portrait) {
       this.addDpad(96, 695, 38);
-      this.addKeyButton(343, 704, 43, "ATK", 0xbf3f48, "attack");
-      this.addKeyButton(407, 642, 30, "JMP", 0x264b61, "up");
-      this.addKeyButton(407, 715, 30, "SKL", 0x236896, "skill");
-      this.addKeyButton(268, 756, 28, "GRD", 0x334856, "guard");
-      this.ougiButton = this.addButton(405, 778, 33, "OUGI", 0x8b6522, () => this.adapter.triggerOugi());
+      this.addKeyButton(343, 704, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
+      this.addKeyButton(407, 642, 30, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
+      this.addKeyButton(407, 715, 30, tr(lang, "技", "SKL"), 0x236896, "skill");
+      this.addKeyButton(268, 756, 28, tr(lang, "防御", "GRD"), 0x334856, "guard");
+      this.ougiButton = this.addButton(405, 778, 33, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
     } else {
       this.addDpad(86, 356, 34);
-      this.addKeyButton(704, 356, 43, "ATK", 0xbf3f48, "attack");
-      this.addKeyButton(765, 291, 29, "JMP", 0x264b61, "up");
-      this.addKeyButton(766, 356, 29, "SKL", 0x236896, "skill");
-      this.addKeyButton(628, 390, 27, "GRD", 0x334856, "guard");
-      this.ougiButton = this.addButton(752, 414, 32, "OUGI", 0x8b6522, () => this.adapter.triggerOugi());
+      this.addKeyButton(704, 356, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
+      this.addKeyButton(765, 291, 29, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
+      this.addKeyButton(766, 356, 29, tr(lang, "技", "SKL"), 0x236896, "skill");
+      this.addKeyButton(628, 390, 27, tr(lang, "防御", "GRD"), 0x334856, "guard");
+      this.ougiButton = this.addButton(752, 414, 32, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
     }
   }
 

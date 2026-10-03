@@ -217,23 +217,23 @@ function build(scene: Runtime): LandscapeUi {
   button(scene, title, 640, 250, 250, 62, tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge"), () => invoke(scene, "startSession", "challenge"), 0xff7a3d, { name: "landscape-challenge-action" });
   button(scene, title, 640, 326, 250, 54, tr(scene.lang ?? "en", "20秒 弱点練習", "20-Second Practice"), () => invoke(scene, "startPractice"), 0x4b75d6, { name: "landscape-practice-action", fontSize: 15 });
   panel(scene, title, 640, 150, 250, 120, 0xffffff, 0x8ac8f4, 0.94, 18);
-  text(scene, title, 640, 128, "BEST", 11, "#2b5b87", "900");
-  text(scene, title, 640, 158, `${loadBestScore()} SCORE`, 27, "#ff7a3d", "900");
-  text(scene, title, 640, 190, `TURBO ${loadBestTurbo()}pt`, 12, "#47709b", "800");
+  text(scene, title, 640, 128, tr(scene.lang ?? "ja", "最高記録", "BEST"), 11, "#2b5b87", "900");
+  text(scene, title, 640, 158, tr(scene.lang ?? "ja", `${loadBestScore()}点`, `${loadBestScore()} SCORE`), 27, "#ff7a3d", "900");
+  text(scene, title, 640, 190, tr(scene.lang ?? "ja", `ターボ ${loadBestTurbo()}pt`, `TURBO ${loadBestTurbo()}pt`), 12, "#47709b", "800");
 
   const timerRing = scene.add.graphics();
   play.add(timerRing);
   const timerText = text(scene, play, 88, 115, "60", 36, "#ffffff", "900");
-  text(scene, play, 88, 77, "TIME", 10, "#d8f5ff", "900");
+  text(scene, play, 88, 77, tr(scene.lang ?? "ja", "残り", "TIME"), 10, "#d8f5ff", "900");
   panel(scene, play, 247, 92, 250, 74, 0x164f82, 0x90e6ff, 0.95, 15);
   const ruleText = text(scene, play, 247, 92, "", 17, "#ffffff", "900");
   panel(scene, play, 228, 230, 300, 180, 0xffffff, 0x8ac8f4, 0.98, 18);
   text(scene, play, 228, 168, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#426c99", "900");
   const promptText = text(scene, play, 228, 232, "", 50, "#253c58", "900");
-  const chainText = text(scene, play, 342, 335, "0\nCHAIN!", 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
+  const chainText = text(scene, play, 342, 335, tr(scene.lang ?? "ja", "0\n連続!", "0\nCHAIN!"), 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
 
   panel(scene, play, 650, 54, 270, 58, 0x153e6a, 0xffd463, 0.96, 13);
-  text(scene, play, 548, 42, "SCORE", 9, "#d8ecff", "900").setOrigin(0, 0.5);
+  text(scene, play, 548, 42, tr(scene.lang ?? "ja", "得点", "SCORE"), 9, "#d8ecff", "900").setOrigin(0, 0.5);
   const scoreText = text(scene, play, 720, 55, "0000", 26, "#fff0a6", "900");
 
   const answers: AnswerView[] = [];
@@ -266,7 +266,7 @@ function build(scene: Runtime): LandscapeUi {
   }
 
   panel(scene, result, 400, 225, 620, 330, 0x164f82, 0x9be9ff, 0.96, 22);
-  const resultHeading = text(scene, result, 400, 118, "RESULT", 30, "#ffffff", "900");
+  const resultHeading = text(scene, result, 400, 118, tr(scene.lang ?? "ja", "結果", "RESULT"), 30, "#ffffff", "900");
   const resultStats = text(scene, result, 400, 215, "", 17, "#e8f8ff", "800");
   const resultPrimary = button(
     scene,
@@ -360,7 +360,7 @@ function refresh(scene: Runtime): void {
     ui.promptText
       .setText(nameForColorId(scene.currentRound.promptWord, scene.writingMode ?? "hiragana"))
       .setColor(`#${hexForColorId(scene.currentRound.promptInk).toString(16).padStart(6, "0")}`);
-    ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`)
+    ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? tr(scene.lang ?? "ja", "加速!", "FLOW!") : tr(scene.lang ?? "ja", "連続!", "CHAIN!")}`)
       .setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
     ui.nextText.setText(
       scene.sessionMode === "practice"
@@ -369,6 +369,13 @@ function refresh(scene: Runtime): void {
           ? tr(scene.lang ?? "en", "RULE SHIFT まもなく！", "RULE SHIFT SOON!")
           : `NEXT RULE ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`,
     );
+    if (scene.lang !== "en") {
+      ui.nextText.setText(scene.sessionMode === "practice"
+        ? `弱点練習  ${scene.practiceJudgeMode === "color" ? "文字の色" : "文字の意味"}`
+        : until <= 2000
+          ? "判定切替 まもなく!"
+          : `次の判定 ${Math.ceil(until / 1000)}秒 · 最高 ${loadBestScore()}`);
+    }
     ui.answers.forEach((answer, i) => answer.text.setText(nameForColorId(COLORS[i]!.id, scene.writingMode ?? "hiragana")));
   }
 
@@ -384,7 +391,7 @@ function refresh(scene: Runtime): void {
           : "C";
     ui.flowGlow.clear();
     ui.resultHeading
-      .setText(`${grade}  ·  SCORE ${summary.score}`)
+      .setText(tr(scene.lang ?? "ja", `${grade}  ·  得点 ${summary.score}`, `${grade}  ·  SCORE ${summary.score}`))
       .setColor(grade === "S" ? "#ffd75e" : grade === "A" ? "#7ee9ff" : "#ffffff");
     const performance = loadPerformanceStats();
     const metric = (key: "content" | "color" | "switch", label: string) => {
@@ -398,6 +405,7 @@ function refresh(scene: Runtime): void {
       `${scene.sessionMode === "practice" ? tr(scene.lang ?? "en", "20秒弱点練習", "20-Second Practice") : tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge")} · ${tr(scene.lang ?? "en", "正答率", "Accuracy")} ${Math.round(summary.accuracy * 100)}% · ${tr(scene.lang ?? "en", "平均", "Avg")} ${Math.round(summary.avgReactionMs)}ms\n` +
       `${metric("content", tr(scene.lang ?? "en", "意味", "Word"))} · ${metric("color", tr(scene.lang ?? "en", "色", "Color"))} · ${metric("switch", tr(scene.lang ?? "en", "切替", "Switch"))}\nNEXT: ${improvementText(scene.lang ?? "en", focus)}`,
     );
+    if (scene.lang !== "en") ui.resultStats.setText(ui.resultStats.text.replace("\nNEXT:", "\n次の目標:"));
     const practice = scene.sessionMode === "practice";
     ui.resultPrimary.label.setText(
       practice ? tr(scene.lang ?? "en", "もう一度20秒", "Replay 20s") : tr(scene.lang ?? "en", "もう一度60秒", "Replay 60s"),

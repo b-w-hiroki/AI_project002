@@ -563,10 +563,10 @@ function refresh(scene: Runtime): void {
   const rec = recommended(state);
   const rate = productionPerSec(state);
   const town = townForState(state);
-  ui.potionText.setText(`${formatNumber(state.potions)} potions`);
+  ui.potionText.setText(`${formatNumber(state.potions)} ${lang === "ja" ? "ポーション" : "potions"}`);
   ui.rateText.setText(`+${formatNumber(rate)}${lang === "ja" ? "/秒" : "/sec"}   ·   ${lang === "ja" ? "調合" : "BREW"} +${formatNumber(state.clickPower * essenceMultiplier(state))}`);
-  ui.essenceText.setText(`Essence ${formatNumber(state.essence)}`);
-  ui.reputationText.setText(`REP ${state.reputation}`);
+  ui.essenceText.setText(`${lang === "ja" ? "エッセンス" : "Essence"} ${formatNumber(state.essence)}`);
+  ui.reputationText.setText(`${lang === "ja" ? "評判" : "REP"} ${state.reputation}`);
   const demandedId = demandGenerator(state);
   const demandedName = demandedId ? GENERATORS.find(def => def.id === demandedId)?.name ?? demandedId : null;
   ui.townText.setText(`🏘 ${townName(lang, town.index, town.cycle, town.name)}${demandedName ? ` · ${generatorName(lang, demandedId!)}×1.5` : lang === "ja" ? " · 通常生産" : " · Standard production"}`);
@@ -602,11 +602,11 @@ function refresh(scene: Runtime): void {
     if (!next) return 0;
     return Math.max(0, state.potions - (buyClickUpgrades(state, 1)?.potions ?? state.potions));
   })();
-  ui.clickUpgradeText.setText(`${lang === "ja" ? "TAP強化" : "TAP POWER"}\nLv.${state.clickPower}${clickCost > 0 ? ` ${formatNumber(clickCost)}` : ""}`);
+  ui.clickUpgradeText.setText(`${lang === "ja" ? "調合強化" : "TAP POWER"}\nLv.${state.clickPower}${clickCost > 0 ? ` ${formatNumber(clickCost)}` : ""}`);
   const offlineCost = offlineExtensionCost(state);
-  ui.offlineText.setText(`${lang === "ja" ? "放置" : "Offline"} ${Math.round(offlineCapSec(state) / 3600)}h\n${offlineCost === null ? "MAX" : `${offlineCost} Essence`}`);
+  ui.offlineText.setText(`${lang === "ja" ? "放置" : "Offline"} ${Math.round(offlineCapSec(state) / 3600)}h\n${offlineCost === null ? "MAX" : `${offlineCost} ${lang === "ja" ? "エッセンス" : "Essence"}`}`);
   const essenceGain = essenceOnPrestige(state);
-  ui.prestigeText.setText(`${lang === "ja" ? "転生" : "ASCEND"}\n${essenceGain > 0 ? `+${essenceGain} Essence` : `${Math.floor((state.totalBrewed / PRESTIGE_UNLOCK) * 100)}%`}`);
+  ui.prestigeText.setText(`${lang === "ja" ? "転生" : "ASCEND"}\n${essenceGain > 0 ? `+${essenceGain} ${lang === "ja" ? "エッセンス" : "Essence"}` : `${Math.floor((state.totalBrewed / PRESTIGE_UNLOCK) * 100)}%`}`);
 
   ui.prestigeBar.clear();
   const ratio = Phaser.Math.Clamp(state.totalBrewed / PRESTIGE_UNLOCK, 0, 1);

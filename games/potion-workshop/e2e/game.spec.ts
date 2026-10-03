@@ -49,6 +49,8 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
 });
 
 test("English locale covers responsive workshop and town choice", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
   await waitForSceneObjects(page, ["approved-workshop-cat", "workshop-nav-0", "workshop-nav-3"]);

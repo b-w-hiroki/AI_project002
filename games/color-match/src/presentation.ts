@@ -80,10 +80,10 @@ function ensureArcadeHud(scene: ColorScene): ArcadeHud {
 
   const graphics = scene.add.graphics();
   const timeText = uiText(scene, 53, 64, "60", 27, "#22334e", "900");
-  const timeLabel = uiText(scene, 53, 91, "TIME", 9, "#67768c", "900");
-  const scoreText = uiText(scene, 397, 45, "SCORE 000", 17, "#263952", "900").setOrigin(1, 0.5);
-  const bestText = uiText(scene, 397, 70, "BEST 000", 10, "#6d7c91", "800").setOrigin(1, 0.5);
-  const ruleKicker = uiText(scene, 225, 88, "CURRENT RULE", 9, "#718097", "900");
+  const timeLabel = uiText(scene, 53, 91, "", 9, "#67768c", "900");
+  const scoreText = uiText(scene, 397, 45, "", 17, "#263952", "900").setOrigin(1, 0.5);
+  const bestText = uiText(scene, 397, 70, "", 10, "#6d7c91", "800").setOrigin(1, 0.5);
+  const ruleKicker = uiText(scene, 225, 88, "", 9, "#718097", "900");
   const ruleText = uiText(scene, 225, 113, "", 17, "#ffffff", "900");
   const chainText = uiText(scene, 395, 207, "", 18, "#ff7546", "900");
   const flowText = uiText(scene, 395, 232, "", 10, "#9a5438", "900");
@@ -199,14 +199,17 @@ function refreshArcadeHud(scene: ColorScene): void {
   hud.graphics.lineStyle(1.5, flow ? 0xffaa6f : 0x8db1df, 0.7).strokeRoundedRect(38, 670, 374, 67, 18);
   hud.graphics.fillStyle(0xffffff, 0.1).fillRoundedRect(41, 673, 368, 13, 12);
 
+  const lang = scene.lang ?? "ja";
   hud.timeText.setText(String(seconds).padStart(2, "0")).setColor(finalTen ? "#d9493d" : "#22334e");
-  hud.scoreText.setText(`SCORE ${String(score).padStart(3, "0")}`);
-  hud.bestText.setText(`BEST ${String(loadBestScore()).padStart(3, "0")}  ·  Q${scene.roundIndex ?? 0}`);
+  hud.timeLabel.setText(tr(lang, "残り", "TIME"));
+  hud.scoreText.setText(`${tr(lang, "得点", "SCORE")} ${String(score).padStart(3, "0")}`);
+  hud.bestText.setText(`${tr(lang, "最高", "BEST")} ${String(loadBestScore()).padStart(3, "0")}  ·  Q${scene.roundIndex ?? 0}`);
+  hud.ruleKicker.setText(tr(lang, "現在の判定", "CURRENT RULE"));
   hud.ruleText.setText(mode === "color" ? tr(scene.lang ?? "en", "文字の『色』を見る", "Watch the INK COLOR") : tr(scene.lang ?? "en", "文字の『意味』を見る", "Watch the WORD MEANING"));
   hud.chainText.setText(streak > 0 ? `×${streak}` : "×0");
-  hud.flowText.setText(flow ? "FLOW / TURBO" : `CHAIN  ·  ${streak}/${TURBO_ENTRY_STREAK}`);
-  hud.nextText.setText(until <= 1500 ? "RULE SHIFT!" : `NEXT RULE  ${Math.ceil(until / 1000)}s`);
-  hud.nextModeText.setText(`${tr(scene.lang ?? "en", "次は", "NEXT")} ${nextMode === "color" ? tr(scene.lang ?? "en", "文字の『色』", "INK COLOR") : tr(scene.lang ?? "en", "文字の『意味』", "WORD MEANING")} · MAX CHAIN ${maxChain}`);
+  hud.flowText.setText(flow ? tr(lang, "ターボ中", "FLOW / TURBO") : tr(lang, `連続  ·  ${streak}/${TURBO_ENTRY_STREAK}`, `CHAIN  ·  ${streak}/${TURBO_ENTRY_STREAK}`));
+  hud.nextText.setText(until <= 1500 ? tr(lang, "判定切替!", "RULE SHIFT!") : tr(lang, `次の判定  ${Math.ceil(until / 1000)}秒`, `NEXT RULE  ${Math.ceil(until / 1000)}s`));
+  hud.nextModeText.setText(`${tr(lang, "次は", "NEXT")} ${nextMode === "color" ? tr(lang, "文字の『色』", "INK COLOR") : tr(lang, "文字の『意味』", "WORD MEANING")} · ${tr(lang, "最大連続", "MAX CHAIN")} ${maxChain}`);
 
   if (hud.mascot) {
     hud.mascot.setTint(flow ? 0xffd0b5 : 0xffffff);
@@ -244,11 +247,12 @@ function showRuleShift(scene: ColorScene, mode: "content" | "color"): void {
 }
 
 function showTurboEntry(scene: Phaser.Scene): void {
+  const lang = (scene as ColorScene).lang ?? "ja";
   const ring = scene.add.graphics().setDepth(2000).setAlpha(0.95);
   ring.lineStyle(7, 0xff7a3d, 0.9).strokeCircle(225, 380, 72);
   ring.lineStyle(2, 0xffd36a, 0.9).strokeCircle(225, 380, 94);
-  const flow = scene.add.text(225, 345, "FLOW!", { fontSize: "46px", fontStyle: "900", color: "#ff7a3d", stroke: "#fff7e8", strokeThickness: 8 }).setOrigin(0.5).setDepth(2001).setScale(0.72);
-  const sub = scene.add.text(225, 410, `TURBO ×${TURBO_ENTRY_STREAK}`, { fontSize: "20px", fontStyle: "900", color: "#7b3f22", stroke: "#fff7e8", strokeThickness: 5 }).setOrigin(0.5).setDepth(2001);
+  const flow = scene.add.text(225, 345, tr(lang, "加速!", "FLOW!"), { fontSize: "46px", fontStyle: "900", color: "#ff7a3d", stroke: "#fff7e8", strokeThickness: 8 }).setOrigin(0.5).setDepth(2001).setScale(0.72);
+  const sub = scene.add.text(225, 410, tr(lang, `ターボ ×${TURBO_ENTRY_STREAK}`, `TURBO ×${TURBO_ENTRY_STREAK}`), { fontSize: "20px", fontStyle: "900", color: "#7b3f22", stroke: "#fff7e8", strokeThickness: 5 }).setOrigin(0.5).setDepth(2001);
   scene.cameras.main.flash(100, 255, 184, 90, false);
   scene.tweens.add({ targets: [ring, flow], scale: 1.12, duration: 180, ease: "Back.Out", yoyo: true });
   scene.tweens.add({ targets: [ring, flow, sub], alpha: 0, duration: 300, delay: 420, onComplete: () => {
@@ -257,14 +261,19 @@ function showTurboEntry(scene: Phaser.Scene): void {
 }
 
 function showChainMilestone(scene: Phaser.Scene, streak: number): void {
-  const label = scene.add.text(225, 325, `${streak} CHAIN`, { fontSize: "30px", fontStyle: "900", color: "#ff7a3d", stroke: "#fff7e8", strokeThickness: 7 }).setOrigin(0.5).setDepth(1900).setScale(0.8);
+  const lang = (scene as ColorScene).lang ?? "ja";
+  const label = scene.add.text(225, 325, tr(lang, `${streak}連続`, `${streak} CHAIN`), { fontSize: "30px", fontStyle: "900", color: "#ff7a3d", stroke: "#fff7e8", strokeThickness: 7 }).setOrigin(0.5).setDepth(1900).setScale(0.8);
   scene.tweens.add({ targets: label, y: 290, scale: 1.08, alpha: 0, duration: 620, ease: "Cubic.easeOut", onComplete: () => label.destroy() });
 }
 
 function showResultBadge(scene: ColorScene): void {
   resultBadgeByScene.get(scene)?.destroy();
   const badge = scene.add
-    .text(225, 470, `MAX CHAIN  ${maxChainByScene.get(scene) ?? 0}   ·   ${loadBestScore() === liveScore(scene) ? "BEST UPDATED!" : "60 SEC COMPLETE"}`, {
+    .text(225, 470, tr(
+      scene.lang ?? "ja",
+      `最大連続  ${maxChainByScene.get(scene) ?? 0}   ·   ${loadBestScore() === liveScore(scene) ? "最高記録更新!" : "60秒完了"}`,
+      `MAX CHAIN  ${maxChainByScene.get(scene) ?? 0}   ·   ${loadBestScore() === liveScore(scene) ? "BEST UPDATED!" : "60 SEC COMPLETE"}`,
+    ), {
       fontFamily: '"Segoe UI", "Hiragino Sans", sans-serif',
       fontSize: "12px",
       fontStyle: "900",

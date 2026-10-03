@@ -10,10 +10,10 @@ import {
 import { regionById } from "../src/logic/regions";
 
 describe("Sangoku Tap i18n", () => {
-  it("uses English outside Japanese locales and supports QA overrides", () => {
+  it("uses Japanese by default and supports QA overrides", () => {
     expect(detectLang("", "ja-JP")).toBe("ja");
-    expect(detectLang("", "en-US")).toBe("en");
-    expect(detectLang("", "fr-FR")).toBe("en");
+    expect(detectLang("", "en-US")).toBe("ja");
+    expect(detectLang("", "fr-FR")).toBe("ja");
     expect(detectLang("?lang=en", "ja-JP")).toBe("en");
     expect(detectLang("?lang=ja", "en-US")).toBe("ja");
   });

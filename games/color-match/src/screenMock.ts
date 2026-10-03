@@ -139,7 +139,7 @@ function build(scene: Runtime): MockUi {
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
     title.add(hit);
   });
-  label(scene, title, 225, 610, `BEST ${loadBestScore()}  ·  TURBO ${loadBestTurbo()}pt`, 13, "#173b63");
+  label(scene, title, 225, 610, `最高 ${loadBestScore()}  ·  ターボ ${loadBestTurbo()}pt`, 13, "#173b63");
   button(scene, title, 225, 664, 360, 64, "60秒チャレンジ", () => invoke(scene, "startSession", "challenge"), {
     name: "portrait-challenge-action",
     fontSize: 18,
@@ -150,9 +150,9 @@ function build(scene: Runtime): MockUi {
     fontSize: 16,
   });
 
-  const resultHeading = label(scene, result, 225, 76, "CHALLENGE RESULT", 27).setStroke("#2259b0", 6);
+  const resultHeading = label(scene, result, 225, 76, "チャレンジ結果", 27).setStroke("#2259b0", 6);
   panel(scene, result, 225, 350, 370, 430);
-  const score = label(scene, result, 225, 178, "SCORE 0", 42, "#ffe46c");
+  const score = label(scene, result, 225, 178, "得点 0", 42, "#ffe46c");
   if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 285, "cm-mascot").setDisplaySize(164, 164));
   const stats = label(scene, result, 225, 424, "", 16, "#ffffff");
   const nextGoal = label(scene, result, 225, 540, "", 12, "#d9f4ff").setName("result-next-focus");
@@ -207,11 +207,11 @@ function refresh(scene: Runtime): void {
       streak = entry.correct ? streak + 1 : 0;
       maxStreak = Math.max(maxStreak, streak);
     });
-    ui.score.setText(`SCORE ${summary.score}`);
-    ui.stats.setText(`正答率 ${Math.round(summary.accuracy * 100)}%\nMAX CHAIN ${maxStreak}\n平均反応 ${Math.round(summary.avgReactionMs)}ms\nTURBO ${scene.turboPoints ?? 0}pt`);
-    ui.nextGoal.setText(`NEXT: ${improvementText(improvementFocus(results))}`);
+    ui.score.setText(`得点 ${summary.score}`);
+    ui.stats.setText(`正答率 ${Math.round(summary.accuracy * 100)}%\n最大連続 ${maxStreak}\n平均反応 ${Math.round(summary.avgReactionMs)}ms\nターボ ${scene.turboPoints ?? 0}pt`);
+    ui.nextGoal.setText(`次の目標: ${improvementText(improvementFocus(results))}`);
     const practice = scene.sessionMode === "practice";
-    ui.resultHeading.setText(practice ? "PRACTICE RESULT" : "CHALLENGE RESULT");
+    ui.resultHeading.setText(practice ? "練習結果" : "チャレンジ結果");
     ui.resultPrimaryLabel.setText(practice ? "もう一度20秒" : "もう一度60秒");
     ui.resultSecondaryLabel.setText(practice ? "60秒チャレンジ" : "弱点を20秒練習");
   }

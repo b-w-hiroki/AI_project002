@@ -12,11 +12,11 @@ export function getPortalLocale(): string | undefined {
 
 export function resolveJaEnLang(
   search: string,
-  browserLanguage: string,
+  _browserLanguage: string,
   sdkLocale: string | undefined = portalLocale,
 ): JaEnLang {
   const forced = new URLSearchParams(search).get("lang");
   if (forced === "ja" || forced === "en") return forced;
-  const preferred = sdkLocale || browserLanguage || "en";
-  return preferred.toLowerCase().startsWith("ja") ? "ja" : "en";
+  if (sdkLocale) return sdkLocale.toLowerCase().startsWith("ja") ? "ja" : "en";
+  return "ja";
 }

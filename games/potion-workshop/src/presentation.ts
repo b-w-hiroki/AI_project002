@@ -12,6 +12,7 @@ import {
   type GameState,
 } from "./logic/economy";
 import { townForPrestige } from "./logic/towns";
+import { generatorName, type Lang } from "./logic/i18n";
 import { sfx } from "./platform/audio";
 import { IdleScene } from "./scenes/IdleScene";
 
@@ -442,13 +443,13 @@ function buildConceptUi(scene: IdleRuntime): WorkshopConceptUi {
   return ui;
 }
 
-function recommendedUpgrade(state: GameState): UpgradeTarget {
+function recommendedUpgrade(state: GameState, lang: Lang): UpgradeTarget {
   const clickCost = clickUpgradeCostForQuantity(state, 1);
   let best: UpgradeTarget = {
     kind: "click",
     cost: clickCost,
-    label: `TAP Lv.${state.clickPower + 1}`,
-    benefit: `TAP +1`,
+    label: lang === "ja" ? `調合 Lv.${state.clickPower + 1}` : `TAP Lv.${state.clickPower + 1}`,
+    benefit: lang === "ja" ? "調合 +1" : "TAP +1",
   };
   for (const generator of GENERATORS) {
     const count = state.counts[generator.id] ?? 0;
@@ -458,7 +459,7 @@ function recommendedUpgrade(state: GameState): UpgradeTarget {
         kind: "generator",
         id: generator.id,
         cost,
-        label: generator.name,
+        label: generatorName(lang, generator.id),
         benefit: `+${formatNumber(generator.baseRate * demandMultiplier(state, generator.id))}/s`,
       };
     }
@@ -469,7 +470,7 @@ function recommendedUpgrade(state: GameState): UpgradeTarget {
 function performRecommendedUpgrade(scene: IdleRuntime): void {
   const state = scene.state;
   if (!state) return;
-  const target = recommendedUpgrade(state);
+  const target = recommendedUpgrade(state, scene.lang ?? "ja");
   if (state.potions < target.cost) {
     invoke(
       scene,
@@ -500,7 +501,7 @@ function refreshConceptUi(scene: IdleRuntime): void {
   if (!state) return;
   const ui = uiByScene.get(scene) ?? buildConceptUi(scene);
   const town = townForPrestige(state.prestigeCount);
-  const target = recommendedUpgrade(state);
+  const target = recommendedUpgrade(state, scene.lang ?? "ja");
   const affordable = state.potions >= target.cost;
 
   ui.workshopLabel.setText(
@@ -508,7 +509,7 @@ function refreshConceptUi(scene: IdleRuntime): void {
       ? `WORKSHOP Lv.${state.prestigeCount + 1} · ${town.name}`
       : `工房 Lv.${state.prestigeCount + 1} · ${town.name}`,
   );
-  ui.repText.setText(`REP ${state.reputation}  ·  +${formatNumber(productionPerSec(state))}/s`);
+  ui.repText.setText(`${ja(scene, "評判", "REP")} ${state.reputation}  ·  +${formatNumber(productionPerSec(state))}/s`);
   ui.speechText.setText(
     affordable
       ? ja(scene, "強化できるよ！\n工房を育てよう！", "Upgrade ready!\nGrow the workshop!")
