@@ -298,6 +298,11 @@ test.describe("phone visual QA", () => {
     for (let attempt = 0; attempt < 3 && !runStarted; attempt += 1) {
       await page.locator("canvas").focus();
       await page.keyboard.down("ArrowRight");
+      await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        code: "ArrowRight",
+        bubbles: true,
+      })));
       try {
         await page.waitForFunction(() => {
           const scene = window.__qaGame.scene.getScene("GameScene");
