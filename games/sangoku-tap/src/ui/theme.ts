@@ -19,10 +19,10 @@ const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sa
 
 export const TYPE = {
   h1: { fontFamily: FONT_FAMILY, fontSize: "28px", fontStyle: "800", letterSpacing: 1 },
-  h2: { fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "700", letterSpacing: 0.5 },
+  h2: { fontFamily: FONT_FAMILY, fontSize: "27px", fontStyle: "700", letterSpacing: 0.5 },
   numeric: { fontFamily: FONT_FAMILY, fontSize: "22px", fontStyle: "800" },
-  body: { fontFamily: FONT_FAMILY, fontSize: "14px", fontStyle: "500" },
-  small: { fontFamily: FONT_FAMILY, fontSize: "12px", fontStyle: "500" },
+  body: { fontFamily: FONT_FAMILY, fontSize: "20px", fontStyle: "500" },
+  small: { fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "500" },
 } as const;
 
 export interface PanelOptions {
@@ -123,11 +123,15 @@ export function makeButton(
     g.strokeRoundedRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, Math.max(4, radius - 3));
   };
   draw(fill);
+  const requestedFontSize = Number.parseFloat(options.fontSize ?? "14");
+  const readableFontSize = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(label)
+    ? Math.max(22, requestedFontSize)
+    : requestedFontSize;
 
   const text = scene.add
     .text(0, -1, label, {
       fontFamily: FONT_FAMILY,
-      fontSize: options.fontSize ?? "14px",
+      fontSize: `${readableFontSize}px`,
       color: options.textColor ?? THEME.textPrimary,
       fontStyle: options.fontStyle ?? "800",
       letterSpacing: 0.35,
@@ -183,7 +187,7 @@ export function drawPill(
   const text = scene.add
     .text(0, 0, label, {
       fontFamily: FONT_FAMILY,
-      fontSize: "13px",
+      fontSize: "19px",
       fontStyle: "700",
       color: THEME.textPrimary,
     })

@@ -276,13 +276,13 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     text(scene, root, 35, 35, "1", 26, "#fff4d2", "900").setStroke("#17334b", 3);
   }
   const titleX = portrait ? 78 : 104;
-  text(scene, root, titleX, 24, t(lang, "title"), portrait ? 21 : 25, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
-  text(scene, root, titleX, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 9, "#f2d8aa", "700").setOrigin(0, 0.5);
+  text(scene, root, titleX, 24, t(lang, "title"), portrait ? 26 : 28, "#fff7e5", "900").setOrigin(0, 0.5).setStroke("#60351f", 5);
+  text(scene, root, titleX, 52, lang === "ja" ? "Potion Workshop — 錬金術師と工房を育てる" : "Potion Workshop — Grow your alchemist and workshop", 17, "#f2d8aa", "700").setOrigin(0, 0.5);
 
-  const potionText = text(scene, root, portrait ? 370 : 545, 22, "", portrait ? 12 : 16, "#fff2cd", "900").setOrigin(1, 0.5);
-  const essenceText = text(scene, root, portrait ? 350 : 665, 48, "", 9, "#e3c4ff", "900").setOrigin(1, 0.5);
-  const reputationText = text(scene, root, portrait ? 438 : 764, 48, "", 9, "#bff0cf", "900").setOrigin(1, 0.5);
-  const townText = text(scene, root, portrait ? 225 : 694, portrait ? 84 : 25, "", 10, "#f5dcae", "800");
+  const potionText = text(scene, root, portrait ? 438 : 545, 22, "", portrait ? 22 : 19, "#fff2cd", "900").setOrigin(1, 0.5);
+  const essenceText = text(scene, root, portrait ? 330 : 665, 82, "", portrait ? 22 : 19, "#e3c4ff", "900").setOrigin(1, 0.5);
+  const reputationText = text(scene, root, portrait ? 438 : 764, 82, "", portrait ? 22 : 19, "#bff0cf", "900").setOrigin(1, 0.5);
+  const townText = text(scene, root, portrait ? 225 : 694, portrait ? 106 : 25, "", portrait ? 20 : 18, "#f5dcae", "800");
 
   const heroX = portrait ? 225 : 150;
   const heroY = portrait ? 325 : 202;
@@ -331,7 +331,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     brewX,
     brewY + (portrait ? 25 : 110),
     lang === "ja" ? "大釜をタップして調合" : "TAP TO BREW",
-    15,
+    20,
     "#b8ffd7",
     "900",
   );
@@ -364,7 +364,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     root.add(board);
     const blackboardText = scene.add.text(73, 484, "", {
       fontFamily: '"Segoe Print", "Yu Gothic", sans-serif',
-      fontSize: "9px",
+      fontSize: "17px",
       fontStyle: "700",
       color: "#fff7d7",
       align: "center",
@@ -385,13 +385,13 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       138,
       162,
       lang === "ja" ? "\u4eca\u65e5\u3082\u7d20\u6575\u306a\n\u30dd\u30fc\u30b7\u30e7\u30f3\u3092!" : "Let's brew something\nwonderful today!",
-      10,
+      22,
       "#4b3528",
       "900",
     );
   }
 
-  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 12, "#fff1d0", "900");
+  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 18, "#fff1d0", "900");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
   const productionTexts: Phaser.GameObjects.Text[] = [];
@@ -404,11 +404,11 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
 
   if (portrait) {
     panel(scene, root, 225, 562, 420, 96, 0x423124, 0xd4b36e, 0.92, 15);
-    text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
+    text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
       addButtonChrome(scene, root, x, 574, 190, 58, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const labelNode = text(scene, root, x, 574, "", 10, "#ffffff", "900");
+      const labelNode = text(scene, root, x, 574, "", 22, "#ffffff", "900");
       orderTexts.push(labelNode);
       hitButton(scene, root, x, 574, 190, 58, () => {
         if (!scene.state) return;
@@ -417,9 +417,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     });
 
     panel(scene, root, 225, 655, 420, 62, 0x3c2d25, 0xd4b36e, 0.92, 14);
-    recommendationText = text(scene, root, 178, 655, "", 11, "#fff2d6", "900");
+    recommendationText = text(scene, root, 178, 655, "", 22, "#fff2d6", "900");
     addButtonChrome(scene, root, 370, 655, 90, 42, 0x2e8f65);
-    text(scene, root, 370, 655, lang === "ja" ? "強化" : "UPGRADE", 11, "#ffffff", "900");
+    text(scene, root, 370, 655, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
     hitButton(scene, root, 370, 655, 90, 48, () => {
       if (!scene.state) return;
       const rec = recommended(scene.state);
@@ -473,7 +473,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     navItems.forEach((item, index) => {
       addButtonChrome(scene, root, item.x, 744, 100, 68, index === 0 ? 0x165f70 : 0x453126);
       addNavIcon(scene, root, item.x, 732, item.kind);
-      text(scene, root, item.x, 763, lang === "ja" ? item.ja : item.en, 9, "#fff3d0", "900");
+      text(scene, root, item.x, 763, lang === "ja" ? item.ja : item.en, 22, "#fff3d0", "900");
       hitButton(scene, root, item.x, 744, 100, 68, item.action).setName(`workshop-nav-${index}`);
     });
     clickUpgradeText = text(scene, root, 171, 780, "", 1, "#f9e8c9", "900").setVisible(false);
@@ -482,11 +482,11 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
 
   } else {
     panel(scene, root, 588, 170, 388, 190, 0x423124, 0xd4b36e, 0.93, 16);
-    text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 10, "#f6dcaa", "900").setOrigin(0, 0.5);
+    text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const y = 132 + index * 68;
       addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const node = text(scene, root, 588, y, "", 11, "#ffffff", "900");
+      const node = text(scene, root, 588, y, "", 19, "#ffffff", "900");
       orderTexts.push(node);
       hitButton(scene, root, 588, y, 340, 56, () => {
         if (!scene.state) return;
@@ -495,9 +495,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     });
 
     panel(scene, root, 588, 292, 388, 70, 0x3c2d25, 0xd4b36e, 0.93, 14);
-    recommendationText = text(scene, root, 535, 292, "", 11, "#fff2d6", "900");
+    recommendationText = text(scene, root, 535, 292, "", 18, "#fff2d6", "900");
     addButtonChrome(scene, root, 720, 292, 90, 44, 0x2e8f65);
-    text(scene, root, 720, 292, lang === "ja" ? "強化" : "UPGRADE", 11, "#ffffff", "900");
+    text(scene, root, 720, 292, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
     hitButton(scene, root, 720, 292, 90, 50, () => {
       if (!scene.state) return;
       const rec = recommended(scene.state);
@@ -505,9 +505,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     });
 
     panel(scene, root, 588, 365, 388, 60, 0x2f2927, 0x9b7d57, 0.91, 13);
-    clickUpgradeText = text(scene, root, 474, 365, "", 9, "#f9e8c9", "900");
-    offlineText = text(scene, root, 590, 365, "", 9, "#d7ecff", "900");
-    prestigeText = text(scene, root, 704, 365, "", 9, "#ead5ff", "900");
+    clickUpgradeText = text(scene, root, 474, 365, "", 17, "#f9e8c9", "900");
+    offlineText = text(scene, root, 590, 365, "", 17, "#d7ecff", "900");
+    prestigeText = text(scene, root, 704, 365, "", 17, "#ead5ff", "900");
     hitButton(scene, root, 474, 365, 105, 52, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
     hitButton(scene, root, 590, 365, 105, 52, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
     hitButton(scene, root, 704, 365, 105, 52, () => {
@@ -519,7 +519,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     panel(scene, root, 400, 426, 760, 42, 0x2f2927, 0xa8895d, 0.9, 12);
     GENERATORS.slice(0, 6).forEach((def, i) => {
       const x = 85 + i * 126;
-      const p = text(scene, root, x, 426, "", 8, "#fff7e5", "800");
+      const p = text(scene, root, x, 426, "", 17, "#fff7e5", "800");
       productionTexts.push(p);
     });
   }

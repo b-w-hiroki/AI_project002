@@ -131,7 +131,7 @@ function button(
   const shine = scene.add.rectangle(0, -height * 0.31, width - 12, Math.max(5, height * 0.16), 0xffffff, 0.13);
   const leftStud = scene.add.circle(-width / 2 + 10, 0, 2.5, 0xffd68c, 0.82);
   const rightStud = scene.add.circle(width / 2 - 10, 0, 2.5, 0xffd68c, 0.82);
-  const labelText = text(scene, 0, 0, label, height >= 56 ? 20 : 15).setStroke("#351713", 3);
+  const labelText = text(scene, 0, 0, label, height >= 56 ? 24 : 22).setStroke("#351713", 3);
   const hit = scene.add.zone(0, 0, width, Math.max(48, height)).setInteractive({ useHandCursor: true });
   const container = scene.add
     .container(x, y, [shadow, bg, rim, shine, leftStud, rightStud, labelText, hit])
@@ -168,10 +168,10 @@ function buildUi(scene: Runtime): MobileUi {
     .setDepth(2800);
 
   const title = text(scene, 225, 118, tr(lang, "覇拳伝", "Fist Legend"), 38, "#ffe1a8");
-  const subtitle = text(scene, 225, 170, `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}\n${tr(lang, "相手の構えを読み、一撃を通せ。", "Read the stance. Land the decisive hit.")}`, 16, "#f4d4bb");
-  const titleStatus = text(scene, 225, 225, "", 14, "#d9c4ad");
-  const titleHint = text(scene, 225, 444, "", 12, "#ffe0a0");
-  const teamText = text(scene, 225, 474, "", 12, "#ffe6b5");
+  const subtitle = text(scene, 225, 170, `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}\n${tr(lang, "相手の構えを読み、一撃を通せ。", "Read the stance. Land the decisive hit.")}`, 19, "#f4d4bb");
+  const titleStatus = text(scene, 225, 225, "", 20, "#d9c4ad");
+  const titleHint = text(scene, 225, 444, "", 19, "#ffe0a0");
+  const teamText = text(scene, 225, 474, "", 19, "#ffe6b5");
   titleGroup.add([title, subtitle, titleStatus, titleHint, teamText]);
 
   const opponentButtons: Phaser.GameObjects.Container[] = [];

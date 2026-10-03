@@ -164,6 +164,7 @@ class SideBattleView {
   private readonly controls: Phaser.GameObjects.Container;
   private readonly adapter: BattleInputAdapter;
   private ougiButton?: ActionButton;
+  private releaseDirectMove?: () => void;
   private portrait = false;
   private active = false;
 
@@ -171,11 +172,11 @@ class SideBattleView {
     this.adapter = new BattleInputAdapter(scene);
     this.chrome = scene.add.graphics();
     this.heroPortrait = scene.add.image(0, 0, "sf-approved-hero-avatar").setDisplaySize(42, 42);
-    this.title = makeText(scene, "BLADE WOODS", 10, "#e8f8ff");
-    this.hpText = makeText(scene, "", 11);
-    this.scoreText = makeText(scene, "", 9, "#f3d88d");
-    this.stageText = makeText(scene, "", 13, "#ffffff");
-    this.missionText = makeText(scene, "", 10, "#e5f8ff");
+    this.title = makeText(scene, "BLADE WOODS", 18, "#e8f8ff");
+    this.hpText = makeText(scene, "", 19);
+    this.scoreText = makeText(scene, "", 18, "#f3d88d");
+    this.stageText = makeText(scene, "", 28, "#ffffff");
+    this.missionText = makeText(scene, "", 18, "#e5f8ff");
     this.comboText = makeText(scene, "", 30, "#ffe070").setOrigin(0, 0.5).setAngle(-7);
     this.controls = scene.add.container(0, 0);
     this.root = scene.add.container(0, 0, [
@@ -197,6 +198,7 @@ class SideBattleView {
         child.setVisible(false);
       }
     }
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.releaseDirectMove?.());
   }
 
   applyLayout(layout: ViewportLayout): void {
@@ -297,23 +299,93 @@ class SideBattleView {
   }
 
   private rebuildControls(): void {
+    this.releaseDirectMove?.();
+    this.releaseDirectMove = undefined;
     this.controls.removeAll(true);
     const lang = this.scene.lang ?? "ja";
     if (this.portrait) {
-      this.addDpad(96, 695, 38);
+      this.addDirectMoveZone({ x: 10, y: 610, width: 190, height: 178 }, 105, 760);
       this.addKeyButton(343, 704, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
       this.addKeyButton(407, 642, 30, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
       this.addKeyButton(407, 715, 30, tr(lang, "技", "SKL"), 0x236896, "skill");
       this.addKeyButton(268, 756, 28, tr(lang, "防御", "GRD"), 0x334856, "guard");
       this.ougiButton = this.addButton(405, 778, 33, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
     } else {
-      this.addDpad(86, 356, 34);
+      this.addDirectMoveZone({ x: 8, y: 294, width: 190, height: 146 }, 103, 421);
       this.addKeyButton(704, 356, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
       this.addKeyButton(765, 291, 29, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
       this.addKeyButton(766, 356, 29, tr(lang, "技", "SKL"), 0x236896, "skill");
       this.addKeyButton(628, 390, 27, tr(lang, "防御", "GRD"), 0x334856, "guard");
       this.ougiButton = this.addButton(752, 414, 32, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
     }
+  }
+
+  private addDirectMoveZone(
+    rect: { x: number; y: number; width: number; height: number },
+    guideX: number,
+    guideY: number,
+  ): void {
+    const zone = this.scene.add
+      .zone(rect.x, rect.y, rect.width, rect.height)
+      .setOrigin(0, 0)
+      .setName("direct-move-zone")
+      .setInteractive();
+    const guide = this.scene.add
+      .text(guideX, guideY, tr(this.scene.lang ?? "ja", "左側をドラッグして移動", "DRAG LEFT SIDE TO MOVE"), {
+        fontFamily: '"Trebuchet MS", "Yu Gothic", sans-serif',
+        fontSize: "18px",
+        fontStyle: "700",
+        color: "#d8f4f4",
+        backgroundColor: "rgba(3, 19, 30, 0.72)",
+        padding: { x: 10, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setName("direct-move-guide");
+
+    let pointerId: number | null = null;
+    let originX = 0;
+    let pressed: "left" | "right" | null = null;
+    const release = () => {
+      if (pressed) this.adapter.release(pressed);
+      pressed = null;
+      pointerId = null;
+    };
+    const setDirection = (next: "left" | "right" | null) => {
+      if (pressed === next) return;
+      if (pressed) this.adapter.release(pressed);
+      pressed = next;
+      if (next) this.adapter.press(next);
+    };
+    const move = (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id !== pointerId) return;
+      const dx = pointer.x - originX;
+      setDirection(Math.abs(dx) < 14 ? null : dx < 0 ? "left" : "right");
+    };
+    const up = (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === pointerId) release();
+    };
+    zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (pointerId !== null) return;
+      pointerId = pointer.id;
+      originX = pointer.x;
+      setDirection(null);
+    });
+    this.scene.input.on("pointermove", move);
+    this.scene.input.on("pointerup", up);
+    this.scene.input.on("gameout", release);
+    const onBlur = () => release();
+    const onPointerCancel = () => release();
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("pointercancel", onPointerCancel);
+    this.releaseDirectMove = () => {
+      release();
+      this.scene.input.off("pointermove", move);
+      this.scene.input.off("pointerup", up);
+      this.scene.input.off("gameout", release);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pointercancel", onPointerCancel);
+    };
+    this.controls.add([zone, guide]);
   }
 
   private addDpad(cx: number, cy: number, radius: number): void {
@@ -359,7 +431,7 @@ class SideBattleView {
     const rim = this.scene.add.circle(0, 0, radius + 3, 0x101e27, 0.92).setStrokeStyle(2, 0xb9dce4, 0.85);
     const face = this.scene.add.circle(0, 0, radius - 3, color, 0.88).setStrokeStyle(1.5, 0xe5f7fa, 0.62).setInteractive({ useHandCursor: true });
     const shine = this.scene.add.arc(0, -radius * 0.27, radius * 0.55, 205, 335, false, 0xffffff, 0.16);
-    const buttonLabel = makeText(this.scene, label, radius >= 38 ? 16 : 12);
+    const buttonLabel = makeText(this.scene, label, radius >= 38 ? 20 : 18);
     const root = this.scene.add.container(x, y, [shadow, rim, face, shine, buttonLabel]);
     const release = () => {
       root.setScale(1);

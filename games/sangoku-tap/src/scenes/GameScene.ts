@@ -335,13 +335,14 @@ export class GameScene extends Phaser.Scene {
       .text(22, 28, tr(this.lang, "1  ホーム・拠点", "1  BASE"), {
         ...TYPE.h2,
         fontFamily: "serif",
-        fontSize: "22px",
+        fontSize: "31px",
         color: THEME.textPrimary,
       })
       .setOrigin(0, 0.5);
     const subtitle = this.add
       .text(24, 68, tr(this.lang, "英雄とともに、天下への一歩を。", "Take the first step toward conquest."), {
         ...TYPE.small,
+        fontSize: "20px",
         color: THEME.textMuted,
       })
       .setOrigin(0, 0.5);
@@ -368,14 +369,14 @@ export class GameScene extends Phaser.Scene {
       .text(126, 145, tr(this.lang, "\u4e3b\u516c\u306e\u672c\u9663", "LORD'S COMMAND"), {
         ...TYPE.h2,
         fontFamily: "serif",
-        fontSize: "17px",
+        fontSize: "30px",
         color: "#fff1c8",
       })
       .setOrigin(0, 0.5);
     const homeStatusText = this.add
       .text(126, 187, "", {
         ...TYPE.small,
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#f7d99b",
       })
       .setOrigin(0, 0.5);
@@ -392,7 +393,7 @@ export class GameScene extends Phaser.Scene {
     const tagline = this.add
       .text(CX + 14, 340, tr(this.lang, "乱世を駆け、\n英雄を集めよ", "Ride through chaos.\nGather your heroes."), {
         fontFamily: "serif",
-        fontSize: "30px",
+        fontSize: "31px",
         fontStyle: "800",
         color: "#fff2cf",
         stroke: "#170c07",

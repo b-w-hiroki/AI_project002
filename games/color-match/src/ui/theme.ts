@@ -18,11 +18,11 @@ export const SPACE = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif';
 
 export const TYPE = {
-  h1: { fontFamily: FONT_FAMILY, fontSize: "26px", fontStyle: "700", letterSpacing: 1 },
-  h2: { fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "700", letterSpacing: 0.5 },
+  h1: { fontFamily: FONT_FAMILY, fontSize: "32px", fontStyle: "700", letterSpacing: 1 },
+  h2: { fontFamily: FONT_FAMILY, fontSize: "27px", fontStyle: "700", letterSpacing: 0.5 },
   numeric: { fontFamily: FONT_FAMILY, fontSize: "40px", fontStyle: "800" },
-  body: { fontFamily: FONT_FAMILY, fontSize: "14px", fontStyle: "500" },
-  small: { fontFamily: FONT_FAMILY, fontSize: "12px", fontStyle: "500" },
+  body: { fontFamily: FONT_FAMILY, fontSize: "20px", fontStyle: "500" },
+  small: { fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "500" },
 } as const;
 
 export interface PanelOptions {
