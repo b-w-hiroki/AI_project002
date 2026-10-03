@@ -1103,7 +1103,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
     hudPlate(scene, root, x, y, 80, 48);
     const unavailable = ["持ち物", "ショップ"].includes(label);
-    text(scene, root, x, unavailable ? y - 7 : y, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
+    text(scene, root, x, unavailable ? y - 7 : y, label, 20, "#fff3ce", "800").setStroke("#091420", 0);
     if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: !unavailable });
     hit.on("pointerdown", action);

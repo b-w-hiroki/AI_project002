@@ -19,10 +19,10 @@ const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sa
 
 export const TYPE = {
   h1: { fontFamily: FONT_FAMILY, fontSize: "28px", fontStyle: "800", letterSpacing: 1 },
-  h2: { fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "700", letterSpacing: 0.5 },
+  h2: { fontFamily: FONT_FAMILY, fontSize: "27px", fontStyle: "700", letterSpacing: 0.5 },
   numeric: { fontFamily: FONT_FAMILY, fontSize: "22px", fontStyle: "800" },
-  body: { fontFamily: FONT_FAMILY, fontSize: "14px", fontStyle: "500" },
-  small: { fontFamily: FONT_FAMILY, fontSize: "12px", fontStyle: "500" },
+  body: { fontFamily: FONT_FAMILY, fontSize: "20px", fontStyle: "500" },
+  small: { fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "500" },
 } as const;
 
 export interface PanelOptions {

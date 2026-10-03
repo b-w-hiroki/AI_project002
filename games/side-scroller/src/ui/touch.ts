@@ -229,7 +229,7 @@ export function buildOrientationWarning(scene: Phaser.Scene): void {
   const bg = scene.add.rectangle(400, 300, 800, 600, 0x0a0a12, 0.96);
   const text = scene.add
     .text(400, 300, "📱 横向きにしてください\nRotate your device to landscape", {
-      fontSize: "20px",
+      fontSize: "34px",
       color: "#e8e8fb",
       align: "center",
       lineSpacing: 10,

@@ -43,11 +43,11 @@ const FONT_FAMILY = '"Segoe UI", -apple-system, BlinkMacSystemFont, "Hiragino Sa
  * フォント指定を統一する。見出し系は字間を少し広げて締まった印象にする。
  */
 export const TYPE = {
-  h1: { fontFamily: FONT_FAMILY, fontSize: "26px", fontStyle: "700", letterSpacing: 1 },
-  h2: { fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "700", letterSpacing: 0.5 },
+  h1: { fontFamily: FONT_FAMILY, fontSize: "32px", fontStyle: "700", letterSpacing: 1 },
+  h2: { fontFamily: FONT_FAMILY, fontSize: "27px", fontStyle: "700", letterSpacing: 0.5 },
   numeric: { fontFamily: FONT_FAMILY, fontSize: "22px", fontStyle: "800" },
-  body: { fontFamily: FONT_FAMILY, fontSize: "13px", fontStyle: "500" },
-  small: { fontFamily: FONT_FAMILY, fontSize: "11px", fontStyle: "500" },
+  body: { fontFamily: FONT_FAMILY, fontSize: "20px", fontStyle: "500" },
+  small: { fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "500" },
 } as const;
 
 /** テキストの値が変わった時だけ、軽くポップさせて変化に気付きやすくする */

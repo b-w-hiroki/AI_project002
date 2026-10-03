@@ -119,12 +119,12 @@ function build(scene: Runtime): MockUi {
   root.add([title, result]);
 
   label(scene, title, 225, 74, "カラーマッチ", 36).setStroke("#2259b0", 7);
-  label(scene, title, 225, 112, "60秒 COLOR × WORD ARCADE", 13, "#e9fbff");
+  label(scene, title, 225, 112, "60秒 COLOR × WORD ARCADE", 20, "#e9fbff");
   if (scene.textures.exists("cm-mascot")) title.add(scene.add.image(225, 225, "cm-mascot").setDisplaySize(220, 220));
   panel(scene, title, 225, 382, 382, 96);
-  label(scene, title, 225, 360, "今のルールを読み、正しい色をタップ", 18);
-  label(scene, title, 225, 398, "意味と色が切り替わる。CHAINを伸ばそう！", 12, "#cceeff");
-  label(scene, title, 225, 458, "出題の表記", 13, "#173b63");
+  label(scene, title, 225, 356, "今のルールを読み、正しい色をタップ", 22);
+  label(scene, title, 225, 400, "意味と色が切り替わる。\nCHAINを伸ばそう！", 17, "#cceeff");
+  label(scene, title, 225, 458, "出題の表記", 18, "#173b63");
   const modeLabels: Phaser.GameObjects.Text[] = [];
   WRITING_MODES.forEach((mode, i) => {
     const x = 125 + (i % 2) * 200;
@@ -133,29 +133,29 @@ function build(scene: Runtime): MockUi {
     g.fillStyle(0xffffff, 0.94).fillRoundedRect(x - 86, y - 24, 172, 48, 13);
     g.lineStyle(2, 0x3e91cf, 0.8).strokeRoundedRect(x - 86, y - 24, 172, 48, 13);
     title.add(g);
-    const text = label(scene, title, x, y, WRITING_MODE_LABEL[mode], 15, "#194d78");
+    const text = label(scene, title, x, y, WRITING_MODE_LABEL[mode], 22, "#194d78");
     modeLabels.push(text);
     const hit = scene.add.zone(x, y, 172, 52).setInteractive({ useHandCursor: true });
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
     title.add(hit);
   });
-  label(scene, title, 225, 610, `最高 ${loadBestScore()}  ·  ターボ ${loadBestTurbo()}pt`, 13, "#173b63");
+  label(scene, title, 225, 610, `最高 ${loadBestScore()}  ·  ターボ ${loadBestTurbo()}pt`, 20, "#173b63");
   button(scene, title, 225, 664, 360, 64, "60秒チャレンジ", () => invoke(scene, "startSession", "challenge"), {
     name: "portrait-challenge-action",
-    fontSize: 18,
+    fontSize: 22,
   });
   button(scene, title, 225, 736, 360, 54, "20秒 弱点練習", () => invoke(scene, "startPractice"), {
     kind: "secondary",
     name: "portrait-practice-action",
-    fontSize: 16,
+    fontSize: 22,
   });
 
   const resultHeading = label(scene, result, 225, 76, "チャレンジ結果", 27).setStroke("#2259b0", 6);
   panel(scene, result, 225, 350, 370, 430);
   const score = label(scene, result, 225, 178, "得点 0", 42, "#ffe46c");
   if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 285, "cm-mascot").setDisplaySize(164, 164));
-  const stats = label(scene, result, 225, 424, "", 16, "#ffffff");
-  const nextGoal = label(scene, result, 225, 540, "", 12, "#d9f4ff").setName("result-next-focus");
+  const stats = label(scene, result, 225, 424, "", 20, "#ffffff");
+  const nextGoal = label(scene, result, 225, 540, "", 17, "#d9f4ff").setName("result-next-focus");
   const resultPrimaryLabel = button(
     scene,
     result,
