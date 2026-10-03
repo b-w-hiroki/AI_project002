@@ -38,7 +38,7 @@ import { detectLang, t, tr, writingModeLabel, type Lang } from "../logic/i18n";
 import { improvementFocus, type ImprovementFocus } from "../logic/resultInsight";
 import { cg } from "../platform/crazygames";
 import { sfx } from "../platform/audio";
-import { drawPanel, makeButton, THEME, TYPE } from "../ui/theme";
+import { drawPanel, makeButton, THEME, TYPE, type ThemedButton } from "../ui/theme";
 
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
 const CX = 225;
@@ -116,6 +116,8 @@ export class GameScene extends Phaser.Scene {
   private titleGroup!: Phaser.GameObjects.Container;
   private resultGroup!: Phaser.GameObjects.Container;
   private playGroup!: Phaser.GameObjects.Container;
+  private resultPrimaryButton!: ThemedButton;
+  private resultSecondaryButton!: ThemedButton;
 
   constructor() {
     super("GameScene");
@@ -606,25 +608,44 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("bestLine");
 
-    const retryBtn = makeButton(
+    this.resultPrimaryButton = makeButton(
       this,
       CX,
       510,
       280,
       52,
       t(this.lang, "retry"),
-      () => this.startSession(),
+      () => this.sessionMode === "practice" ? this.startPractice() : this.startSession("challenge"),
       {
         fontSize: "15px",
       },
     );
+    this.resultPrimaryButton.container.setName("result-primary-action");
+    this.resultSecondaryButton = makeButton(
+      this,
+      CX,
+      574,
+      280,
+      48,
+      t(this.lang, "practice"),
+      () => this.sessionMode === "practice" ? this.startSession("challenge") : this.startPractice(),
+      {
+        fillColor: 0xddeeff,
+        borderColor: 0x83c9ee,
+        fontSize: "14px",
+      },
+    );
+    this.resultSecondaryButton.container.setName("result-secondary-action");
 
-    this.resultGroup.add([panel, heading, stats, bestLine, retryBtn.container]);
+    this.resultGroup.add([panel, heading, stats, bestLine, this.resultPrimaryButton.container, this.resultSecondaryButton.container]);
     if (resultMascot) this.resultGroup.add(resultMascot);
     this.resultGroup.setVisible(false);
   }
 
   private showTitle(): void {
+    this.accepting = false;
+    this.pendingRound?.remove(false);
+    this.pendingRound = undefined;
     this.phase = "title";
     this.titleGroup.setVisible(true);
     this.playGroup.setVisible(false);
@@ -644,6 +665,7 @@ export class GameScene extends Phaser.Scene {
 
   private startSession(mode: SessionMode = "challenge"): void {
     this.pendingRound?.remove(false);
+    this.pendingRound = undefined;
     this.sessionMode = mode;
     this.sessionDurationMs = mode === "practice" ? PRACTICE_MS : CHALLENGE_MS;
     this.sessionRemaining = this.sessionDurationMs;
@@ -733,7 +755,8 @@ export class GameScene extends Phaser.Scene {
 
   private handleKeydown(e: KeyboardEvent): void {
     if (this.phase === "result" && (e.key === "r" || e.key === "R")) {
-      this.startSession();
+      if (this.sessionMode === "practice") this.startPractice();
+      else this.startSession("challenge");
     }
   }
 
@@ -964,6 +987,7 @@ export class GameScene extends Phaser.Scene {
     if (this.phase !== "playing") return;
     this.accepting = false;
     this.pendingRound?.remove(false);
+    this.pendingRound = undefined;
     this.phase = "result";
     this.playGroup.setVisible(false);
 
@@ -1019,6 +1043,16 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: heading, scale: 1, duration: 260, ease: "Back.easeOut" });
     if (grade === "S" || grade === "A") this.cameras.main.flash(120, 255, 222, 110);
     const focus = improvementFocus(this.results);
+    this.resultPrimaryButton.setLabel(
+      this.sessionMode === "practice"
+        ? tr(this.lang, "もう一度20秒", "Practice Again (20s)")
+        : tr(this.lang, "もう一度60秒", "Play Again (60s)"),
+    );
+    this.resultSecondaryButton.setLabel(
+      this.sessionMode === "practice"
+        ? t(this.lang, "challenge")
+        : t(this.lang, "practice"),
+    );
     stats.setText(
       `${t(this.lang, "accuracy")}: ${Math.round(summary.accuracy * 100)}%\n${t(this.lang, "avgReaction")}: ${Math.round(summary.avgReactionMs)}ms\n${t(this.lang, "turboBonus")}: ${this.turboPoints}pt\nNEXT: ${improvementText(this.lang, focus)}`,
     );

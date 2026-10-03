@@ -60,6 +60,8 @@ type LandscapeUi = {
   answers: AnswerView[];
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
+  resultPrimary: { label: Phaser.GameObjects.Text; hit: Phaser.GameObjects.Zone };
+  resultSecondary: { label: Phaser.GameObjects.Text; hit: Phaser.GameObjects.Zone };
   titleMode: Phaser.GameObjects.Text;
 };
 
@@ -122,7 +124,8 @@ function button(
   label: string,
   action: () => void,
   color = 0xff7a3d,
-): void {
+  options: { name?: string; fontSize?: number } = {},
+): { label: Phaser.GameObjects.Text; hit: Phaser.GameObjects.Zone } {
   const g = scene.add.graphics();
   const paint = (pressed = false) => {
     g.clear();
@@ -133,12 +136,15 @@ function button(
   };
   paint();
   parent.add(g);
-  text(scene, parent, x, y, label, 17, "#ffffff", "900");
-  const hit = scene.add.zone(x, y, w, Math.max(52, h)).setInteractive({ useHandCursor: true });
+  const labelNode = text(scene, parent, x, y, label, options.fontSize ?? 17, "#ffffff", "900");
+  const hit = scene.add.zone(x, y, w, Math.max(52, h));
+  if (options.name) hit.setName(options.name);
+  hit.setInteractive({ useHandCursor: true });
   parent.add(hit);
   hit.on("pointerdown", () => { paint(true); action(); });
   hit.on("pointerup", () => paint(false));
   hit.on("pointerout", () => paint(false));
+  return { label: labelNode, hit };
 }
 
 function sky(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void {
@@ -208,8 +214,8 @@ function build(scene: Runtime): LandscapeUi {
     title.add(hit);
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
   });
-  button(scene, title, 640, 250, 250, 62, tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge"), () => invoke(scene, "startSession", "challenge"));
-  button(scene, title, 640, 326, 250, 54, tr(scene.lang ?? "en", "20秒 弱点練習", "20-Second Practice"), () => invoke(scene, "startPractice"), 0x4b75d6);
+  button(scene, title, 640, 250, 250, 62, tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge"), () => invoke(scene, "startSession", "challenge"), 0xff7a3d, { name: "landscape-challenge-action" });
+  button(scene, title, 640, 326, 250, 54, tr(scene.lang ?? "en", "20秒 弱点練習", "20-Second Practice"), () => invoke(scene, "startPractice"), 0x4b75d6, { name: "landscape-practice-action", fontSize: 15 });
   panel(scene, title, 640, 150, 250, 120, 0xffffff, 0x8ac8f4, 0.94, 18);
   text(scene, title, 640, 128, "BEST", 11, "#2b5b87", "900");
   text(scene, title, 640, 158, `${loadBestScore()} SCORE`, 27, "#ff7a3d", "900");
@@ -262,7 +268,30 @@ function build(scene: Runtime): LandscapeUi {
   panel(scene, result, 400, 225, 620, 330, 0x164f82, 0x9be9ff, 0.96, 22);
   const resultHeading = text(scene, result, 400, 118, "RESULT", 30, "#ffffff", "900");
   const resultStats = text(scene, result, 400, 215, "", 17, "#e8f8ff", "800");
-  button(scene, result, 400, 340, 280, 62, tr(scene.lang ?? "en", "もう一度あそぶ", "Play Again"), () => invoke(scene, "startSession"), 0xff7a3d);
+  const resultPrimary = button(
+    scene,
+    result,
+    280,
+    340,
+    220,
+    58,
+    tr(scene.lang ?? "en", "もう一度60秒", "Replay 60s"),
+    () => scene.sessionMode === "practice" ? invoke(scene, "startPractice") : invoke(scene, "startSession", "challenge"),
+    0xff7a3d,
+    { name: "landscape-result-primary-action", fontSize: 14 },
+  );
+  const resultSecondary = button(
+    scene,
+    result,
+    520,
+    340,
+    220,
+    54,
+    tr(scene.lang ?? "en", "弱点を20秒練習", "Practice 20s"),
+    () => scene.sessionMode === "practice" ? invoke(scene, "startSession", "challenge") : invoke(scene, "startPractice"),
+    0x4b75d6,
+    { name: "landscape-result-secondary-action", fontSize: 14 },
+  );
 
   const ui = {
     root,
@@ -280,6 +309,8 @@ function build(scene: Runtime): LandscapeUi {
     answers,
     resultHeading,
     resultStats,
+    resultPrimary,
+    resultSecondary,
     titleMode,
   };
   uiByScene.set(scene, ui);
@@ -366,6 +397,13 @@ function refresh(scene: Runtime): void {
     ui.resultStats.setText(
       `${scene.sessionMode === "practice" ? tr(scene.lang ?? "en", "20秒弱点練習", "20-Second Practice") : tr(scene.lang ?? "en", "60秒チャレンジ", "60-Second Challenge")} · ${tr(scene.lang ?? "en", "正答率", "Accuracy")} ${Math.round(summary.accuracy * 100)}% · ${tr(scene.lang ?? "en", "平均", "Avg")} ${Math.round(summary.avgReactionMs)}ms\n` +
       `${metric("content", tr(scene.lang ?? "en", "意味", "Word"))} · ${metric("color", tr(scene.lang ?? "en", "色", "Color"))} · ${metric("switch", tr(scene.lang ?? "en", "切替", "Switch"))}\nNEXT: ${improvementText(scene.lang ?? "en", focus)}`,
+    );
+    const practice = scene.sessionMode === "practice";
+    ui.resultPrimary.label.setText(
+      practice ? tr(scene.lang ?? "en", "もう一度20秒", "Replay 20s") : tr(scene.lang ?? "en", "もう一度60秒", "Replay 60s"),
+    );
+    ui.resultSecondary.label.setText(
+      practice ? tr(scene.lang ?? "en", "60秒チャレンジ", "60s Challenge") : tr(scene.lang ?? "en", "弱点を20秒練習", "Practice 20s"),
     );
   }
 }

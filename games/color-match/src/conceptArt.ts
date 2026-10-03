@@ -19,6 +19,8 @@ type Runtime = Phaser.Scene & {
   phase?: "title" | "playing" | "result";
   sessionMode?: "challenge" | "practice";
   sessionRemaining?: number;
+  sessionDurationMs?: number;
+  practiceJudgeMode?: "content" | "color";
   currentRound?: Round | null;
   roundIndex?: number;
   turboStreak?: number;
@@ -44,6 +46,7 @@ type ArcadeUi = {
   ruleText: Phaser.GameObjects.Text;
   promptText: Phaser.GameObjects.Text;
   chainText: Phaser.GameObjects.Text;
+  nextLabel: Phaser.GameObjects.Text;
   nextText: Phaser.GameObjects.Text;
   cards: CardView[];
   mascot?: Phaser.GameObjects.Image;
@@ -220,10 +223,13 @@ function build(scene: Runtime): ArcadeUi {
     scene.tweens.add({ targets: mascot, y: 748, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
   panel(scene, root, 270, 760, 330, 48, 0x153d68, 0x79cff7, 0.94, 14);
-  text(scene, root, 120, 747, "NEXT", 9, "#bdeaff", "900").setOrigin(0, 0.5);
-  const nextText = text(scene, root, 278, 764, "", 11, "#ffffff", "900");
+  const nextLabel = text(scene, root, 120, 747, "NEXT", 9, "#bdeaff", "900")
+    .setOrigin(0, 0.5)
+    .setName("portrait-session-context");
+  const nextText = text(scene, root, 278, 764, "", 11, "#ffffff", "900")
+    .setName("portrait-session-guidance");
 
-  const ui = { root, timerRing, timerText, scoreText: approvedScoreText, progressText, ruleText: approvedRuleText, promptText: approvedPromptText, chainText, nextText, cards, mascot };
+  const ui = { root, timerRing, timerText, scoreText: approvedScoreText, progressText, ruleText: approvedRuleText, promptText: approvedPromptText, chainText, nextLabel, nextText, cards, mascot };
   uiByScene.set(scene, ui);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => uiByScene.delete(scene));
   return ui;
@@ -235,12 +241,13 @@ function refresh(scene: Runtime): void {
   ui.root.setVisible(active);
   if (!active || !scene.currentRound) return;
 
-  const remaining = Phaser.Math.Clamp(scene.sessionRemaining ?? CHALLENGE_MS, 0, CHALLENGE_MS);
+  const duration = scene.sessionDurationMs ?? CHALLENGE_MS;
+  const remaining = Phaser.Math.Clamp(scene.sessionRemaining ?? duration, 0, duration);
   const secs = Math.max(0, Math.ceil(remaining / 1000));
-  const ratio = remaining / CHALLENGE_MS;
+  const ratio = duration > 0 ? remaining / duration : 0;
   const danger = secs <= 10;
-  const elapsed = CHALLENGE_MS - remaining;
-  const until = Math.max(0, nextSwitchAt(elapsed) - elapsed);
+  const elapsed = duration - remaining;
+  const until = scene.sessionMode === "practice" ? 0 : Math.max(0, nextSwitchAt(elapsed) - elapsed);
   const round = scene.currentRound;
   const mode = scene.writingMode ?? "hiragana";
   const streak = scene.turboStreak ?? 0;
@@ -259,7 +266,17 @@ function refresh(scene: Runtime): void {
   ui.promptText.setText(nameForColorId(round.promptWord, mode)).setColor(`#${hexForColorId(round.promptInk).toString(16).padStart(6, "0")}`);
   ui.chainText.setText(`${streak}\n${streak >= TURBO_ENTRY_STREAK ? "FLOW!" : "CHAIN!"}`);
   ui.chainText.setColor(streak >= TURBO_ENTRY_STREAK ? "#ff7a3d" : "#ff5f8f");
-  ui.nextText.setText(until <= 2000 ? tr(scene.lang ?? "en", "ルール切替まもなく！", "RULE SHIFT SOON!") : `${tr(scene.lang ?? "en", "次のルールまで", "NEXT RULE IN")} ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`);
+  if (scene.sessionMode === "practice") {
+    ui.nextLabel.setText("PRACTICE");
+    ui.nextText.setText(
+      scene.practiceJudgeMode === "color"
+        ? tr(scene.lang ?? "en", "文字の色だけで判断", "INK COLOR only")
+        : tr(scene.lang ?? "en", "文字の意味だけで判断", "WORD MEANING only"),
+    );
+  } else {
+    ui.nextLabel.setText("NEXT");
+    ui.nextText.setText(until <= 2000 ? tr(scene.lang ?? "en", "ルール切替まもなく！", "RULE SHIFT SOON!") : `${tr(scene.lang ?? "en", "次のルールまで", "NEXT RULE IN")} ${Math.ceil(until / 1000)}${tr(scene.lang ?? "en", "秒", "s")} · BEST ${loadBestScore()}`);
+  }
   ui.cards.forEach((card) => card.label.setText(nameForColorId(card.colorId, mode)));
 }
 
