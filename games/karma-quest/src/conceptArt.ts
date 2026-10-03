@@ -626,7 +626,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
     if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
     root.add(ink.setX(8));
-    text(scene, root, 47, y + 25, label, 16, "#fff3ce", "800").setStroke("#091420", 0);
+    text(scene, root, 47, y + 25, label, 20, "#fff3ce", "800").setStroke("#091420", 0);
   }
   text(scene, root, 330, 286, "この世界の\n物語は、", 30, "#35281e", "900", 200);
   text(scene, root, 322, 353, "あなたの選択から。", 22, "#35281e", "900", 228);
@@ -678,11 +678,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.add(icons);
   // Availability is visible before opening the explanatory modal.
   for (const [x, y] of [[47, 505], [400, 746]] as const) {
-    root.add(scene.add.graphics().fillStyle(0x07131e, 0.9).fillRoundedRect(x - 24, y - 9, 48, 18, 4));
-    text(scene, root, x, y, "準備中", 12, "#d8c9ab", "700").setStroke("#091420", 0);
+    root.add(scene.add.graphics().fillStyle(0x07131e, 0.9).fillRoundedRect(x - 34, y - 12, 68, 24, 4));
+    text(scene, root, x, y, "準備中", 20, "#d8c9ab", "700").setStroke("#091420", 0);
   }
   for (const [i, label] of ["王都", "ワールド", "キャラ", "リーグ", "ショップ"].entries()) {
-    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 16, "#fff0c8", "800").setStroke("#091420", 0);
+    text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 20, "#fff0c8", "800").setStroke("#091420", 0);
   }
   // Draw the approved visible-only portrait last so the live player card masks
   // the old placeholder portrait while retaining its text and interactions.

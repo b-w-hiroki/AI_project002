@@ -32,7 +32,7 @@ async function enterBattleForVisualQa(page: Page): Promise<void> {
       return game.scene.isActive("GameScene") && !!Reflect.get(game.scene.getScene("GameScene"), "player");
     });
     if (ready) return;
-    await tapGamePoint(page, 400, 545);
+    await tapGamePoint(page, 640, 420);
     try {
       await page.waitForFunction(() => {
         const game = window.__qaGame;
@@ -59,6 +59,26 @@ test.beforeEach(async ({ page }) => {
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
   await expectResponsiveCanvas(page);
+});
+
+test.describe("landscape loadout readability", () => {
+  test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
+
+  test("uses the battle aspect ratio and keeps supplementary text readable", async ({ page }) => {
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).height)).toBe(450);
+    const result = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("LoadoutScene");
+      const sizes = scene.children.list
+        .filter(node => node.type === "Text" && (node as Phaser.GameObjects.Text).visible)
+        .map(node => Number.parseFloat(String((node as Phaser.GameObjects.Text).style.fontSize)));
+      const canvas = window.__qaGame.canvas;
+      const scale = canvas.getBoundingClientRect().height / canvas.height;
+      return { minLogical: Math.min(...sizes), minPhysical: Math.min(...sizes) * scale };
+    });
+    expect(result.minLogical).toBeGreaterThanOrEqual(17);
+    expect(result.minPhysical).toBeGreaterThanOrEqual(14);
+    await page.locator("canvas").screenshot({ path: "e2e/screenshots/side-loadout-844x390.png", animations: "disabled" });
+  });
 });
 
 test.describe("English localization", () => {
