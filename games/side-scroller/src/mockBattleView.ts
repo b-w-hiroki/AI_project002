@@ -343,12 +343,14 @@ class SideBattleView {
       .setName("direct-move-guide");
 
     let pointerId: number | null = null;
+    let nativePointerId: number | null = null;
     let originX = 0;
     let pressed: "left" | "right" | null = null;
     const release = () => {
       if (pressed) this.adapter.release(pressed);
       pressed = null;
       pointerId = null;
+      nativePointerId = null;
     };
     const setDirection = (next: "left" | "right" | null) => {
       if (pressed === next) return;
@@ -367,6 +369,7 @@ class SideBattleView {
     zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (pointerId !== null) return;
       pointerId = pointer.id;
+      nativePointerId = pointer.event instanceof PointerEvent ? pointer.event.pointerId : null;
       originX = pointer.x;
       setDirection(null);
     });
@@ -374,8 +377,12 @@ class SideBattleView {
     this.scene.input.on("pointerup", up);
     this.scene.input.on("gameout", release);
     const onBlur = () => release();
+    const onWindowPointerUp = (event: PointerEvent) => {
+      if (nativePointerId === null || event.pointerId === nativePointerId) release();
+    };
     const onPointerCancel = () => release();
     window.addEventListener("blur", onBlur);
+    window.addEventListener("pointerup", onWindowPointerUp);
     window.addEventListener("pointercancel", onPointerCancel);
     this.releaseDirectMove = () => {
       release();
@@ -383,6 +390,7 @@ class SideBattleView {
       this.scene.input.off("pointerup", up);
       this.scene.input.off("gameout", release);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pointerup", onWindowPointerUp);
       window.removeEventListener("pointercancel", onPointerCancel);
     };
     this.controls.add([zone, guide]);
