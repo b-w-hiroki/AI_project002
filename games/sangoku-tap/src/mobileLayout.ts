@@ -3,6 +3,7 @@ import { bindResponsiveScene, getResponsiveLayout, type ViewportLayout } from ".
 import { GENERAL_POOL } from "./logic/general";
 import {
   ROLES,
+  expeditionReward,
   newExpedition,
   returnExpedition,
   victoryChance,
@@ -317,7 +318,7 @@ function renderResult(scene: Runtime, root: Phaser.GameObjects.Container): void 
 
   panel(scene, root, 665, 225, 240, 310, 0x151313, 0xd3a657, 0.96, 15);
   label(scene, root, 665, 105, tr(scene.lang ?? "en", "戦果", "Results"), 11, "#dcb977", "900");
-  label(scene, root, 665, 151, `${run.loot} ${tr(scene.lang ?? "en", "銭", "Coins")}`, 30, "#f4cb7f", "900");
+  label(scene, root, 665, 151, `${expeditionReward(run)} ${tr(scene.lang ?? "en", "持帰り銭", "Coins Secured")}`, 30, "#f4cb7f", "900");
   label(scene, root, 665, 198, run.status === "clear" ? tr(scene.lang ?? "en", "Rare装備 +1", "Rare Gear +1") : run.status !== "defeat" && run.step >= 3 ? tr(scene.lang ?? "en", "Common装備 +1", "Common Gear +1") : tr(scene.lang ?? "en", "装備報酬なし", "No Gear Reward"), 12, "#f1dfc0", "800");
   label(scene, root, 665, 234, `${tr(scene.lang ?? "en", "功績", "Merit")} +${scene.earnedMerit ?? 0}`, 16, "#9cdbc3", "900");
   button(scene, root, 665, 298, 205, 54, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => {

@@ -406,6 +406,9 @@ test.describe("phone visual QA", () => {
       return { health: boss.state.health, distance: boss.sprite.x - player.x };
     });
 
+    // Let Phaser publish the injected physics positions before the real key
+    // event; otherwise the first frame can still use the pre-injection bodies.
+    await page.waitForTimeout(50);
     await page.keyboard.down("x");
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -648,4 +651,20 @@ test("wave tactics explain how the selected stance should fight", async ({ page 
   expect(drawAdvice.length).toBeGreaterThan(10);
   expect(chainAdvice).not.toBe(drawAdvice);
   await page.screenshot({ path: "e2e/screenshots/phone-wave-tactic.png", animations: "disabled" });
+});
+
+test("battle HUD reports the live wave without a false level or wave cap", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?visualqa=battle&lang=en");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+  const labels = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container;
+    return root.list.filter(node => node.type === "Text").map(node => (node as Phaser.GameObjects.Text).text);
+  });
+  expect(labels.some(label => /^HP \d+\/\d+$/.test(label))).toBe(true);
+  expect(labels.some(label => /^WAVE \d+$/.test(label))).toBe(true);
+  expect(labels.join(" ")).not.toMatch(/LV\.28|WAVE \d+\/3/);
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/side-live-hud-390x844.png", animations: "disabled" });
 });

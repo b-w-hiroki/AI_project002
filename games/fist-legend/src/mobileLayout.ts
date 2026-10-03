@@ -62,6 +62,8 @@ type MobileUi = {
   root: Phaser.GameObjects.Container;
   chrome: Phaser.GameObjects.Graphics;
   titleGroup: Phaser.GameObjects.Container;
+  title: Phaser.GameObjects.Text;
+  subtitle: Phaser.GameObjects.Text;
   battleGroup: Phaser.GameObjects.Container;
   resultGroup: Phaser.GameObjects.Container;
   titleStatus: Phaser.GameObjects.Text;
@@ -190,7 +192,7 @@ function buildUi(scene: Runtime): MobileUi {
       x,
       507,
       92,
-      34,
+      44,
       fighterName(lang, fighter.id),
       fighter.id === "ryuga" ? 0x6d3f2f : fighter.accent,
       () => scene.toggleTeamMember?.(fighter.id),
@@ -254,6 +256,8 @@ function buildUi(scene: Runtime): MobileUi {
     root,
     chrome,
     titleGroup,
+    title,
+    subtitle,
     battleGroup,
     resultGroup,
     titleStatus,
@@ -406,15 +410,27 @@ function refresh(scene: Runtime): void {
       b.setAlpha(fighter && team.includes(fighter.id) ? 1 : 0.42);
     });
     if (portrait) {
+      ui.title.setPosition(225, 118).setFontSize(38);
+      ui.subtitle.setPosition(225, 170).setFontSize(16);
       (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(82, 565 + extra * 0.69);
       (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(225, 565 + extra * 0.69);
       (ui.titleGroup.getByName("title-story") as Phaser.GameObjects.Container | null)?.setPosition(368, 565 + extra * 0.69);
       (ui.titleGroup.getByName("title-gacha") as Phaser.GameObjects.Container | null)?.setPosition(225, 630 + extra * 0.84);
     }
     if (!portrait) {
-      // 横持ちは既存タイトルを活かし、モバイル専用タイトル面を隠す。
-      ui.titleGroup.setVisible(false);
-      ui.chrome.clear();
+      // Keep the complete title flow reachable after rotating a phone. The
+      // legacy 800x600 title is clipped by the 800x450 landscape surface.
+      ui.title.setPosition(220, 56).setFontSize(32);
+      ui.subtitle.setPosition(220, 104).setFontSize(14);
+      ui.titleStatus.setPosition(610, 48);
+      ui.opponentButtons.forEach((button, index) => button.setPosition(610, 105 + index * 54));
+      ui.titleHint.setPosition(610, 276);
+      ui.teamText.setPosition(220, 188);
+      ui.teamButtons.forEach((button, index) => button.setPosition(52 + index * 112, 230));
+      (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(120, 322);
+      (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(260, 322);
+      (ui.titleGroup.getByName("title-story") as Phaser.GameObjects.Container | null)?.setPosition(400, 322);
+      (ui.titleGroup.getByName("title-gacha") as Phaser.GameObjects.Container | null)?.setPosition(620, 354);
     }
     return;
   }

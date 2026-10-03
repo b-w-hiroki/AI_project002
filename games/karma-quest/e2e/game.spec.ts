@@ -1196,3 +1196,22 @@ test("final chronicle changes replay prompt for different choice strategies", as
   expect(selectivePrompt).toMatch(/次の旅|NEXT RUN/);
   expect(supportPrompt).not.toBe(selectivePrompt);
 });
+
+test("unavailable home routes do not advertise an active hand cursor", async ({ page }) => {
+  const readCursor = (name: string) => page.evaluate(target => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let cursor: string | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (node.name === target) cursor = node.input?.cursor;
+      if (node.type === "Container") (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return cursor ?? "";
+  }, name);
+
+  await expect.poll(() => readCursor("home-nav:1")).toBe("pointer");
+  await expect.poll(() => readCursor("home-nav:4")).not.toBe("pointer");
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => readCursor("home-nav-wide:ワールド")).toBe("pointer");
+  await expect.poll(() => readCursor("home-nav-wide:ショップ")).not.toBe("pointer");
+});
