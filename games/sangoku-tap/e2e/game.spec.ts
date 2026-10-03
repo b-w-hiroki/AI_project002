@@ -135,6 +135,38 @@ async function checkFrame(page: Page, name: string) {
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
 }
 
+test("landscape home reaches formation and battle without a rotation blocker", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.locator(".orientation-notice")).toHaveCount(0);
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  const home = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("sangoku-landscape-home") as Phaser.GameObjects.Container | null;
+    const sizes = (root?.list ?? [])
+      .filter(node => node.type === "Text")
+      .map(node => Number.parseFloat(String((node as Phaser.GameObjects.Text).style.fontSize)));
+    return { exists: !!root?.visible, minimum: Math.min(...sizes) };
+  });
+  expect(home).toEqual({ exists: true, minimum: 17 });
+  await checkFrame(page, "landscape-home");
+
+  await tapPoint(page, 628, 298);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container | undefined;
+    return !!root && !root.visible;
+  })).toBe(true);
+  await tapPoint(page, 615, 389);
+  await expect.poll(() => expeditionView(page)).toBe("formation");
+  await tapPoint(page, 665, 368);
+  await expect.poll(() => expeditionView(page)).toBe("camp");
+  await tapPoint(page, 710, 389);
+  await expect.poll(() => expeditionView(page)).toBe("road");
+  await checkFrame(page, "landscape-home-to-battle");
+});
+
 test("touch opens campaign and starts an expedition after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
   await tapPoint(page, 225, 635);

@@ -23,6 +23,12 @@ type MethodTable = Record<string, SceneMethod | undefined>;
 type Troop = { ids: string[]; power: number; hp: number };
 type Runtime = Phaser.Scene & {
   root?: Phaser.GameObjects.Container;
+  phase?: "title" | "quest" | "gacha" | "breeding" | "roster";
+  titleGroup?: Phaser.GameObjects.Container;
+  questGroup?: Phaser.GameObjects.Container;
+  gachaGroup?: Phaser.GameObjects.Container;
+  breedingGroup?: Phaser.GameObjects.Container;
+  rosterGroup?: Phaser.GameObjects.Container;
   view?: "camp" | "formation" | "road" | "result";
   campaign?: Campaign;
   selectedRegion?: RegionId;
@@ -54,9 +60,10 @@ function invoke(scene: Runtime, key: string, ...args: unknown[]): unknown {
 }
 
 function label(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: number, y: number, value: string, size = 14, color = "#fff0d4", weight = "800"): Phaser.GameObjects.Text {
+  const readableSize = Math.max(size, 17);
   const t = scene.add.text(x, y, value, {
     fontFamily: '"Yu Mincho", "Hiragino Mincho ProN", serif',
-    fontSize: `${size}px`,
+    fontSize: `${readableSize}px`,
     fontStyle: weight,
     color,
     align: "center",
@@ -93,7 +100,7 @@ function button(scene: Runtime, root: Phaser.GameObjects.Container, x: number, y
   };
   paint();
   root.add(g);
-  label(scene, root, x, y, value, h >= 54 ? 15 : 12, enabled ? "#fff2d4" : "#8e8580", "900");
+  label(scene, root, x, y, value, 19, enabled ? "#fff2d4" : "#8e8580", "900");
   const hit = scene.add.zone(x, y, w, Math.max(48, h)).setInteractive({ useHandCursor: enabled });
   root.add(hit);
   hit.on("pointerdown", () => { if (enabled) { paint(true); action(); } });
@@ -372,6 +379,113 @@ function bindExpeditionOrientation(scene: Runtime): void {
   });
 }
 
+function fitLandscapeCanvas(scene: Phaser.Scene, layout: ViewportLayout): void {
+  const target = { width: 800, height: 450 };
+  if (scene.scale.gameSize.width !== target.width || scene.scale.gameSize.height !== target.height) {
+    scene.scale.resize(target.width, target.height);
+  }
+  const availableWidth = Math.max(1, layout.contentWidth - 18);
+  const availableHeight = Math.max(1, layout.contentHeight - 8);
+  const fit = Math.min(availableWidth / target.width, availableHeight / target.height);
+  scene.scale.canvas.style.setProperty("width", `${Math.floor(target.width * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("height", `${Math.floor(target.height * fit)}px`, "important");
+  scene.scale.canvas.style.setProperty("margin", "0 auto", "important");
+  scene.scale.updateBounds();
+  scene.scale.displayScale.set(
+    scene.scale.baseSize.width / scene.scale.canvasBounds.width,
+    scene.scale.baseSize.height / scene.scale.canvasBounds.height,
+  );
+}
+
+function managementGroups(scene: Runtime): Phaser.GameObjects.Container[] {
+  return [scene.titleGroup, scene.questGroup, scene.gachaGroup, scene.breedingGroup, scene.rosterGroup]
+    .filter((group): group is Phaser.GameObjects.Container => !!group);
+}
+
+function restoreManagementPhase(scene: Runtime): void {
+  const method = scene.phase === "quest"
+    ? "showQuest"
+    : scene.phase === "gacha"
+      ? "showGacha"
+      : scene.phase === "breeding"
+        ? "showBreeding"
+        : scene.phase === "roster"
+          ? "showRoster"
+          : "showTitle";
+  invoke(scene, method);
+}
+
+function renderLandscapeHome(scene: Runtime, root: Phaser.GameObjects.Container): void {
+  background(scene, root, 0xe2b27a);
+  header(
+    scene,
+    root,
+    tr(scene.lang ?? "en", "三国ポチポチ", "Sangoku Tap"),
+    tr(scene.lang ?? "en", "本陣から編成し、戦略地図へ進軍する", "Form your army at base, then advance on the strategy map"),
+  );
+
+  panel(scene, root, 236, 258, 430, 344, 0x21140f, 0xc89855, 0.72, 18);
+  if (scene.textures.exists("st-generated-capital-bg")) {
+    root.add(scene.add.image(236, 258, "st-generated-capital-bg").setDisplaySize(412, 326).setAlpha(0.72));
+  }
+  if (scene.textures.exists("st-generated-hero")) {
+    root.add(scene.add.image(218, 275, "st-generated-hero").setDisplaySize(190, 350));
+  } else if (scene.textures.exists("st-general-hakuen")) {
+    root.add(scene.add.image(218, 275, "st-general-hakuen").setDisplaySize(190, 300));
+  }
+  label(scene, root, 350, 142, tr(scene.lang ?? "en", "主公の本陣", "LORD'S BASE"), 28, "#fff1c8", "900").setStroke("#5d1d15", 5);
+  label(scene, root, 350, 181, tr(scene.lang ?? "en", "武将を率いて天下統一へ", "Lead your generals toward unification"), 17, "#f6d69d", "800");
+
+  panel(scene, root, 628, 244, 300, 330, 0x15100f, 0xd3a657, 0.96, 18);
+  label(scene, root, 628, 103, tr(scene.lang ?? "en", "出撃準備", "READY TO DEPLOY"), 27, "#fff0d1", "900");
+  label(scene, root, 628, 151, `${tr(scene.lang ?? "en", "銭", "Coins")} ${loadCurrency()}`, 21, "#f4cb7f", "900");
+  label(scene, root, 628, 188, `${tr(scene.lang ?? "en", "最高進軍", "Best March")} ${loadBestDistance()}`, 17, "#e8d6b8", "800");
+  label(scene, root, 628, 230, tr(scene.lang ?? "en", "地図で武将編成 → 出撃", "On the map: form squad → sortie"), 17, "#e8d6b8", "800");
+  button(scene, root, 628, 298, 252, 68, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => {
+    scene.scene.start("ExpeditionScene");
+  }, true, 0xa72f22);
+  label(scene, root, 628, 365, tr(scene.lang ?? "en", "編成・戦闘も横画面対応", "Formation & battle stay landscape"), 17, "#f2cf98", "800");
+}
+
+function renderGameLandscape(scene: Runtime): void {
+  destroyMobile(scene);
+  const layout = getResponsiveLayout(scene as never);
+  if (!layout || layout.isPortrait) {
+    if (scene.scale.gameSize.width !== 450 || scene.scale.gameSize.height !== 800) {
+      scene.scale.resize(450, 800);
+    }
+    restoreManagementPhase(scene);
+    return;
+  }
+
+  managementGroups(scene).forEach(group => group.setVisible(false));
+  fitLandscapeCanvas(scene, layout);
+  const root = scene.add.container(0, 0).setDepth(5000).setName("sangoku-landscape-home");
+  mobileRoots.set(scene, root);
+  if (scene.phase === "title") {
+    renderLandscapeHome(scene, root);
+    return;
+  }
+
+  background(scene, root);
+  panel(scene, root, 400, 225, 560, 250, 0x15100f, 0xd3a657, 0.97, 18);
+  label(scene, root, 400, 170, tr(scene.lang ?? "en", "管理画面は縦向き表示です", "Management screens use portrait layout"), 27, "#fff0d1", "900");
+  label(scene, root, 400, 220, tr(scene.lang ?? "en", "戦略地図・編成・戦闘は横画面で操作できます", "Strategy map, formation, and battle are playable in landscape"), 17, "#e8d6b8", "800");
+  button(scene, root, 400, 292, 260, 62, tr(scene.lang ?? "en", "本陣へ戻る", "Return to Base"), () => {
+    invoke(scene, "showTitle");
+    renderGameLandscape(scene);
+  });
+}
+
+function bindGameOrientation(scene: Runtime): void {
+  if (boundScenes.has(scene)) return;
+  boundScenes.add(scene);
+  bindResponsiveScene(scene as never, (layout: ViewportLayout) => {
+    if (!layout.isPortrait) fitLandscapeCanvas(scene, layout);
+    renderGameLandscape(scene);
+  });
+}
+
 export function installSangokuMobileLayout(): void {
   const expeditionProto = ExpeditionScene.prototype as unknown as MethodTable;
   const originalCreate = expeditionProto.create;
@@ -393,16 +507,14 @@ export function installSangokuMobileLayout(): void {
     };
   }
 
-  // Management screens remain portrait-first so gacha/equipment flows stay intact.
   const gameProto = GameScene.prototype as unknown as MethodTable;
   const gameCreate = gameProto.create;
   if (gameCreate && !gameProto.__mobileCreate) {
     gameProto.__mobileCreate = gameCreate;
     gameProto.create = function (this: Phaser.Scene, ...args: unknown[]): unknown {
-      if (this.scale.gameSize.width !== 450 || this.scale.gameSize.height !== 800) {
-        this.scale.resize(450, 800);
-      }
-      return gameCreate.apply(this, args);
+      const result = gameCreate.apply(this, args);
+      bindGameOrientation(this as Runtime);
+      return result;
     };
   }
 }

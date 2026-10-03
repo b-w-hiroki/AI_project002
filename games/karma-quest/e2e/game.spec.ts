@@ -269,6 +269,27 @@ test("compact phones keep the primary choice readable and tappable", async ({ pa
   await expect.poll(() => phase(page)).not.toBe("karma");
 });
 
+test("portrait navigation remains at least 14 physical pixels at 375px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  const result = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const home = scene.children.list
+      .find(node => node.type === "Container" && node.visible
+        && !!(node as Phaser.GameObjects.Container).getByName("home-nav:0")) as Phaser.GameObjects.Container;
+    const labels = home.list
+      .filter(node => node.type === "Text")
+      .map(node => node as Phaser.GameObjects.Text)
+      .filter(node => node.visible && ((node.y >= 735) || (node.x < 80 && node.y >= 230 && node.y <= 590)));
+    const canvas = window.__qaGame.canvas;
+    const scale = canvas.getBoundingClientRect().width / canvas.width;
+    const entries = labels.map(node => ({ text: node.text, size: Number.parseFloat(String(node.style.fontSize)) * scale }));
+    return { count: entries.length, minimum: Math.min(...entries.map(entry => entry.size)), entries };
+  });
+  expect(result.count).toBeGreaterThanOrEqual(10);
+  expect(result.minimum, JSON.stringify(result.entries)).toBeGreaterThanOrEqual(14);
+});
+
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
   const box = (await canvas.boundingBox())!;
