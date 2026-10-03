@@ -503,13 +503,21 @@ test.describe("phone visual QA", () => {
       bossBody.setAllowGravity(false).setVelocity(0, 0);
       playerBody.moves = false;
       bossBody.moves = false;
+      playerBody.updateFromGameObject();
+      bossBody.updateFromGameObject();
       return { health: boss.state.health, distance: boss.sprite.x - player.x };
     });
 
-    // Let Phaser publish the injected physics positions before the real key
-    // event; otherwise the first frame can still use the pre-injection bodies.
+    // Drive the same Phaser key object and attack handler in one browser task.
+    // WebKit/Linux can otherwise consume JustDown during the frame between the
+    // synthetic setup and the keyboard event, making this geometry test race.
     await page.waitForTimeout(50);
-    await page.keyboard.down("x");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
+      attackKey.onDown(new KeyboardEvent("keydown", { key: "x", code: "KeyX" }));
+      Reflect.get(scene, "handleAttack").call(scene, scene.time.now);
+    });
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const boss = (Reflect.get(scene, "enemies") as Array<{
@@ -538,7 +546,11 @@ test.describe("phone visual QA", () => {
     expect(before.distance).toBe(90);
     expect(after.health).toBeLessThan(before.health);
     expect(after).toMatchObject({ heroPose: "hero-attack-art", slashVisible: true });
-    await page.keyboard.up("x");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
+      attackKey.onUp(new KeyboardEvent("keyup", { key: "x", code: "KeyX" }));
+    });
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-approved-boss-melee-contact-v2-800x600.png",
       animations: "disabled",
