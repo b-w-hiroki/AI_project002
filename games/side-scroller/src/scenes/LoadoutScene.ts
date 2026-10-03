@@ -44,7 +44,7 @@ const RARITY_COLOR_INT: Readonly<Record<string, number>> = {
 /** ソシャゲ的な★演出。SR以上だけ付ける */
 const RARITY_STARS: Readonly<Record<string, string>> = { SR: "★", SSR: "★★", UR: "★★★" };
 
-const INVENTORY_GRID = { cols: 3, cardW: 140, cardH: 56, gapX: 10, gapY: 8, startX: 20, startY: 230, maxRows: 3 };
+const INVENTORY_GRID = { cols: 3, cardW: 140, cardH: 56, gapX: 10, gapY: 8, startX: 20, startY: 190, maxRows: 3 };
 
 /**
  * アウトゲームのロードアウト画面。
@@ -79,6 +79,11 @@ export class LoadoutScene extends Phaser.Scene {
 
   create(): void {
     cg.gameplayStart();
+    // The loadout is landscape-only on touch devices. Match the battle canvas
+    // so labels do not get reduced by the old 800x600 fit at phone height.
+    if (isTouchDevice(this) && this.scale.gameSize.height !== 450) {
+      this.scale.resize(800, 450);
+    }
     this.data_ = loadLoadout(window.localStorage);
     if (this.data_.currency === 0 && this.data_.inventory.length === 0) {
       // 初回プレイ時のみ、遊び始められるよう少額の通貨を配布
@@ -88,18 +93,18 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildBackground();
 
     this.add
-      .text(400, 34, tr(this.lang, "⚔️ 剣戟の森", "⚔️ Blade Woods"), { fontSize: "26px", color: THEME.textPrimary, fontStyle: "700" })
+      .text(400, 12, tr(this.lang, "⚔️ 剣戟の森", "⚔️ Blade Woods"), { fontSize: "28px", color: THEME.textPrimary, fontStyle: "700" })
       .setOrigin(0.5, 0);
     this.add
-      .text(400, 66, tr(this.lang, "ロードアウト設定 — 所持武器を選んでスロットに設定してください", "Loadout — Choose owned weapons for each slot"), {
-        fontSize: "13px",
+      .text(400, 44, tr(this.lang, "ロードアウト設定 — 所持武器を選んでスロットに設定してください", "Loadout — Choose owned weapons for each slot"), {
+        fontSize: "17px",
         color: THEME.textMuted,
       })
       .setOrigin(0.5, 0);
 
     drawPanel(this, 68, 24, 100, 32, { radius: 8, fillColor: 0x2a2210, borderColor: 0xffcc66, borderAlpha: 0.5 });
     this.currencyText = this.add
-      .text(68, 24, "", { fontSize: "14px", color: "#ffcc66", fontStyle: "600" })
+      .text(68, 24, "", { fontSize: "17px", color: "#ffcc66", fontStyle: "600" })
       .setOrigin(0.5);
 
     this.buildSlotPanel();
@@ -108,7 +113,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildArmorPanel();
     this.buildStartButton();
     this.hintText = this.add
-      .text(400, 580, "", { fontSize: "13px", color: "#1f8a63", fontStyle: "600" })
+      .text(245, 412, "", { fontSize: "17px", color: "#4ecca3", fontStyle: "600", align: "center", wordWrap: { width: 440 } })
       .setOrigin(0.5, 0);
 
     if (isTouchDevice(this)) buildOrientationWarning(this);
@@ -123,16 +128,16 @@ export class LoadoutScene extends Phaser.Scene {
   private buildBackground(): void {
     if (this.textures.exists(ART_BG_KEY)) {
       const src = this.textures.get(ART_BG_KEY).getSourceImage();
-      const scale = Math.max(800 / src.width, 600 / src.height);
+      const scale = Math.max(800 / src.width, 450 / src.height);
       this.add
-        .image(400, 300, ART_BG_KEY)
+        .image(400, 225, ART_BG_KEY)
         .setDisplaySize(src.width * scale, src.height * scale);
-      this.add.rectangle(400, 300, 800, 600, 0x0f160e, 0.72);
+      this.add.rectangle(400, 225, 800, 450, 0x0f160e, 0.72);
       return;
     }
     const g = this.add.graphics();
     g.fillGradientStyle(0x14200f, 0x14200f, 0x0a0f08, 0x0a0f08, 1);
-    g.fillRect(0, 0, 800, 600);
+    g.fillRect(0, 0, 800, 450);
   }
 
   private persist(): void {
@@ -143,20 +148,20 @@ export class LoadoutScene extends Phaser.Scene {
     const kinds: WeaponKind[] = ["melee", "mid", "ranged"];
     kinds.forEach((kind, i) => {
       const x = 140 + i * 180;
-      const y = 130;
-      drawPanel(this, x, y, 160, 90, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
+      const y = 100;
+      drawPanel(this, x, y, 160, 70, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
       this.add
-        .text(x, y - 34, weaponLabel(this.lang, kind), { fontSize: "12px", color: THEME.textMuted, fontStyle: "600" })
+        .text(x, y - 24, weaponLabel(this.lang, kind), { fontSize: "17px", color: THEME.textMuted, fontStyle: "600" })
         .setOrigin(0.5);
       const text = this.add
-        .text(x, y, tr(this.lang, "(未設定)", "(Not Set)"), { fontSize: "13px", color: "#8a97a8", align: "center", wordWrap: { width: 150 } })
+        .text(x, y + 8, tr(this.lang, "(未設定)", "(Not Set)"), { fontSize: "18px", color: "#8a97a8", align: "center", wordWrap: { width: 150 } })
         .setOrigin(0.5);
       this.slotTexts[kind] = text;
 
       // 未設定スロットに気付きやすいよう、パネルの外周をゆっくりパルスさせるグローを重ねる
       const glow = this.add.graphics({ x, y });
       glow.lineStyle(3, KIND_ACCENT[kind], 1);
-      glow.strokeRoundedRect(-84, -49, 168, 98, 14);
+      glow.strokeRoundedRect(-84, -39, 168, 78, 14);
       this.slotGlows[kind] = glow;
       this.tweens.add({
         targets: glow,
@@ -167,19 +172,19 @@ export class LoadoutScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
 
-      const zone = this.add.zone(x, y, 160, 90).setInteractive({ useHandCursor: true });
+      const zone = this.add.zone(x, y, 160, 70).setInteractive({ useHandCursor: true });
       zone.on("pointerdown", () => this.assignSelectedToSlot(kind));
     });
   }
 
   private buildInventoryPanel(): void {
     // スロットパネル（近/中/遠距離、下端y=175）との間に隙間を空け、枠線同士が接触しないようにする
-    drawPanel(this, 245, 335, 460, 300, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    this.add.text(20, 195, tr(this.lang, "🗡️ 所持武器（タップして選択）", "🗡️ Owned Weapons (tap to select)"), { fontSize: "14px", color: THEME.textPrimary, fontStyle: "600" });
+    drawPanel(this, 245, 285, 460, 290, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
+    this.add.text(20, 150, tr(this.lang, "🗡️ 所持武器（タップして選択）", "🗡️ Owned Weapons (tap to select)"), { fontSize: "18px", color: THEME.textPrimary, fontStyle: "600" });
     // 所持武器のレアリティ内訳を積み上げバーで可視化する（実データはrefresh()で反映）
     this.rarityBar = this.add.graphics();
     // 選択中の武器の詳細ステータスをここにまとめて表示する（カード自体は名前とレアリティのみのスッキリ表示にする）
-    this.inventoryDetailText = this.add.text(20, 458, "", { fontSize: "11px", color: "#4a5a72" });
+    this.inventoryDetailText = this.add.text(20, 390, "", { fontSize: "17px", color: "#b9c7d8", wordWrap: { width: 440 } });
   }
 
   /** 所持武器のレアリティ別内訳を積み上げバーとして描画する */
@@ -188,7 +193,7 @@ export class LoadoutScene extends Phaser.Scene {
     const counts = order.map((r) => this.data_.inventory.filter((w) => w.rarity === r).length);
     const total = counts.reduce((a, b) => a + b, 0);
     const x0 = 20;
-    const y = 218;
+    const y = 175;
     const w = 440;
     const h = 6;
     this.rarityBar.clear();
@@ -207,8 +212,8 @@ export class LoadoutScene extends Phaser.Scene {
 
   private buildAcquirePanel(): void {
     // ボタンがゾーンパネルの外にはみ出さないよう、パネル上端(180)から十分な余白を確保する
-    drawPanel(this, 640, 270, 300, 180, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    const chestBtn = makeButton(this, 610, 200, 200, 30, tr(this.lang, "🎁 宝箱を開ける (100)", "🎁 Open Chest (100)"), () => {
+    drawPanel(this, 640, 178, 300, 190, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
+    const chestBtn = makeButton(this, 640, 105, 260, 40, tr(this.lang, "🎁 宝箱を開ける (100)", "🎁 Open Chest (100)"), () => {
       if (this.data_.currency < 100) {
         this.setHint(tr(this.lang, "通貨が足りません", "Not enough currency"));
         return;
@@ -222,16 +227,16 @@ export class LoadoutScene extends Phaser.Scene {
       this.persist();
       this.setHint(`${weaponName(this.lang, instance.templateId, findTemplate(instance.templateId)?.name)} (${instance.rarity}) ${tr(this.lang, "を入手した！", "obtained!")}`);
       this.refresh();
-    }, { fillColor: 0x2a3a2f, borderColor: 0x4ecca3, textColor: "#4ecca3", fontSize: "13px", radius: 8 });
+    }, { fillColor: 0x2a3a2f, borderColor: 0x4ecca3, textColor: "#4ecca3", fontSize: "19px", radius: 8 });
     chestBtn.container.setDepth(1);
 
-    let y = 231;
+    let y = 138;
     for (const template of WEAPON_TEMPLATES) {
       const cost = BLACKSMITH_COST.N;
-      this.add.text(500, y, `🔨 ${weaponName(this.lang, template.id, template.name)} ${tr(this.lang, "を鍛治", "Forge")} (${cost})`, { fontSize: "12px", color: "#e0447a" });
+      this.add.text(500, y, `🔨 ${weaponName(this.lang, template.id, template.name)} ${tr(this.lang, "を鍛治", "Forge")} (${cost})`, { fontSize: "17px", color: "#ff7daa" });
       // 密なリスト（行間20px）のため高さは行間ぎりぎりまで、横幅は右端まで広げて妥協する
-      makeTappable(this, 640, y + 6, 300, 18, () => this.craft(template.id));
-      y += 20;
+      makeTappable(this, 640, y + 8, 300, 24, () => this.craft(template.id));
+      y += 25;
     }
   }
 
@@ -240,18 +245,18 @@ export class LoadoutScene extends Phaser.Scene {
    * 選択のたびにコストを支払い、選んだTierの耐久でステージに出撃する。
    */
   private buildArmorPanel(): void {
-    drawPanel(this, 640, 448, 300, 130, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    this.add.text(500, 390, tr(this.lang, "🛡️ 防具を選択（出撃ごとに購入）", "🛡️ Choose Armor (purchased per run)"), { fontSize: "13px", color: THEME.textPrimary, fontStyle: "600" });
-    let y = 413;
+    drawPanel(this, 640, 326, 300, 116, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
+    this.add.text(500, 278, tr(this.lang, "🛡️ 防具を選択（出撃ごとに購入）", "🛡️ Choose Armor (purchased per run)"), { fontSize: "17px", color: THEME.textPrimary, fontStyle: "600" });
+    let y = 298;
     for (const armor of ARMOR_TEMPLATES) {
       const label =
         armor.id === "none"
           ? tr(this.lang, "なし（耐久0）", "None (Durability 0)")
           : `${armorName(this.lang, armor.id, armor.name)} (${tr(this.lang, "耐久", "Durability")} ${armor.maxDurability}) (${armor.cost})`;
-      const text = this.add.text(500, y, label, { fontSize: "12px", color: "#2f8fd1" });
-      makeTappable(this, 640, y + 6, 300, 18, () => this.selectArmor(armor.id));
+      const text = this.add.text(500, y, label, { fontSize: "17px", color: "#7fd1ff" });
+      makeTappable(this, 640, y + 8, 300, 24, () => this.selectArmor(armor.id));
       this.armorTexts.push({ id: armor.id, label, text });
-      y += 20;
+      y += 24;
     }
   }
 
@@ -293,9 +298,9 @@ export class LoadoutScene extends Phaser.Scene {
   private buildStartButton(): void {
     makeButton(
       this,
-      400,
-      545,
-      240,
+      640,
+      424,
+      280,
       52,
       tr(this.lang, "▶ ステージ開始", "▶ Start Run"),
       () => {
@@ -306,7 +311,7 @@ export class LoadoutScene extends Phaser.Scene {
           selectedArmorId: this.data_.selectedArmorId,
         });
       },
-      { radius: 26, fillColor: 0x3a9d78, hoverColor: 0x4ecca3, textColor: "#0a0a12", fontSize: "18px" },
+      { radius: 26, fillColor: 0x3a9d78, hoverColor: 0x4ecca3, textColor: "#0a0a12", fontSize: "20px" },
     );
   }
 
@@ -399,14 +404,14 @@ export class LoadoutScene extends Phaser.Scene {
       const star = RARITY_STARS[instance.rarity] ?? "";
       const nameText = this.add
         .text(x - cardW / 2 + 42, y - 14, template?.name ?? "?", {
-          fontSize: "12px",
+          fontSize: "17px",
           color: THEME.textPrimary,
           fontStyle: "600",
         })
         .setOrigin(0, 0.5);
       const rarityText = this.add
         .text(x - cardW / 2 + 42, y + 8, `[${instance.rarity}]${star ? ` ${star}` : ""}`, {
-          fontSize: "11px",
+          fontSize: "17px",
           color: RARITY_COLOR[instance.rarity] ?? "#8a97a8",
           fontStyle: "600",
         })
@@ -422,7 +427,7 @@ export class LoadoutScene extends Phaser.Scene {
     const overflow = this.data_.inventory.length - visible.length;
     if (overflow > 0) {
       const text = this.add.text(20, startY + maxRows * (cardH + gapY) - gapY + 4, `${tr(this.lang, "他", "Other")} ${overflow}`, {
-        fontSize: "11px",
+        fontSize: "17px",
         color: "#8a97a8",
       });
       this.inventoryTexts.push(text);
@@ -430,7 +435,7 @@ export class LoadoutScene extends Phaser.Scene {
 
     if (this.data_.inventory.length === 0) {
       const text = this.add.text(20, startY, tr(this.lang, "（所持武器なし。宝箱か鍛治で入手してください）", "(No weapons owned. Open a chest or forge one.)"), {
-        fontSize: "12px",
+        fontSize: "17px",
         color: "#62628a",
       });
       this.inventoryTexts.push(text);
