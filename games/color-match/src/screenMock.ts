@@ -102,10 +102,22 @@ function button(
 }
 
 function background(scene: Phaser.Scene, parent: Phaser.GameObjects.Container): void {
+  if (scene.textures.exists("cm-bg-fantasy-portrait")) {
+    parent.add(scene.add.image(225, 400, "cm-bg-fantasy-portrait").setDisplaySize(450, 800));
+  }
   const g = scene.add.graphics();
-  g.fillGradientStyle(0x168fdf, 0x35b9ef, 0xd8f8ff, 0x79cf9a, 1).fillRect(0, 0, 450, 800);
-  g.fillStyle(0xffffff, 0.45).fillCircle(50, 115, 70).fillCircle(390, 165, 95);
-  g.fillStyle(0x4fac72, 0.8).fillCircle(40, 760, 125).fillCircle(390, 755, 145);
+  if (!scene.textures.exists("cm-bg-fantasy-portrait")) {
+    g.fillGradientStyle(0x168fdf, 0x35b9ef, 0xd8f8ff, 0x79cf9a, 1).fillRect(0, 0, 450, 800);
+    g.fillStyle(0xffffff, 0.45).fillCircle(50, 115, 70).fillCircle(390, 165, 95);
+    g.fillStyle(0x4fac72, 0.8).fillCircle(40, 760, 125).fillCircle(390, 755, 145);
+  }
+  g.fillGradientStyle(0x0b2852, 0x164a82, 0x164a82, 0x071b39, 0.34, 0.08, 0.02, 0.38).fillRect(0, 0, 450, 800);
+  g.fillStyle(0xffffff, 0.16);
+  [[38, 154, 5], [405, 202, 7], [66, 344, 4], [385, 478, 5], [52, 604, 6], [405, 666, 4]].forEach(([x, y, r]) => {
+    g.fillCircle(x!, y!, r!);
+  });
+  g.lineStyle(3, 0xffd76f, 0.72).strokeRoundedRect(8, 8, 434, 784, 24);
+  g.lineStyle(1, 0xffffff, 0.38).strokeRoundedRect(13, 13, 424, 774, 20);
   parent.add(g);
 }
 
@@ -152,10 +164,18 @@ function build(scene: Runtime): MockUi {
 
   const resultHeading = label(scene, result, 225, 76, "チャレンジ結果", 27).setStroke("#2259b0", 6);
   panel(scene, result, 225, 350, 370, 430);
+  const resultOrnaments = scene.add.graphics();
+  resultOrnaments.fillStyle(0xffd86f, 0.96);
+  resultOrnaments.fillTriangle(55, 154, 72, 154, 55, 171).fillTriangle(395, 154, 378, 154, 395, 171);
+  resultOrnaments.fillTriangle(55, 546, 72, 546, 55, 529).fillTriangle(395, 546, 378, 546, 395, 529);
+  resultOrnaments.lineStyle(2, 0xffe89a, 0.72).lineBetween(88, 154, 362, 154).lineBetween(88, 546, 362, 546);
+  resultOrnaments.fillStyle(0xfff7df, 0.96).fillRoundedRect(66, 508, 318, 58, 13);
+  resultOrnaments.lineStyle(2, 0xe1b855, 0.9).strokeRoundedRect(66, 508, 318, 58, 13);
+  result.add(resultOrnaments);
   const score = label(scene, result, 225, 178, "得点 0", 42, "#ffe46c");
   if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 285, "cm-mascot").setDisplaySize(164, 164));
   const stats = label(scene, result, 225, 424, "", 20, "#ffffff");
-  const nextGoal = label(scene, result, 225, 540, "", 17, "#d9f4ff").setName("result-next-focus");
+  const nextGoal = label(scene, result, 225, 537, "", 16, "#173b63").setName("result-next-focus");
   const resultPrimaryLabel = button(
     scene,
     result,
