@@ -21,6 +21,9 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => phase(page), {
+    message: "GameScene should finish creating before tests call scene methods",
+  }).toBe("title");
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 

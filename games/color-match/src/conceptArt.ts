@@ -128,6 +128,19 @@ function makeSky(scene: Phaser.Scene, root: Phaser.GameObjects.Container): void 
     g.fillStyle([0xffe36c,0xff93c8,0x9aebff,0xb4f79b][i % 4]!, 0.72).fillCircle(x!, y!, 7);
   });
   root.add(g);
+
+  const ambience = scene.add.graphics();
+  ambience.fillStyle(0xffffff, 0.22);
+  [[24,352,5],[421,326,4],[46,514,7],[404,532,6],[74,706,5],[385,714,7]].forEach(([x,y,r]) => {
+    ambience.fillCircle(x!, y!, r!);
+  });
+  ambience.fillStyle(0xfff1a8, 0.2);
+  [[28,405,13],[420,390,15],[34,622,11],[414,640,13]].forEach(([x,y,r]) => {
+    ambience.fillCircle(x!, y!, r!);
+  });
+  ambience.lineStyle(3, 0xffd96f, 0.58).strokeRoundedRect(7, 7, 436, 786, 23);
+  ambience.lineStyle(1, 0xffffff, 0.35).strokeRoundedRect(12, 12, 426, 776, 19);
+  root.add(ambience);
 }
 
 function build(scene: Runtime): ArcadeUi {
@@ -178,6 +191,12 @@ function build(scene: Runtime): ArcadeUi {
   const approvedRuleText = text(scene, root, 292, 150, "", 18, "#ffffff", "900");
   text(scene, root, 292, 177, "Tap the correct color!", 10, "#d7f2ff", "800");
   panel(scene, root, 225, 287, 330, 126, 0xfffbec, 0xf4c85f, 0.99, 20);
+  const promptOrnaments = scene.add.graphics();
+  promptOrnaments.lineStyle(2, 0xd6a33b, 0.85).strokeRoundedRect(67, 232, 316, 110, 17);
+  promptOrnaments.fillStyle(0xe5b649, 0.94);
+  promptOrnaments.fillTriangle(60, 224, 80, 224, 60, 244).fillTriangle(390, 224, 370, 224, 390, 244);
+  promptOrnaments.fillTriangle(60, 350, 80, 350, 60, 330).fillTriangle(390, 350, 370, 350, 390, 330);
+  root.add(promptOrnaments);
   const approvedPromptText = text(scene, root, 225, 288, "", 50, "#273d5b", "900");
   ruleText.setVisible(false);
   promptText.setVisible(false);
@@ -194,6 +213,7 @@ function build(scene: Runtime): ArcadeUi {
     const bg = scene.add.graphics();
     const paint = (pressed = false) => {
       bg.clear();
+      bg.lineStyle(12, color.hex, pressed ? 0.12 : 0.2).strokeRoundedRect(x - 92, y - 46, 184, 92, 19);
       bg.fillStyle(0x102a49, 0.34).fillRoundedRect(x - 90 + 5, y - 44 + 8, 180, 88, 17);
       bg.fillStyle(color.hex, pressed ? 0.78 : 0.96).fillRoundedRect(x - 90, y - 44, 180, 88, 17);
       bg.fillStyle(0xffffff, 0.22).fillRoundedRect(x - 83, y - 37, 166, 17, 11);
@@ -218,9 +238,9 @@ function build(scene: Runtime): ArcadeUi {
 
   let mascot: Phaser.GameObjects.Image | undefined;
   if (scene.textures.exists("cm-mascot")) {
-    mascot = scene.add.image(52, 754, "cm-mascot").setDisplaySize(72, 72);
+    mascot = scene.add.image(51, 744, "cm-mascot").setDisplaySize(88, 88);
     root.add(mascot);
-    scene.tweens.add({ targets: mascot, y: 748, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    scene.tweens.add({ targets: mascot, y: 738, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
   panel(scene, root, 270, 760, 330, 48, 0x153d68, 0x79cff7, 0.94, 14);
   const nextLabel = text(scene, root, 120, 747, "NEXT", 9, "#bdeaff", "900")
