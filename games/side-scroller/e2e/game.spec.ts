@@ -446,6 +446,11 @@ test.describe("phone visual QA", () => {
         key: "ArrowRight",
         code: "ArrowRight",
       }));
+      // Key#onUp intentionally returns early while the keyboard plugin is
+      // disabled (which can briefly happen around focus changes in WebKit).
+      // Reset the synthetic key unconditionally so this pose test cannot
+      // leave movement latched after its own injected input.
+      cursors.right.reset();
     });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
