@@ -48,6 +48,47 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("short portrait separates workshop status from the next order", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(async () => (await canvasSize(page))).toEqual({ width: 450, height: 800 });
+  await waitForSceneObjects(page, [
+    "workshop-town-status",
+    "workshop-rate-status",
+    "workshop-blackboard-text",
+    "workshop-orders-label",
+    "brew-hit-target",
+  ]);
+  const audit = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const bounds = (name: string) => {
+      const rect = (find(scene.children.list, name) as Phaser.GameObjects.Text).getBounds();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    };
+    const brew = find(scene.children.list, "brew-hit-target") as Phaser.GameObjects.Zone;
+    return {
+      blackboard: bounds("workshop-blackboard-text"),
+      rate: bounds("workshop-rate-status"),
+      town: bounds("workshop-town-status"),
+      brewHeight: brew.height,
+    };
+  });
+  const box = (await page.locator("canvas").boundingBox())!;
+  expect(audit.rate.left - audit.blackboard.right).toBeGreaterThanOrEqual(20);
+  expect(audit.town.top).toBeGreaterThanOrEqual(90);
+  expect(audit.brewHeight * box.height / 800).toBeGreaterThanOrEqual(44);
+  await page.screenshot({ path: "e2e/screenshots/mobile-workshop-flow-375x667.png", animations: "disabled" });
+});
+
 test("English locale covers responsive workshop and town choice", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);

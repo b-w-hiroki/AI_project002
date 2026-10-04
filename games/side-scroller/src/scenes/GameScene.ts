@@ -291,6 +291,7 @@ export class GameScene extends Phaser.Scene {
   private statusPanel!: Phaser.GameObjects.Graphics;
   private statusText!: Phaser.GameObjects.Text;
   private restartText!: Phaser.GameObjects.Text;
+  private restartPrompt!: Phaser.GameObjects.Container;
   private virtualControls?: Phaser.GameObjects.Container;
 
   private tipsOverlay?: Phaser.GameObjects.Container;
@@ -413,7 +414,6 @@ export class GameScene extends Phaser.Scene {
     this.buildTipsOverlay();
     this.buildSummonOverlay();
     this.buildStageBuffOverlay();
-    this.spawnWave(this.wave);
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
@@ -441,6 +441,9 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(HUD_DEPTH)
       .setName("wave-tactic");
+    // Scene instances are reused on restart. Build the new text object before
+    // spawnWave refreshes advice so it cannot address the destroyed prior one.
+    this.spawnWave(this.wave);
     this.lastStyleHit = -Infinity;
     this.chooseCombatStyle();
 
@@ -1008,7 +1011,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setScrollFactor(0);
 
-    this.statusPanel = drawPanel(this, 400, 300, 360, 140, {
+    this.statusPanel = drawPanel(this, 400, 300, 380, 180, {
       radius: 18,
       fillColor: 0xffffff,
       fillAlpha: 0.97,
@@ -1017,15 +1020,36 @@ export class GameScene extends Phaser.Scene {
       scrollFactor: 0,
     }).setVisible(false);
     this.statusText = this.add
-      .text(400, 280, "", { fontSize: "34px", color: "#2d3a52", align: "center", fontStyle: "700" })
+      .text(400, 255, "", { fontSize: "34px", color: "#2d3a52", align: "center", fontStyle: "700" })
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.restartText = this.add
-      .text(400, 325, "", { fontSize: "14px", color: "#7488a0", align: "center" })
+      .text(400, 299, "", { fontSize: "15px", color: "#52657b", align: "center", fontStyle: "600" })
       .setOrigin(0.5)
       .setScrollFactor(0);
+    const retryChrome = this.add.graphics();
+    retryChrome.fillStyle(0x17362f, 0.98).fillRoundedRect(-130, -29, 260, 58, 16);
+    retryChrome.lineStyle(3, 0xe1bf78, 0.92).strokeRoundedRect(-130, -29, 260, 58, 16);
+    retryChrome.lineStyle(1, 0xffffff, 0.26).strokeRoundedRect(-124, -23, 248, 46, 12);
+    const retryLabel = this.add
+      .text(0, 0, tr(this.lang, "もう一度挑戦", "TRY AGAIN"), {
+        fontSize: "20px",
+        color: "#fff4cf",
+        fontStyle: "700",
+      })
+      .setOrigin(0.5);
+    const retryHit = this.add.zone(0, 0, 260, 58).setInteractive({ useHandCursor: true });
+    retryHit.on("pointerdown", () => {
+      if (this.status !== "playing") this.restartKey.onDown(fakeKeyEvent(this));
+    });
+    this.restartPrompt = this.add
+      .container(400, 348, [retryChrome, retryLabel, retryHit])
+      .setSize(260, 58)
+      .setName("side-retry-action")
+      .setScrollFactor(0)
+      .setVisible(false);
     // ステータスパネル全体をタップ可能にする。表示中（gameover/cleared）以外は何もしない
-    makeTappable(this, 400, 300, 360, 140, () => {
+    makeTappable(this, 400, 300, 380, 180, () => {
       if (this.status !== "playing") this.restartKey.onDown(fakeKeyEvent(this));
     }).setScrollFactor(0);
     this.refreshHud();
@@ -2092,9 +2116,10 @@ export class GameScene extends Phaser.Scene {
       saveBestWave(window.localStorage as unknown as KVStore, this.wave);
       this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
-      this.restartText.setText(`${tr(this.lang, "到達", "Reached")}: Wave ${this.wave}  ${tr(this.lang, "ベスト", "Best")}: Wave ${this.bestWave}\n${tr(this.lang, "R キーでリトライ", "Press R to Retry")}`);
+      this.restartText.setText(`${tr(this.lang, "到達", "Reached")}: Wave ${this.wave}  ${tr(this.lang, "ベスト", "Best")}: Wave ${this.bestWave}`);
       this.virtualControls?.setVisible(false);
       this.statusPanel.setVisible(true);
+      this.restartPrompt.setVisible(true);
       (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
     }
   }

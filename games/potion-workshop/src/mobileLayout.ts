@@ -282,7 +282,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   const potionText = text(scene, root, portrait ? 438 : 545, 22, "", portrait ? 22 : 19, "#fff2cd", "900").setOrigin(1, 0.5);
   const essenceText = text(scene, root, portrait ? 330 : 665, 82, "", portrait ? 22 : 19, "#e3c4ff", "900").setOrigin(1, 0.5);
   const reputationText = text(scene, root, portrait ? 438 : 764, 82, "", portrait ? 22 : 19, "#bff0cf", "900").setOrigin(1, 0.5);
-  const townText = text(scene, root, portrait ? 225 : 694, portrait ? 106 : 25, "", portrait ? 20 : 18, "#f5dcae", "800");
+  if (portrait) panel(scene, root, 225, 108, 420, 34, 0x2b1d18, 0xd9ad58, 0.84, 10);
+  const townText = text(scene, root, portrait ? 225 : 694, portrait ? 108 : 25, "", portrait ? 18 : 18, "#f5dcae", "800")
+    .setName("workshop-town-status");
 
   const heroX = portrait ? 225 : 150;
   const heroY = portrait ? 325 : 202;
@@ -391,7 +393,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     );
   }
 
-  const rateText = text(scene, root, portrait ? 225 : 250, portrait ? 505 : 390, "", 18, "#fff1d0", "900");
+  if (portrait) panel(scene, root, 300, 498, 250, 30, 0x173f42, 0xd4b36e, 0.9, 9);
+  const rateText = text(scene, root, portrait ? 300 : 250, portrait ? 498 : 390, "", portrait ? 17 : 18, "#fff1d0", "900")
+    .setName("workshop-rate-status");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
   const productionTexts: Phaser.GameObjects.Text[] = [];
@@ -404,7 +408,9 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
 
   if (portrait) {
     panel(scene, root, 225, 562, 420, 96, 0x423124, 0xd4b36e, 0.92, 15);
-    text(scene, root, 38, 522, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900").setOrigin(0, 0.5);
+    text(scene, root, 38, 529, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900")
+      .setOrigin(0, 0.5)
+      .setName("workshop-orders-label");
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
       addButtonChrome(scene, root, x, 574, 190, 58, index === 0 ? 0x3e765d : 0x4c6e8c);
