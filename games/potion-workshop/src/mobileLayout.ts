@@ -376,25 +376,10 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     root.add(blackboardText);
     root.setData("blackboardText", blackboardText);
 
-    const speech = scene.add.graphics();
-    speech.fillStyle(0xfffbef, 0.96).fillRoundedRect(72, 126, 132, 74, 18);
-    speech.fillTriangle(176, 194, 196, 190, 187, 211);
-    speech.lineStyle(2, 0xd2a75a, 0.92).strokeRoundedRect(72, 126, 132, 74, 18);
-    root.add(speech);
-    text(
-      scene,
-      root,
-      138,
-      162,
-      lang === "ja" ? "\u4eca\u65e5\u3082\u7d20\u6575\u306a\n\u30dd\u30fc\u30b7\u30e7\u30f3\u3092!" : "Let's brew something\nwonderful today!",
-      22,
-      "#4b3528",
-      "900",
-    );
   }
 
-  if (portrait) panel(scene, root, 300, 498, 250, 30, 0x173f42, 0xd4b36e, 0.9, 9);
-  const rateText = text(scene, root, portrait ? 300 : 250, portrait ? 498 : 390, "", portrait ? 17 : 18, "#fff1d0", "900")
+  if (portrait) panel(scene, root, 300, 486, 250, 30, 0x173f42, 0xd4b36e, 0.9, 9);
+  const rateText = text(scene, root, portrait ? 300 : 250, portrait ? 486 : 390, "", portrait ? 17 : 18, "#fff1d0", "900")
     .setName("workshop-rate-status");
 
   const orderTexts: Phaser.GameObjects.Text[] = [];
@@ -407,32 +392,30 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
   root.add(prestigeBar);
 
   if (portrait) {
-    panel(scene, root, 225, 562, 420, 96, 0x423124, 0xd4b36e, 0.92, 15);
-    text(scene, root, 38, 529, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900")
+    panel(scene, root, 225, 568, 420, 96, 0x423124, 0xd4b36e, 0.92, 15);
+    text(scene, root, 38, 535, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900")
       .setOrigin(0, 0.5)
       .setName("workshop-orders-label");
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
-      addButtonChrome(scene, root, x, 574, 190, 58, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const labelNode = text(scene, root, x, 574, "", 22, "#ffffff", "900");
+      addButtonChrome(scene, root, x, 580, 190, 58, index === 0 ? 0x3e765d : 0x4c6e8c);
+      const labelNode = text(scene, root, x, 580, "", 22, "#ffffff", "900")
+        .setName(`workshop-order-${index}`);
       orderTexts.push(labelNode);
-      hitButton(scene, root, x, 574, 190, 58, () => {
+      hitButton(scene, root, x, 580, 190, 58, () => {
         if (!scene.state) return;
         updateState(scene, fulfillContract(scene.state, index));
       });
     });
 
-    panel(scene, root, 225, 655, 420, 62, 0x3c2d25, 0xd4b36e, 0.92, 14);
-    recommendationText = text(scene, root, 178, 655, "", 22, "#fff2d6", "900");
-    addButtonChrome(scene, root, 370, 655, 90, 42, 0x2e8f65);
-    text(scene, root, 370, 655, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
-    hitButton(scene, root, 370, 655, 90, 48, () => {
-      if (!scene.state) return;
-      const rec = recommended(scene.state);
-      updateState(scene, buyGenerator(scene.state, rec.id));
-    });
+    // The recommendation duplicated the upgrade/equipment tabs and forced
+    // three competing action rows into short portrait. Keep its live value for
+    // state refreshes, but disclose upgrades through the dedicated tabs.
+    recommendationText = text(scene, root, 0, 0, "", 22, "#fff2d6", "900")
+      .setName("workshop-recommendation-detail")
+      .setVisible(false);
 
-    panel(scene, root, 225, 744, 430, 78, 0x2f2927, 0x9b7d57, 0.94, 13);
+    panel(scene, root, 225, 702, 430, 78, 0x2f2927, 0x9b7d57, 0.94, 13);
     // Approved-home hierarchy: one large brew CTA plus four compact management tabs.
     // Every tab retains a real game action and a >= 44 px target.
     const navItems = [
@@ -477,10 +460,10 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       },
     ];
     navItems.forEach((item, index) => {
-      addButtonChrome(scene, root, item.x, 744, 100, 68, index === 0 ? 0x165f70 : 0x453126);
-      addNavIcon(scene, root, item.x, 732, item.kind);
-      text(scene, root, item.x, 763, lang === "ja" ? item.ja : item.en, 22, "#fff3d0", "900");
-      hitButton(scene, root, item.x, 744, 100, 68, item.action).setName(`workshop-nav-${index}`);
+      addButtonChrome(scene, root, item.x, 702, 100, 68, index === 0 ? 0x165f70 : 0x453126);
+      addNavIcon(scene, root, item.x, 690, item.kind);
+      text(scene, root, item.x, 721, lang === "ja" ? item.ja : item.en, 22, "#fff3d0", "900");
+      hitButton(scene, root, item.x, 702, 100, 68, item.action).setName(`workshop-nav-${index}`);
     });
     clickUpgradeText = text(scene, root, 171, 780, "", 1, "#f9e8c9", "900").setVisible(false);
     offlineText = text(scene, root, 280, 780, "", 1, "#d7ecff", "900").setVisible(false);
@@ -492,7 +475,8 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     [0, 1].forEach((index) => {
       const y = 132 + index * 68;
       addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const node = text(scene, root, 588, y, "", 19, "#ffffff", "900");
+      const node = text(scene, root, 588, y, "", 19, "#ffffff", "900")
+        .setName(`workshop-order-${index}`);
       orderTexts.push(node);
       hitButton(scene, root, 588, y, 340, 56, () => {
         if (!scene.state) return;
@@ -500,34 +484,32 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       });
     });
 
-    panel(scene, root, 588, 292, 388, 70, 0x3c2d25, 0xd4b36e, 0.93, 14);
-    recommendationText = text(scene, root, 535, 292, "", 18, "#fff2d6", "900");
-    addButtonChrome(scene, root, 720, 292, 90, 44, 0x2e8f65);
-    text(scene, root, 720, 292, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
-    hitButton(scene, root, 720, 292, 90, 50, () => {
+    panel(scene, root, 588, 300, 388, 70, 0x3c2d25, 0xd4b36e, 0.93, 14);
+    recommendationText = text(scene, root, 535, 300, "", 18, "#fff2d6", "900")
+      .setName("workshop-landscape-recommendation");
+    addButtonChrome(scene, root, 720, 300, 90, 44, 0x2e8f65);
+    text(scene, root, 720, 300, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
+    hitButton(scene, root, 720, 300, 90, 50, () => {
       if (!scene.state) return;
       const rec = recommended(scene.state);
       updateState(scene, buyGenerator(scene.state, rec.id));
     });
 
-    panel(scene, root, 588, 365, 388, 60, 0x2f2927, 0x9b7d57, 0.91, 13);
-    clickUpgradeText = text(scene, root, 474, 365, "", 17, "#f9e8c9", "900");
-    offlineText = text(scene, root, 590, 365, "", 17, "#d7ecff", "900");
-    prestigeText = text(scene, root, 704, 365, "", 17, "#ead5ff", "900");
-    hitButton(scene, root, 474, 365, 105, 52, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
-    hitButton(scene, root, 590, 365, 105, 52, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
-    hitButton(scene, root, 704, 365, 105, 52, () => {
+    panel(scene, root, 588, 380, 388, 60, 0x2f2927, 0x9b7d57, 0.91, 13);
+    clickUpgradeText = text(scene, root, 474, 380, "", 17, "#f9e8c9", "900")
+      .setName("workshop-landscape-management");
+    offlineText = text(scene, root, 590, 380, "", 17, "#d7ecff", "900");
+    prestigeText = text(scene, root, 704, 380, "", 17, "#ead5ff", "900");
+    hitButton(scene, root, 474, 380, 105, 52, () => scene.state && updateState(scene, buyClickUpgrades(scene.state, 1)));
+    hitButton(scene, root, 590, 380, 105, 52, () => scene.state && updateState(scene, buyOfflineExtension(scene.state)));
+    hitButton(scene, root, 704, 380, 105, 52, () => {
       if (!scene.state || essenceOnPrestige(scene.state) <= 0) return;
       const show = Reflect.get(scene, "showTownChoice");
       if (typeof show === "function") show.call(scene);
     });
 
-    panel(scene, root, 400, 426, 760, 42, 0x2f2927, 0xa8895d, 0.9, 12);
-    GENERATORS.slice(0, 6).forEach((def, i) => {
-      const x = 85 + i * 126;
-      const p = text(scene, root, x, 426, "", 17, "#fff7e5", "800");
-      productionTexts.push(p);
-    });
+    // Generator counts belong to equipment detail. Keeping six tiny labels on
+    // the main landscape surface made every action row compete for attention.
   }
 
   const ui: MobileUi = {
@@ -618,7 +600,7 @@ function refresh(scene: Runtime): void {
   const ratio = Phaser.Math.Clamp(state.totalBrewed / PRESTIGE_UNLOCK, 0, 1);
   const width = ui.orientation === "portrait" ? 105 : 95;
   const x = ui.orientation === "portrait" ? 365 : 704;
-  const y = ui.orientation === "portrait" ? 746 : 393;
+  const y = ui.orientation === "portrait" ? 704 : 408;
   ui.prestigeBar.fillStyle(0x4b3d57, 0.8).fillRoundedRect(x - width / 2, y, width, 5, 3);
   ui.prestigeBar.fillStyle(0xb77de6, 1).fillRoundedRect(x - width / 2, y, width * ratio, 5, 3);
 

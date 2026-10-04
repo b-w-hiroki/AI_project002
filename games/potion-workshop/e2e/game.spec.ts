@@ -56,6 +56,8 @@ test("short portrait separates workshop status from the next order", async ({ pa
     "workshop-rate-status",
     "workshop-blackboard-text",
     "workshop-orders-label",
+    "workshop-recommendation-detail",
+    "workshop-nav-0",
     "brew-hit-target",
   ]);
   const audit = await page.evaluate(() => {
@@ -79,11 +81,17 @@ test("short portrait separates workshop status from the next order", async ({ pa
       blackboard: bounds("workshop-blackboard-text"),
       rate: bounds("workshop-rate-status"),
       town: bounds("workshop-town-status"),
+      orders: bounds("workshop-orders-label"),
+      recommendationVisible: (find(scene.children.list, "workshop-recommendation-detail") as Phaser.GameObjects.Text).visible,
+      nav: bounds("workshop-nav-0"),
       brewHeight: brew.height,
     };
   });
   const box = (await page.locator("canvas").boundingBox())!;
   expect(audit.rate.left - audit.blackboard.right).toBeGreaterThanOrEqual(20);
+  expect(audit.orders.top - audit.rate.bottom).toBeGreaterThanOrEqual(20);
+  expect(audit.recommendationVisible).toBe(false);
+  expect(audit.nav.top - audit.orders.bottom).toBeGreaterThanOrEqual(80);
   expect(audit.town.top).toBeGreaterThanOrEqual(90);
   expect(audit.brewHeight * box.height / 800).toBeGreaterThanOrEqual(44);
   await page.screenshot({ path: "e2e/screenshots/mobile-workshop-flow-375x667.png", animations: "disabled" });
@@ -115,7 +123,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(responsiveLabels.labels).toContain("TAP TO BREW");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
   expect(responsiveLabels.labels).toContain("UPGRADE");
-  expect(responsiveLabels.labels).toContain("Let's brew something\nwonderful today!");
+  expect(responsiveLabels.labels).not.toContain("Let's brew something\nwonderful today!");
 
   const modalLabels = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
@@ -344,6 +352,41 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(async () => (await canvasSize(page)).width).toBe(800);
+  await waitForSceneObjects(page, [
+    "workshop-order-1",
+    "workshop-landscape-recommendation",
+    "workshop-landscape-management",
+  ]);
+  const landscapeSpacing = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const findNamed = (
+      nodes: Phaser.GameObjects.GameObject[],
+      name: string,
+    ): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const found = findNamed((node as Phaser.GameObjects.Container).list, name);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+    const bounds = (name: string) => findNamed(scene.children.list, name)!.getBounds();
+    const order = bounds("workshop-order-1");
+    const recommendation = bounds("workshop-landscape-recommendation");
+    const management = bounds("workshop-landscape-management");
+    return {
+      orderToRecommendation: recommendation.top - order.bottom,
+      recommendationToManagement: management.top - recommendation.bottom,
+      recommendationFont: Number((findNamed(scene.children.list, "workshop-landscape-recommendation") as Phaser.GameObjects.Text).style.fontSize.replace("px", "")),
+      managementFont: Number((findNamed(scene.children.list, "workshop-landscape-management") as Phaser.GameObjects.Text).style.fontSize.replace("px", "")),
+    };
+  });
+  expect(landscapeSpacing.orderToRecommendation).toBeGreaterThanOrEqual(20);
+  expect(landscapeSpacing.recommendationToManagement).toBeGreaterThanOrEqual(20);
+  expect(landscapeSpacing.recommendationFont).toBeGreaterThanOrEqual(18);
+  expect(landscapeSpacing.managementFont).toBeGreaterThanOrEqual(17);
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-workshop.png", animations: "disabled" });
 });
 
