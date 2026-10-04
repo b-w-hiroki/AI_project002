@@ -21,6 +21,9 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => phase(page), {
+    message: "GameScene should finish creating before tests call scene methods",
+  }).toBe("title");
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
@@ -164,6 +167,53 @@ test("browser back recreates a playable scene", async ({ page }) => {
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
   await expectResponsiveCanvas(page);
+});
+
+test("landscape world art and typography stay readable", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+
+  const audit = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(node => node.type === "Container" && node.depth === 4200) as Phaser.GameObjects.Container | undefined;
+    const sizes: number[] = [];
+    let hasWorldArt = false;
+    const visit = (nodes: Phaser.GameObjects.GameObject[], parentVisible = true): void => {
+      for (const node of nodes) {
+        const visible = parentVisible && (!("visible" in node) || Boolean((node as Phaser.GameObjects.GameObject & { visible?: boolean }).visible));
+        if (!visible) continue;
+        if (node.name === "fantasy-bg:cm-bg-fantasy-landscape") hasWorldArt = true;
+        if (node.type === "Text") {
+          const fontSize = Number.parseFloat((node as Phaser.GameObjects.Text).style.fontSize.toString());
+          if (Number.isFinite(fontSize)) sizes.push(fontSize);
+        }
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, visible);
+      }
+    };
+    if (root) visit(root.list, root.visible);
+    return { hasWorldArt, minLogicalFont: Math.min(...sizes) };
+  });
+  const canvas = page.locator("canvas");
+  const box = (await canvas.boundingBox())!;
+  const logicalHeight = await canvas.evaluate(node => (node as HTMLCanvasElement).height);
+  expect(audit.hasWorldArt).toBe(true);
+  expect(audit.minLogicalFont).toBeGreaterThanOrEqual(17);
+  expect(audit.minLogicalFont * box.height / logicalHeight).toBeGreaterThanOrEqual(14);
+  await checkFrame(page, "landscape-title-layout");
+});
+
+test("short portrait keeps primary actions inside 44px safe targets", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  const canvas = page.locator("canvas");
+  const box = (await canvas.boundingBox())!;
+  const logicalHeight = await canvas.evaluate(node => (node as HTMLCanvasElement).height);
+  for (const name of ["portrait-challenge-action", "portrait-practice-action"]) {
+    const bounds = await namedBounds(page, name);
+    expect(bounds).not.toBeNull();
+    expect(bounds!.height * box.height / logicalHeight).toBeGreaterThanOrEqual(44);
+  }
+  await checkFrame(page, "short-portrait-title-layout");
 });
 
 test("English landscape marketing UI contains no Japanese", async ({ page }) => {
