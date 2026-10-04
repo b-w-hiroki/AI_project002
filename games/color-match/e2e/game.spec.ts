@@ -172,10 +172,19 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
 test("landscape world art and typography stay readable", async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(node =>
+      node.type === "Container" && node.depth === 4200 && (node as Phaser.GameObjects.Container).visible
+    ) as Phaser.GameObjects.Container | undefined;
+    return root?.list.some(node => node.name === "fantasy-bg:cm-bg-fantasy-landscape") ?? false;
+  })).toBe(true);
 
   const audit = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const root = scene.children.list.find(node => node.type === "Container" && node.depth === 4200) as Phaser.GameObjects.Container | undefined;
+    const root = scene.children.list.find(node =>
+      node.type === "Container" && node.depth === 4200 && (node as Phaser.GameObjects.Container).visible
+    ) as Phaser.GameObjects.Container | undefined;
     const sizes: number[] = [];
     let hasWorldArt = false;
     const visit = (nodes: Phaser.GameObjects.GameObject[], parentVisible = true): void => {

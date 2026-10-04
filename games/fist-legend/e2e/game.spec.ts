@@ -63,6 +63,41 @@ test("portrait phone uses the available viewport height", async ({ page }) => {
   expect(844 - (box!.y + box!.height)).toBeLessThanOrEqual(12);
 });
 
+test("short portrait separates opponent guidance and keeps primary actions touchable", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  const layout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const bounds = (name: string) => {
+      const node = find(scene.children.list, name) as Phaser.GameObjects.Container | Phaser.GameObjects.Text;
+      const rect = node.getBounds();
+      return { top: rect.top, bottom: rect.bottom, height: rect.height };
+    };
+    return {
+      opponent: bounds("title-opponent-charge"),
+      hint: bounds("title-opponent-hint"),
+      battle: bounds("title-battle"),
+      gacha: bounds("title-gacha"),
+      logicalHeight: window.__qaGame.canvas.height,
+    };
+  });
+  const box = (await page.locator("canvas").boundingBox())!;
+  expect(layout.hint.top - layout.opponent.bottom).toBeGreaterThanOrEqual(8);
+  expect(layout.battle.height * box.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.gacha.bottom).toBeLessThanOrEqual(layout.logicalHeight - 16);
+  await checkFrame(page, "short-portrait-title-flow");
+});
+
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);

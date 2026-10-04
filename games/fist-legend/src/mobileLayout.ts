@@ -132,10 +132,10 @@ function button(
   const leftStud = scene.add.circle(-width / 2 + 10, 0, 2.5, 0xffd68c, 0.82);
   const rightStud = scene.add.circle(width / 2 - 10, 0, 2.5, 0xffd68c, 0.82);
   const labelText = text(scene, 0, 0, label, height >= 56 ? 24 : 22).setStroke("#351713", 3);
-  const hit = scene.add.zone(0, 0, width, Math.max(48, height)).setInteractive({ useHandCursor: true });
+  const hit = scene.add.zone(0, 0, width, Math.max(68, height)).setInteractive({ useHandCursor: true });
   const container = scene.add
     .container(x, y, [shadow, bg, rim, shine, leftStud, rightStud, labelText, hit])
-    .setSize(width, Math.max(48, height));
+    .setSize(width, Math.max(68, height));
   const release = () => container.setScale(1);
   hit.on("pointerdown", () => { container.setScale(0.97); onTap(); });
   hit.on("pointerup", release);
@@ -170,8 +170,8 @@ function buildUi(scene: Runtime): MobileUi {
   const title = text(scene, 225, 118, tr(lang, "覇拳伝", "Fist Legend"), 38, "#ffe1a8");
   const subtitle = text(scene, 225, 170, `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}\n${tr(lang, "相手の構えを読み、一撃を通せ。", "Read the stance. Land the decisive hit.")}`, 19, "#f4d4bb");
   const titleStatus = text(scene, 225, 225, "", 20, "#d9c4ad");
-  const titleHint = text(scene, 225, 444, "", 19, "#ffe0a0");
-  const teamText = text(scene, 225, 474, "", 19, "#ffe6b5");
+  const titleHint = text(scene, 225, 444, "", 19, "#ffe0a0").setName("title-opponent-hint");
+  const teamText = text(scene, 225, 474, "", 19, "#ffe6b5").setName("title-team-summary");
   titleGroup.add([title, subtitle, titleStatus, titleHint, teamText]);
 
   const opponentButtons: Phaser.GameObjects.Container[] = [];
@@ -179,7 +179,7 @@ function buildUi(scene: Runtime): MobileUi {
     const b = button(scene, titleGroup, 225, 292 + index * 58, 330, 46, localizedOpponentName(lang, opponent.id), 0x4d2b26, () => {
       scene.opponent = opponent.id;
       titleHint.setText(opponentHint(lang, opponent.id));
-    });
+    }).setName(`title-opponent-${opponent.id}`);
     opponentButtons.push(b);
   });
 
@@ -395,27 +395,27 @@ function refresh(scene: Runtime): void {
     ui.chrome.fillStyle(0x140a08, 0.97).fillRect(0, 0, width, height);
     ui.chrome.fillStyle(0x40201a, 0.72).fillRoundedRect(18, 70, width - 36, portrait ? height - 140 : 340, 24);
     ui.titleStatus.setPosition(width / 2, portrait ? 225 : 120);
-    ui.titleHint.setPosition(width / 2, portrait ? 444 + extra * 0.34 : 324);
+    ui.titleHint.setPosition(width / 2, portrait ? 476 + extra * 0.25 : 324);
     const team = scene.selectedTeam?.length ? scene.selectedTeam : (["ryuga"] as FighterId[]);
     ui.titleStatus.setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()} · ${tr(lang, "勝利", "Wins")} ${loadWinCount()}`);
     ui.titleHint.setText(opponentHint(lang, scene.opponent ?? "rush"));
-    ui.teamText.setPosition(width / 2, portrait ? 474 + extra * 0.42 : 350).setText(`TEAM ${team.length}/3 · ${team.map(id => fighterName(lang, id)).join(" / ")} · ${tr(lang, "先頭が出場", "leader starts")}`);
+    ui.teamText.setPosition(width / 2, portrait ? 512 + extra * 0.32 : 350).setText(`TEAM ${team.length}/3 · ${team.map(id => fighterName(lang, id)).join(" / ")} · ${tr(lang, "先頭が出場", "leader starts")}`);
     ui.opponentButtons.forEach((b, index) => {
       if (portrait) b.setPosition(225, 292 + index * 58 + extra * 0.12);
       b.setAlpha(OPPONENTS[index]?.id === scene.opponent ? 1 : 0.62);
     });
     ui.teamButtons.forEach((b, index) => {
       const fighter = FIGHTERS[index];
-      if (portrait) b.setPosition(57 + index * 112, 507 + extra * 0.52);
+      if (portrait) b.setPosition(57 + index * 112, 552 + extra * 0.42);
       b.setAlpha(fighter && team.includes(fighter.id) ? 1 : 0.42);
     });
     if (portrait) {
       ui.title.setPosition(225, 118).setFontSize(38);
       ui.subtitle.setPosition(225, 170).setFontSize(16);
-      (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(82, 565 + extra * 0.69);
-      (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(225, 565 + extra * 0.69);
-      (ui.titleGroup.getByName("title-story") as Phaser.GameObjects.Container | null)?.setPosition(368, 565 + extra * 0.69);
-      (ui.titleGroup.getByName("title-gacha") as Phaser.GameObjects.Container | null)?.setPosition(225, 630 + extra * 0.84);
+      (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(82, 620 + extra * 0.58);
+      (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(225, 620 + extra * 0.58);
+      (ui.titleGroup.getByName("title-story") as Phaser.GameObjects.Container | null)?.setPosition(368, 620 + extra * 0.58);
+      (ui.titleGroup.getByName("title-gacha") as Phaser.GameObjects.Container | null)?.setPosition(225, 692 + extra * 0.72);
     }
     if (!portrait) {
       // Keep the complete title flow reachable after rotating a phone. The
