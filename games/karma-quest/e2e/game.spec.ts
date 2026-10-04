@@ -695,6 +695,21 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
     const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
     return root.list.filter(item => item instanceof Object && "text" in item).map(item => Reflect.get(item, "text"));
   })).toEqual(expect.arrayContaining(["2年目\n支援を見送りました", "1年目 · 鉄を届けました", "この旅で刻んだ選択：2件", "14", "9", "44", "5"]));
+  const chronicleSpacing = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+    const bounds = (name: string) => (root.getByName(name) as Phaser.GameObjects.Text).getBounds();
+    const record = bounds("chronicleRecordCount");
+    const replay = bounds("chronicleReplayHint");
+    return {
+      gap: replay.top - record.bottom,
+      replayBottom: replay.bottom,
+      replayFontSize: Number.parseFloat(String((root.getByName("chronicleReplayHint") as Phaser.GameObjects.Text).style.fontSize)),
+    };
+  });
+  expect(chronicleSpacing.gap).toBeGreaterThanOrEqual(2);
+  expect(chronicleSpacing.replayBottom).toBeLessThanOrEqual(410);
+  expect(chronicleSpacing.replayFontSize).toBeGreaterThanOrEqual(14);
   await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.005,
   });

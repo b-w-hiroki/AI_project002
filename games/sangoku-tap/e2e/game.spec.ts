@@ -185,17 +185,53 @@ test("management screens keep readable visual hierarchy", async ({ page }) => {
   const sceneVisible = async (method: string) => page.evaluate(method => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.get(scene, method).call(scene);
-    return Reflect.get(scene, "phase");
+    const groups = ["titleGroup", "questGroup", "gachaGroup", "breedingGroup", "rosterGroup"];
+    return {
+      phase: Reflect.get(scene, "phase"),
+      visibleGroups: groups.filter(name => (Reflect.get(scene, name) as Phaser.GameObjects.Container).visible),
+    };
   }, method);
 
-  await expect(sceneVisible("showGacha")).resolves.toBe("gacha");
+  await expect(sceneVisible("showGacha")).resolves.toEqual({ phase: "gacha", visibleGroups: ["gachaGroup"] });
   await checkFrame(page, "portrait-gacha");
 
-  await expect(sceneVisible("showBreeding")).resolves.toBe("breeding");
+  await expect(sceneVisible("showBreeding")).resolves.toEqual({ phase: "breeding", visibleGroups: ["breedingGroup"] });
   await checkFrame(page, "portrait-breeding");
 
-  await expect(sceneVisible("showRoster")).resolves.toBe("roster");
+  await expect(sceneVisible("showRoster")).resolves.toEqual({ phase: "roster", visibleGroups: ["rosterGroup"] });
+  const rosterSpacing = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = Reflect.get(scene, "rosterGroup") as Phaser.GameObjects.Container;
+    const heading = (root.getByName("rosterHeading") as Phaser.GameObjects.Text).getBounds();
+    const hint = (root.getByName("rosterHint") as Phaser.GameObjects.Text).getBounds();
+    const inventory = (root.getByName("rosterInventory") as Phaser.GameObjects.Text).getBounds();
+    const rows = root.list.filter(item => item.name.startsWith("rosterRow:")) as Phaser.GameObjects.Container[];
+    const first = rows[0].getBounds();
+    const last = rows.at(-1)!.getBounds();
+    return {
+      headingGap: hint.top - heading.bottom,
+      hintGap: inventory.top - hint.bottom,
+      rowGap: first.top - inventory.bottom,
+      minimumRowHeight: Math.min(...rows.map(row => row.height)),
+      lastRowBottom: last.bottom,
+    };
+  });
+  expect(rosterSpacing.headingGap).toBeGreaterThanOrEqual(2);
+  expect(rosterSpacing.hintGap).toBeGreaterThanOrEqual(4);
+  expect(rosterSpacing.rowGap).toBeGreaterThanOrEqual(4);
+  expect(rosterSpacing.minimumRowHeight).toBeGreaterThanOrEqual(53);
+  expect(rosterSpacing.lastRowBottom).toBeLessThan(650);
   await checkFrame(page, "portrait-roster");
+  await page.setViewportSize({ width: 375, height: 667 });
+  const physicalRowHeight = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = Reflect.get(scene, "rosterGroup") as Phaser.GameObjects.Container;
+    const row = root.list.find(item => item.name.startsWith("rosterRow:")) as Phaser.GameObjects.Container;
+    const canvas = document.querySelector("canvas")!;
+    return row.height * canvas.getBoundingClientRect().height / canvas.height;
+  });
+  expect(physicalRowHeight).toBeGreaterThanOrEqual(44);
+  await checkFrame(page, "short-portrait-roster");
 });
 
 test("expedition result is visually reviewable after a clear", async ({ page }) => {
