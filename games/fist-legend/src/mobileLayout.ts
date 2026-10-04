@@ -242,11 +242,12 @@ function buildUi(scene: Runtime): MobileUi {
     ...(resultEnemy ? [resultEnemy] : []),
   ]);
 
-  const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
+  const resultFinish = text(scene, 225, 195, "", 56, "#ffe3a8")
     .setFontFamily('"Arial Black", "Arial", "Segoe UI", sans-serif')
     .setStroke("#3a1a12", 7)
-    .setAngle(-5);
-  const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
+    .setPadding(14)
+    .setName("mobile-result-finish");
+  const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
   const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
   resultGroup.add([resultFinish, resultHeading, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, () => scene.handleResultPrimary?.());
@@ -383,7 +384,7 @@ function refresh(scene: Runtime): void {
     ui.resultBackdrop?.setPosition(225, height / 2).setDisplaySize(450, height);
     ui.resultHero?.setPosition(118, 430 + extra * 0.28);
     ui.resultEnemy?.setPosition(332, 430 + extra * 0.28);
-    ui.resultFinish.setPosition(225, 205 + extra * 0.10);
+    ui.resultFinish.setPosition(225, 195 + extra * 0.10);
     ui.resultHeading.setPosition(225, 285 + extra * 0.14);
     ui.resultStats.setPosition(225, 345 + extra * 0.18);
     ui.resultRetry.setPosition(225, height - 245);
@@ -531,7 +532,7 @@ function refresh(scene: Runtime): void {
       if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
     }
     ui.resultFinish
-      .setPosition(width / 2, portrait ? 205 : 92)
+      .setPosition(width / 2, portrait ? 195 : 92)
       .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
       .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
       .setScale(portrait ? 1 : 0.72);

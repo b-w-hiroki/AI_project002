@@ -265,9 +265,31 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   })).toBe(false);
   const mobileFinish = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const finish = find(scene.children.list, "mobile-result-finish") as Phaser.GameObjects.Text;
+    const heading = find(scene.children.list, "mobile-result-heading") as Phaser.GameObjects.Text;
+    const padding = Reflect.get(finish, "padding") as { left: number; right: number; top: number; bottom: number };
+    const finishBounds = finish.getBounds();
+    const headingBounds = heading.getBounds();
+    return {
+      text: (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text,
+      padding,
+      finish: { top: finishBounds.y, bottom: finishBounds.y + finishBounds.height },
+      heading: { top: headingBounds.y, bottom: headingBounds.y + headingBounds.height },
+    };
   });
-  expect(mobileFinish).toBe("DRAW");
+  expect(mobileFinish.text).toBe("DRAW");
+  expect(mobileFinish.padding).toMatchObject({ left: 14, right: 14, top: 14, bottom: 14 });
+  expect(mobileFinish.finish.bottom).toBeLessThan(mobileFinish.heading.top);
   await checkFrame(page, "portrait-result");
 
   await page.setViewportSize({ width: 844, height: 390 });
