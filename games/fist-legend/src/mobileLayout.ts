@@ -302,10 +302,10 @@ function buildUi(scene: Runtime): MobileUi {
     ? scene.add.image(225, 400, "fl-bg-arena").setDisplaySize(450, 800).setAlpha(0.34)
     : undefined;
   const resultHero = scene.textures.exists("fl-hero-fighter")
-    ? scene.add.image(118, 430, "fl-hero-fighter").setDisplaySize(150, 200).setAlpha(0.72)
+    ? scene.add.image(118, 430, "fl-hero-fighter").setDisplaySize(150, 200).setAlpha(0.72).setName("mobile-result-hero")
     : undefined;
   const resultEnemy = scene.textures.exists("fl-enemy-fighter")
-    ? scene.add.image(332, 430, "fl-enemy-fighter").setDisplaySize(150, 200).setFlipX(true).setAlpha(0.42)
+    ? scene.add.image(332, 430, "fl-enemy-fighter").setDisplaySize(150, 200).setFlipX(true).setAlpha(0.42).setName("mobile-result-enemy")
     : undefined;
   resultGroup.add([
     ...(resultBackdrop ? [resultBackdrop] : []),
@@ -320,7 +320,7 @@ function buildUi(scene: Runtime): MobileUi {
     .setName("mobile-result-finish");
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
   const reward = buildRewardMedallion(scene);
-  const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc");
+  const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc").setName("mobile-result-next");
   resultGroup.add([resultFinish, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, () => scene.handleResultPrimary?.());
   const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, () => scene.showTitle?.());
@@ -594,11 +594,25 @@ function refresh(scene: Runtime): void {
     ui.chrome.fillStyle(0x120907, 0.58).fillRect(0, 0, width, height);
     ui.resultBackdrop?.setPosition(width / 2, height / 2).setDisplaySize(width, height).setAlpha(0.34);
     if (portrait) {
-      ui.resultHero?.setPosition(width * 0.28, 430).setDisplaySize(150, 200);
-      ui.resultEnemy?.setPosition(width * 0.72, 430).setDisplaySize(150, 200);
+      const fighterHeight = Phaser.Math.Clamp(120 + extra * 0.12, 120, 150);
+      const fighterY = 510 + extra * 0.12;
+      if (ui.resultHero) {
+        ui.resultHero.setPosition(120, fighterY);
+        fitFighter(ui.resultHero, fighterHeight);
+      }
+      if (ui.resultEnemy) {
+        ui.resultEnemy.setPosition(330, fighterY);
+        fitFighter(ui.resultEnemy, fighterHeight);
+      }
     } else {
-      ui.resultHero?.setPosition(width * 0.26, 255).setDisplaySize(160, 214);
-      ui.resultEnemy?.setPosition(width * 0.74, 255).setDisplaySize(160, 214);
+      if (ui.resultHero) {
+        ui.resultHero.setPosition(160, 255);
+        fitFighter(ui.resultHero, 214);
+      }
+      if (ui.resultEnemy) {
+        ui.resultEnemy.setPosition(640, 255);
+        fitFighter(ui.resultEnemy, 214);
+      }
     }
     const outcome = scene.lastOutcome;
     if (ui.resultHero) {
@@ -656,6 +670,18 @@ function refresh(scene: Runtime): void {
     }
     ui.resultRetry.setPosition(width / 2, portrait ? height - 245 : 292).setScale(portrait ? 1 : 0.86);
     ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 352).setScale(portrait ? 1 : 0.86);
+    if (portrait && ui.resultHero && ui.resultEnemy) {
+      const bandTop = ui.resultStats.getBounds().bottom + 8;
+      const bandBottom = ui.resultRetry.getBounds().top - 8;
+      const available = Math.max(96, bandBottom - bandTop);
+      const fighterHeight = Phaser.Math.Clamp(available, 96, 150);
+      const breathingRoom = Math.min(24, Math.max(0, (available - fighterHeight) / 2));
+      const fighterY = bandTop + fighterHeight / 2 + breathingRoom;
+      ui.resultHero.setPosition(120, fighterY);
+      fitFighter(ui.resultHero, fighterHeight);
+      ui.resultEnemy.setPosition(330, fighterY);
+      fitFighter(ui.resultEnemy, fighterHeight);
+    }
   }
 }
 
