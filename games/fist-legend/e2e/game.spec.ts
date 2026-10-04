@@ -165,6 +165,41 @@ async function checkFrame(page: Page, name: string) {
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
 }
 
+async function resultCharactersAreClear(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const bounds = (name: string) => find(scene.children.list, name)!.getBounds();
+    const fighters = [bounds("mobile-result-hero"), bounds("mobile-result-enemy")];
+    const ui = [
+      bounds("mobile-result-finish"),
+      bounds("mobile-result-heading"),
+      bounds("mobile-result-reward"),
+      bounds("mobile-result-next"),
+      bounds("mobile-result-primary"),
+    ];
+    const canvas = window.__qaGame.canvas;
+    const overlaps = (a: Phaser.Geom.Rectangle, b: Phaser.Geom.Rectangle) =>
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    return fighters.every(fighter =>
+      fighter.left >= 0
+      && fighter.right <= canvas.width
+      && fighter.top >= 0
+      && fighter.bottom <= canvas.height
+      && ui.every(panel => !overlaps(fighter, panel)),
+    );
+  });
+}
+
 test("touch starts battle and a move advances the beat after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
   await tapVisibleText(page, "対戦");
@@ -265,14 +300,93 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   })).toBe(false);
   const mobileFinish = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const finish = find(scene.children.list, "mobile-result-finish") as Phaser.GameObjects.Text;
+    const heading = find(scene.children.list, "mobile-result-heading") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const hero = find(scene.children.list, "mobile-result-hero") as Phaser.GameObjects.Image;
+    const enemy = find(scene.children.list, "mobile-result-enemy") as Phaser.GameObjects.Image;
+    const padding = Reflect.get(finish, "padding") as { left: number; right: number; top: number; bottom: number };
+    const finishBounds = finish.getBounds();
+    const headingBounds = heading.getBounds();
+    const rewardBounds = reward.getBounds();
+    const primaryBounds = primary.getBounds();
+    const nextBounds = next.getBounds();
+    const heroBounds = hero.getBounds();
+    const enemyBounds = enemy.getBounds();
+    return {
+      text: (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text,
+      padding,
+      finish: { top: finishBounds.y, bottom: finishBounds.y + finishBounds.height },
+      heading: { top: headingBounds.y, bottom: headingBounds.y + headingBounds.height },
+      reward: {
+        text: reward.list.filter(node => node.type === "Text").map(node => (node as Phaser.GameObjects.Text).text),
+        top: rewardBounds.y,
+        bottom: rewardBounds.y + rewardBounds.height,
+      },
+      primary: { top: primaryBounds.y, height: primaryBounds.height },
+      next: { bottom: nextBounds.bottom },
+      hero: { top: heroBounds.top, bottom: heroBounds.bottom },
+      enemy: { top: enemyBounds.top, bottom: enemyBounds.bottom },
+    };
   });
-  expect(mobileFinish).toBe("DRAW");
+  expect(mobileFinish.text).toBe("DRAW");
+  expect(mobileFinish.padding).toMatchObject({ left: 14, right: 14, top: 14, bottom: 14 });
+  expect(mobileFinish.finish.bottom).toBeLessThan(mobileFinish.heading.top);
+  expect(mobileFinish.reward.text).toEqual(expect.arrayContaining(["獲得報酬", "豪拳石 +20", "所持 20"]));
+  expect(mobileFinish.reward.top).toBeGreaterThan(mobileFinish.heading.bottom);
+  expect(mobileFinish.reward.bottom).toBeLessThan(mobileFinish.primary.top);
+  expect(mobileFinish.primary.height).toBeGreaterThanOrEqual(58);
+  expect(mobileFinish.hero.top).toBeGreaterThan(mobileFinish.next.bottom);
+  expect(mobileFinish.enemy.top).toBeGreaterThan(mobileFinish.next.bottom);
+  expect(mobileFinish.hero.bottom).toBeLessThan(mobileFinish.primary.top);
+  expect(mobileFinish.enemy.bottom).toBeLessThan(mobileFinish.primary.top);
+  expect(await resultCharactersAreClear(page)).toBe(true);
   await checkFrame(page, "portrait-result");
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
+  await checkFrame(page, "short-portrait-result");
 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
   await checkFrame(page, "landscape-result");
+
+  const pressed = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const primary = find(scene.children.list, "mobile-result-primary")!;
+    const shadow = primary.list[0] as Phaser.GameObjects.Rectangle;
+    const background = primary.list[1] as Phaser.GameObjects.Rectangle;
+    const shine = primary.list[3] as Phaser.GameObjects.Rectangle;
+    const hit = primary.list.at(-1) as Phaser.GameObjects.Zone;
+    hit.emit("pointerdown");
+    return { fillColor: background.fillColor, shineAlpha: shine.alpha, shadowY: shadow.y };
+  });
+  expect(pressed).toEqual({ fillColor: 0x7f2d25, shineAlpha: 0.045, shadowY: 2 });
+  await expect.poll(() => phase(page)).toBe("battle");
 });
 
 test("opponent archetypes keep distinct battle identity", async ({ page }) => {

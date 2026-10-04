@@ -35,6 +35,8 @@ type Runtime = Phaser.Scene & {
   timeRemainingSec?: number;
   accepting?: boolean;
   lastOutcome?: BattleOutcome | null;
+  lastReward?: number;
+  lastBalance?: number;
   playerSprite?: FighterSprite;
   enemySprite?: FighterSprite;
   gachaGroup?: Phaser.GameObjects.Container;
@@ -80,6 +82,10 @@ type MobileUi = {
   resultFinish: Phaser.GameObjects.Text;
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
+  resultReward: Phaser.GameObjects.Container;
+  resultRewardLabel: Phaser.GameObjects.Text;
+  resultRewardValue: Phaser.GameObjects.Text;
+  resultRewardBalance: Phaser.GameObjects.Text;
   resultRetry: Phaser.GameObjects.Container;
   resultTitle: Phaser.GameObjects.Container;
   portrait: boolean;
@@ -124,24 +130,89 @@ function button(
   label: string,
   color: number,
   onTap: () => void,
+  emphasis = false,
 ): Phaser.GameObjects.Container {
+  const isPrimary = emphasis || (color === 0xa9402d && width >= 300 && height >= 58);
   const shadow = scene.add.rectangle(3, 5, width, height, 0x120b09, 0.38).setStrokeStyle(1, 0x000000, 0.22);
   const bg = scene.add.rectangle(0, 0, width, height, color, 0.96).setStrokeStyle(3, 0x2b1713, 0.82);
   const rim = scene.add.rectangle(0, 0, width - 7, height - 7, color, 0).setStrokeStyle(1.5, 0xffd68c, 0.78);
   const shine = scene.add.rectangle(0, -height * 0.31, width - 12, Math.max(5, height * 0.16), 0xffffff, 0.13);
+  const heraldry = scene.add.graphics();
+  if (isPrimary) {
+    heraldry.lineStyle(2, 0xffdd8a, 0.88);
+    heraldry.lineBetween(-width / 2 + 24, -height / 2 + 6, width / 2 - 24, -height / 2 + 6);
+    heraldry.lineBetween(-width / 2 + 24, height / 2 - 6, width / 2 - 24, height / 2 - 6);
+    heraldry.fillStyle(0xffd36a, 0.92);
+    heraldry.fillTriangle(-width / 2 + 8, 0, -width / 2 + 18, -8, -width / 2 + 18, 8);
+    heraldry.fillTriangle(width / 2 - 8, 0, width / 2 - 18, -8, width / 2 - 18, 8);
+  }
   const leftStud = scene.add.circle(-width / 2 + 10, 0, 2.5, 0xffd68c, 0.82);
   const rightStud = scene.add.circle(width / 2 - 10, 0, 2.5, 0xffd68c, 0.82);
   const labelText = text(scene, 0, 0, label, height >= 56 ? 24 : 22).setStroke("#351713", 3);
   const hit = scene.add.zone(0, 0, width, Math.max(68, height)).setInteractive({ useHandCursor: true });
   const container = scene.add
-    .container(x, y, [shadow, bg, rim, shine, leftStud, rightStud, labelText, hit])
+    .container(x, y, [shadow, bg, rim, shine, heraldry, leftStud, rightStud, labelText, hit])
     .setSize(width, Math.max(68, height));
-  const release = () => container.setScale(1);
-  hit.on("pointerdown", () => { container.setScale(0.97); onTap(); });
+  const release = () => {
+    if (!isPrimary) container.setScale(1);
+    bg.setFillStyle(color, 0.96);
+    shine.setAlpha(0.13);
+    shadow.setY(5);
+  };
+  hit.on("pointerdown", () => {
+    if (isPrimary) {
+      bg.setFillStyle(0x7f2d25, 0.98);
+      shine.setAlpha(0.045);
+      shadow.setY(2);
+    } else {
+      container.setScale(0.97);
+    }
+    if (isPrimary) {
+      scene.time.delayedCall(70, () => {
+        release();
+        onTap();
+      });
+      return;
+    }
+    onTap();
+  });
   hit.on("pointerup", release);
   hit.on("pointerout", release);
   root.add(container);
   return container;
+}
+
+function buildRewardMedallion(scene: Phaser.Scene): {
+  container: Phaser.GameObjects.Container;
+  label: Phaser.GameObjects.Text;
+  value: Phaser.GameObjects.Text;
+  balance: Phaser.GameObjects.Text;
+} {
+  const plate = scene.add.graphics();
+  plate.fillStyle(0x120907, 0.76).fillRoundedRect(-150, -34, 300, 68, 16);
+  plate.fillStyle(0x7b271d, 0.42).fillRoundedRect(-146, -30, 292, 18, 12);
+  plate.lineStyle(2, 0xd8a84f, 0.92).strokeRoundedRect(-150, -34, 300, 68, 16);
+  plate.lineStyle(1, 0xffe2a0, 0.34).strokeRoundedRect(-144, -28, 288, 56, 12);
+  plate.lineStyle(2, 0xd8a84f, 0.72).lineBetween(-86, -21, 122, -21);
+
+  const gem = scene.add.graphics({ x: -112, y: 0 }).setName("mobile-result-reward-icon");
+  gem.fillStyle(0x180d0a, 0.72).fillCircle(0, 3, 26);
+  gem.lineStyle(2, 0xf4cf73, 0.92).strokeCircle(0, 0, 24);
+  gem.fillStyle(0xc74835, 1).fillTriangle(0, -17, -16, -3, 0, 18);
+  gem.fillStyle(0x8f251f, 1).fillTriangle(0, -17, 16, -3, 0, 18);
+  gem.fillStyle(0xf17b52, 0.95).fillTriangle(0, -17, -7, -3, 0, 3);
+  gem.lineStyle(1.5, 0xffd88b, 0.84);
+  gem.strokeTriangle(0, -17, -16, -3, 0, 18);
+  gem.strokeTriangle(0, -17, 16, -3, 0, 18);
+
+  const label = text(scene, -66, -10, "", 12, "#e7c985").setOrigin(0, 0.5);
+  const value = text(scene, -66, 10, "", 24, "#fff0bd").setOrigin(0, 0.5).setStroke("#3a1710", 3);
+  const balance = text(scene, 132, 11, "", 11, "#d6bea0").setOrigin(1, 0.5);
+  const container = scene.add
+    .container(225, 345, [plate, gem, label, value, balance])
+    .setSize(300, 68)
+    .setName("mobile-result-reward");
+  return { container, label, value, balance };
 }
 
 function hideLegacyOrientationWarning(scene: Phaser.Scene): void {
@@ -231,10 +302,10 @@ function buildUi(scene: Runtime): MobileUi {
     ? scene.add.image(225, 400, "fl-bg-arena").setDisplaySize(450, 800).setAlpha(0.34)
     : undefined;
   const resultHero = scene.textures.exists("fl-hero-fighter")
-    ? scene.add.image(118, 430, "fl-hero-fighter").setDisplaySize(150, 200).setAlpha(0.72)
+    ? scene.add.image(118, 430, "fl-hero-fighter").setDisplaySize(150, 200).setAlpha(0.72).setName("mobile-result-hero")
     : undefined;
   const resultEnemy = scene.textures.exists("fl-enemy-fighter")
-    ? scene.add.image(332, 430, "fl-enemy-fighter").setDisplaySize(150, 200).setFlipX(true).setAlpha(0.42)
+    ? scene.add.image(332, 430, "fl-enemy-fighter").setDisplaySize(150, 200).setFlipX(true).setAlpha(0.42).setName("mobile-result-enemy")
     : undefined;
   resultGroup.add([
     ...(resultBackdrop ? [resultBackdrop] : []),
@@ -242,15 +313,19 @@ function buildUi(scene: Runtime): MobileUi {
     ...(resultEnemy ? [resultEnemy] : []),
   ]);
 
-  const resultFinish = text(scene, 225, 205, "", 56, "#ffe3a8")
+  const resultFinish = text(scene, 225, 195, "", 56, "#ffe3a8")
     .setFontFamily('"Arial Black", "Arial", "Segoe UI", sans-serif')
     .setStroke("#3a1a12", 7)
-    .setAngle(-5);
-  const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8");
-  const resultStats = text(scene, 225, 345, "", 15, "#e5d0bc");
-  resultGroup.add([resultFinish, resultHeading, resultStats]);
+    .setPadding(14)
+    .setName("mobile-result-finish");
+  const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
+  const reward = buildRewardMedallion(scene);
+  const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc").setName("mobile-result-next");
+  resultGroup.add([resultFinish, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, () => scene.handleResultPrimary?.());
   const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, () => scene.showTitle?.());
+
+  resultRetry.setName("mobile-result-primary");
 
   const ui: MobileUi = {
     root,
@@ -274,6 +349,10 @@ function buildUi(scene: Runtime): MobileUi {
     resultFinish,
     resultHeading,
     resultStats,
+    resultReward: reward.container,
+    resultRewardLabel: reward.label,
+    resultRewardValue: reward.value,
+    resultRewardBalance: reward.balance,
     resultRetry,
     resultTitle,
     portrait: false,
@@ -296,7 +375,6 @@ function applySurface(scene: Runtime, width: number, height: number): void {
     scene.scale.resize(width, height);
   }
   const viewport = window.visualViewport;
-  const portrait = height > width;
   const availableWidth = (viewport?.width ?? window.innerWidth) - 18;
   const availableHeight = (viewport?.height ?? window.innerHeight) - 8;
   const fit = Math.min(availableWidth / width, availableHeight / height);
@@ -383,9 +461,10 @@ function refresh(scene: Runtime): void {
     ui.resultBackdrop?.setPosition(225, height / 2).setDisplaySize(450, height);
     ui.resultHero?.setPosition(118, 430 + extra * 0.28);
     ui.resultEnemy?.setPosition(332, 430 + extra * 0.28);
-    ui.resultFinish.setPosition(225, 205 + extra * 0.10);
+    ui.resultFinish.setPosition(225, 195 + extra * 0.10);
     ui.resultHeading.setPosition(225, 285 + extra * 0.14);
-    ui.resultStats.setPosition(225, 345 + extra * 0.18);
+    ui.resultReward.setPosition(225, 355 + extra * 0.16).setScale(1);
+    ui.resultStats.setPosition(225, 414 + extra * 0.20);
     ui.resultRetry.setPosition(225, height - 245);
     ui.resultTitle.setPosition(225, height - 175);
   }
@@ -515,11 +594,25 @@ function refresh(scene: Runtime): void {
     ui.chrome.fillStyle(0x120907, 0.58).fillRect(0, 0, width, height);
     ui.resultBackdrop?.setPosition(width / 2, height / 2).setDisplaySize(width, height).setAlpha(0.34);
     if (portrait) {
-      ui.resultHero?.setPosition(width * 0.28, 430).setDisplaySize(150, 200);
-      ui.resultEnemy?.setPosition(width * 0.72, 430).setDisplaySize(150, 200);
+      const fighterHeight = Phaser.Math.Clamp(120 + extra * 0.12, 120, 150);
+      const fighterY = 510 + extra * 0.12;
+      if (ui.resultHero) {
+        ui.resultHero.setPosition(120, fighterY);
+        fitFighter(ui.resultHero, fighterHeight);
+      }
+      if (ui.resultEnemy) {
+        ui.resultEnemy.setPosition(330, fighterY);
+        fitFighter(ui.resultEnemy, fighterHeight);
+      }
     } else {
-      ui.resultHero?.setPosition(width * 0.26, 255).setDisplaySize(160, 214);
-      ui.resultEnemy?.setPosition(width * 0.74, 255).setDisplaySize(160, 214);
+      if (ui.resultHero) {
+        ui.resultHero.setPosition(160, 255);
+        fitFighter(ui.resultHero, 214);
+      }
+      if (ui.resultEnemy) {
+        ui.resultEnemy.setPosition(640, 255);
+        fitFighter(ui.resultEnemy, 214);
+      }
     }
     const outcome = scene.lastOutcome;
     if (ui.resultHero) {
@@ -531,11 +624,15 @@ function refresh(scene: Runtime): void {
       if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
     }
     ui.resultFinish
-      .setPosition(width / 2, portrait ? 205 : 92)
+      .setPosition(width / 2, portrait ? 195 : 92)
       .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
       .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
       .setScale(portrait ? 1 : 0.72);
     ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
+    ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
+    ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));
+    ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${scene.lastReward ?? 0}`);
+    ui.resultRewardBalance.setText(`${tr(lang, "所持", "Held")} ${scene.lastBalance ?? loadCurrency()}`);
     const modeText = scene.storyActive
       ? `${tr(lang, "物語", "Story")} ${Math.min(3, (scene.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${scene.storyProgress ?? 0}/3`
       : scene.seriesActive
@@ -552,6 +649,7 @@ function refresh(scene: Runtime): void {
     ui.resultStats
       .setPosition(width / 2, portrait ? 338 : 202)
       .setText(`${tr(lang, "豪拳石", "Fist Gems")} ${loadCurrency()}\n${nextLine}`);
+    ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setText(nextLine);
     const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
     if (retryLabel) {
       retryLabel.setText(
@@ -570,8 +668,20 @@ function refresh(scene: Runtime): void {
             : tr(lang, "もう一度", "Play Again"),
       );
     }
-    ui.resultRetry.setPosition(width / 2, portrait ? 430 : 292).setScale(portrait ? 1 : 0.86);
-    ui.resultTitle.setPosition(width / 2, portrait ? 500 : 352).setScale(portrait ? 1 : 0.86);
+    ui.resultRetry.setPosition(width / 2, portrait ? height - 245 : 292).setScale(portrait ? 1 : 0.86);
+    ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 352).setScale(portrait ? 1 : 0.86);
+    if (portrait && ui.resultHero && ui.resultEnemy) {
+      const bandTop = ui.resultStats.getBounds().bottom + 8;
+      const bandBottom = ui.resultRetry.getBounds().top - 8;
+      const available = Math.max(96, bandBottom - bandTop);
+      const fighterHeight = Phaser.Math.Clamp(available, 96, 150);
+      const breathingRoom = Math.min(24, Math.max(0, (available - fighterHeight) / 2));
+      const fighterY = bandTop + fighterHeight / 2 + breathingRoom;
+      ui.resultHero.setPosition(120, fighterY);
+      fitFighter(ui.resultHero, fighterHeight);
+      ui.resultEnemy.setPosition(330, fighterY);
+      fitFighter(ui.resultEnemy, fighterHeight);
+    }
   }
 }
 

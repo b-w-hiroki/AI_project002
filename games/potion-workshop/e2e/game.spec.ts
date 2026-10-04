@@ -58,6 +58,13 @@ test("short portrait separates workshop status from the next order", async ({ pa
     "workshop-orders-label",
     "workshop-recommendation-detail",
     "workshop-nav-0",
+    "workshop-nav-chrome-0",
+    "workshop-nav-label-0",
+    "workshop-order-chrome-0",
+    "workshop-order-hit-0",
+    "workshop-order-0",
+    "workshop-brew-chrome",
+    "workshop-brew-label",
     "brew-hit-target",
   ]);
   const audit = await page.evaluate(() => {
@@ -76,15 +83,35 @@ test("short portrait separates workshop status from the next order", async ({ pa
       const rect = (find(scene.children.list, name) as Phaser.GameObjects.Text).getBounds();
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
     };
+    const buttonBounds = (name: string) =>
+      (find(scene.children.list, name) as Phaser.GameObjects.Graphics).getData("buttonBounds") as {
+        left: number; right: number; top: number; bottom: number;
+      };
     const brew = find(scene.children.list, "brew-hit-target") as Phaser.GameObjects.Zone;
+    const orderHit = find(scene.children.list, "workshop-order-hit-0") as Phaser.GameObjects.Zone;
+    const fontSize = (name: string) => Number(
+      (find(scene.children.list, name) as Phaser.GameObjects.Text).style.fontSize.replace("px", ""),
+    );
     return {
       blackboard: bounds("workshop-blackboard-text"),
       rate: bounds("workshop-rate-status"),
       town: bounds("workshop-town-status"),
       orders: bounds("workshop-orders-label"),
+      brewChrome: buttonBounds("workshop-brew-chrome"),
+      brewLabel: bounds("workshop-brew-label"),
+      orderChrome: buttonBounds("workshop-order-chrome-0"),
+      orderLabel: bounds("workshop-order-0"),
+      navChrome: buttonBounds("workshop-nav-chrome-0"),
+      navLabel: bounds("workshop-nav-label-0"),
+      fonts: {
+        brew: fontSize("workshop-brew-label"),
+        order: fontSize("workshop-order-0"),
+        nav: fontSize("workshop-nav-label-0"),
+      },
       recommendationVisible: (find(scene.children.list, "workshop-recommendation-detail") as Phaser.GameObjects.Text).visible,
       nav: bounds("workshop-nav-0"),
       brewHeight: brew.height,
+      orderHeight: orderHit.height,
     };
   });
   const box = (await page.locator("canvas").boundingBox())!;
@@ -94,7 +121,36 @@ test("short portrait separates workshop status from the next order", async ({ pa
   expect(audit.nav.top - audit.orders.bottom).toBeGreaterThanOrEqual(80);
   expect(audit.town.top).toBeGreaterThanOrEqual(90);
   expect(audit.brewHeight * box.height / 800).toBeGreaterThanOrEqual(44);
+  expect(audit.orderHeight * box.height / 800).toBeGreaterThanOrEqual(44);
+  expect(audit.fonts).toEqual({ brew: 23, order: 22, nav: 22 });
+  expect(audit.brewLabel.left - audit.brewChrome.left).toBeGreaterThanOrEqual(14);
+  expect(audit.brewChrome.right - audit.brewLabel.right).toBeGreaterThanOrEqual(14);
+  expect(audit.brewLabel.top - audit.brewChrome.top).toBeGreaterThanOrEqual(8);
+  expect(audit.brewChrome.bottom - audit.brewLabel.bottom).toBeGreaterThanOrEqual(8);
+  expect(audit.orderLabel.top - audit.orderChrome.top).toBeGreaterThanOrEqual(8);
+  expect(audit.orderChrome.bottom - audit.orderLabel.bottom).toBeGreaterThanOrEqual(8);
+  expect(audit.navChrome.bottom - audit.navLabel.bottom).toBeGreaterThanOrEqual(8);
   await page.screenshot({ path: "e2e/screenshots/mobile-workshop-flow-375x667.png", animations: "disabled" });
+  const pressFeedback = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const chrome = find(scene.children.list, "workshop-brew-chrome") as Phaser.GameObjects.Graphics;
+    const target = find(scene.children.list, "brew-hit-target") as Phaser.GameObjects.Zone;
+    target.emit("pointerdown");
+    const pressed = chrome.alpha;
+    target.emit("pointerup");
+    return { pressed, released: chrome.alpha };
+  });
+  expect(pressFeedback).toEqual({ pressed: 0.76, released: 1 });
 });
 
 test("English locale covers responsive workshop and town choice", async ({ page }) => {
@@ -120,7 +176,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   });
   expect(responsiveLabels.lang).toBe("en");
   expect(responsiveLabels.labels).toContain("Potion Workshop");
-  expect(responsiveLabels.labels).toContain("TAP TO BREW");
+  expect(responsiveLabels.labels).toContain("✦  BREW POTION  ✦");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
   expect(responsiveLabels.labels).toContain("UPGRADE");
   expect(responsiveLabels.labels).not.toContain("Let's brew something\nwonderful today!");
@@ -346,7 +402,7 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     cat: { x: 102, y: 408, width: 150, height: 164 },
     blackboard: { visible: true, text: expect.stringMatching(/次の依頼|NEXT ORDER/) },
     brewTarget: { width: 230, height: 220, interactive: true },
-    navTargets: Array.from({ length: 4 }, () => ({ width: 100, height: 68, interactive: true })),
+    navTargets: Array.from({ length: 4 }, () => ({ width: 100, height: 72, interactive: true })),
   });
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-workshop.png", animations: "disabled" });
 
@@ -356,6 +412,10 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     "workshop-order-1",
     "workshop-landscape-recommendation",
     "workshop-landscape-management",
+    "brew-landscape-action",
+    "workshop-brew-chrome",
+    "workshop-brew-label",
+    "workshop-rate-status",
   ]);
   const landscapeSpacing = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
@@ -376,17 +436,30 @@ test("portrait and landscape workshop are captured for visual QA", async ({ page
     const order = bounds("workshop-order-1");
     const recommendation = bounds("workshop-landscape-recommendation");
     const management = bounds("workshop-landscape-management");
+    const brewChrome = (findNamed(scene.children.list, "workshop-brew-chrome") as Phaser.GameObjects.Graphics)
+      .getData("buttonBounds") as { left: number; right: number; top: number; bottom: number };
+    const brewAction = findNamed(scene.children.list, "brew-landscape-action") as Phaser.GameObjects.Zone;
+    const brewLabel = findNamed(scene.children.list, "workshop-brew-label") as Phaser.GameObjects.Text;
+    const rate = bounds("workshop-rate-status");
     return {
       orderToRecommendation: recommendation.top - order.bottom,
       recommendationToManagement: management.top - recommendation.bottom,
       recommendationFont: Number((findNamed(scene.children.list, "workshop-landscape-recommendation") as Phaser.GameObjects.Text).style.fontSize.replace("px", "")),
       managementFont: Number((findNamed(scene.children.list, "workshop-landscape-management") as Phaser.GameObjects.Text).style.fontSize.replace("px", "")),
+      brewAction: { width: brewAction.width, height: brewAction.height, interactive: !!brewAction.input?.enabled },
+      brewLabelFont: Number(brewLabel.style.fontSize.replace("px", "")),
+      brewChromeRight: brewChrome.right,
+      brewToRate: rate.top - brewChrome.bottom,
     };
   });
   expect(landscapeSpacing.orderToRecommendation).toBeGreaterThanOrEqual(20);
   expect(landscapeSpacing.recommendationToManagement).toBeGreaterThanOrEqual(20);
   expect(landscapeSpacing.recommendationFont).toBeGreaterThanOrEqual(18);
   expect(landscapeSpacing.managementFont).toBeGreaterThanOrEqual(17);
+  expect(landscapeSpacing.brewAction).toEqual({ width: 250, height: 54, interactive: true });
+  expect(landscapeSpacing.brewLabelFont).toBe(21);
+  expect(landscapeSpacing.brewChromeRight).toBeLessThanOrEqual(375);
+  expect(landscapeSpacing.brewToRate).toBeGreaterThanOrEqual(10);
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-workshop.png", animations: "disabled" });
 });
 

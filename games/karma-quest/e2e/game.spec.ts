@@ -161,7 +161,7 @@ test("English responsive UI contains no Japanese", async ({ page }) => {
 test("English fallback localizes the title and first request flow", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
-  const labels = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const collect = (nodes: Phaser.GameObjects.GameObject[], out: string[] = []): string[] => {
       for (const node of nodes) {
@@ -171,9 +171,7 @@ test("English fallback localizes the title and first request flow", async ({ pag
       return out;
     };
     return collect(scene.children.list);
-  });
-  expect(labels).toContain("Karma Quest");
-  expect(labels).toContain("Begin Journey");
+  })).toEqual(expect.arrayContaining(["Karma Quest", "Begin Journey"]));
 
   await tapPoint(page, 225, 650);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -695,12 +693,27 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
     const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
     return root.list.filter(item => item instanceof Object && "text" in item).map(item => Reflect.get(item, "text"));
   })).toEqual(expect.arrayContaining(["2年目\n支援を見送りました", "1年目 · 鉄を届けました", "この旅で刻んだ選択：2件", "14", "9", "44", "5"]));
-  await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
-    animations: "disabled", maxDiffPixelRatio: 0.005,
+  const chronicleSpacing = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+    const bounds = (name: string) => (root.getByName(name) as Phaser.GameObjects.Text).getBounds();
+    const record = bounds("chronicleRecordCount");
+    const replay = bounds("chronicleReplayHint");
+    return {
+      gap: replay.top - record.bottom,
+      replayBottom: replay.bottom,
+      replayFontSize: Number.parseFloat(String((root.getByName("chronicleReplayHint") as Phaser.GameObjects.Text).style.fontSize)),
+    };
   });
+  expect(chronicleSpacing.gap).toBeGreaterThanOrEqual(2);
+  expect(chronicleSpacing.replayBottom).toBeLessThanOrEqual(410);
+  expect(chronicleSpacing.replayFontSize).toBeGreaterThanOrEqual(14);
   await page.locator("canvas").screenshot({
     path: "e2e/screenshots/portrait-final-chronicle.png",
     animations: "disabled",
+  });
+  await expect(page.locator("canvas")).toHaveScreenshot("karma-final-mock.png", {
+    animations: "disabled", maxDiffPixelRatio: 0.005,
   });
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-chronicle-current.png" });
   await page.locator("canvas").click({ position: { x: 225, y: 708 } });

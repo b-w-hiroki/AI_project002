@@ -46,6 +46,45 @@ async function enterBattleForVisualQa(page: Page): Promise<void> {
   throw new Error("GameScene did not start after three loadout attempts");
 }
 
+async function expectActionControlsClear(page: Page): Promise<void> {
+  const layout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const names = ["attack", "up", "skill", "guard", "ougi"].map(value => `side-action-${value}`);
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const controls = names.map(name => {
+      const node = find(scene.children.list, name) as Phaser.GameObjects.Container | undefined;
+      if (!node) throw new Error(`${name} is missing`);
+      const bounds = node.getBounds();
+      return { name, left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, centerX: bounds.centerX, centerY: bounds.centerY, radius: Math.max(bounds.width, bounds.height) / 2 };
+    });
+    return { controls, width: window.__qaGame.canvas.width, height: window.__qaGame.canvas.height };
+  });
+
+  for (const control of layout.controls) {
+    expect(control.left, `${control.name} left safe area`).toBeGreaterThanOrEqual(6);
+    expect(control.right, `${control.name} right safe area`).toBeLessThanOrEqual(layout.width - 6);
+    expect(control.top, `${control.name} top safe area`).toBeGreaterThanOrEqual(6);
+    expect(control.bottom, `${control.name} bottom safe area`).toBeLessThanOrEqual(layout.height - 6);
+  }
+  for (let i = 0; i < layout.controls.length; i += 1) {
+    for (let j = i + 1; j < layout.controls.length; j += 1) {
+      const a = layout.controls[i];
+      const b = layout.controls[j];
+      const distance = Math.hypot(a.centerX - b.centerX, a.centerY - b.centerY);
+      expect(distance, `${a.name} must not overlap ${b.name}`).toBeGreaterThanOrEqual(a.radius + b.radius);
+    }
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     const response = await route.fetch();
@@ -144,6 +183,7 @@ test.describe("phone visual QA", () => {
     await page.locator("canvas").waitFor();
     await page.waitForTimeout(500);
     await enterBattleForVisualQa(page);
+    await expectActionControlsClear(page);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-portrait-battle-390x844.png",
       animations: "disabled",
@@ -156,6 +196,7 @@ test.describe("phone visual QA", () => {
     await page.locator("canvas").waitFor();
     await page.waitForTimeout(500);
     await enterBattleForVisualQa(page);
+    await expectActionControlsClear(page);
     await page.locator("canvas").screenshot({
       path: "e2e/screenshots/side-landscape-battle-844x390.png",
       animations: "disabled",

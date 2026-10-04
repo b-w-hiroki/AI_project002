@@ -506,11 +506,8 @@ export class GameScene extends Phaser.Scene {
     this.phase = "title";
     // タイトル画面はイラストを主役にするため、他画面より薄めに暗幕をかける
     this.setBackgroundDim(this.textures.exists(BG_KEY) ? 0.22 : 0.55);
+    this.hideAllViews();
     this.titleGroup.setVisible(true);
-    this.questGroup.setVisible(false);
-    this.gachaGroup.setVisible(false);
-    this.breedingGroup.setVisible(false);
-    this.rosterGroup.setVisible(false);
     const coinPill = this.titleGroup.getData("coinPill") as {
       setText: (t: string) => void;
     };
@@ -528,6 +525,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------- クエスト（タップ進撃） ----------
+
+  /** Keep exactly one full-screen view active when navigation changes directly. */
+  private hideAllViews(): void {
+    this.titleGroup.setVisible(false);
+    this.questGroup.setVisible(false);
+    this.gachaGroup.setVisible(false);
+    this.breedingGroup.setVisible(false);
+    this.rosterGroup.setVisible(false);
+  }
 
   private buildQuestScreen(): void {
     this.questGroup = this.add.container(0, 0);
@@ -616,7 +622,7 @@ export class GameScene extends Phaser.Scene {
   private showQuest(): void {
     this.phase = "quest";
     this.setBackgroundDim(0.2);
-    this.titleGroup.setVisible(false);
+    this.hideAllViews();
     this.questGroup.setVisible(true);
     this.distance = 0;
     this.refreshQuestVisual();
@@ -844,7 +850,7 @@ export class GameScene extends Phaser.Scene {
   private showGacha(): void {
     this.phase = "gacha";
     this.setBackgroundDim(0.6);
-    this.titleGroup.setVisible(false);
+    this.hideAllViews();
     this.gachaGroup.setVisible(true);
     const resultText = this.gachaGroup.getByName(
       "gachaResult",
@@ -1055,7 +1061,7 @@ export class GameScene extends Phaser.Scene {
   private showBreeding(): void {
     this.phase = "breeding";
     this.setBackgroundDim(0.6);
-    this.titleGroup.setVisible(false);
+    this.hideAllViews();
     this.breedingGroup.setVisible(true);
     const resultText = this.breedingGroup.getByName(
       "breedResult",
@@ -1125,18 +1131,19 @@ export class GameScene extends Phaser.Scene {
 
   private buildRosterScreen(): void {
     this.rosterGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, {
+    const panel = drawPanel(this, CX, 400, 400, 730, {
       depth: 0,
       fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95,
     });
 
     const heading = this.add
       .text(CX, 90, tr(this.lang, "武将一覧・装備", "Generals / Equipment"), { ...TYPE.h1, color: THEME.textPrimary })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setName("rosterHeading");
     const hint = this.add
       .text(
         CX,
-        125,
+        143,
         tr(this.lang, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", "Tap a general to cycle gear\nNone → Common → Rare → Epic"),
         {
           ...TYPE.small,
@@ -1145,24 +1152,26 @@ export class GameScene extends Phaser.Scene {
           wordWrap: { width: 340, useAdvancedWrap: true },
         },
       )
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setName("rosterHint");
     const inventoryText = this.add
-      .text(CX, 160, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 190, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("rosterInventory");
 
     const backBtn = makeButton(
       this,
       CX,
-      690,
+      733,
       260,
-      48,
+      62,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
       },
     );
+    backBtn.container.setName("rosterBackButton");
 
     this.rosterGroup.add([
       panel,
@@ -1177,7 +1186,7 @@ export class GameScene extends Phaser.Scene {
   private showRoster(): void {
     this.phase = "roster";
     this.setBackgroundDim(0.6);
-    this.titleGroup.setVisible(false);
+    this.hideAllViews();
     this.rosterGroup.setVisible(true);
     this.refreshRoster();
   }
@@ -1196,9 +1205,9 @@ export class GameScene extends Phaser.Scene {
 
     const owned = loadOwnedGenerals();
     const equipped = loadEquippedMap();
-    const rowH = 52;
-    const rowGap = 6;
-    const startY = 195;
+    const rowH = 62;
+    const rowGap = 0;
+    const startY = 235;
 
     GENERAL_POOL.forEach((general, i) => {
       const y = startY + i * (rowH + rowGap);
@@ -1250,7 +1259,8 @@ export class GameScene extends Phaser.Scene {
       rowChildren.push(nameText, statusText);
       const container = this.add
         .container(CX, y, rowChildren)
-        .setSize(360, rowH);
+        .setSize(360, rowH)
+        .setName(`rosterRow:${general.id}`);
       if (has) {
         container.setInteractive({ useHandCursor: true });
         container.on("pointerdown", () => this.onCycleEquip(general));

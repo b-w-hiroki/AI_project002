@@ -305,18 +305,20 @@ class SideBattleView {
     const lang = this.scene.lang ?? "ja";
     if (this.portrait) {
       this.addDirectMoveZone({ x: 10, y: 610, width: 190, height: 178 }, 105, 760);
-      this.addKeyButton(343, 704, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
-      this.addKeyButton(407, 642, 30, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
-      this.addKeyButton(407, 715, 30, tr(lang, "技", "SKL"), 0x236896, "skill");
+      this.addKeyButton(325, 690, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
+      this.addKeyButton(407, 595, 30, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
+      this.addKeyButton(407, 668, 30, tr(lang, "技", "SKL"), 0x236896, "skill");
       this.addKeyButton(268, 756, 28, tr(lang, "防御", "GRD"), 0x334856, "guard");
-      this.ougiButton = this.addButton(405, 778, 33, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
+      this.ougiButton = this.addButton(403, 750, 33, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
+      this.ougiButton.root.setName("side-action-ougi");
     } else {
       this.addDirectMoveZone({ x: 8, y: 294, width: 190, height: 146 }, 103, 421);
-      this.addKeyButton(704, 356, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
-      this.addKeyButton(765, 291, 29, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
-      this.addKeyButton(766, 356, 29, tr(lang, "技", "SKL"), 0x236896, "skill");
-      this.addKeyButton(628, 390, 27, tr(lang, "防御", "GRD"), 0x334856, "guard");
-      this.ougiButton = this.addButton(752, 414, 32, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
+      this.addKeyButton(674, 340, 43, tr(lang, "攻撃", "ATK"), 0xbf3f48, "attack");
+      this.addKeyButton(758, 250, 29, tr(lang, "跳躍", "JMP"), 0x264b61, "up");
+      this.addKeyButton(758, 320, 29, tr(lang, "技", "SKL"), 0x236896, "skill");
+      this.addKeyButton(610, 400, 27, tr(lang, "防御", "GRD"), 0x334856, "guard");
+      this.ougiButton = this.addButton(750, 400, 32, tr(lang, "奥義", "OUGI"), 0x8b6522, () => this.adapter.triggerOugi());
+      this.ougiButton.root.setName("side-action-ougi");
     }
   }
 
@@ -415,7 +417,7 @@ class SideBattleView {
     binding: Direction | "attack" | "skill" | "guard",
   ): ActionButton {
     const isDirection = binding === "left" || binding === "right" || binding === "up" || binding === "down";
-    return this.addButton(
+    const button = this.addButton(
       x,
       y,
       radius,
@@ -424,6 +426,8 @@ class SideBattleView {
       () => isDirection ? this.adapter.press(binding) : this.adapter.pressAction(binding),
       () => isDirection ? this.adapter.release(binding) : this.adapter.releaseAction(binding),
     );
+    button.root.setName(`side-action-${binding}`);
+    return button;
   }
 
   private addButton(
