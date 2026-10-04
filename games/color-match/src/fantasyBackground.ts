@@ -55,7 +55,7 @@ export function installColorFantasyBackground(): void {
       // gradient-heavy SVG into WebGL. Use the checked-in 450x800 raster at the
       // approved portrait viewport so the intended world art is always visible.
       this.load.image(PORTRAIT_KEY, `images/${PORTRAIT_KEY}.png`);
-      this.load.svg(LANDSCAPE_KEY, `images/${LANDSCAPE_KEY}.svg`);
+      this.load.image(LANDSCAPE_KEY, `images/${LANDSCAPE_KEY}.png`);
       return result;
     };
   }

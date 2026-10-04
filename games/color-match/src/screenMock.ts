@@ -93,7 +93,7 @@ function button(
   parent.add(g);
   const textNode = label(scene, parent, x, y, text, options.fontSize ?? (secondary ? 16 : 20))
     .setStroke(secondary ? "#174774" : "#9d321f", secondary ? 3 : 4);
-  const hit = scene.add.zone(x, y, w, Math.max(52, h));
+  const hit = scene.add.zone(x, y, w, Math.max(62, h));
   if (options.name) hit.setName(options.name);
   hit.setInteractive({ useHandCursor: true });
   hit.on("pointerdown", action);
@@ -147,7 +147,7 @@ function build(scene: Runtime): MockUi {
     title.add(g);
     const text = label(scene, title, x, y, WRITING_MODE_LABEL[mode], 22, "#194d78");
     modeLabels.push(text);
-    const hit = scene.add.zone(x, y, 172, 52).setInteractive({ useHandCursor: true });
+    const hit = scene.add.zone(x, y, 172, 62).setInteractive({ useHandCursor: true });
     hit.on("pointerdown", () => invoke(scene, "setWritingMode", mode));
     title.add(hit);
   });
@@ -175,7 +175,7 @@ function build(scene: Runtime): MockUi {
   const score = label(scene, result, 225, 178, "得点 0", 42, "#ffe46c");
   if (scene.textures.exists("cm-mascot")) result.add(scene.add.image(225, 285, "cm-mascot").setDisplaySize(164, 164));
   const stats = label(scene, result, 225, 424, "", 20, "#ffffff");
-  const nextGoal = label(scene, result, 225, 537, "", 16, "#173b63").setName("result-next-focus");
+  const nextGoal = label(scene, result, 225, 537, "", 17, "#173b63").setName("result-next-focus");
   const resultPrimaryLabel = button(
     scene,
     result,

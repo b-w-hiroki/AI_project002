@@ -71,7 +71,7 @@ function text(
 ): Phaser.GameObjects.Text {
   const t = scene.add.text(x, y, value, {
     fontFamily: '"Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif',
-    fontSize: `${size}px`,
+    fontSize: `${Math.max(size, 17)}px`,
     fontStyle: weight,
     color,
     align: "center",

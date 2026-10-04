@@ -84,7 +84,7 @@ function text(
 ): Phaser.GameObjects.Text {
   const node = scene.add.text(x, y, value, {
     fontFamily: '"Hiragino Sans", "Yu Gothic", "Segoe UI", sans-serif',
-    fontSize: `${size}px`,
+    fontSize: `${Math.max(size, 17)}px`,
     fontStyle: weight,
     color,
     align: "center",
@@ -181,6 +181,12 @@ function build(scene: Runtime): LandscapeUi {
 
   const root = scene.add.container(0, 0).setDepth(4200).setVisible(false);
   sky(scene, root);
+  const chrome = scene.add.graphics();
+  chrome.fillGradientStyle(0x09274c, 0x123e70, 0x09274c, 0x123e70, 0.86, 0.72, 0.2, 0.12)
+    .fillRect(0, 0, 800, 78);
+  chrome.fillStyle(0x08223f, 0.3).fillRect(0, 354, 800, 96);
+  chrome.lineStyle(2, 0xffd66f, 0.72).lineBetween(14, 76, 786, 76);
+  root.add(chrome);
   text(scene, root, 22, 22, tr(scene.lang ?? "en", "カラーマッチ", "Color Match"), 26, "#ffffff", "900").setOrigin(0, 0.5).setStroke("#245bc4", 5);
   text(scene, root, 24, 55, "60 SEC ARCADE · COLOR / WORD SWITCH", 9, "#e8f8ff", "800").setOrigin(0, 0.5);
 
@@ -223,18 +229,18 @@ function build(scene: Runtime): LandscapeUi {
 
   const timerRing = scene.add.graphics();
   play.add(timerRing);
-  const timerText = text(scene, play, 88, 115, "60", 36, "#ffffff", "900");
-  text(scene, play, 88, 77, tr(scene.lang ?? "ja", "残り", "TIME"), 10, "#d8f5ff", "900");
-  panel(scene, play, 247, 92, 250, 74, 0x164f82, 0x90e6ff, 0.95, 15);
-  const ruleText = text(scene, play, 247, 92, "", 17, "#ffffff", "900");
-  panel(scene, play, 228, 230, 300, 180, 0xffffff, 0x8ac8f4, 0.98, 18);
-  text(scene, play, 228, 168, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#426c99", "900");
-  const promptText = text(scene, play, 228, 232, "", 50, "#253c58", "900");
-  const chainText = text(scene, play, 342, 335, tr(scene.lang ?? "ja", "0\n連続!", "0\nCHAIN!"), 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
+  const timerText = text(scene, play, 88, 128, "60", 36, "#ffffff", "900");
+  text(scene, play, 88, 90, tr(scene.lang ?? "ja", "残り", "TIME"), 10, "#d8f5ff", "900");
+  panel(scene, play, 247, 106, 250, 74, 0x164f82, 0x90e6ff, 0.95, 15);
+  const ruleText = text(scene, play, 247, 106, "", 17, "#ffffff", "900");
+  panel(scene, play, 228, 240, 300, 180, 0xffffff, 0x8ac8f4, 0.98, 18);
+  text(scene, play, 228, 178, tr(scene.lang ?? "en", "お題", "PROMPT"), 10, "#426c99", "900");
+  const promptText = text(scene, play, 228, 242, "", 50, "#253c58", "900");
+  const chainText = text(scene, play, 342, 345, tr(scene.lang ?? "ja", "0\n連続!", "0\nCHAIN!"), 23, "#ff5f8f", "900").setStroke("#ffffff", 5).setAngle(-4);
 
   panel(scene, play, 650, 54, 270, 58, 0x153e6a, 0xffd463, 0.96, 13);
-  text(scene, play, 548, 42, tr(scene.lang ?? "ja", "得点", "SCORE"), 9, "#d8ecff", "900").setOrigin(0, 0.5);
-  const scoreText = text(scene, play, 720, 55, "0000", 26, "#fff0a6", "900");
+  text(scene, play, 548, 55, tr(scene.lang ?? "ja", "得点", "SCORE"), 9, "#d8ecff", "900").setOrigin(0, 0.5);
+  const scoreText = text(scene, play, 704, 55, "0000", 26, "#fff0a6", "900");
 
   const answers: AnswerView[] = [];
   const xs = [470, 600, 730];
@@ -350,10 +356,10 @@ function refresh(scene: Runtime): void {
     }
 
     ui.timerRing.clear();
-    ui.timerRing.fillStyle(0x113c65, 0.96).fillCircle(88, 115, 48);
-    ui.timerRing.lineStyle(8, seconds <= 10 ? 0xff5f78 : 0x65dff7, 0.28).strokeCircle(88, 115, 47);
+    ui.timerRing.fillStyle(0x113c65, 0.96).fillCircle(88, 128, 48);
+    ui.timerRing.lineStyle(8, seconds <= 10 ? 0xff5f78 : 0x65dff7, 0.28).strokeCircle(88, 128, 47);
     ui.timerRing.lineStyle(8, seconds <= 10 ? 0xff5f78 : 0x39d8ff, 1)
-      .beginPath().arc(88, 115, 47, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).strokePath();
+      .beginPath().arc(88, 128, 47, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio).strokePath();
     ui.timerText.setText(String(seconds)).setColor(seconds <= 10 ? "#ffd0d8" : "#ffffff");
     ui.scoreText.setText(String(score).padStart(4, "0"));
     ui.ruleText.setText(scene.currentRound.judgeMode === "color" ? tr(scene.lang ?? "en", "『文字の色』でタップ", "Tap by INK COLOR") : tr(scene.lang ?? "en", "『文字の意味』でタップ", "Tap by WORD MEANING"));
