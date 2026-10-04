@@ -1131,7 +1131,7 @@ export class GameScene extends Phaser.Scene {
 
   private buildRosterScreen(): void {
     this.rosterGroup = this.add.container(0, 0);
-    const panel = drawPanel(this, CX, 400, 400, 700, {
+    const panel = drawPanel(this, CX, 400, 400, 730, {
       depth: 0,
       fillAlpha: this.textures.exists(BG_KEY) ? 0.85 : 0.95,
     });
@@ -1143,7 +1143,7 @@ export class GameScene extends Phaser.Scene {
     const hint = this.add
       .text(
         CX,
-        139,
+        143,
         tr(this.lang, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", "Tap a general to cycle gear\nNone → Common → Rare → Epic"),
         {
           ...TYPE.small,
@@ -1155,22 +1155,23 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("rosterHint");
     const inventoryText = this.add
-      .text(CX, 183, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 187, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("rosterInventory");
 
     const backBtn = makeButton(
       this,
       CX,
-      690,
+      730,
       260,
-      48,
+      62,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
         fontSize: "14px",
       },
     );
+    backBtn.container.setName("rosterBackButton");
 
     this.rosterGroup.add([
       panel,
@@ -1204,9 +1205,9 @@ export class GameScene extends Phaser.Scene {
 
     const owned = loadOwnedGenerals();
     const equipped = loadEquippedMap();
-    const rowH = 54;
-    const rowGap = 2;
-    const startY = 228;
+    const rowH = 62;
+    const rowGap = 0;
+    const startY = 232;
 
     GENERAL_POOL.forEach((general, i) => {
       const y = startY + i * (rowH + rowGap);

@@ -207,20 +207,23 @@ test("management screens keep readable visual hierarchy", async ({ page }) => {
     const inventory = (root.getByName("rosterInventory") as Phaser.GameObjects.Text).getBounds();
     const rows = root.list.filter(item => item.name.startsWith("rosterRow:")) as Phaser.GameObjects.Container[];
     const first = rows[0].getBounds();
-    const last = rows.at(-1)!.getBounds();
+    const last = rows.at(-1)!;
+    const back = root.getByName("rosterBackButton") as Phaser.GameObjects.Container;
     return {
       headingGap: hint.top - heading.bottom,
       hintGap: inventory.top - hint.bottom,
       rowGap: first.top - inventory.bottom,
       minimumRowHeight: Math.min(...rows.map(row => row.height)),
-      lastRowBottom: last.bottom,
+      backGap: back.y - back.height / 2 - (last.y + last.height / 2),
+      backHeight: back.height,
     };
   });
   expect(rosterSpacing.headingGap).toBeGreaterThanOrEqual(2);
   expect(rosterSpacing.hintGap).toBeGreaterThanOrEqual(4);
   expect(rosterSpacing.rowGap).toBeGreaterThanOrEqual(4);
-  expect(rosterSpacing.minimumRowHeight).toBeGreaterThanOrEqual(53);
-  expect(rosterSpacing.lastRowBottom).toBeLessThan(650);
+  expect(rosterSpacing.minimumRowHeight).toBeGreaterThanOrEqual(61);
+  expect(rosterSpacing.backGap).toBeGreaterThanOrEqual(2);
+  expect(rosterSpacing.backHeight).toBeGreaterThanOrEqual(61);
   await checkFrame(page, "portrait-roster");
   await page.setViewportSize({ width: 375, height: 667 });
   const physicalRowHeight = await page.evaluate(() => {
