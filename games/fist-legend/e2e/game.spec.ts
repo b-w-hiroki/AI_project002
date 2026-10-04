@@ -277,24 +277,65 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
     };
     const finish = find(scene.children.list, "mobile-result-finish") as Phaser.GameObjects.Text;
     const heading = find(scene.children.list, "mobile-result-heading") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
     const padding = Reflect.get(finish, "padding") as { left: number; right: number; top: number; bottom: number };
     const finishBounds = finish.getBounds();
     const headingBounds = heading.getBounds();
+    const rewardBounds = reward.getBounds();
+    const primaryBounds = primary.getBounds();
     return {
       text: (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text,
       padding,
       finish: { top: finishBounds.y, bottom: finishBounds.y + finishBounds.height },
       heading: { top: headingBounds.y, bottom: headingBounds.y + headingBounds.height },
+      reward: {
+        text: reward.list.filter(node => node.type === "Text").map(node => (node as Phaser.GameObjects.Text).text),
+        top: rewardBounds.y,
+        bottom: rewardBounds.y + rewardBounds.height,
+      },
+      primary: { top: primaryBounds.y, height: primaryBounds.height },
     };
   });
   expect(mobileFinish.text).toBe("DRAW");
   expect(mobileFinish.padding).toMatchObject({ left: 14, right: 14, top: 14, bottom: 14 });
   expect(mobileFinish.finish.bottom).toBeLessThan(mobileFinish.heading.top);
+  expect(mobileFinish.reward.text).toEqual(expect.arrayContaining(["獲得報酬", "豪拳石 +20", "所持 20"]));
+  expect(mobileFinish.reward.top).toBeGreaterThan(mobileFinish.heading.bottom);
+  expect(mobileFinish.reward.bottom).toBeLessThan(mobileFinish.primary.top);
+  expect(mobileFinish.primary.height).toBeGreaterThanOrEqual(58);
   await checkFrame(page, "portrait-result");
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await checkFrame(page, "short-portrait-result");
 
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   await checkFrame(page, "landscape-result");
+
+  const pressed = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const primary = find(scene.children.list, "mobile-result-primary")!;
+    const shadow = primary.list[0] as Phaser.GameObjects.Rectangle;
+    const background = primary.list[1] as Phaser.GameObjects.Rectangle;
+    const shine = primary.list[3] as Phaser.GameObjects.Rectangle;
+    const hit = primary.list.at(-1) as Phaser.GameObjects.Zone;
+    hit.emit("pointerdown");
+    return { fillColor: background.fillColor, shineAlpha: shine.alpha, shadowY: shadow.y };
+  });
+  expect(pressed).toEqual({ fillColor: 0x7f2d25, shineAlpha: 0.045, shadowY: 2 });
+  await expect.poll(() => phase(page)).toBe("battle");
 });
 
 test("opponent archetypes keep distinct battle identity", async ({ page }) => {

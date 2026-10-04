@@ -163,6 +163,8 @@ export class GameScene extends Phaser.Scene {
   private timeRemainingSec = ROUND_TIME_SEC;
   private accepting = false;
   private lastOutcome: BattleOutcome | null = null;
+  private lastReward = 0;
+  private lastBalance = 0;
   private moveBuffer: MoveEvent[] = [];
 
   private titleGroup!: Phaser.GameObjects.Container;
@@ -1273,6 +1275,8 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       this.playSound(sfx.lose);
     }
     const balance = addCurrency(reward + seriesBonus + storyBonus);
+    this.lastReward = reward + seriesBonus + storyBonus;
+    this.lastBalance = balance;
 
     this.battleGroup.setVisible(false);
     const heading = this.resultGroup.getByName(
