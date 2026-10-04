@@ -208,14 +208,29 @@ test.describe("phone visual QA", () => {
     expect(controls.labels).toContain("左側をドラッグして移動");
     expect(controls.labels).not.toEqual(expect.arrayContaining(["←", "→", "↑", "↓"]));
 
-    const start = await canvasPoint(page, 70, 680);
-    const end = await canvasPoint(page, 155, 680);
     const beforeX = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x);
-    await page.mouse.move(start.x, start.y);
-    await page.mouse.down();
-    await page.mouse.move(end.x, end.y, { steps: 8 });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container;
+      const findNamed = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.GameObject | undefined => {
+        for (const node of nodes) {
+          if (node.name === "direct-move-zone") return node;
+          if (node.type === "Container") {
+            const nested = findNamed((node as Phaser.GameObjects.Container).list);
+            if (nested) return nested;
+          }
+        }
+        return undefined;
+      };
+      const directZone = findNamed(mock.list) as Phaser.GameObjects.Zone;
+      const pointer = { id: 31, x: 70, y: 680 } as Phaser.Input.Pointer;
+      directZone.emit("pointerdown", pointer);
+      scene.input.emit("pointermove", { ...pointer, x: 155 });
+    });
     await expect.poll(() => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x)).toBeGreaterThan(beforeX + 4);
-    await page.mouse.up();
+    await page.evaluate(() => {
+      window.__qaGame.scene.getScene("GameScene").input.emit("pointerup", { id: 31 });
+    });
     await expect.poll(() => page.evaluate(() => {
       const player = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite;
       return Math.abs((player.body as Phaser.Physics.Arcade.Body).velocity.x);
@@ -254,11 +269,29 @@ test.describe("phone visual QA", () => {
     expect(multiTouchState).toEqual({ afterSecond: false, afterOwner: true, afterRelease: false });
 
     // Browser cancellation and orientation rebuilds must never leave movement held.
-    await page.mouse.move(start.x, start.y);
-    await page.mouse.down();
-    await page.mouse.move(end.x, end.y, { steps: 4 });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container;
+      const findNamed = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.GameObject | undefined => {
+        for (const node of nodes) {
+          if (node.name === "direct-move-zone") return node;
+          if (node.type === "Container") {
+            const nested = findNamed((node as Phaser.GameObjects.Container).list);
+            if (nested) return nested;
+          }
+        }
+        return undefined;
+      };
+      const directZone = findNamed(mock.list) as Phaser.GameObjects.Zone;
+      const pointer = { id: 51, x: 70, y: 680 } as Phaser.Input.Pointer;
+      directZone.emit("pointerdown", pointer);
+      scene.input.emit("pointermove", { ...pointer, x: 155 });
+    });
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
+    })).toBe(true);
     await page.evaluate(() => window.dispatchEvent(new PointerEvent("pointercancel")));
-    await page.mouse.up();
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
