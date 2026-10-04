@@ -1155,14 +1155,14 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setName("rosterHint");
     const inventoryText = this.add
-      .text(CX, 187, "", { ...TYPE.small, color: THEME.textMuted })
+      .text(CX, 190, "", { ...TYPE.small, color: THEME.textMuted })
       .setOrigin(0.5)
       .setName("rosterInventory");
 
     const backBtn = makeButton(
       this,
       CX,
-      730,
+      733,
       260,
       62,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
@@ -1207,7 +1207,7 @@ export class GameScene extends Phaser.Scene {
     const equipped = loadEquippedMap();
     const rowH = 62;
     const rowGap = 0;
-    const startY = 232;
+    const startY = 235;
 
     GENERAL_POOL.forEach((general, i) => {
       const y = startY + i * (rowH + rowGap);
