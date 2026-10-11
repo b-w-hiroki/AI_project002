@@ -2,6 +2,13 @@
 
 このリポジトリで作業するAIエージェント向けの共通実行ルール。
 
+## Shared studio standard
+
+共通設計・UI・素材制作・AIハーネス改善の最新版は Private の https://github.com/b-w-hiroki/studio-playbook/blob/main/README.md を参照（閲覧にはGitHub権限が必要）。共通ルールの本文をこのリポジトリへ複製しない。アクセス不可なら未読と明示。
+
+各ゲームの世界観・操作・モック・保存と、このリポジトリの CLAUDE.md・個別設計・既存テストが固有の契約。共通の素材工程は2Dアクション／育成／カード等で使い分け、3Dならmesh/rig/animation/物理・実エディタQAまで含める。良い改善はPlaybookへ実測とPRで反映する。
+
+
 ## Start here
 1. `CLAUDE.md`
 2. `docs/review/final-release-gate-2026-09-27.md`
