@@ -1,0 +1,56 @@
+name: Benchmark game WebKit positive-controls (not AI A/B)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/benchmark-webkit-positive-control.yml'
+      - 'scripts/benchmark-webkit-report.mjs'
+      - 'games/color-match/**'
+      - 'games/fist-legend/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/benchmark-webkit-positive-control.yml'
+      - 'scripts/benchmark-webkit-report.mjs'
+      - 'games/color-match/**'
+      - 'games/fist-legend/**'
+permissions:
+  contents: read
+jobs:
+  positive-control:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        game: [color-match, fist-legend]
+    defaults:
+      run:
+        working-directory: games/${{ matrix.game }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: games/${{ matrix.game }}/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps webkit
+      - name: Run full WebKit E2E (no filtered / skipped tests)
+        run: npx playwright test --browser=webkit --reporter=json > "$RUNNER_TEMP/benchmark-webkit-report.json"
+      - name: Audit real test run for six-button and martial-arts interaction
+        run: |
+          node ../../scripts/benchmark-webkit-report.mjs \
+            "$RUNNER_TEMP/benchmark-webkit-report.json" \
+            "${{ matrix.game }}" \
+            "$RUNNER_TEMP/benchmark-positive-control.json"
+      - name: Upload independent WebKit screenshots and verification metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ matrix.game }}-webkit
+          path: |
+            games/${{ matrix.game }}/e2e/screenshots/
+            ${{ runner.temp }}/benchmark-positive-control.json
+          if-no-files-found: warn
+          retention-days: 14
