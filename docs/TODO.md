@@ -1,5 +1,14 @@
 # TODO
 
+## 2026-10-19 Karma Quest 保存データの復旧
+
+- [x] 欠損HPの誤った撃破扱いと異常数値を修正
+- [x] 正常なHP 0・ダメージ進行を維持
+- [x] 復旧後の攻撃・保存・再読み込みをChromium / WebKitで検証
+- [ ] PRレビュー・統合、実機と外部Portalの確認
+
+詳細: `docs/review/karma-raid-save-validation-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 魔王戦のブラッシュアップ
 
 - [x] 回転時にHP・報酬状態と直前の結果を維持
