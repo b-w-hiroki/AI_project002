@@ -38,6 +38,7 @@ raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。max
 
 ## 描画・検証
 WebKitは回転時の描画消失を避けるCanvas fallback、それ以外はAUTO。
+王都ホームのchapter Graphicsは、fillGradientStyleの前に不透明な濃紺のfillStyleを指定する。Canvas rendererはグラデーション命令を無視するため、この色を使用する。WebGLでは従来のグラデーションに置き換わる。タイトルのOS／ブラウザ別画像比較で可読性を確認する。
 [UI造形](../../design/karma-ui-design-system.md)・[画面設計図](../../design/karma-screen-blueprints.md) は意図の参照先。現行値と相違したら本書とコードを更新して差分を記録する。
 [tests](../../../games/karma-quest/tests) と [E2E](../../../games/karma-quest/e2e/game.spec.ts) を使う。タイトル画像基準はOS／ブラウザ別。実画像確認なしに許容差を緩めない。
 
