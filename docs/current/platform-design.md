@@ -27,7 +27,7 @@ flowchart TD
 [games/shared/mobile](../../games/shared/mobile) はviewport、safe area、touch、resize lifecycleを扱う。
 [responsiveScene.ts](../../games/shared/mobile/responsiveScene.ts) はmobile-layoutイベントとmobileViewportLayoutレジストリを介して通知する。
 ゲームの状態は作品側、Canvasサイズと表示領域は共通基盤が担当する。resizeでゲーム開始や報酬付与を再実行しない。
-[localTelemetry](../../games/shared/localTelemetry.ts) の組込先はmain.ts。収集項目・保存・送信の変更は仕様への影響をレビューする。
+[localTelemetry](../../games/shared/localTelemetry.ts) の組込先はmain.ts。ai_project002_local_telemetry_v1:<gameId>へセッション数・初回操作数・活動時間・時刻をlocalStorageだけに保存する。このモジュールにネットワーク送信はない。収集項目・保存・送信の変更は仕様への影響をレビューする。
 
 ## ビルド・テスト
 

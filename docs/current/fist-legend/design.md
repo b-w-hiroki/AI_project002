@@ -16,7 +16,7 @@
 
 ## 永続化と描画
 [progress](../../../games/fist-legend/src/logic/progress.ts): fist_legend_currency_v1 / fist_legend_win_count_v1 / fist_legend_team_v1 / fist_legend_story_progress_v1。
-[gacha](../../../games/fist-legend/src/logic/gacha.ts) はガチャの保存責務を持つ。キーの全体確認は変更時に当該ファイルも読む。
+[gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。
 
 ## 検証と参照
@@ -26,4 +26,3 @@ WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作�
 ## 確認範囲・保留
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
-

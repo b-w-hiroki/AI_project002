@@ -23,4 +23,3 @@ presentation → conceptArt → mobileLayout → wall-clock persistence の組�
 ## 確認範囲・保留
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
-

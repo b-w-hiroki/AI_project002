@@ -73,7 +73,10 @@
     }
   },
   "validation": [
-    "コード・既存E2Eとの照合。文書検査と検査スクリプトの単体テストは実行結果をreview記録へ保存する"
+    "各作品のmain・主Scene・ロジック・保存・既存E2Eと照合",
+    "python -m unittest discover -s scripts/tests -p test_docs*.py: 18件成功",
+    "python scripts/check_docs.py --base c975eab --head HEAD: 文書とリンク検査成功",
+    "詳細: docs/review/documentation-workflow-2026-10-19.md"
   ],
   "limitations": [
     "この文書整備で6作品を新たに全E2E実行したわけではない",
