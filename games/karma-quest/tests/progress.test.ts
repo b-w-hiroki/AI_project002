@@ -14,9 +14,18 @@ function installStorage(initial: Record<string, string> = {}) {
 beforeEach(() => installStorage());
 afterEach(() => vi.unstubAllGlobals());
 
-import { loadBestStage, loadTotalEvaluation } from "../src/logic/progress";
+import { loadBestStage, loadTotalEvaluation, saveBestStage } from "../src/logic/progress";
 
 describe("progress durability", () => {
+  it("keeps the furthest year when another journey starts", () => {
+    saveBestStage(1);
+    saveBestStage(2);
+    saveBestStage(1);
+    expect(loadBestStage()).toBe(2);
+    saveBestStage(12);
+    saveBestStage(2);
+    expect(loadBestStage()).toBe(12);
+  });
   it("negative/invalid numeric saves fall back safely", () => {
     installStorage({
       karma_quest_best_stage_v1: "-4",

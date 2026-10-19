@@ -1202,12 +1202,42 @@ test("landscape encounter battle and report remain operable through rotation", a
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
+test("best year survives an interrupted journey and a new start", async ({ page }) => {
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => phase(page)).toBe("reaction");
+  await tapPoint(page, 225, 750);
+  await expect.poll(() => phase(page)).toMatch(/^(encounter|battle)$/);
+  if (await phase(page) === "encounter") await tapPoint(page, 225, 460);
+  await expect.poll(() => phase(page)).toBe("battle");
+  await tapPoint(page, 225, 560);
+  await expect.poll(() => phase(page)).toBe("report");
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 680);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("2");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("最高到達 2年");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-best-year-checkpoint.png" });
+  const total = await page.evaluate(() => Number(localStorage.getItem("karma_quest_total_eval_v1")));
+  await tapPoint(page, 315, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts.join(" ")).toContain(`Rating ${total + 120}`);
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("2");
+});
+
 test("a normal twelve-year journey finishes using touch in both orientations", async ({ page }) => {
   test.setTimeout(180000);
   await tapPoint(page, 225, 660);
   for (let year = 1; year <= 12; year++) {
     await expect.poll(() => phase(page)).toBe("karma");
     expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(year);
+      expect(await page.evaluate(() => Number(localStorage.getItem("karma_quest_best_stage_v1")))).toBe(year);
     const wide = year % 2 === 0;
     await page.setViewportSize(wide ? { width: 800, height: 360 } : { width: 320, height: 568 });
     await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
@@ -1224,6 +1254,7 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
   }
   await expect.poll(() => phase(page)).toBe("final");
   expect(await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory") as unknown[]).length)).toBe(12);
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("12");
 });
 
 

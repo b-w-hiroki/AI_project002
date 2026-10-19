@@ -356,6 +356,8 @@ export class GameScene extends Phaser.Scene {
       this.showFinal();
       return;
     }
+    // Best Year describes the furthest year reached, including interrupted runs.
+    saveBestStage(this.stage);
     this.showKarmaPhase();
   }
 
