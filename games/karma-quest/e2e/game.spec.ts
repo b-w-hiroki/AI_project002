@@ -639,6 +639,59 @@ test("solo raid persists damage, rewards evaluation, and advances boss level", a
   await checkFrame(page, "landscape-solo-raid");
 });
 
+test("raid defeat and reward feedback survive rotation without duplicate rewards", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", JSON.stringify({ level: 1, hp: 1, maxHp: 900, defeats: 0 }));
+    localStorage.setItem("karma_quest_total_eval_v1", "0");
+  });
+  const raidText = () => page.evaluate(() => {
+    const texts: string[] = [];
+    for (const root of window.__qaGame.scene.getScene("GameScene").children.list) {
+      if (root.type !== "Container" || !(root as Phaser.GameObjects.Container).visible) continue;
+      for (const panel of (root as Phaser.GameObjects.Container).list) {
+        if (!panel.name.startsWith("raid-modal") || !(panel as Phaser.GameObjects.Container).visible) continue;
+        for (const child of (panel as Phaser.GameObjects.Container).list) {
+          if (child.type === "Text") texts.push((child as Phaser.GameObjects.Text).text);
+        }
+      }
+    }
+    return texts;
+  });
+  await tapPoint(page, 135, 758);
+  await expect.poll(raidText).toContain("魔王へ攻撃");
+  await tapPoint(page, 225, 510);
+  await expect.poll(raidText).toContain("-1  魔王撃破！");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-defeat-portrait.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(raidText).toContain("-1  魔王撃破！");
+  await expect.poll(raidText).toContain("評価 +80 を受け取る");
+  await tapPoint(page, 62, 348);
+  await expect.poll(raidText).toContain("評価 +80 を受け取る");
+  await tapPoint(page, 591, 397);
+  expect(await phase(page)).toBe("title");
+  await tapPoint(page, 400, 330);
+  await expect.poll(raidText).toContain("評価 +80 獲得。Lv.2 が出現！");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-reward-landscape.png" });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(raidText).toContain("評価 +80 獲得。Lv.2 が出現！");
+  await expect.poll(raidText).toContain("魔王へ攻撃");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-reward-compact.png" });
+  await tapPoint(page, 47, 253);
+  await expect.poll(raidText).toContain("魔王へ攻撃");
+  await tapPoint(page, 225, 510);
+  expect(await page.evaluate(() => Number(localStorage.getItem("karma_quest_total_eval_v1")))).toBe(80);
+  await tapPoint(page, 225, 604);
+  await expect.poll(raidText).toEqual([]);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(raidText).toEqual([]);
+  await tapPoint(page, 150, 348);
+  await expect.poll(raidText).toContain("魔王へ攻撃");
+  expect((await raidText()).join(" ")).not.toContain("獲得");
+});
+
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));

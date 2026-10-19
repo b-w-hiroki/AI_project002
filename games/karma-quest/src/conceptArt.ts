@@ -28,6 +28,7 @@ type Runtime = Phaser.Scene & {
   journeyPending?: boolean;
   journeyError?: boolean;
   homeInformation?: { title: string; description: string };
+  raidPanel?: { lastAction: string };
   lastOutcome?: ReturnType<typeof requestOutcome>;
   choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
@@ -202,14 +203,13 @@ function buildRaidModal(
   const panelH = portrait ? 560 : 382;
   requestCard(scene, modal, cx, cy, panelW, panelH);
   text(scene, modal, cx, portrait ? 152 : 66, "異界の魔王襲来", portrait ? 30 : 28, "#35281e", "900");
-  const boss = text(scene, modal, cx, portrait ? 216 : 118, "", portrait ? 23 : 22, "#5b2334", "900");
+  const boss = text(scene, modal, cx, portrait ? 216 : 118, "", portrait ? 23 : 22, "#5b2334", "900").setStroke("#5b2334", 0);
   const detail = text(scene, modal, cx, portrait ? 290 : 184, "", portrait ? 20 : 19, "#43382e", "700", portrait ? 330 : 560);
   const hpBg = scene.add.graphics();
   const hpFill = scene.add.graphics();
   modal.add([hpBg, hpFill]);
-  const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520);
+  const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520).setStroke("#7c3d2a", 0);
 
-  let lastAction = "";
   const refresh = () => {
     const state = loadRaid(localStorage);
     const stats = deriveStats(scene.karma ?? initialKarma());
@@ -223,10 +223,11 @@ function buildRaidModal(
     );
     hpBg.clear().fillStyle(0x3a2c31, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
-    hpFill.clear().fillStyle(state.hp <= 0 ? 0xd5ad60 : 0xa93b4c, 1)
+    hpFill.clear();
+    if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
     actionLabel?.setText(state.hp <= 0 ? `評価 +${raidReward(state)} を受け取る` : "魔王へ攻撃");
-    actionResult.setText(lastAction);
+    actionResult.setText(scene.raidPanel?.lastAction ?? "");
   };
 
   const actionLabel = button(
@@ -245,14 +246,14 @@ function buildRaidModal(
         addTotalEvaluation(reward);
         const next = advanceRaid(state);
         saveRaid(localStorage, next);
-        lastAction = `評価 +${reward} 獲得。Lv.${next.level} が出現！`;
+        scene.raidPanel = { lastAction: `評価 +${reward} 獲得。Lv.${next.level} が出現！` };
         scene.cameras.main.flash(180, 232, 196, 102);
       } else {
         const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
         saveRaid(localStorage, result.next);
-        lastAction = result.defeated
+        scene.raidPanel = { lastAction: result.defeated
           ? `-${result.damage}  魔王撃破！`
-          : `-${result.damage} ダメージ`;
+          : `-${result.damage} ダメージ` };
         scene.cameras.main.shake(120, 0.004);
       }
       refresh();
@@ -269,14 +270,24 @@ function buildRaidModal(
     portrait ? 64 : 52,
     "王都へ戻る",
     0x0758a4,
-    () => modal.setVisible(false),
+    () => { scene.raidPanel = undefined; modal.setVisible(false); },
     undefined,
     false,
   );
 
   modal.setData("refreshRaid", refresh);
+  let displayed: Runtime["raidPanel"];
+  parent.setData("refreshRaidPanel", () => {
+    const current = scene.raidPanel;
+    modal.setVisible(!!current);
+    // Storage and HP graphics only need refreshing when the raid changes,
+    // including a change made in the other orientation.
+    if (current && current !== displayed) refresh();
+    displayed = current;
+  });
   modal.setData("showRaid", () => {
-    lastAction = "";
+    scene.homeInformation = undefined;
+    scene.raidPanel = { lastAction: "" };
     refresh();
     modal.setVisible(true);
   });
@@ -577,6 +588,7 @@ function homeInformationState(
   });
   return {
     show: (title: string, description: string) => {
+      scene.raidPanel = undefined;
       scene.homeInformation = { title, description };
       (root.getData("refreshInformation") as () => void)();
     },
@@ -676,6 +688,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
     (root.getData("refreshInformation") as () => void)();
+    (root.getData("refreshRaidPanel") as () => void)();
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
     requestStatus.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読込失敗・依頼を押して再試行" : "新しい依頼が届いています");
@@ -778,6 +791,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     () => show("四つの派閥", "戦士・商人・荒くれ・魔術師\n\n依頼に応じると派閥の力が増し、\n勇者の能力に反映されます。"),
   ];
   railRoutes.forEach((route, i) => addRoute(47, 253 + i * 88, 76, 82, `home-rail:${i}`, route));
+  root.bringToTop(raidModal);
   root.add(modal);
   return root;
 }
@@ -1079,6 +1093,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   if (!final) buildLandscapeHomeNavigation(scene, root);
   root.setData("refreshOverview", () => {
     if (!final) (root.getData("refreshInformation") as () => void)();
+    if (!final) (root.getData("refreshRaidPanel") as () => void)();
     journeyLabel.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読み込みを再試行" : final ? "もう一度旅に出る" : "依頼を聞く");
     (journeyLabel.getData("setBusy") as (busy: boolean) => void)(!!scene.journeyPending);
     if (final) {
@@ -1148,6 +1163,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     hit.on("pointerdown", action);
     root.add(hit);
   });
+  root.bringToTop(raidModal);
   root.add(modal);
 }
 
@@ -1262,7 +1278,10 @@ function build(scene: Runtime): MockUi {
 }
 
 function refresh(scene: Runtime): void {
-  if (scene.phase !== "title") scene.homeInformation = undefined;
+  if (scene.phase !== "title") {
+    scene.homeInformation = undefined;
+    scene.raidPanel = undefined;
+  }
   if (scene.lang === "en") {
     const ui = uiByScene.get(scene);
     if (ui) {
