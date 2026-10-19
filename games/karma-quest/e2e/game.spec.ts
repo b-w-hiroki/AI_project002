@@ -1474,6 +1474,36 @@ test("corrupt persisted progress does not block startup", async ({ page }) => {
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
 });
 
+test("invalid progress recovers through home league and reward claiming", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_best_stage_v1", "99");
+    localStorage.setItem("karma_quest_total_eval_v1", "1.5");
+    localStorage.setItem("karma_quest_solo_raid_v1", '{"level":1,"defeats":0,"hp":0}');
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  await page.screenshot({ path: "../../docs/review/karma-progress-recovery.png" });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("最高到達 0年");
+  expect((await loadingFeedback(page)).texts).toContain("累計評価 0");
+  await tapPoint(page, 315, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts.join(" ")).toContain("Bronze LEAGUE · Rating 0");
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 135, 758);
+  await tapPoint(page, 225, 510);
+  await tapPoint(page, 225, 604);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 80");
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe("80");
+  await page.screenshot({ path: "../../docs/review/karma-progress-recovery.png" });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 80");
+  await tapPoint(page, 225, 650);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("1");
+});
+
 
 test("final chronicle changes replay prompt for different choice strategies", async ({ page }) => {
   await useNativePortrait(page);
