@@ -648,6 +648,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   // Do not draw the superseded compact header underneath: Canvas renderers
   // can expose it through the chapter's gradient and show stale progress.
   const chapter = scene.add.graphics();
+  // Canvas ignores gradient styles. Seed an opaque fill so the header keeps
+  // its contrast there; WebGL replaces this style with the gradient below.
+  chapter.fillStyle(0x07131e, 1);
   chapter.fillGradientStyle(0x07131e, 0x18374c, 0x07131e, 0x102a3e, 1, 1, 1, 1)
     .fillRoundedRect(12, 12, 426, 100, 10);
   chapter.lineStyle(2, 0xd5ad60, 0.96).strokeRoundedRect(12, 12, 426, 100, 10);
