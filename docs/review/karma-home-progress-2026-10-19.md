@@ -20,4 +20,6 @@
 - [確認画像](karma-home-live-reward.png)を保存・目視確認。
 - [ヘッダー整理後](karma-home-live-reward-webkit.png)で旧文字と古い評価の重複がないことを確認。
 
+追検証: Linux基準更新後の [run 39185589685](https://github.com/b-w-hiroki/AI_project002/actions/runs/39185589685) でKarma QuestのchecksとE2Eが成功。前回のタイトル比較残件は解消した。この実行対象はPR #341の内容で、後続の最高到達チェックポイント変更は含まない。
+
 実機・外部Portal・mainへの統合・公開は未実施。

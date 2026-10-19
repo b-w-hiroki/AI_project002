@@ -16,5 +16,6 @@
 - typecheck / lint / 単体80件 / build成功。
 - Chromium関連4件成功（通常の12年完走で毎年の記録を検査）。WebKit関連4件成功（中断・再読み込み・再出発、リーグ、回転後の最終年を検査）。
 - [2年目到達後に再読み込みしたホーム](karma-best-year-checkpoint.png)を目視確認。
+- 前回PR #341のLinux画像基準はrun 39185589685でchecks / E2E成功を確認。今回の変更そのものの検証は上記ローカルChromium / WebKitによるもの。
 
 実機・外部Portal・mainへの統合・公開は未実施。
