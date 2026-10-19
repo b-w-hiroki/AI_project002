@@ -15,7 +15,9 @@
 - WebKit: 同じ対象5件を確認。追加した報告テストは、初期操作と回転後操作を描画より先に実行して失敗したため、起動準備と描画フレーム待ちを整え、再実行で成功。
 - 英語の表示・開始の回帰2件成功。
 - 報告操作: 320px幅で未選択送信防止、2件上限、解除、4行目選択、神様変更、縦横回転、送信を確認。
-- Windows Chromium/WebKitの討伐・報告PNGを目視確認。Linux基準は別途実行結果から確認する。
+- Windows Chromium/WebKitの討伐・報告PNGを目視確認。
+- Linux初回 [run 39218547912](https://github.com/b-w-hiroki/AI_project002/actions/runs/39218547912): 46件成功、変更前の討伐・報告画像基準2件が不一致。アップロードされた実画像を目視してOS固有の基準を更新。許容差は変更していない。
+- Linux再検証 [run 39219639308](https://github.com/b-w-hiroki/AI_project002/actions/runs/39219639308)、head `a64026e`: **48件すべて成功（10.6分）**。
 
 ## 限界
 
