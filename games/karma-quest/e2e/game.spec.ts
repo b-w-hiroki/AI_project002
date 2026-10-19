@@ -114,8 +114,7 @@ test("home keeps live progress values, capital context, and long request copy", 
   const approvedAvatar = avatarLayers.find(layer => layer.key === "kq-approved-avatar-visible");
   const placeholderAvatar = avatarLayers.find(layer => layer.key === "kq-dialogue-hero-v1");
   expect(approvedAvatar).toEqual(expect.objectContaining({ name: "approved-home-avatar", x: 48, y: 151, alpha: 1 }));
-  expect(approvedAvatar!.rootDepth).toBeGreaterThanOrEqual(placeholderAvatar!.rootDepth);
-  expect(approvedAvatar!.childIndex).toBeGreaterThan(placeholderAvatar!.childIndex);
+  expect(placeholderAvatar).toBeUndefined();
 
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", {
     id: "merchant_monster", faction: "merchant", karmaDelta: 8,
@@ -712,6 +711,44 @@ test("incomplete raid save recovers without granting an unearned reward", async 
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
   await tapPoint(page, 135, 758);
   await expect.poll(async () => (await loadingFeedback(page)).texts.join(" ")).toContain("HP 1500 / 1600");
+});
+
+test("home progress updates immediately after claiming a raid reward", async ({ page }) => {
+  const homeValue = (name: string) => page.evaluate(name => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    for (const root of scene.children.list) {
+      if (root.type !== "Container") continue;
+      const label = (root as Phaser.GameObjects.Container).getByName(name) as Phaser.GameObjects.Text | null;
+      if (label) return label.text;
+    }
+    return "";
+  }, name);
+  await expect.poll(() => homeValue("home-total-evaluation")).toBe("累計評価 0");
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", '{"level":1,"defeats":0,"hp":0}');
+    localStorage.setItem("karma_quest_best_stage_v1", "7");
+  });
+  await tapPoint(page, 135, 758);
+  await tapPoint(page, 225, 510);
+  await tapPoint(page, 225, 604);
+  await expect.poll(() => homeValue("home-total-evaluation")).toBe("累計評価 80");
+  await expect.poll(() => homeValue("home-best-stage")).toBe("最高到達 7年");
+  expect((await loadingFeedback(page)).texts.filter(value => value.startsWith("累計評価 "))).toEqual(["累計評価 80"]);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-home-live-reward.png" });
+  await tapPoint(page, 315, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts.join(" ")).toContain("Rating 500");
+  await tapPoint(page, 225, 551);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 80");
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("最高到達 7年");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(() => homeValue("home-total-evaluation")).toBe("累計評価 80");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await expect.poll(() => homeValue("home-total-evaluation")).toBe("累計評価 80");
+  await expect.poll(() => homeValue("home-best-stage")).toBe("最高到達 7年");
 });
 
 test("portrait title keeps the approved visual mock", async ({ page }) => {

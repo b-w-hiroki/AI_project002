@@ -602,20 +602,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const shade = scene.add.graphics();
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  hudPlate(scene, root, 108, 45, 184, 66);
-  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
-  text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
-  text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
-  // Separate lifetime progress from the current location so both scan like
-  // the approved resource and season rows without covering the hero.
-  hudPlate(scene, root, 332, 26, 204, 34);
-  text(scene, root, 332, 26, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setStroke("#091420", 1);
-  hudPlate(scene, root, 332, 67, 190, 42);
-  text(scene, root, 332, 59, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setStroke("#091420", 1);
-  text(scene, root, 332, 76, "王都ルナディス", 12, "#fff6dd", "700").setStroke("#091420", 0);
   // Chapter header and live status row mirror the approved home hierarchy.
-  // They intentionally cover the earlier compact header without replacing any
-  // progress source: lifetime evaluation and best stage remain live values.
+  // Do not draw the superseded compact header underneath: Canvas renderers
+  // can expose it through the chapter's gradient and show stale progress.
   const chapter = scene.add.graphics();
   chapter.fillGradientStyle(0x07131e, 0x18374c, 0x07131e, 0x102a3e, 1, 1, 1, 1)
     .fillRoundedRect(12, 12, 426, 100, 10);
@@ -637,9 +626,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 332, 132, 204, 34);
-  text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
+  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
   hudPlate(scene, root, 332, 173, 190, 42);
-  text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
+  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
   text(scene, root, 332, 182, "王都ルナティス", 12, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
 
   const rail = scene.add.graphics();
@@ -687,6 +676,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
   const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
+    totalEvaluation.setText(`累計評価 ${loadTotalEvaluation()}`);
+    bestStage.setText(`最高到達 ${loadBestStage()}年`);
     (root.getData("refreshInformation") as () => void)();
     (root.getData("refreshRaidPanel") as () => void)();
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
@@ -733,8 +724,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   for (const [i, label] of ["王都", "ワールド", "キャラ", "リーグ", "ショップ"].entries()) {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 20, "#fff0c8", "800").setStroke("#091420", 0);
   }
-  // Draw the approved visible-only portrait last so the live player card masks
-  // the old placeholder portrait while retaining its text and interactions.
+  // Keep the approved avatar in the live player card's reserved portrait slot.
   fitted(scene, root, APPROVED_AVATAR_KEY, 48, 151, 52, 52)?.setName("approved-home-avatar");
   screenFrame(scene, root);
   const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });
