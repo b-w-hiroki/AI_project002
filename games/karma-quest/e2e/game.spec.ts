@@ -1495,6 +1495,7 @@ test("invalid progress recovers through home league and reward claiming", async 
   await tapPoint(page, 225, 604);
   await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 80");
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe("80");
+  await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning);
   await page.screenshot({ path: "../../docs/review/karma-progress-recovery.png" });
   await page.reload();
   await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
