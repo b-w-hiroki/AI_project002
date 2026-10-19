@@ -2,6 +2,29 @@ import { describe, expect, it } from "vitest";
 import { advanceRaid, attackRaid, loadRaid, newRaid, raidDamage, raidMaxHp, raidReward, saveRaid } from "../src/logic/raid";
 
 describe("solo raid", () => {
+  const fromRaw = (raw: string) => loadRaid({ getItem: () => raw, setItem: () => undefined });
+
+  it.each([undefined, null, "bad", "0", -1, 0.5])("does not treat invalid HP %s as a defeat", hp => {
+    expect(fromRaw(JSON.stringify({ level: 3, defeats: 2, hp }))).toEqual(newRaid(3, 2));
+  });
+
+  it.each(["null", "[]", "42", '"saved"', "{broken"])("recovers an invalid record %s", raw => {
+    expect(fromRaw(raw)).toEqual(newRaid());
+  });
+
+  it.each(["Infinity", -3, 1.5, Number.MAX_SAFE_INTEGER])("rejects unsafe level %s", level => {
+    const state = fromRaw(JSON.stringify({ level, defeats: -2 }));
+    expect(state).toEqual(newRaid());
+    expect(Number.isSafeInteger(raidReward(state))).toBe(true);
+  });
+
+  it("preserves legitimate defeated and damaged bosses and derives max HP", () => {
+    expect(fromRaw('{"level":2,"defeats":1,"hp":0,"maxHp":999}')).toEqual({ ...newRaid(2, 1), hp: 0 });
+    expect(fromRaw('{"level":2,"defeats":1,"hp":300}')).toEqual({ ...newRaid(2, 1), hp: 300 });
+    expect(fromRaw('{"level":2,"defeats":1,"hp":9000}')).toEqual(newRaid(2, 1));
+    expect(fromRaw('{"level":1e309,"hp":1e309,"defeats":1e309}')).toEqual(newRaid());
+  });
+
   it("scales boss HP by level", () => {
     expect(raidMaxHp(1)).toBe(900);
     expect(raidMaxHp(3)).toBe(1600);

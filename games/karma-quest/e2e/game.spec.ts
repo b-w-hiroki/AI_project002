@@ -692,6 +692,28 @@ test("raid defeat and reward feedback survive rotation without duplicate rewards
   expect((await raidText()).join(" ")).not.toContain("獲得");
 });
 
+test("incomplete raid save recovers without granting an unearned reward", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", '{"level":3,"defeats":2}');
+    localStorage.setItem("karma_quest_total_eval_v1", "0");
+  });
+  await tapPoint(page, 135, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("魔王へ攻撃");
+  expect((await loadingFeedback(page)).texts.join(" ")).toContain("HP 1600 / 1600");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-save-recovery.png" });
+  await tapPoint(page, 225, 510);
+  const readSave = () => page.evaluate(() => ({
+    raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
+    evaluation: Number(localStorage.getItem("karma_quest_total_eval_v1")),
+  }));
+  await expect.poll(async () => (await readSave()).raid.hp).toBe(1500);
+  expect(await readSave()).toEqual({ raid: { level: 3, defeats: 2, hp: 1500, maxHp: 1600 }, evaluation: 0 });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await tapPoint(page, 135, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts.join(" ")).toContain("HP 1500 / 1600");
+});
+
 test("portrait title keeps the approved visual mock", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "homeRequest", { id: "warrior_iron", faction: "warrior", text: "鉄が足りなくて剣が作れない…", karmaDelta: 5 }));

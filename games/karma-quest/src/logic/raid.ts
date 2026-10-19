@@ -20,6 +20,10 @@ export interface RaidStore {
 
 const RAID_KEY = "karma_quest_solo_raid_v1";
 
+function nonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
 export function raidMaxHp(level: number): number {
   return 900 + Math.max(0, level - 1) * 350;
 }
@@ -33,11 +37,16 @@ export function loadRaid(store: RaidStore): RaidState {
   const raw = store.getItem(RAID_KEY);
   if (!raw) return newRaid();
   try {
-    const parsed = JSON.parse(raw) as Partial<RaidState>;
-    const level = Math.max(1, Math.floor(Number(parsed.level) || 1));
-    const defeats = Math.max(0, Math.floor(Number(parsed.defeats) || 0));
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return newRaid();
+    const record = parsed as Partial<Record<keyof RaidState, unknown>>;
+    // Save files contain numbers. Do not coerce missing/null/string HP to zero:
+    // zero is an actual defeated boss with a reward waiting to be claimed.
+    const level = nonNegativeInteger(record.level) && record.level >= 1
+      && Number.isSafeInteger(raidMaxHp(record.level + 1)) ? record.level : 1;
+    const defeats = nonNegativeInteger(record.defeats) && record.defeats < Number.MAX_SAFE_INTEGER ? record.defeats : 0;
     const maxHp = raidMaxHp(level);
-    const hp = Math.min(maxHp, Math.max(0, Number(parsed.hp) || 0));
+    const hp = nonNegativeInteger(record.hp) ? Math.min(maxHp, record.hp) : maxHp;
     return { level, hp, maxHp, defeats };
   } catch {
     return newRaid();
