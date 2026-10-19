@@ -596,6 +596,47 @@ function homeInformationState(
   };
 }
 
+function leagueTable(scene: Runtime, modal: Phaser.GameObjects.Container, portrait: boolean): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setName("league-table").setVisible(false);
+  modal.add(root);
+  const cx = portrait ? 225 : 400;
+  const left = portrait ? 59 : 132;
+  const right = portrait ? 391 : 668;
+  const top = portrait ? 276 : 132;
+  const rowHeight = 28;
+  const summary = text(scene, root, cx, portrait ? 238 : 98, "", portrait ? 20 : 22, "#43382e", "800");
+  const ink = scene.add.graphics(); root.add(ink);
+  const rows = Array.from({ length: 7 }, (_, i) => {
+    const y = top + i * rowHeight;
+    return {
+      rank: text(scene, root, left, y, "", 20, "#43382e", "700").setOrigin(0, 0.5),
+      name: text(scene, root, left + 50, y, "", 20, "#43382e", "700").setOrigin(0, 0.5),
+      rating: text(scene, root, right, y, "", 20, "#43382e", "700").setOrigin(1, 0.5),
+    };
+  });
+  const next = text(scene, root, cx, portrait ? 483 : 330, "", 20, "#43382e", "800");
+  root.setData("refresh", () => {
+    const snapshot = leagueSnapshot(loadTotalEvaluation(), loadBestStage());
+    summary.setText(`${snapshot.tier} LEAGUE · Rating ${snapshot.rating}`);
+    ink.clear();
+    snapshot.entries.forEach((entry, i) => {
+      const row = rows[i];
+      if (!row) return;
+      const y = top + i * rowHeight;
+      if (entry.self) {
+        ink.fillStyle(0xd8e8ed, 1).fillRoundedRect(left - 9, y - 13, right - left + 18, 26, 3);
+        ink.lineStyle(1, 0x8a6726, 0.8).strokeRoundedRect(left - 9, y - 13, right - left + 18, 26, 3);
+      } else ink.lineStyle(1, 0xb79451, 0.22).lineBetween(left - 8, y + 14, right + 8, y + 14);
+      const color = entry.self ? "#123f59" : "#43382e";
+      row.rank.setText(`${i + 1}位`).setColor(color);
+      row.name.setText(entry.self ? "あなた / カイト" : entry.name).setColor(color);
+      row.rating.setText(String(entry.rating)).setColor(color);
+    });
+    next.setText(snapshot.rank === 1 ? "現在トップ！ 首位を守ろう" : `次の順位まで あと ${snapshot.nextGap}`);
+  });
+  return root;
+}
+
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
   cover(scene, root, HOME_BG_KEY);
@@ -743,7 +784,11 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const heading = text(scene, modal, 225, 204, "", 30, "#35281e", "900", 340);
   const body = text(scene, modal, 225, 358, "", 23, "#43382e", "700", 330);
   const sound = soundSetting(scene, modal, 225, 475, 56);
+  const league = leagueTable(scene, modal, true);
   const { show, close } = homeInformationState(scene, root, modal, (title, description) => {
+    league.setVisible(title === "勇者リーグ");
+    body.setVisible(title !== "勇者リーグ");
+    if (league.visible) (league.getData("refresh") as () => void)();
     sound.setVisible(title === "冒険の案内");
     (sound.getData("refresh") as () => void)();
     heading.setText(title);
@@ -1119,7 +1164,11 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   const heading = text(scene, modal, 400, 62, "", 30, "#35281e", "900", 610);
   const body = text(scene, modal, 400, 208, "", 24, "#43382e", "700", 610);
   const sound = soundSetting(scene, modal, 400, 316, 56);
+  const league = leagueTable(scene, modal, false);
   const { show, close } = homeInformationState(scene, root, modal, (title, value) => {
+    league.setVisible(title === "勇者リーグ");
+    body.setVisible(title !== "勇者リーグ");
+    if (league.visible) (league.getData("refresh") as () => void)();
     heading.setText(title);
     body
       .setFontSize(title === "勇者リーグ" ? 19 : 24)

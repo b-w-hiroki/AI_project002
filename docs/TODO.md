@@ -1,5 +1,14 @@
 # TODO
 
+## 2026-10-19 Karma Quest リーグの読みやすさ
+
+- [x] 順位・名前・評価点の列揃えと文字拡大
+- [x] 自分の行と次順位への点数を強調
+- [x] 320px幅・回転・首位をChromium / WebKitで検証
+- [ ] PRレビュー・統合、実機と外部Portalの確認
+
+詳細: `docs/review/karma-league-readability-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 最高到達の途中記録
 
 - [x] 各年への到達時に最高到達を保存
