@@ -5,7 +5,9 @@
 ## 発見・対応
 
 1. **SDKの無期限待機でゲームが起動しない**: mainはSDK初期化をawaitするが、スクリプト取得とSDK.initにタイムアウトがなかった。応答を保留する単体テスト2件で修正前の失敗を確認。合計8秒の期限を設け、失敗時は既存の単体ゲーム動作へ戻す。遅れて完了したSDKから言語・フックが有効にならないよう、成功時だけ状態を確定する。通常の成功時の言語・連携は維持。
-2. **開発依存の監査警告**: eslint→minimatch→brace-expansion 5.0.9にnpm audit high 1件。ランタイム依存ではない。PR #330のlockfileも5.0.9だったため、別の依存修正として扱う。
+2. **開発依存の監査警告**: eslint→minimatch→brace-expansion 5.0.9にnpm audit high 1件。ランタイム依存ではない。PR #330のlockfileも5.0.9だったため、別の依存修正 [PR #336](https://github.com/b-w-hiroki/AI_project002/pull/336) で5.0.12へ更新。npm ci・audit 0件・lint・typecheck・単体60件・build成功、公開用ビルドのハッシュは変更なし。
+
+起動修正は [draft PR #335](https://github.com/b-w-hiroki/AI_project002/pull/335)、依存修正は独立したdraft PR #336。mainへのマージ・公開は未実施。
 
 ## 検証
 
