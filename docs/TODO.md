@@ -1,5 +1,13 @@
 # TODO
 
+## 2026-10-19 Karma Quest ホームの進行表示
+
+- [x] 報酬受取後の累計評価と最高到達を縦ホームへ即時反映
+- [x] リーグ・縦横回転・再読み込みとの整合をChromium / WebKitで検証
+- [ ] PRレビュー・統合、実機と外部Portalの確認
+
+詳細: `docs/review/karma-home-progress-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 保存データの復旧
 
 - [x] 欠損HPの誤った撃破扱いと異常数値を修正

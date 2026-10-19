@@ -637,9 +637,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 332, 132, 204, 34);
-  text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
+  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
   hudPlate(scene, root, 332, 173, 190, 42);
-  text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
+  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
   text(scene, root, 332, 182, "王都ルナティス", 12, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
 
   const rail = scene.add.graphics();
@@ -687,6 +687,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
   const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
+    totalEvaluation.setText(`累計評価 ${loadTotalEvaluation()}`);
+    bestStage.setText(`最高到達 ${loadBestStage()}年`);
     (root.getData("refreshInformation") as () => void)();
     (root.getData("refreshRaidPanel") as () => void)();
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
