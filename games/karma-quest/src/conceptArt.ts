@@ -446,6 +446,7 @@ function button(
   const g = scene.add.graphics();
   let armed = false;
   let processing = false;
+  let busy = false;
   const outline = (inset: number) => {
     const l = x - width / 2 + inset, r = x + width / 2 - inset;
     const t = y - height / 2 + inset, b = y + height / 2 - inset;
@@ -475,7 +476,7 @@ function button(
     g.lineStyle(1, 0x6192b4, blue ? 0.7 : 0.15).strokePoints(outline(8), true);
     ornament(g, x - width / 2 + 2, y - height / 2 + 2, width - 4, height - 4);
     if (state === "focus") g.lineStyle(2, 0xffffff, 0.72).strokePoints(outline(8), true);
-    if (state === "processing") g.fillStyle(0x071017, 0.44).fillPoints(outline(5), true);
+    if (busy || state === "processing") g.fillStyle(0x071017, 0.44).fillPoints(outline(5), true);
     // Small gold corner flourishes, matching the mock's inset metalwork.
     for (const side of [-1, 1]) {
       const edge = x + side * (width / 2 - 13);
@@ -508,10 +509,17 @@ function button(
   if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
   const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
-  zone.on("pointerover", () => { if (!processing) paint("focus"); });
-  zone.on("pointerdown", () => { if (!processing) { armed = true; paint("pressed"); } });
+  labelText.setData("setBusy", (value: boolean) => {
+    if (busy === value) return;
+    busy = value;
+    armed = false;
+    zone.input!.enabled = !value;
+    paint(value ? "processing" : "idle");
+  });
+  zone.on("pointerover", () => { if (!processing && !busy) paint("focus"); });
+  zone.on("pointerdown", () => { if (!processing && !busy) { armed = true; paint("pressed"); } });
   zone.on("pointerup", () => {
-    if (!armed || processing) return;
+    if (!armed || processing || busy) return;
     armed = false;
     processing = true;
     paint("processing");
@@ -634,7 +642,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeHero = fitted(scene, root, HERO_BACK_KEY, 150, 770, 480, 634);
   registerHeroKarmaVisual(scene, root, homeHero, 150, 650, 330, 440, 142, 475);
   hudPlate(scene, root, 186, 621, 314, 38);
-  text(scene, root, 186, 621, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
+  const requestStatus = text(scene, root, 186, 621, "新しい依頼が届いています", 21, "#ffffff", "900").setStroke("#091420", 1);
   requestCard(scene, root, 225, 682, 414, 92);
   requesterPortrait(scene, root, 31, 648, 72, 66, true);
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
@@ -642,8 +650,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   root.setData("refreshRequest", () => {
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
-    if (scene.journeyPending) homeRequestTitle.setText("旅の準備中…");
-    else if (scene.journeyError) homeRequestTitle.setText("読込失敗・押して再試行");
+    requestStatus.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読込失敗・依頼を押して再試行" : "新しい依頼が届いています");
+    requestStatus.setFontSize(scene.journeyError ? 18 : 21);
     const requestCopy = scene.homeRequest?.text ?? "王都であなたの決断を待っています。";
     homeRequestBody
       .setFontSize(requestCopy.length > 44 ? 15 : requestCopy.length > 30 ? 18 : 21)
@@ -779,7 +787,7 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   const requestTitle = text(scene, root, 290, 111, "", 20, "#35281e", "900", 270);
   const requestText = text(scene, root, 290, 193, "", 22, "#352f29", "700", 264).setAlign("left");
   const acceptLabel = button(scene, root, 225, 598, 382, 80, "食料を支援する", 0x0758a4, () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
-  button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
+  root.setData("declineLabel", button(scene, root, 225, 694, 382, 80, "支援を断る", 0x981d25, () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1"));
   text(scene, root, 225, 766, "「どんな選択にも、意味がある」", 17, "#fff3d0", "700");
   screenFrame(scene, root);
   return { choiceRoot: root, yearText, requestTitle, requestText, acceptLabel };
@@ -802,8 +810,8 @@ function buildLandscapeChoice(scene: Runtime): NonNullable<MockUi["landscapeChoi
   const requestText = text(scene, root, 591, 157, "", 24, "#352f29", "700", 338).setAlign("left");
   const acceptLabel = button(scene, root, 591, 301, 382, 80, "依頼を引き受ける", 0x0758a4,
     () => invoke(scene, "onKarmaChoice", true), "依頼者の力になる");
-  button(scene, root, 591, 397, 382, 80, "支援を断る", 0x981d25,
-    () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1");
+  root.setData("declineLabel", button(scene, root, 591, 397, 382, 80, "支援を断る", 0x981d25,
+    () => invoke(scene, "onKarmaChoice", false), "他の三派閥がそれぞれ +1"));
   const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
   ornament(frame, 8, 8, 374, 434);
   root.add(frame);
@@ -1035,13 +1043,15 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
     heading.setPosition(655, 128).setWordWrapWidth(226, true);
     body.setName("landscape-home-request-body").setPosition(655, 212).setWordWrapWidth(226, true).setFontSize(22);
   }
-  button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
+  const journeyLabel = button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
     () => invoke(scene, "startRun"));
   const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
   ornament(frame, 8, 8, 374, 434);
   root.add(frame);
   if (!final) buildLandscapeHomeNavigation(scene, root);
   root.setData("refreshOverview", () => {
+    journeyLabel.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読み込みを再試行" : final ? "もう一度旅に出る" : "依頼を聞く");
+    (journeyLabel.getData("setBusy") as (busy: boolean) => void)(!!scene.journeyPending);
     if (final) {
       const history = scene.choiceHistory ?? [];
       const latest = history.at(-1), previous = history.at(-2);
@@ -1059,8 +1069,6 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
       status.setText(`最高到達 ${loadBestStage()}年`);
       heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
-      if (scene.journeyPending) heading.setText("旅の準備中…");
-      else if (scene.journeyError) heading.setText("読込失敗・再試行");
       body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
       footer.setText(`累計評価 ${loadTotalEvaluation()}`);
     }
@@ -1320,8 +1328,6 @@ function refresh(scene: Runtime): void {
   }
   ui.yearText.setText(`${Phaser.Math.Clamp(scene.stage ?? 1, 1, 12)}年目  春`);
   ui.requestTitle.setText(request ? `依頼  ${FACTION_LABEL[request.faction]}` : "新しい依頼");
-  if (scene.artPending) ui.requestTitle.setText("場面を読み込み中…");
-  else if (scene.artError) ui.requestTitle.setText("読込失敗・選択で再試行");
   ui.requestText.setText(request?.text ?? "王都の民が、あなたの決断を待っています。どうしますか？");
   const actionLabels: Record<string, string> = {
     village_food: "食料を支援する",
@@ -1345,6 +1351,17 @@ function refresh(scene: Runtime): void {
     wideChoice.requestText.setText(ui.requestText.text);
     wideChoice.acceptLabel.setText(ui.acceptLabel.text);
     (wideChoice.acceptLabel.getData("detailText") as Phaser.GameObjects.Text).setText(detail?.text ?? "");
+  }
+  for (const choice of [ui, wideChoice]) {
+    if (!choice) continue;
+    const decline = choice.choiceRoot.getData("declineLabel") as Phaser.GameObjects.Text;
+    for (const label of [choice.acceptLabel, decline]) {
+      (label.getData("setBusy") as (busy: boolean) => void)(!!scene.artPending);
+      const detailText = label.getData("detailText") as Phaser.GameObjects.Text;
+      if (scene.artPending) detailText.setText("場面を準備しています…");
+      else if (scene.artError) detailText.setText("読込失敗・この選択で再試行");
+      else if (label === decline) detailText.setText("他の三派閥がそれぞれ +1");
+    }
   }
 }
 
