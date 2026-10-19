@@ -552,6 +552,38 @@ test("custom selections only confirm their pressing pointer", async ({ page }) =
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-selection-pointer-owner.png" });
 });
 
+test("landscape report marks the selected deity and preserves it through rotation", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const labels = () => page.evaluate(() => {
+    const result: string[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("report-god-label:")) result.push((node as Phaser.GameObjects.Text).text);
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return result;
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
+  await tapPoint(page, 699, 144);
+  await expect.poll(labels).toEqual(["軍神", "✓ 慈愛神"]);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-god-selected.png" });
+  await useNativePortrait(page);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(labels).toEqual(["軍神", "✓ 慈愛神"]);
+  await tapPoint(page, 519, 144);
+  await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
