@@ -724,8 +724,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   for (const [i, label] of ["王都", "ワールド", "キャラ", "リーグ", "ショップ"].entries()) {
     text(scene, root, [52, 135, 225, 315, 400][i] ?? 225, 775, label, 20, "#fff0c8", "800").setStroke("#091420", 0);
   }
-  // Draw the approved visible-only portrait last so the live player card masks
-  // the old placeholder portrait while retaining its text and interactions.
+  // Keep the approved avatar in the live player card's reserved portrait slot.
   fitted(scene, root, APPROVED_AVATAR_KEY, 48, 151, 52, 52)?.setName("approved-home-avatar");
   screenFrame(scene, root);
   const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });

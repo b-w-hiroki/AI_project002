@@ -14,7 +14,10 @@
 - 修正前に評価80受取後も累計評価0と表示されることを追加E2Eで再現。
 - typecheck / lint / 単体79件 / build成功。
 - Chromium関連4件、WebKit関連4件成功。
+- Windowsのタイトル画像比較もChromium / WebKit各1件成功。削除した旧ヘッダーの差分を確認し、それぞれの実画像で基準を更新した。
+- Linux CI [run 39184184307](https://github.com/b-w-hiroki/AI_project002/actions/runs/39184184307): checks成功、E2Eは42件成功・タイトル画像比較1件失敗。差分は旧ヘッダー上端365ピクセル。artifactの `portrait-title-approved.png` を目視確認しLinux基準へ採用した。基準更新後のLinux全43件再実行は未実施。
 - 実操作で報酬受取後に評価80、最高到達7年を表示。リーグRating 500、横ホーム、縦への復帰、再読み込み後も整合することを確認。
 - [確認画像](karma-home-live-reward.png)を保存・目視確認。
+- [ヘッダー整理後](karma-home-live-reward-webkit.png)で旧文字と古い評価の重複がないことを確認。
 
 実機・外部Portal・mainへの統合・公開は未実施。
