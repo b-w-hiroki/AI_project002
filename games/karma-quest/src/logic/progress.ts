@@ -3,19 +3,26 @@
 const BEST_STAGE_KEY = "karma_quest_best_stage_v1";
 const TOTAL_EVAL_KEY = "karma_quest_total_eval_v1";
 
-function loadNumber(key: string): number {
+const MAX_STAGE = 12;
+
+function validCounter(value: number, maximum = Number.MAX_SAFE_INTEGER): boolean {
+  return Number.isSafeInteger(value) && value >= 0 && value <= maximum;
+}
+
+function loadNumber(key: string, maximum = Number.MAX_SAFE_INTEGER): number {
   const raw = localStorage.getItem(key);
   if (!raw) return 0;
   const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  // Invalid records are ignored, not rewritten merely by viewing the home screen.
+  return validCounter(n, maximum) ? n : 0;
 }
 
 export function loadBestStage(): number {
-  return loadNumber(BEST_STAGE_KEY);
+  return loadNumber(BEST_STAGE_KEY, MAX_STAGE);
 }
 
 export function saveBestStage(stage: number): void {
-  if (stage > loadBestStage()) {
+  if (validCounter(stage, MAX_STAGE) && stage > loadBestStage()) {
     localStorage.setItem(BEST_STAGE_KEY, String(stage));
   }
 }
@@ -25,7 +32,10 @@ export function loadTotalEvaluation(): number {
 }
 
 export function addTotalEvaluation(amount: number): number {
-  const next = loadTotalEvaluation() + amount;
+  const current = loadTotalEvaluation();
+  if (!validCounter(amount)) return current;
+  // Saturate before addition so a valid reward cannot write an unsafe integer.
+  const next = current + Math.min(amount, Number.MAX_SAFE_INTEGER - current);
   localStorage.setItem(TOTAL_EVAL_KEY, String(next));
   return next;
 }
