@@ -286,6 +286,40 @@ test("compact phones keep the primary choice readable and tappable", async ({ pa
   await expect.poll(() => phase(page)).not.toBe("karma");
 });
 
+test("home progress stays readable and separated on a compact phone", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  for (const value of [0, 9876, 99999999, Number.MAX_SAFE_INTEGER]) {
+    await page.evaluate(value => {
+      localStorage.setItem("karma_quest_total_eval_v1", String(value));
+      localStorage.setItem("karma_quest_best_stage_v1", "12");
+    }, value);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    const labels = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.list.find(node => node.type === "Container" &&
+        !!(node as Phaser.GameObjects.Container).getByName("home-total-evaluation")) as Phaser.GameObjects.Container;
+      const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+      return ["home-total-evaluation", "home-best-stage", "home-capital"].map(name => {
+        const label = root.getByName(name) as Phaser.GameObjects.Text;
+        const box = label.getBounds();
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+          size: Number.parseFloat(String(label.style.fontSize)) * scale };
+      });
+    });
+    expect(labels[0].size).toBeGreaterThanOrEqual(14);
+    expect(labels[1].size).toBeGreaterThanOrEqual(14);
+    expect(labels[0].left).toBeGreaterThan(234);
+    expect(labels[0].right).toBeLessThan(430);
+    expect(labels[0].bottom).toBeLessThan(labels[1].top);
+    expect(labels[1].bottom).toBeLessThan(labels[2].top);
+    expect(labels[2].bottom).toBeLessThan(206);
+  }
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "../../docs/review/karma-home-readable-progress.png" });
+});
+
 test("portrait navigation remains at least 14 physical pixels at 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
