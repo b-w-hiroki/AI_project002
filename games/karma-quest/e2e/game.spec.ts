@@ -573,8 +573,30 @@ test("landscape report marks the selected deity and preserves it through rotatio
   });
   await page.setViewportSize({ width: 806, height: 456 });
   await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
+  await page.evaluate(() => {
+    Reflect.set(window, "__godFrameClears", 0);
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (node.name.startsWith("report-god-frame:")) {
+        const graphics = node as Phaser.GameObjects.Graphics;
+        const clear = graphics.clear;
+        graphics.clear = function () {
+          Reflect.set(window, "__godFrameClears", Number(Reflect.get(window, "__godFrameClears")) + 1);
+          return clear.call(this);
+        };
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+  });
+  await page.evaluate(() => new Promise<void>(resolve => {
+    let frames = 0;
+    const step = () => { if (++frames >= 10) resolve(); else requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }));
+  expect(await page.evaluate(() => Reflect.get(window, "__godFrameClears"))).toBe(0);
   await tapPoint(page, 699, 144);
   await expect.poll(labels).toEqual(["軍神", "✓ 慈愛神"]);
+  expect(await page.evaluate(() => Reflect.get(window, "__godFrameClears"))).toBe(2);
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-god-selected.png" });
   await useNativePortrait(page);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");

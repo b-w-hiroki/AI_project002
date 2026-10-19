@@ -1384,7 +1384,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   });
   const godChoices = (["valor", "mercy"] as const).map((god, i) => {
     const x = 519 + i * 180;
-    const g = scene.add.graphics(); report.add(g);
+    const g = scene.add.graphics().setName(`report-god-frame:${god}`); report.add(g);
     g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
     const label = text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e").setName(`report-god-label:${god}`);
     const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
@@ -1399,15 +1399,19 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320).setName("landscape-report-preview");
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
   const submitLabel = button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
+  let renderedGod: Deity | undefined;
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
     if (report.visible) {
       const selectedGod = Reflect.get(scene, "deity") as Deity;
-      for (const { god, x, g, label } of godChoices) {
-        const selected = god === selectedGod;
-        g.clear().fillStyle(selected ? 0xd8e8ed : 0xf4e8ca, selected ? 1 : 0.2).fillRect(x - 81, 114, 162, 60);
-        g.lineStyle(selected ? 3 : 1, selected ? 0x8a6726 : 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
-        label.setText(`${selected ? "✓ " : ""}${DEITIES[god].name}`).setColor(selected ? "#123f59" : "#35281e");
+      if (selectedGod !== renderedGod) {
+        renderedGod = selectedGod;
+        for (const { god, x, g, label } of godChoices) {
+          const selected = god === selectedGod;
+          g.clear().fillStyle(selected ? 0xd8e8ed : 0xf4e8ca, selected ? 1 : 0.2).fillRect(x - 81, 114, 162, 60);
+          g.lineStyle(selected ? 3 : 1, selected ? 0x8a6726 : 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
+          label.setText(`${selected ? "✓ " : ""}${DEITIES[god].name}`).setColor(selected ? "#123f59" : "#35281e");
+        }
       }
     }
     if (encounter.visible) {
