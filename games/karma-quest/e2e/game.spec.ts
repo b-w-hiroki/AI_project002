@@ -488,6 +488,70 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
+test("custom selections only confirm their pressing pointer", async ({ page }) => {
+  await useNativePortrait(page);
+  const emit = (name: string, event: string, id: number) => page.evaluate(({ name, event, id }) => {
+    let target: Phaser.GameObjects.GameObject | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === name) target = node;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    if (!target) throw new Error(`Missing visible selection: ${name}`);
+    target.emit(event, { id });
+  }, { name, event, id });
+  const foreignRelease = async (name: string) => {
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerdown", 102);
+    await emit(name, "pointerup", 102);
+    await emit(name, "pointerout", 102);
+  };
+  await foreignRelease("home-start-card");
+  expect(await phase(page)).toBe("title");
+  await emit("home-start-card", "pointerup", 101);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    const name = `report-row-${wide ? "wide" : "portrait"}:0`;
+    // Test pointer ownership after resize settles; resize itself intentionally cancels presses.
+    await page.evaluate(() => new Promise<void>(resolve => {
+      const scale = window.__qaGame.scale;
+      let timer: ReturnType<typeof setTimeout>;
+      const settled = () => { scale.off("resize", changed); resolve(); };
+      const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
+      scale.on("resize", changed);
+      changed();
+    }));
+    await foreignRelease(name);
+    expect(await selected()).toBe(0);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerout", 101);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(0);
+  }
+  const deity = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"));
+  await foreignRelease("report-god-wide:mercy");
+  expect(await deity()).toBe("valor");
+  await emit("report-god-wide:mercy", "pointerup", 101);
+  expect(await deity()).toBe("mercy");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-selection-pointer-owner.png" });
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {

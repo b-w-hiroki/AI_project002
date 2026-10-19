@@ -455,6 +455,21 @@ function cancelOnInterruption(scene: Runtime, target: Phaser.GameObjects.GameObj
   });
 }
 
+/** Custom selection zones use the same pointer ownership as the framed CTA. */
+function ownedTap(scene: Runtime, zone: Phaser.GameObjects.Zone, action: () => void): void {
+  let owner: number | undefined;
+  cancelOnInterruption(scene, zone, () => { owner = undefined; });
+  zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => { owner ??= pointer.id; });
+  zone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+    if (owner === pointer.id) owner = undefined;
+  });
+  zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (owner !== pointer.id) return;
+    owner = undefined;
+    action();
+  });
+}
+
 function button(
   scene: Runtime,
   root: Phaser.GameObjects.Container,
@@ -807,11 +822,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   fitted(scene, root, APPROVED_AVATAR_KEY, 48, 151, 52, 52)?.setName("approved-home-avatar");
   screenFrame(scene, root);
   const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });
-  let startArmed = false;
-  start.on("pointerdown", () => { startArmed = true; });
-  start.on("pointerout", () => { startArmed = false; });
-  cancelOnInterruption(scene, start, () => { startArmed = false; });
-  start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
+  start.setName("home-start-card");
+  ownedTap(scene, start, () => invoke(scene, "startRun"));
   root.add(start);
 
   const raidModal = buildRaidModal(scene, root, true);
@@ -1283,13 +1295,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
     const bg = scene.add.graphics(); layer.add(bg);
     const label = text(scene, layer, 225, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(225, y, 374, 64).setName(`report-row-portrait:${i}`).setInteractive();
-    let armed = false;
-    cancelOnInterruption(scene, hit, () => { armed = false; });
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => {
-      if (!armed || scene.phase !== "report") return;
-      armed = false;
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
       (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
     });
     layer.add(hit);
@@ -1365,13 +1372,8 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     const bg = scene.add.graphics(); layer.add(bg);
     const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
-    let armed = false;
-    cancelOnInterruption(scene, hit, () => { armed = false; });
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => {
-      if (!armed || scene.phase !== "report") return;
-      armed = false;
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
       (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
     });
     layer.add(hit);
@@ -1383,13 +1385,10 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
     text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
     const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
-    let armed = false;
-    cancelOnInterruption(scene, hit, () => { armed = false; });
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => {
-      if (!armed || scene.phase !== "report") return;
-      armed = false; Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview");
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
+      Reflect.set(scene, "deity", god);
+      invoke(scene, "refreshReportPreview");
     });
     report.add(hit);
   }

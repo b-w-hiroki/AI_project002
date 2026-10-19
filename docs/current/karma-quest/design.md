@@ -40,7 +40,8 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
-共通buttonは押下状態をpressedPointer（Pointer.idまたはundefined）で保持し、所有者以外のpointerdown/up/outを無視する。busyへの切替・中断・確定・所有者の領域外移動でIDを解除する。別ポインターのhoverで押下色を上書きしない。専用の出発カード・報告選択Zoneはこの変更の対象外。
+ownedTapは専用ZoneのPointer.idを保持し、所有者のpointerupだけを既存の操作へ渡す。所有者のpointeroutとcancelOnInterruptionで解除する。縦横の記録選択と横の神様選択はreportフェーズを確認してからGameSceneへ委譲する。
+共通buttonは押下状態をpressedPointer（Pointer.idまたはundefined）で保持し、所有者以外のpointerdown/up/outを無視する。busyへの切替・中断・確定・所有者の領域外移動でIDを解除する。別ポインターのhoverで押下色を上書きしない。専用の出発カード・報告選択ZoneはownedTapを使用する。
 cancelOnInterruptionへRESIZE/BLUR/HIDDENの登録とGameObject破棄時の解除を集約する。共通buttonに加え、ホームの出発Zone、縦横の報告行Zone、横の神様選択Zoneが使用する。コールバックは各操作の押下待ち状態のみ解除し、選択状態はGameSceneに維持する。
 共通buttonはScale.RESIZE、Core.BLUR、Core.HIDDENでpressedPointerを解除する。busy／processing中の描画は維持し、押下待ちのみidleへ戻す。ZoneのDESTROYで3つの監視を解除し、Scene再作成後に古いボタンへ通知しない。ブラウザのblur/focus、回転とPhaserのhidden/visibleイベントで回帰検査する。
 共通buttonは表示の高さと任意のhitHeightを分離し、Zoneの高さは両者の大きい方を使う。縦報告の神様ボタンのみ表示56px／入力64pxを指定する。320px幅でCSS換算した入力領域、隣接領域との非重複、上下端の選択、領域外へのドラッグキャンセルをE2Eで検査する。

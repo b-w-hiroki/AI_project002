@@ -1,0 +1,11 @@
+{
+  "summary": "出発カードと報告選択にも押した指だけで確定する規則を適用",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "専用の出発・記録・報告先選択における誤確定防止を追加した"},
+      "design": {"status": "updated", "reason": "専用Zoneの所有者管理をownedTapへ集約し既存操作への委譲を維持した"}
+    }
+  },
+  "validation": ["lint・typecheck・build成功、単体122件成功", "Chromium・WebKit各2件：出発・縦横の記録・横の神様選択の所有者検査と中断キャンセル", "docs/review/karma-selection-pointer-owner.pngを目視確認"],
+  "limitations": ["複数指の検査はPhaserイベント注入。物理端末のマルチタッチ検証ではない", "物理iOS/Android・外部Portal未確認"]
+}
