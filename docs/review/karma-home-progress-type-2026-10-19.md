@@ -16,4 +16,10 @@
 - [320px幅・大きい評価点の画面](karma-home-readable-progress.png)を目視確認。
 - 新規検査をWebKit CIの対象へ追加。
 
-Linux CIの結果は取得後に追記する。物理端末・外部Portal・マージ・公開は未実施。
+## Linux CI
+
+- 初回run 39204519238: 46件成功、旧タイトル画像との差分6210pxで1件失敗。
+- 同runの実スクショを目視確認し、Linux基準を更新。許容差は変更なし。
+- 再検証run 39205180696: Karma Questのchecks / E2E成功。
+
+物理端末・外部Portal・マージ・公開は未実施。他ゲームのCI結果を本作の成功に含めない。
