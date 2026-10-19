@@ -1,0 +1,82 @@
+{
+  "summary": "6作品の現行仕様・設計を初版化し、更新記録・PRテンプレート・CIで更新漏れを検知する運用を追加",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "side-scroller": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "color-match": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "fist-legend": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "sangoku-tap": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    },
+    "platform": {
+      "spec": {
+        "status": "updated",
+        "reason": "現行コードと既存テストを照合し、現行仕様と非対象を初版として整理した"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "起動経路、責務、保存、表示拡張と検証の対応を初版として整理した"
+      }
+    }
+  },
+  "validation": [
+    "コード・既存E2Eとの照合。文書検査と検査スクリプトの単体テストは実行結果をreview記録へ保存する"
+  ],
+  "limitations": [
+    "この文書整備で6作品を新たに全E2E実行したわけではない",
+    "GitHub必須チェック設定とmainへのマージは別作業"
+  ]
+}
