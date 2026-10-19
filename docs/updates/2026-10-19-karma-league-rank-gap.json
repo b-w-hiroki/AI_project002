@@ -1,0 +1,11 @@
+{
+  "summary": "リーグの同点順位と次の順位までの点数を一致させる",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "同点時は既存ライバルを上位とし、案内した点数で順位が上がる仕様を明記した"},
+      "design": {"status": "updated", "reason": "文字列locale比較をselfフラグによる同点比較に置き換え、最小加点量との整合を検査した"}
+    }
+  },
+  "validation": ["単体127件成功、lint・typecheck・build成功", "全6ライバルの同点・前後1点、案内点数ちょうどでの順位上昇を単体検査", "Chromium/WebKit各2件成功。同点520の6位・あと1点と521の5位・あと300点、および縦横リーグ表示を確認", "docs/review/karma-league-tie.pngを目視確認"],
+  "limitations": ["物理端末・外部Portal未確認"]
+}

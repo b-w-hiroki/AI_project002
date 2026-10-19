@@ -596,6 +596,26 @@ test("home information survives rotation and closes across both layouts", async 
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
+test("league next-rank advice matches a tied rival and one-point gain", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_eval_v1", "520");
+    localStorage.setItem("karma_quest_best_stage_v1", "0");
+  });
+  const readRank = async () => {
+    const texts = (await loadingFeedback(page)).texts;
+    const index = texts.indexOf("あなた / カイト");
+    return { rank: texts[index - 1], next: texts.find(value => value.startsWith("次の順位まで")) };
+  };
+  await tapPoint(page, 315, 758);
+  await expect.poll(readRank).toEqual({ rank: "6位", next: "次の順位まで あと 1" });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-league-tie.png" });
+  await tapPoint(page, 225, 551);
+  await page.evaluate(() => localStorage.setItem("karma_quest_total_eval_v1", "521"));
+  await tapPoint(page, 315, 758);
+  await expect.poll(readRank).toEqual({ rank: "5位", next: "次の順位まで あと 300" });
+});
+
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {

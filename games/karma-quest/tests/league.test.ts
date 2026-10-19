@@ -28,9 +28,20 @@ describe("solo hero league", () => {
     expect(high.nextGap).toBe(0);
   });
 
-  it("reports points needed for the next rank", () => {
-    const snapshot = leagueSnapshot(400, 2); // rating 520, just below 紅蓮のバルク 520 tie ordering
-    expect(snapshot.rating).toBe(520);
-    expect(snapshot.nextGap).toBeGreaterThanOrEqual(0);
+  it.each([260, 520, 820, 1180, 1650, 2200])("requires one point above a rival at %i", rating => {
+    const tied = leagueSnapshot(rating, 0);
+    expect(tied.entries[tied.rank - 2]?.rating).toBe(rating);
+    expect(tied.nextGap).toBe(1);
+    expect(leagueSnapshot(rating - 1, 0).rank).toBe(tied.rank);
+    expect(leagueSnapshot(rating - 1, 0).nextGap).toBe(2);
+    expect(leagueSnapshot(rating + 1, 0).rank).toBe(tied.rank - 1);
   });
+
+  it.each([0, 259, 260, 519, 520, 819, 820, 1179, 1180, 1649, 1650, 2199, 2200])(
+    "nextGap is exactly enough to improve rank from rating %i", rating => {
+      const current = leagueSnapshot(rating, 0);
+      expect(leagueSnapshot(rating + current.nextGap - 1, 0).rank).toBe(current.rank);
+      expect(leagueSnapshot(rating + current.nextGap, 0).rank).toBe(current.rank - 1);
+    },
+  );
 });

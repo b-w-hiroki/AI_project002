@@ -8,6 +8,7 @@
 [main.ts](../../../games/karma-quest/src/main.ts) は presentation → conceptArt → mobileLayout → kingdomBackground の順に既存Sceneへ表示を組み込む。順序変更は画面全体への影響を確認する。
 [GameScene](../../../games/karma-quest/src/scenes/GameScene.ts) が進行、選択履歴、戦闘・報告を所有する。[conceptArt](../../../games/karma-quest/src/conceptArt.ts) が王都・リーグ・レイド・年代記の造形を担当する。
 純粋ロジックは [karma](../../../games/karma-quest/src/logic/karma.ts)、[report](../../../games/karma-quest/src/logic/report.ts)、[league](../../../games/karma-quest/src/logic/league.ts)、[raid](../../../games/karma-quest/src/logic/raid.ts) に分離する。
+leagueの同点比較はselfフラグでライバルを先にし、名前や実行環境のlocaleを順位に使わない。nextGapは直上の評価との差＋1。全ライバルの前後1点と、案内点数ちょうどで順位が上がることを検査する。
 
 ## 状態と非同期処理
 

@@ -36,7 +36,9 @@ export function leagueSnapshot(totalEvaluation: number, bestStage: number): Leag
   const rating = leagueRating(totalEvaluation, bestStage);
   const player: LeagueEntry = { name: "あなた / カイト", rating, self: true };
   const entries = [...RIVALS, player]
-    .sort((a, b) => b.rating - a.rating || a.name.localeCompare(b.name));
+    // A rival keeps its place on a tie: nextGap promises the points needed
+    // to exceed that rival, independent of names and the browser's locale.
+    .sort((a, b) => b.rating - a.rating || Number(!!a.self) - Number(!!b.self));
   const rank = entries.findIndex(entry => entry.self) + 1;
   const above = rank > 1 ? entries[rank - 2] : undefined;
   return {
