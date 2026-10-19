@@ -1304,7 +1304,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   });
   const preview = text(scene, report, 225, 594, "", 21, "#43382e", "700", 366);
   const submit = scene.add.container(0, 0); report.add(submit);
-  button(scene, submit, 225, 680, 374, 72, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  const submitLabel = button(scene, submit, 225, 680, 374, 72, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   text(scene, report, 225, 752, "あなたが紡いだ、この世界の物語", 19, "#705631");
   root.setData("refreshJourney", () => {
     battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
@@ -1328,7 +1328,9 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       const god = Reflect.get(scene, "deity") as Deity;
       godLabels.forEach((label, i) => { const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
-      const enabled = source.some(row => row.selected);
+      const selectedCount = source.filter(row => row.selected).length;
+      const enabled = selectedCount > 0;
+      submitLabel.setText(enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
       submit.setAlpha(enabled ? 1 : 0.45);
       (submit.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = enabled;
     }
@@ -1395,7 +1397,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   });
   const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
-  button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  const submitLabel = button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
     if (report.visible) {
@@ -1430,6 +1432,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       });
       const god = Reflect.get(scene, "deity") as Deity;
       const count = source.filter(row => row.selected).length;
+      submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
       preview.setText(`${DEITIES[god].name}へ報告\n選択 ${count}/2\n${DEITIES[god].wish}`);
       submitAction.setAlpha(count > 0 ? 1 : 0.45);
       (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;

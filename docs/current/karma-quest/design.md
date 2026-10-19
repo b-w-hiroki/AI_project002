@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+縦横の報告submitLabelは既存highlightRowsのselected件数から文言を更新する。入力Zoneの名前とonSubmitReportへの委譲は維持し、未選択時の入力無効化と表示が同じ件数を参照する。
 buildLandscapeJourneyのgodChoicesは報告先ごとのGraphicsとTextを保持し、refreshJourneyでGameScene.deityを参照して選択印・背景・枠を更新する。報告先を表示層で別保存せず、既存のownedTapと報告プレビュー更新を維持する。
 ownedTapは専用ZoneのPointer.idを保持し、所有者のpointerupだけを既存の操作へ渡す。所有者のpointeroutとcancelOnInterruptionで解除する。縦横の記録選択と横の神様選択はreportフェーズを確認してからGameSceneへ委譲する。
 共通buttonは押下状態をpressedPointer（Pointer.idまたはundefined）で保持し、所有者以外のpointerdown/up/outを無視する。busyへの切替・中断・確定・所有者の領域外移動でIDを解除する。別ポインターのhoverで押下色を上書きしない。専用の出発カード・報告選択ZoneはownedTapを使用する。

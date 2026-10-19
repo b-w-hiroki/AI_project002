@@ -584,6 +584,45 @@ test("landscape report marks the selected deity and preserves it through rotatio
   await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
 });
 
+test("report action explains empty selection and reflects the selected count", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const label = () => page.evaluate(() => {
+    let value = "";
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "report-submit-label") value = (node as Phaser.GameObjects.Text).text;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return value;
+  });
+  await expect.poll(label).toBe("出来事を選んでください");
+  await tapPoint(page, 225, 680);
+  expect(await phase(page)).toBe("report");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-empty-guidance.png" });
+  await tapPoint(page, 225, 291);
+  await expect.poll(label).toBe("1件を報告する");
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(label).toBe("1件を報告する");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-ready-guidance.png" });
+  await tapPoint(page, 215, 150);
+  await expect.poll(label).toBe("出来事を選んでください");
+  await tapPoint(page, 609, 405);
+  expect(await phase(page)).toBe("report");
+  await tapPoint(page, 215, 150);
+  await expect.poll(label).toBe("1件を報告する");
+  await tapPoint(page, 609, 405);
+  await expect.poll(() => phase(page)).not.toBe("report");
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {

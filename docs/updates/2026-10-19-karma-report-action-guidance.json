@@ -1,0 +1,11 @@
+{
+  "summary": "報告CTAに未選択時の案内と選択件数を表示する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "未選択と選択済みで報告CTAの文言が変わる動作を明記した"},
+      "design": {"status": "updated", "reason": "選択済み行の件数から文言と入力可否を更新する責務を記録した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で未選択時の抑止、件数表示、回転、選択解除、報告完了を確認", "docs/review/karma-report-empty-guidance.pngとkarma-report-ready-guidance.pngを目視確認"],
+  "limitations": ["物理iOS/Android・外部Portal未確認"]
+}
