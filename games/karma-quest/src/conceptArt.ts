@@ -1283,7 +1283,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   hudPlate(scene, report, 225, 72, 396, 90);
   text(scene, report, 225, 58, "神様への報告", 30);
   text(scene, report, 225, 91, "この年の出来事を、年代記へ", 20, "#fff3ce");
-  text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380);
+  const selectionHint = text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380).setName("report-selection-hint");
   const gods = ["valor", "mercy"] as const;
   const godLabels = gods.map((god, i) => button(scene, report, 127 + i * 196, 213, 184, 56, DEITIES[god].name, 0x0758a4,
     // 64 design pixels = 44.7 CSS pixels on the 314px canvas of a 320px phone.
@@ -1329,6 +1329,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       godLabels.forEach((label, i) => { const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       const selectedCount = source.filter(row => row.selected).length;
+      selectionHint.setText(selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
       const enabled = selectedCount > 0;
       submitLabel.setText(enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
       submit.setAlpha(enabled ? 1 : 0.45);
@@ -1363,7 +1364,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
   button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
   text(scene, report, 400, 36, "神様への報告", 30);
-  text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21);
+  const selectionHint = text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21).setName("report-selection-hint");
   requestCard(scene, report, 215, 271, 400, 330);
   requestCard(scene, report, 609, 240, 366, 270);
   type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
@@ -1431,6 +1432,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
       });
       const count = source.filter(row => row.selected).length;
+      selectionHint.setText(count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
       submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       submitAction.setAlpha(count > 0 ? 1 : 0.45);

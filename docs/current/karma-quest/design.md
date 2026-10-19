@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+縦横のreport-selection-hintはhighlightRowsの選択件数で案内文を切り替える。選択制限自体はGameSceneに残し、表示側で選択の入れ替えを行わない。
 縦横の報告プレビューはGameScene.reportPreview.textを参照する。評価はrefreshReportPreviewで一度計算し、横画面で別の要約を作って評価点を落とさない。横の文字領域が神様選択と送信CTAに重ならないことをE2Eで検査する。
 縦横の報告submitLabelは既存highlightRowsのselected件数から文言を更新する。入力Zoneの名前とonSubmitReportへの委譲は維持し、未選択時の入力無効化と表示が同じ件数を参照する。
 buildLandscapeJourneyのgodChoicesは報告先ごとのGraphicsとTextを保持し、refreshJourneyでGameScene.deityを参照して選択印・背景・枠を更新する。報告先を表示層で別保存せず、既存のownedTapと報告プレビュー更新を維持する。

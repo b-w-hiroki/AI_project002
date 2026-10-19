@@ -662,6 +662,45 @@ test("landscape report shows the authoritative evaluation preview", async ({ pag
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-report-evaluation.png" });
 });
 
+test("report explains how to replace a full selection in both layouts", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deeds", [{ id: "help", label: "村人を助けた", quality: 4, tag: "mercy" }]);
+    Reflect.set(scene, "cheerCount", 1);
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let hint = "";
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "report-selection-hint") hint = (node as Phaser.GameObjects.Text).text;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return { hint, selected: (Reflect.get(scene, "highlightRows") as Array<{selected: boolean}>).map(row => row.selected) };
+  });
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 365);
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+  await tapPoint(page, 225, 439);
+  expect((await read()).selected).toEqual([true, true, false]);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-limit-portrait.png" });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-limit-landscape.png" });
+  await tapPoint(page, 215, 150);
+  await expect.poll(async () => (await read()).hint).toContain("最大2つ");
+  await tapPoint(page, 215, 310);
+  await expect.poll(async () => (await read()).selected).toEqual([false, true, true]);
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
