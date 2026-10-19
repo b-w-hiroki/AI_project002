@@ -41,6 +41,7 @@ type MockUi = {
   landscapeTitle?: Phaser.GameObjects.Container;
   landscapeFinal?: Phaser.GameObjects.Container;
   landscapeJourney?: Phaser.GameObjects.Container;
+  portraitJourney?: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
@@ -1217,6 +1218,87 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   root.add(modal);
 }
 
+function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  cover(scene, root, HOME_BG_KEY);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 0.55).fillRect(0, 0, 450, 800));
+  // Block underlying controls. GameScene remains the sole owner of progression.
+  root.add(scene.add.zone(225, 400, 450, 800).setInteractive());
+  const battle = scene.add.container(0, 0), report = scene.add.container(0, 0);
+  root.add([battle, report]);
+  hudPlate(scene, battle, 225, 60, 414, 80);
+  const heading = text(scene, battle, 225, 60, "", 30);
+  const hero = fitted(scene, battle, HERO_DIALOGUE_KEY, 225, 240, 380, 276);
+  registerHeroKarmaVisual(scene, battle, hero, 225, 240, 330, 260, 48, 325);
+  requestCard(scene, battle, 225, 440, 414, 128);
+  const stats = text(scene, battle, 225, 410, "", 24, "#43382e", "700", 370);
+  const result = text(scene, battle, 225, 468, "", 25, "#43382e", "900", 370);
+  hudPlate(scene, battle, 225, 514, 374, 36);
+  const count = text(scene, battle, 225, 514, "", 20, "#fff3ce");
+  const cheer = scene.add.container(0, 0); battle.add(cheer);
+  button(scene, cheer, 225, 568, 374, 64, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  hudPlate(scene, battle, 225, 686, 414, 110);
+  text(scene, battle, 225, 686, "選んだ道が、勇者の力になる。\nこの年の記録を、神様へ届けよう。", 22, "#fff3ce", "700", 370);
+  requestCard(scene, report, 225, 400, 426, 772);
+  hudPlate(scene, report, 225, 72, 396, 90);
+  text(scene, report, 225, 58, "神様への報告", 30);
+  text(scene, report, 225, 91, "この年の出来事を、年代記へ", 20, "#fff3ce");
+  text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380);
+  const gods = ["valor", "mercy"] as const;
+  const godLabels = gods.map((god, i) => button(scene, report, 127 + i * 196, 213, 184, 56, DEITIES[god].name, 0x0758a4,
+    () => { if (scene.phase === "report") { Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview"); } }, undefined, false));
+  type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
+  const rows = Array.from({ length: 4 }, (_, i) => {
+    const y = 291 + i * 74;
+    const layer = scene.add.container(0, 0); report.add(layer);
+    const bg = scene.add.graphics(); layer.add(bg);
+    const label = text(scene, layer, 225, y, "", 21, "#43382e", "700", 330);
+    const hit = scene.add.zone(225, y, 374, 64).setName(`report-row-portrait:${i}`).setInteractive();
+    let armed = false;
+    hit.on("pointerdown", () => { armed = true; });
+    hit.on("pointerout", () => { armed = false; });
+    hit.on("pointerup", () => {
+      if (!armed || scene.phase !== "report") return;
+      armed = false;
+      (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
+    });
+    layer.add(hit);
+    return { layer, bg, label, y };
+  });
+  const preview = text(scene, report, 225, 594, "", 21, "#43382e", "700", 366);
+  const submit = scene.add.container(0, 0); report.add(submit);
+  button(scene, submit, 225, 680, 374, 72, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  text(scene, report, 225, 752, "あなたが紡いだ、この世界の物語", 19, "#705631");
+  root.setData("refreshJourney", () => {
+    battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (battle.visible) {
+      refreshHeroKarmaVisual(scene, battle);
+      const source = Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container;
+      for (const [target, name] of [[heading, "battleHeading"], [stats, "battleStats"], [result, "battleResult"], [count, "cheerCountText"]] as const)
+        target.setText((source.getByName(name) as Phaser.GameObjects.Text)?.text ?? "");
+      const enabled = !Reflect.get(scene, "currentBattleResult");
+      cheer.setAlpha(enabled ? 1 : 0.45);
+      (cheer.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+    if (report.visible) {
+      const source = Reflect.get(scene, "highlightRows") as Row[];
+      rows.forEach(({ layer, bg, label, y }, i) => {
+        const row = source[i]; layer.setVisible(!!row); if (!row) return;
+        label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(38, y - 32, 374, 64);
+        bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.35).strokeRect(38, y - 32, 374, 64);
+      });
+      const god = Reflect.get(scene, "deity") as Deity;
+      godLabels.forEach((label, i) => { const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
+      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
+      const enabled = source.some(row => row.selected);
+      submit.setAlpha(enabled ? 1 : 0.45);
+      (submit.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+  });
+  return root;
+}
+
 function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   artWindow(scene, root, HOME_BG_KEY, 0, 0, 800, 450);
@@ -1323,6 +1405,8 @@ function build(scene: Runtime): MockUi {
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
   const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle, landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
+  const portraitJourney = buildPortraitJourney(scene);
+  Object.assign(ui, { portraitJourney });
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -1345,6 +1429,7 @@ function refresh(scene: Runtime): void {
         ui.finalRoot,
         ui.landscapeFinal,
         ui.landscapeJourney,
+        ui.portraitJourney,
       ]) root?.setVisible(false);
     }
     return;
@@ -1378,6 +1463,8 @@ function refresh(scene: Runtime): void {
   }
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  ui.portraitJourney?.setVisible(portrait && ["battle", "report"].includes(scene.phase ?? ""));
+  if (ui.portraitJourney?.visible) (ui.portraitJourney.getData("refreshJourney") as () => void)();
   ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
   if (ui.landscapeJourney?.visible) (ui.landscapeJourney.getData("refreshJourney") as () => void)();
   for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {
