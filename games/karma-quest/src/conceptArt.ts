@@ -668,10 +668,10 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 332, 132, 204, 34);
-  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${scoreDisplay(loadTotalEvaluation())}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
-  hudPlate(scene, root, 332, 173, 190, 42);
-  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
-  text(scene, root, 332, 182, "王都ルナティス", 12, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
+  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${scoreDisplay(loadTotalEvaluation())}`, 21, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
+  hudPlate(scene, root, 332, 181, 190, 58);
+  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 21, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
+  text(scene, root, 332, 190, "王都ルナティス", 16, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
 
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 214, 62, 456, 8);
