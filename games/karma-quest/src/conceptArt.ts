@@ -470,7 +470,7 @@ function button(
   hitHeight = height,
 ): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
-  let armed = false;
+  let pressedPointer: number | undefined;
   let processing = false;
   let busy = false;
   const outline = (inset: number) => {
@@ -544,24 +544,33 @@ function button(
   labelText.setData("setBusy", (value: boolean) => {
     if (busy === value) return;
     busy = value;
-    armed = false;
+    pressedPointer = undefined;
     zone.input!.enabled = !value;
     paint(value ? "processing" : "idle");
   });
-  zone.on("pointerover", () => { if (!processing && !busy) paint("focus"); });
-  zone.on("pointerdown", () => { if (!processing && !busy) { armed = true; paint("pressed"); } });
-  zone.on("pointerup", () => {
-    if (!armed || processing || busy) return;
-    armed = false;
+  zone.on("pointerover", () => { if (pressedPointer === undefined && !processing && !busy) paint("focus"); });
+  zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer === undefined && !processing && !busy) {
+      pressedPointer = pointer.id;
+      paint("pressed");
+    }
+  });
+  zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== pointer.id || processing || busy) return;
+    pressedPointer = undefined;
     processing = true;
     paint("processing");
     onClick();
     if (!lockAfterAction) { processing = false; paint("idle"); return; }
     scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
   });
-  zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
+  zone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== undefined && pressedPointer !== pointer.id) return;
+    pressedPointer = undefined;
+    if (!processing && !busy) paint("idle");
+  });
   const cancelPress = () => {
-    armed = false;
+    pressedPointer = undefined;
     if (!processing && !busy) paint("idle");
   };
   // Resizing or leaving the window must not leave a pending click behind.

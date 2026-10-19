@@ -1,0 +1,11 @@
+{
+  "summary": "共通CTAを押した指だけが操作を確定できるようにする",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "共通CTAにおける複数ポインターの確定とキャンセルの規則を明記した"},
+      "design": {"status": "updated", "reason": "真偽値の押下管理をPointer.idによる所有者管理へ変更した"}
+    }
+  },
+  "validation": ["変更前に別のPointer.idの指離しで効果音が切り替わることを再現", "lint・typecheck・build、単体122件成功", "Chromium・WebKit各3件：ポインター所有者、通常の効果音操作と保存復元、中断キャンセル", "docs/review/karma-pointer-owner.pngで復帰後の表示を確認"],
+  "limitations": ["複数指の検査はPhaserイベント注入。物理端末でのマルチタッチ検査ではない", "専用の出発カード・報告選択Zoneは今回の対象外", "物理iOS/Android・外部Portal未確認"]
+}
