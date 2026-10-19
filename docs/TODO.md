@@ -1,5 +1,14 @@
 # TODO
 
+## 2026-10-19 Karma Quest 最新mainとの統合
+
+- [x] main 9f2754dの依存更新と既存改善を統合ブランチへ反映
+- [x] 単体109件・Chromium全46件・WebKit12件で統合検証
+- [x] WebKit CIに最近のUI・保存の回帰検査を追加
+- [ ] 統合候補のPRレビュー・mainへのマージ、実機・外部Portal確認
+
+詳細: `docs/review/karma-latest-integration-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 大きい評価点の表示
 
 - [x] 万・億・兆の表示をホームと縦横リーグで統一
