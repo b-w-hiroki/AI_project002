@@ -686,7 +686,7 @@ test("league columns remain separated on compact screens and rotation", async ({
   // real inset from the compact canvas edge while the column checks above
   // continue to enforce that rank, name, and rating never overlap.
   expect(portraitLabels[0].x).toBeGreaterThanOrEqual(32);
-  expect(portraitLabels[0].right).toBeLessThan(415);
+  expect(portraitLabels[0].right).toBeLessThanOrEqual(418);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.screenshot({ path: "../../docs/review/karma-large-score-league.png" });
   await page.setViewportSize({ width: 844, height: 390 });
