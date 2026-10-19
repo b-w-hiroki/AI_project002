@@ -556,7 +556,7 @@ test("hero league opens from home in portrait and landscape", async ({ page }) =
       if (node.type === "Text") {
         const value = (node as Phaser.GameObjects.Text).text;
         if (value === "勇者リーグ") heading = value;
-        if (value.includes("LEAGUE") && value.includes("Rating")) body = value;
+        body += `${value}\n`;
       }
       if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(child => visit(child, ownVisible));
     };
@@ -584,6 +584,57 @@ test("hero league opens from home in portrait and landscape", async ({ page }) =
     return modal?.visible ?? false;
   })).toBe(true);
   await checkFrame(page, "landscape-hero-league");
+});
+
+test("league columns remain separated on compact screens and rotation", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_eval_v1", "1000");
+    localStorage.setItem("karma_quest_best_stage_v1", "8");
+  });
+  await tapPoint(page, 315, 758);
+  const tableState = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const tables: Phaser.GameObjects.Container[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "league-table") tables.push(node as Phaser.GameObjects.Container);
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return tables.flatMap(table => table.list.filter(node => node.type === "Text").map(node => {
+      const label = node as Phaser.GameObjects.Text;
+      const bounds = label.getBounds();
+      return { text: label.text, x: bounds.x, right: bounds.right, y: bounds.y, bottom: bounds.bottom };
+    }));
+  });
+  const verifyColumns = async () => {
+    await expect.poll(async () => (await tableState()).length).toBe(23);
+    const labels = await tableState();
+    expect(labels[0].text).toContain("Rating 1480");
+    expect(labels.filter(label => label.text === "あなた / カイト")).toHaveLength(1);
+    for (let i = 0; i < 7; i++) {
+      const [rank, name, rating] = labels.slice(1 + i * 3, 4 + i * 3);
+      expect(rank.text).toBe(`${i + 1}位`);
+      expect(rank.right).toBeLessThan(name.x);
+      expect(name.right).toBeLessThan(rating.x);
+      expect(i === 0 ? labels[0].bottom : labels[1 + (i - 1) * 3].bottom).toBeLessThan(rank.y);
+    }
+    expect(labels[21].bottom).toBeLessThan(labels[22].y);
+  };
+  await verifyColumns();
+  await page.screenshot({ path: "../../docs/review/karma-league-compact.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await verifyColumns();
+  await page.screenshot({ path: "../../docs/review/karma-league-landscape.png" });
+  await tapPoint(page, 400, 385);
+  await page.evaluate(() => localStorage.setItem("karma_quest_total_eval_v1", "3000"));
+  await tapPoint(page, 150, 407);
+  await expect.poll(async () => (await tableState()).at(-1)?.text).toBe("現在トップ！ 首位を守ろう");
+  expect((await tableState())[2].text).toBe("あなた / カイト");
 });
 
 test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {
