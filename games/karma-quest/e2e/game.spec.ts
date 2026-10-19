@@ -286,6 +286,40 @@ test("compact phones keep the primary choice readable and tappable", async ({ pa
   await expect.poll(() => phase(page)).not.toBe("karma");
 });
 
+test("home progress stays readable and separated on a compact phone", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  for (const value of [0, 9876, 99999999, Number.MAX_SAFE_INTEGER]) {
+    await page.evaluate(value => {
+      localStorage.setItem("karma_quest_total_eval_v1", String(value));
+      localStorage.setItem("karma_quest_best_stage_v1", "12");
+    }, value);
+    await page.reload();
+    await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    const labels = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.list.find(node => node.type === "Container" &&
+        !!(node as Phaser.GameObjects.Container).getByName("home-total-evaluation")) as Phaser.GameObjects.Container;
+      const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+      return ["home-total-evaluation", "home-best-stage", "home-capital"].map(name => {
+        const label = root.getByName(name) as Phaser.GameObjects.Text;
+        const box = label.getBounds();
+        return { left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+          size: Number.parseFloat(String(label.style.fontSize)) * scale };
+      });
+    });
+    expect(labels[0].size).toBeGreaterThanOrEqual(14);
+    expect(labels[1].size).toBeGreaterThanOrEqual(14);
+    expect(labels[0].left).toBeGreaterThan(234);
+    expect(labels[0].right).toBeLessThan(430);
+    expect(labels[0].bottom).toBeLessThan(labels[1].top);
+    expect(labels[1].bottom).toBeLessThan(labels[2].top);
+    expect(labels[2].bottom).toBeLessThan(206);
+  }
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "../../docs/review/karma-home-readable-progress.png" });
+});
+
 test("portrait navigation remains at least 14 physical pixels at 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
@@ -610,10 +644,10 @@ test("league columns remain separated on compact screens and rotation", async ({
       return { text: label.text, x: bounds.x, right: bounds.right, y: bounds.y, bottom: bounds.bottom };
     }));
   });
-  const verifyColumns = async () => {
+  const verifyColumns = async (ratingText = "1480") => {
     await expect.poll(async () => (await tableState()).length).toBe(23);
     const labels = await tableState();
-    expect(labels[0].text).toContain("Rating 1480");
+    expect(labels[0].text).toContain(`Rating ${ratingText}`);
     expect(labels.filter(label => label.text === "あなた / カイト")).toHaveLength(1);
     for (let i = 0; i < 7; i++) {
       const [rank, name, rating] = labels.slice(1 + i * 3, 4 + i * 3);
@@ -635,6 +669,32 @@ test("league columns remain separated on compact screens and rotation", async ({
   await tapPoint(page, 150, 407);
   await expect.poll(async () => (await tableState()).at(-1)?.text).toBe("現在トップ！ 首位を守ろう");
   expect((await tableState())[2].text).toBe("あなた / カイト");
+  await tapPoint(page, 400, 385);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_eval_v1", String(Number.MAX_SAFE_INTEGER));
+    localStorage.setItem("karma_quest_best_stage_v1", "12");
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 9007.1兆");
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "../../docs/review/karma-large-score-home.png" });
+  await tapPoint(page, 315, 758);
+  await verifyColumns("9007.1兆");
+  const portraitLabels = await tableState();
+  // WebKit and Chromium use slightly different Japanese font metrics. Keep a
+  // real inset from the compact canvas edge while the column checks above
+  // continue to enforce that rank, name, and rating never overlap.
+  expect(portraitLabels[0].x).toBeGreaterThanOrEqual(32);
+  expect(portraitLabels[0].right).toBeLessThan(415);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "../../docs/review/karma-large-score-league.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await verifyColumns("9007.1兆");
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "../../docs/review/karma-large-score-landscape.png" });
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(String(Number.MAX_SAFE_INTEGER));
 });
 
 test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {

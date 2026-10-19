@@ -22,7 +22,7 @@ const RIVALS: readonly LeagueEntry[] = [
 ] as const;
 
 export function leagueRating(totalEvaluation: number, bestStage: number): number {
-  return Math.max(0, Math.floor(totalEvaluation + bestStage * 60));
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(totalEvaluation + bestStage * 60)));
 }
 
 export function leagueTier(rating: number): LeagueSnapshot["tier"] {

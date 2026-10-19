@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { leagueRating, leagueSnapshot, leagueTier } from "../src/logic/league";
 
 describe("solo hero league", () => {
+  it("keeps the rating safe when the year bonus reaches the integer limit", () => {
+    expect(leagueRating(Number.MAX_SAFE_INTEGER, 12)).toBe(Number.MAX_SAFE_INTEGER);
+    expect(leagueSnapshot(Number.MAX_SAFE_INTEGER, 12).rank).toBe(1);
+  });
   it("rates total evaluation plus best-stage bonus", () => {
     expect(leagueRating(120, 6)).toBe(480);
     expect(leagueRating(0, 12)).toBe(720);

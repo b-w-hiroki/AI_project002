@@ -5,6 +5,7 @@ import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
 import { addTotalEvaluation, loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import { formatLeague, leagueSnapshot } from "./logic/league";
+import { scoreDisplay } from "./logic/scoreDisplay";
 import { advanceRaid, attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
@@ -617,7 +618,7 @@ function leagueTable(scene: Runtime, modal: Phaser.GameObjects.Container, portra
   const next = text(scene, root, cx, portrait ? 483 : 330, "", 20, "#43382e", "800");
   root.setData("refresh", () => {
     const snapshot = leagueSnapshot(loadTotalEvaluation(), loadBestStage());
-    summary.setText(`${snapshot.tier} LEAGUE · Rating ${snapshot.rating}`);
+    summary.setText(`${snapshot.tier} LEAGUE · Rating ${scoreDisplay(snapshot.rating)}`);
     ink.clear();
     snapshot.entries.forEach((entry, i) => {
       const row = rows[i];
@@ -630,7 +631,7 @@ function leagueTable(scene: Runtime, modal: Phaser.GameObjects.Container, portra
       const color = entry.self ? "#123f59" : "#43382e";
       row.rank.setText(`${i + 1}位`).setColor(color);
       row.name.setText(entry.self ? "あなた / カイト" : entry.name).setColor(color);
-      row.rating.setText(String(entry.rating)).setColor(color);
+      row.rating.setText(scoreDisplay(entry.rating)).setColor(color);
     });
     next.setText(snapshot.rank === 1 ? "現在トップ！ 首位を守ろう" : `次の順位まで あと ${snapshot.nextGap}`);
   });
@@ -667,10 +668,10 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, root, 134, 140, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
   text(scene, root, 134, 166, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
   hudPlate(scene, root, 332, 132, 204, 34);
-  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
-  hudPlate(scene, root, 332, 173, 190, 42);
-  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
-  text(scene, root, 332, 182, "王都ルナティス", 12, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
+  const totalEvaluation = text(scene, root, 332, 132, `累計評価 ${scoreDisplay(loadTotalEvaluation())}`, 21, "#fff2c4", "900").setName("home-total-evaluation").setStroke("#091420", 1);
+  hudPlate(scene, root, 332, 181, 190, 58);
+  const bestStage = text(scene, root, 332, 165, `最高到達 ${loadBestStage()}年`, 21, "#fff2c4", "900").setName("home-best-stage").setStroke("#091420", 1);
+  text(scene, root, 332, 190, "王都ルナティス", 16, "#fff6dd", "700").setName("home-capital").setStroke("#091420", 0);
 
   const rail = scene.add.graphics();
   rail.fillStyle(0x08131d, 0.82).fillRoundedRect(12, 214, 62, 456, 8);
@@ -717,7 +718,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
   const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
-    totalEvaluation.setText(`累計評価 ${loadTotalEvaluation()}`);
+    totalEvaluation.setText(`累計評価 ${scoreDisplay(loadTotalEvaluation())}`);
     bestStage.setText(`最高到達 ${loadBestStage()}年`);
     (root.getData("refreshInformation") as () => void)();
     (root.getData("refreshRaidPanel") as () => void)();
@@ -1149,7 +1150,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       status.setText(`最高到達 ${loadBestStage()}年`);
       heading.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
       body.setText(scene.homeRequest?.text ?? "王都であなたの決断を待っています。");
-      footer.setText(`累計評価 ${loadTotalEvaluation()}`);
+      footer.setText(`累計評価 ${scoreDisplay(loadTotalEvaluation())}`);
     }
   });
   return root;

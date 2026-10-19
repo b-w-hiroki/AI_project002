@@ -1,5 +1,33 @@
 # TODO
 
+## 2026-10-19 Karma Quest ホーム進行情報の文字サイズ
+
+- [x] 主要な進行文字を320px幅で約14.7px相当へ拡大
+- [x] 王都名との行間とパネルの高さを調整
+- [x] 通常値・大きい値・再読み込み後の収まりを両ブラウザで確認
+- [x] Linux画像基準を実スクショから更新しCI再検証成功
+- [ ] PRレビュー、実機確認
+
+詳細: `docs/review/karma-home-progress-type-2026-10-19.md`
+
+## 2026-10-19 Karma Quest 最新mainとの統合
+
+- [x] main 9f2754dの依存更新と既存改善を統合ブランチへ反映
+- [x] 単体109件・Chromium全46件・WebKit12件で統合検証
+- [x] WebKit CIに最近のUI・保存の回帰検査を追加
+- [ ] 統合候補のPRレビュー・mainへのマージ、実機・外部Portal確認
+
+詳細: `docs/review/karma-latest-integration-2026-10-19.md`
+
+## 2026-10-19 Karma Quest 大きい評価点の表示
+
+- [x] 万・億・兆の表示をホームと縦横リーグで統一
+- [x] リーグの到達年ボーナス加算でも整数上限を維持
+- [x] 通常値・大きい値・縦横回転をChromium / WebKitで確認
+- [ ] 最新mainとの統合検証、PRレビュー、実機と外部Portalの確認
+
+詳細: `docs/review/karma-large-score-display-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 進行記録の検証
 
 - [x] 到達年と累計評価の読み込み・保存値を検証
