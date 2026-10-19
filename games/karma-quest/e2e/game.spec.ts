@@ -945,9 +945,50 @@ test("portrait battle keeps the approved visual mock", async ({ page }) => {
     if (typeof showBattle === "function") showBattle.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("battle");
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-battle-current.png" });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-battle-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });
+});
+
+test("portrait report preserves selection limits and rotation state", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "stage", 12);
+    Reflect.set(scene, "deeds", [
+      { id: "one", label: "王都の民へ食料を届けた", quality: 4, tag: "mercy" },
+      { id: "two", label: "旅人に道を案内した", quality: 4, tag: "valor" },
+    ]);
+    Reflect.set(scene, "cheerCount", 1);
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  await expect.poll(() => phase(page)).toBe("report");
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  await tapPoint(page, 225, 680);
+  expect(await phase(page)).toBe("report");
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 365);
+  await tapPoint(page, 225, 439);
+  expect(await selected()).toBe(2);
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 513);
+  expect(await selected()).toBe(2);
+  await tapPoint(page, 323, 213);
+  await page.setViewportSize({ width: 800, height: 450 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  expect(await selected()).toBe(2);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 225, 680);
+  await expect.poll(() => phase(page)).toBe("final");
 });
 
 test("portrait report keeps the approved visual mock", async ({ page }) => {
@@ -971,6 +1012,7 @@ test("portrait report keeps the approved visual mock", async ({ page }) => {
     if (typeof refresh === "function") refresh.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("report");
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-report-current.png" });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-report-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });
