@@ -456,6 +456,7 @@ function button(
   onClick: () => void,
   detail?: string,
   lockAfterAction = true,
+  hitHeight = height,
 ): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
   let armed = false;
@@ -527,7 +528,7 @@ function button(
   root.add(g);
   const labelText = text(scene, root, detail ? x + 12 : x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", detail ? width - 106 : width - 70).setStroke("#091420", 1);
   if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
-  const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
+  const zone = scene.add.zone(x, y, width, Math.max(height, hitHeight)).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
   labelText.setData("setBusy", (value: boolean) => {
     if (busy === value) return;
@@ -1246,7 +1247,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380);
   const gods = ["valor", "mercy"] as const;
   const godLabels = gods.map((god, i) => button(scene, report, 127 + i * 196, 213, 184, 56, DEITIES[god].name, 0x0758a4,
-    () => { if (scene.phase === "report") { Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview"); } }, undefined, false));
+    // 64 design pixels = 44.7 CSS pixels on the 314px canvas of a 320px phone.
+    () => { if (scene.phase === "report") { Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview"); } }, undefined, false, 64));
   type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
   const rows = Array.from({ length: 4 }, (_, i) => {
     const y = 291 + i * 74;

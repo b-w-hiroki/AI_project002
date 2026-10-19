@@ -970,6 +970,40 @@ test("portrait report preserves selection limits and rotation state", async ({ p
   });
   await expect.poll(() => phase(page)).toBe("report");
   const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  const targets = await page.evaluate(() => {
+    const found: Array<{ x: number; y: number; width: number; height: number }> = [];
+    const walk = (items: Phaser.GameObjects.GameObject[]) => {
+      for (const item of items) {
+        if (["cta:軍神", "cta:慈愛神"].includes(item.name)) {
+          const bounds = (item as Phaser.GameObjects.Zone).getBounds();
+          found.push({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
+        }
+        const children = (item as Phaser.GameObjects.Container).list;
+        if (Array.isArray(children)) walk(children);
+      }
+    };
+    walk(window.__qaGame.scene.getScene("GameScene").children.list);
+    return found.sort((a, b) => a.x - b.x);
+  });
+  expect(targets).toHaveLength(2);
+  const box = (await page.locator("canvas").boundingBox())!;
+  for (const target of targets) {
+    expect(target.height * box.height / 800).toBeGreaterThanOrEqual(44);
+    expect(target.y + target.height).toBeLessThan(291 - 32);
+  }
+  expect(targets[0]!.x + targets[0]!.width).toBeLessThan(targets[1]!.x);
+  const deity = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"));
+  // Hit the new upper/lower margins outside the visible 56px button.
+  await tapPoint(page, 323, 183);
+  expect(await deity()).toBe("mercy");
+  await tapPoint(page, 127, 243);
+  expect(await deity()).toBe("valor");
+  await page.mouse.move(box.x + 323 * box.width / 450, box.y + 183 * box.height / 800);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 225 * box.width / 450, box.y + 250 * box.height / 800);
+  await page.mouse.up();
+  expect(await deity()).toBe("valor");
+  expect(await selected()).toBe(0);
   await tapPoint(page, 225, 680);
   expect(await phase(page)).toBe("report");
   await tapPoint(page, 225, 291);

@@ -1,0 +1,11 @@
+{
+  "summary": "小型スマホで報告先の神様を押しやすくする",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "神様ボタンのタップ領域を64設計pxへ拡張し、小型画面の44px相当を確保した"},
+      "design": {"status": "updated", "reason": "共通buttonの表示サイズから入力高さを分離する任意パラメータと検査方法を追加した"}
+    }
+  },
+  "validation": ["lint・typecheck・build成功、単体109件成功", "Chromium/WebKitの報告操作・画像比較が各2件成功。画像基準の変更なし", "320px幅で領域サイズ、非重複、上下端のタップと領域外キャンセルを確認"],
+  "limitations": ["物理iPhone/Androidと外部Portalは未確認"]
+}
