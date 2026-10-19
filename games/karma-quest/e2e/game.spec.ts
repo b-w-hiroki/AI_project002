@@ -43,6 +43,26 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+test("stalled portal initialization falls back to a playable home", async ({ page }) => {
+  await page.addInitScript(() => {
+    Reflect.set(window, "__qaPortalStarts", 0);
+    Reflect.set(window, "CrazyGames", { SDK: {
+      init: () => new Promise<void>(resolve => Reflect.set(window, "__qaReleasePortal", resolve)),
+      user: { systemInfo: { locale: "en-US" } },
+      game: { gameplayStart: () => Reflect.set(window, "__qaPortalStarts", Number(Reflect.get(window, "__qaPortalStarts")) + 1) },
+    } });
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator("canvas")).toBeVisible({ timeout: 15000 });
+  await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await page.evaluate(() => Reflect.get(window, "__qaReleasePortal")());
+  await tapPoint(page, 225, 660);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "lang"))).toBe("ja");
+  expect(await page.evaluate(() => Reflect.get(window, "__qaPortalStarts"))).toBe(0);
+  await page.screenshot({ path: `../../docs/review/karma-sdk-timeout-${test.info().project.name || test.info().project.use.browserName || "chromium"}.png` });
+});
+
 test("home keeps live progress values, capital context, and long request copy", async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_total_eval_v1", "9876");

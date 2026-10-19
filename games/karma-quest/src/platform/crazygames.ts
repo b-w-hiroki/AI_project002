@@ -39,24 +39,40 @@ function isCrazyGamesRuntime(): boolean {
 
 /** SDK スクリプトを読み込んで初期化。失敗しても例外は出さない */
 export async function initCrazyGames(): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let script: HTMLScriptElement | undefined;
+  let scriptLoaded = false;
   try {
     if (!isCrazyGamesRuntime()) {
       sdk = null;
       setPortalLocale(undefined);
       return false;
     }
-    if (!window.CrazyGames) {
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://sdk.crazygames.com/crazygames-sdk-v3.js";
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error("SDK load failed"));
-        document.head.appendChild(s);
-      });
-    }
-    if (!window.CrazyGames) return false;
-    sdk = window.CrazyGames.SDK;
-    await sdk.init();
+    // main awaits this call before creating the canvas. Bound both network load
+    // and SDK initialization so a silent portal failure cannot block the game.
+    const initialize = async (): Promise<CrazyGamesSDK> => {
+      if (!window.CrazyGames) {
+        await new Promise<void>((resolve, reject) => {
+          script = document.createElement("script");
+          script.src = "https://sdk.crazygames.com/crazygames-sdk-v3.js";
+          script.onload = () => { scriptLoaded = true; resolve(); };
+          script.onerror = () => reject(new Error("SDK load failed"));
+          document.head.appendChild(script);
+        });
+      }
+      const candidate = window.CrazyGames?.SDK;
+      if (!candidate) throw new Error("SDK unavailable");
+      await candidate.init();
+      return candidate;
+    };
+    sdk = await Promise.race([
+      initialize(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("SDK startup timed out")), 8000);
+      }),
+    ]);
+    // Commit hooks/locale only after the race succeeds. A late SDK completion
+    // must not change language or activate hooks after standalone startup.
     const info = sdk.user?.systemInfo;
     setPortalLocale(info?.locale ?? info?.language);
     return true;
@@ -64,6 +80,13 @@ export async function initCrazyGames(): Promise<boolean> {
     sdk = null;
     setPortalLocale(undefined);
     return false;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    if (script) {
+      script.onload = null;
+      script.onerror = null;
+      if (!scriptLoaded) script.remove();
+    }
   }
 }
 
