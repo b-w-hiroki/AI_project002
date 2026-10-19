@@ -208,6 +208,40 @@ test("English fallback localizes the title and first request flow", async ({ pag
   expect(state.faction).toMatch(/Faction/);
 });
 
+test("sound settings remain usable when their storage access is denied", async ({ page }) => {
+  await page.addInitScript(() => {
+    const read = Storage.prototype.getItem;
+    const write = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (key === "karma_quest_sound_v1") throw new DOMException("Blocked", "SecurityError");
+      return read.call(this, key);
+    };
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === "karma_quest_sound_v1") throw new DOMException("Full", "QuotaExceededError");
+      write.call(this, key, value);
+    };
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  const enabled = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "isSoundEnabled").call(scene);
+  });
+  expect(await enabled()).toBe(true);
+  await tapPoint(page, 47, 253);
+  for (const expected of [false, true, false]) {
+    await tapPoint(page, 225, 475);
+    await expect.poll(enabled).toBe(expected);
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-storage-denied.png" });
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  expect(await enabled()).toBe(true);
+});
+
 test("sound preference is operable in both home layouts and survives reload", async ({ page }) => {
   await page.addInitScript(() => {
     Reflect.set(window, "__qaAudioStarts", 0);
