@@ -37,6 +37,7 @@ raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。max
 ストレージ利用禁止・容量不足を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
 
 ## 描画・検証
+conceptArtの共通buttonはCanvasの場合に通常のfillStyleで面・反射・下端を塗り分ける。WebGLのグラデーションは維持する。押下色とドラッグアウトによるキャンセルをWebKitの実Canvas画素・進行状態で検査する。依頼見出しも通常の塗り色を先に指定する。
 WebKitは回転時の描画消失を避けるCanvas fallback、それ以外はAUTO。
 王都ホームのchapter Graphicsは、fillGradientStyleの前に不透明な濃紺のfillStyleを指定する。Canvas rendererはグラデーション命令を無視するため、この色を使用する。WebGLでは従来のグラデーションに置き換わる。タイトルのOS／ブラウザ別画像比較で可読性を確認する。
 [UI造形](../../design/karma-ui-design-system.md)・[画面設計図](../../design/karma-screen-blueprints.md) は意図の参照先。現行値と相違したら本書とコードを更新して差分を記録する。

@@ -1,0 +1,15 @@
+{
+  "summary": "Canvasで依頼見出しと金枠CTAの可読性・押下表現を改善",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "依頼見出しの下地とCanvas上のボタンの明暗・押下キャンセルを明記"},
+      "design": {"status": "updated", "reason": "Canvasで通常塗りを使う描画分岐と画素による入力フィードバック検査を記載"}
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体109件成功",
+    "WebKit 8件成功: 5画面の画像比較、押下とキャンセル、コンパクト画面、回転後タッチ",
+    "WebKitの依頼・討伐・報告・年代記のPNGを実画像確認。今回追加の基準は現状回帰用で、モック完成認定ではない"
+  ],
+  "limitations": ["物理端末と外部Portal未確認", "WebKitの縦討伐・報告には簡素な表示が残る。別途モックとの差を改善する"]
+}
