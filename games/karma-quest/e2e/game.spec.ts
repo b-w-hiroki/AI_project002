@@ -836,6 +836,54 @@ test("league columns remain separated on compact screens and rotation", async ({
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(String(Number.MAX_SAFE_INTEGER));
 });
 
+test("large raid counters fit mobile panels without changing saved values", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", JSON.stringify({ level: 100000000, hp: 0, defeats: 99999999 }));
+    localStorage.setItem("karma_quest_total_eval_v1", "0");
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => window.__qaGame.scale.parentSize.width <= 320);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 135, 758);
+  const labels = () => page.evaluate(() => {
+    const result: { text: string; left: number; right: number }[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("raid-modal")) {
+        for (const child of (node as Phaser.GameObjects.Container).list) {
+          if (child.type !== "Text") continue;
+          const label = child as Phaser.GameObjects.Text;
+          const bounds = label.getBounds();
+          result.push({ text: label.text, left: bounds.left, right: bounds.right });
+        }
+      } else if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return result;
+  });
+  await expect.poll(async () => (await labels()).length).toBeGreaterThan(0);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-large-portrait.png" });
+  expect((await labels()).map(label => label.text)).toContain("評価 +20億 を受け取る");
+  for (const label of await labels()) {
+    expect(label.left, label.text).toBeGreaterThanOrEqual(40);
+    expect(label.right, label.text).toBeLessThanOrEqual(410);
+  }
+  await tapPoint(page, 225, 510);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await labels()).map(label => label.text)).toContain("評価 +20億 獲得。Lv.1億 が出現！");
+  for (const label of await labels()) {
+    expect(label.left, label.text).toBeGreaterThanOrEqual(80);
+    expect(label.right, label.text).toBeLessThanOrEqual(720);
+  }
+  await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-large-landscape.png" });
+  expect(await page.evaluate(() => ({
+    raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
+    evaluation: localStorage.getItem("karma_quest_total_eval_v1"),
+  }))).toEqual({ raid: { level: 100000001, hp: 35000000900, maxHp: 35000000900, defeats: 100000000 }, evaluation: "2000000060" });
+});
+
 test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {

@@ -35,6 +35,7 @@ stateDiagram-v2
 raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。maxHpはレベルから再導出する。
 loadRaidはレベルを検証してからHPを復元する。不正なレベルの場合はレコード全体をnewRaid()へ戻し、そのHP=0をLv.1の撃破状態へ転用しない。正常なレベルの途中HP・撃破済み状態は維持し、読み込みだけでは保存を書き換えない。
 [scoreDisplay](../../../games/karma-quest/src/logic/scoreDisplay.ts) は表示専用。元の数値を短縮文字列で上書きしない。
+buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の数値をscoreDisplayで整形する。raidPanel.lastActionは表示用文字列のみ保持し、レイド状態と評価の保存は整形前の値を使用する。大きな保存値で縦横の文字境界・受取後の正確な保存値をE2Eで検査する。
 ストレージ利用禁止・容量不足を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
