@@ -549,6 +549,19 @@ function button(
     scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
   });
   zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
+  const cancelPress = () => {
+    armed = false;
+    if (!processing && !busy) paint("idle");
+  };
+  // Resizing or leaving the window must not leave a pending click behind.
+  scene.scale.on(Phaser.Scale.Events.RESIZE, cancelPress);
+  scene.game.events.on(Phaser.Core.Events.BLUR, cancelPress);
+  scene.game.events.on(Phaser.Core.Events.HIDDEN, cancelPress);
+  zone.once(Phaser.GameObjects.Events.DESTROY, () => {
+    scene.scale.off(Phaser.Scale.Events.RESIZE, cancelPress);
+    scene.game.events.off(Phaser.Core.Events.BLUR, cancelPress);
+    scene.game.events.off(Phaser.Core.Events.HIDDEN, cancelPress);
+  });
   return labelText;
 }
 

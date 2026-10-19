@@ -419,6 +419,43 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
+test("interrupted choice presses cancel before a fresh tap", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  for (const interruption of ["blur", "hidden", "rotation"] as const) {
+    const box = (await page.locator("canvas").boundingBox())!;
+    await page.mouse.move(box.x + 225, box.y + 598);
+    await page.mouse.down();
+    if (interruption === "rotation") {
+      await page.setViewportSize({ width: 806, height: 456 });
+      await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+      await useNativePortrait(page);
+    } else {
+      await page.evaluate(kind => {
+        if (kind === "blur") {
+          window.dispatchEvent(new Event("blur"));
+          window.dispatchEvent(new Event("focus"));
+        } else {
+          // Browser automation cannot hide a real tab reliably; exercise the
+          // same Phaser events emitted by its visibility handler.
+          window.__qaGame.events.emit("hidden");
+          window.__qaGame.events.emit("visible");
+        }
+      }, interruption);
+    }
+    await page.mouse.up();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await phase(page)).toBe("karma");
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-choice-interrupted.png" });
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => phase(page)).toBe("reaction");
+});
+
 test("Canvas choice buttons darken on press and cancel on drag out", async ({ page, browserName }) => {
   test.skip(browserName !== "webkit", "Canvas fallback regression");
   await useNativePortrait(page);

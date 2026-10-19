@@ -1,0 +1,11 @@
+{
+  "summary": "中断された共通CTAの押下待ちを解除する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "回転・フォーカス喪失・非表示化の後は新しいタップを必要とする操作契約を追加した"},
+      "design": {"status": "updated", "reason": "共通ボタンの中断イベント監視とZone破棄時の解除を明記した"}
+    }
+  },
+  "validation": ["単体116件、lint・typecheck・build成功", "WebKitで中断後の指離し・通常タップ復帰・既存ドラッグキャンセルの2件成功", "Chromiumで中断操作と既存画像比較の2件成功", "docs/review/karma-choice-interrupted.pngを目視確認"],
+  "limitations": ["非表示化はPhaserイベントによる検査。物理端末のバックグラウンド移行は未確認", "対象はconceptArtの共通CTA。独自のホームナビや記録行は対象外"]
+}

@@ -38,6 +38,7 @@ loadRaidはレベルを検証してからHPを復元する。不正なレベル�
 ストレージ利用禁止・容量不足を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
 
 ## 描画・検証
+共通buttonはScale.RESIZE、Core.BLUR、Core.HIDDENでarmedを解除する。busy／processing中の描画は維持し、押下待ちのみidleへ戻す。ZoneのDESTROYで3つの監視を解除し、Scene再作成後に古いボタンへ通知しない。ブラウザのblur/focus、回転とPhaserのhidden/visibleイベントで回帰検査する。
 共通buttonは表示の高さと任意のhitHeightを分離し、Zoneの高さは両者の大きい方を使う。縦報告の神様ボタンのみ表示56px／入力64pxを指定する。320px幅でCSS換算した入力領域、隣接領域との非重複、上下端の選択、領域外へのドラッグキャンセルをE2Eで検査する。
 buildPortraitJourneyは日本語の縦討伐・報告の表示層。既存の背景・勇者画像、requestCard、buttonを再利用し、GameSceneの能力・結果・選択・評価を参照する。報告行は指を離した際に既存の行操作へ委譲し、報酬や選択上限を表示側で再実装しない。入力を受ける背景Zoneで下層への入力漏れを防ぐ。英語と横画面は既存経路を維持する。
 conceptArtの共通buttonはCanvasの場合に通常のfillStyleで面・反射・下端を塗り分ける。WebGLのグラデーションは維持する。押下色とドラッグアウトによるキャンセルをWebKitの実Canvas画素・進行状態で検査する。依頼見出しも通常の塗り色を先に指定する。
