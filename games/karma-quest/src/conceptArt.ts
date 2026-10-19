@@ -602,20 +602,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const shade = scene.add.graphics();
   shade.fillGradientStyle(0x07141b, 0x07141b, 0x07141b, 0x07141b, 0.03, 0.03, 0.04, 0.04).fillRect(0, 0, 450, 800);
   root.add(shade);
-  hudPlate(scene, root, 108, 45, 184, 66);
-  bustWindow(scene, root, HERO_DIALOGUE_KEY, 22, 18, 52, 54, 0.6);
-  text(scene, root, 134, 34, "カイト", 24, "#ffffff", "900").setStroke("#091420", 1);
-  text(scene, root, 134, 60, "旅する剣士", 18, "#fff2c4", "700").setStroke("#091420", 0);
-  // Separate lifetime progress from the current location so both scan like
-  // the approved resource and season rows without covering the hero.
-  hudPlate(scene, root, 332, 26, 204, 34);
-  text(scene, root, 332, 26, `累計評価 ${loadTotalEvaluation()}`, 15, "#fff2c4", "900").setStroke("#091420", 1);
-  hudPlate(scene, root, 332, 67, 190, 42);
-  text(scene, root, 332, 59, `最高到達 ${loadBestStage()}年`, 14, "#fff2c4", "900").setStroke("#091420", 1);
-  text(scene, root, 332, 76, "王都ルナディス", 12, "#fff6dd", "700").setStroke("#091420", 0);
   // Chapter header and live status row mirror the approved home hierarchy.
-  // They intentionally cover the earlier compact header without replacing any
-  // progress source: lifetime evaluation and best stage remain live values.
+  // Do not draw the superseded compact header underneath: Canvas renderers
+  // can expose it through the chapter's gradient and show stale progress.
   const chapter = scene.add.graphics();
   chapter.fillGradientStyle(0x07131e, 0x18374c, 0x07131e, 0x102a3e, 1, 1, 1, 1)
     .fillRoundedRect(12, 12, 426, 100, 10);
