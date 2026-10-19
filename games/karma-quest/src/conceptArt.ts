@@ -27,6 +27,7 @@ type Runtime = Phaser.Scene & {
   artError?: boolean;
   journeyPending?: boolean;
   journeyError?: boolean;
+  homeInformation?: { title: string; description: string };
   lastOutcome?: ReturnType<typeof requestOutcome>;
   choiceHistory?: Array<{ year: number; outcome: ReturnType<typeof requestOutcome> }>;
 };
@@ -557,6 +558,32 @@ function soundSetting(scene: Runtime, root: Phaser.GameObjects.Container, x: num
   return control;
 }
 
+// Both orientations render one open panel. Keep content, not display objects,
+// in shared state so closing or rotating cannot resurrect the other layout.
+function homeInformationState(
+  scene: Runtime,
+  root: Phaser.GameObjects.Container,
+  modal: Phaser.GameObjects.Container,
+  render: (title: string, description: string) => void,
+  refreshControls: () => void,
+) {
+  let rendered: Runtime["homeInformation"];
+  root.setData("refreshInformation", () => {
+    const current = scene.homeInformation;
+    modal.setVisible(!!current);
+    if (current && current !== rendered) render(current.title, current.description);
+    if (current && root.visible) refreshControls();
+    rendered = current;
+  });
+  return {
+    show: (title: string, description: string) => {
+      scene.homeInformation = { title, description };
+      (root.getData("refreshInformation") as () => void)();
+    },
+    close: () => { scene.homeInformation = undefined; modal.setVisible(false); },
+  };
+}
+
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
   cover(scene, root, HOME_BG_KEY);
@@ -648,6 +675,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
   const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
+    (root.getData("refreshInformation") as () => void)();
     (root.getData("refreshRequester") as (request?: KarmaRequest) => void)(scene.homeRequest);
     homeRequestTitle.setText(scene.homeRequest ? FACTION_LABEL[scene.homeRequest.faction] : "新しい依頼");
     requestStatus.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読込失敗・依頼を押して再試行" : "新しい依頼が届いています");
@@ -712,8 +740,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const heading = text(scene, modal, 225, 204, "", 30, "#35281e", "900", 340);
   const body = text(scene, modal, 225, 358, "", 23, "#43382e", "700", 330);
   const sound = soundSetting(scene, modal, 225, 475, 56);
-  button(scene, modal, 225, 551, 326, 80, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
-  const show = (title: string, description: string) => {
+  const { show, close } = homeInformationState(scene, root, modal, (title, description) => {
     sound.setVisible(title === "冒険の案内");
     (sound.getData("refresh") as () => void)();
     heading.setText(title);
@@ -722,13 +749,14 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
       .setLineSpacing(title === "勇者リーグ" ? 2 : 5)
       .setText(description);
     modal.setVisible(true);
-  };
+  }, () => (sound.getData("refresh") as () => void)());
+  button(scene, modal, 225, 551, 326, 80, "王都へ戻る", 0x0758a4, close, undefined, false);
   const character = () => {
     const stats = deriveStats(scene.karma ?? initialKarma());
     show("カイトの能力", `攻撃力  ${stats.atk}    防御力  ${stats.def}\n体力  ${stats.hp}    魔力  ${stats.magic}\n\n依頼への選択が\n勇者を育てます。`);
   };
   const routes = [
-    () => modal.setVisible(false),
+    close,
     () => (raidModal.getData("showRaid") as () => void)(),
     character,
     () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage()))),
@@ -1050,6 +1078,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   root.add(frame);
   if (!final) buildLandscapeHomeNavigation(scene, root);
   root.setData("refreshOverview", () => {
+    if (!final) (root.getData("refreshInformation") as () => void)();
     journeyLabel.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読み込みを再試行" : final ? "もう一度旅に出る" : "依頼を聞く");
     (journeyLabel.getData("setBusy") as (busy: boolean) => void)(!!scene.journeyPending);
     if (final) {
@@ -1085,8 +1114,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   const heading = text(scene, modal, 400, 62, "", 30, "#35281e", "900", 610);
   const body = text(scene, modal, 400, 208, "", 24, "#43382e", "700", 610);
   const sound = soundSetting(scene, modal, 400, 316, 56);
-  button(scene, modal, 400, 385, 326, 64, "王都へ戻る", 0x0758a4, () => modal.setVisible(false), undefined, false);
-  const show = (title: string, value: string) => {
+  const { show, close } = homeInformationState(scene, root, modal, (title, value) => {
     heading.setText(title);
     body
       .setFontSize(title === "勇者リーグ" ? 19 : 24)
@@ -1095,9 +1123,10 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     modal.setVisible(true);
     sound.setVisible(title === "冒険の案内");
     (sound.getData("refresh") as () => void)();
-  };
+  }, () => (sound.getData("refresh") as () => void)());
+  button(scene, modal, 400, 385, 326, 64, "王都へ戻る", 0x0758a4, close, undefined, false);
   const items: Array<[string, () => void]> = [
-    ["案内", () => show("冒険の案内", "依頼を聞き、返答を選び、世界の反応を確認します。\n結果の「次へ」で冒険が進みます。\n\n選択は指を離したときに確定します。")],
+    ["案内", () => show("冒険の案内", "依頼カードを押して出発。\n依頼への返答を選び、\n世界の反応を確認します。\n\n選択は指を離したときに確定。")],
     ["ワールド", () => (raidModal.getData("showRaid") as () => void)()],
     ["仲間", () => {
       const stats = deriveStats(scene.karma ?? initialKarma());
@@ -1107,7 +1136,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     ["持ち物", () => show("持ち物", "持ち物の管理は現在は利用できません。\n\n装備なしで冒険を開始できます。")],
     ["リーグ", () => show("勇者リーグ", formatLeague(leagueSnapshot(loadTotalEvaluation(), loadBestStage())))],
     ["ショップ", () => show("ショップ", "現在は利用できません。\n\n購入なしで冒険を進められます。")],
-    ["王都", () => modal.setVisible(false)],
+    ["王都", close],
   ];
   items.forEach(([label, action], i) => {
     const x = 62 + (i % 4) * 88, y = i < 4 ? 348 : 407;
@@ -1233,6 +1262,7 @@ function build(scene: Runtime): MockUi {
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.phase !== "title") scene.homeInformation = undefined;
   if (scene.lang === "en") {
     const ui = uiByScene.get(scene);
     if (ui) {

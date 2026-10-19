@@ -489,6 +489,56 @@ test("home navigation opens and closes information without starting a journey be
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
+test("home information survives rotation and closes across both layouts", async ({ page }) => {
+  const visiblePanel = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const values: string[] = [];
+    for (const root of scene.children.list) {
+      if (root.type !== "Container" || !(root as Phaser.GameObjects.Container).visible) continue;
+      for (const child of (root as Phaser.GameObjects.Container).list) {
+        if (!child.name.startsWith("home-information") || !(child as Phaser.GameObjects.Container).visible) continue;
+        for (const item of (child as Phaser.GameObjects.Container).list) {
+          if (item.type === "Text") values.push((item as Phaser.GameObjects.Text).text);
+        }
+      }
+    }
+    return values;
+  });
+  await tapPoint(page, 47, 253);
+  await expect.poll(visiblePanel).toContain("冒険の案内");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-portrait.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(visiblePanel).toContain("冒険の案内");
+  await tapPoint(page, 591, 397);
+  expect(await phase(page)).toBe("title");
+  await expect.poll(visiblePanel).toContain("冒険の案内");
+  await tapPoint(page, 400, 316);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("off");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-landscape.png" });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(visiblePanel).toContain("冒険の案内");
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("効果音 OFF");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-compact.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await tapPoint(page, 400, 385);
+  await expect.poll(visiblePanel).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(visiblePanel).toEqual([]);
+  await tapPoint(page, 225, 758);
+  await expect.poll(visiblePanel).toContain("カイトの能力");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-character-rotated.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(visiblePanel).toContain("カイトの能力");
+  await tapPoint(page, 400, 385);
+  await expect.poll(visiblePanel).toEqual([]);
+  await tapPoint(page, 591, 397);
+  await expect.poll(() => phase(page)).toBe("karma");
+});
+
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {
