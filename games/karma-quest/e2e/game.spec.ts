@@ -1065,6 +1065,23 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
 });
 
 
+async function loadingFeedback(page: Page) {
+  return page.evaluate(() => {
+    const texts: string[] = [];
+    const actions: boolean[] = [];
+    const visit = (nodes: Phaser.GameObjects.GameObject[]) => {
+      for (const node of nodes) {
+        if (Reflect.get(node, "visible") === false) continue;
+        if (node.type === "Text") texts.push((node as Phaser.GameObjects.Text).text);
+        if (node.name.startsWith("cta:")) actions.push(!!node.input?.enabled);
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list);
+      }
+    };
+    visit(window.__qaGame.scene.getScene("GameScene").children.list);
+    return { texts, actions };
+  });
+}
+
 test("result images load on demand and retry without duplicate choices", async ({ page }) => {
   allowedConsoleErrors.get(page)?.push(/Failed to load resource: net::ERR_FAILED/);
   await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").sys.isActive());
@@ -1089,6 +1106,9 @@ test("result images load on demand and retry without duplicate choices", async (
   await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").children.list.some(child => child.depth >= 2000 && child.depth <= 2002));
   await tapPoint(page, 225, 598);
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "artError"))).toBe(true);
+  await expect.poll(async () => (await loadingFeedback(page)).texts.filter(t => t === "読込失敗・この選択で再試行").length).toBe(2);
+  expect((await loadingFeedback(page)).texts).toContain("依頼  戦士の派閥");
+  expect((await loadingFeedback(page)).actions).toEqual([true, true]);
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-loading-error-portrait.png" });
   expect(await phase(page)).toBe("karma");
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "choiceHistory").length)).toBe(0);
@@ -1098,6 +1118,9 @@ test("result images load on demand and retry without duplicate choices", async (
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await tapPoint(page, 591, 301);
   await expect.poll(() => attempts).toBe(failedAttempts + 1);
+  await expect.poll(async () => (await loadingFeedback(page)).actions).toEqual([false, false]);
+  expect((await loadingFeedback(page)).texts).toContain("依頼  戦士の派閥");
+  expect((await loadingFeedback(page)).texts.filter(t => t === "場面を準備しています…")).toHaveLength(2);
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-loading-landscape.png" });
   await tapPoint(page, 591, 397);
   expect(await phase(page)).toBe("karma");
@@ -1177,6 +1200,8 @@ test("home loads only its artwork and journey preparation retries safely", async
   });
   await tapPoint(page, 225, 660);
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyError"))).toBe(true);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("読込失敗・依頼を押して再試行");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-journey-error-portrait.png" });
   expect(await phase(page)).toBe("title");
   failRequests = false;
   await page.setViewportSize({ width: 800, height: 360 });
@@ -1184,6 +1209,7 @@ test("home loads only its artwork and journey preparation retries safely", async
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await tapPoint(page, 591, 397);
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyPending"))).toBe(true);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("旅の準備中…");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-journey-loading.png" });
   await tapPoint(page, 591, 397);
   expect(await phase(page)).toBe("title");
