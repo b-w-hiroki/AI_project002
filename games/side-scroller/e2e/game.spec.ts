@@ -525,6 +525,13 @@ test.describe("phone visual QA", () => {
       // Reset the synthetic key unconditionally so this pose test cannot
       // leave movement latched after its own injected input.
       cursors.right.reset();
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const body = player.body as Phaser.Physics.Arcade.Body;
+      body.setVelocityX(0);
+      // The synthetic Key callbacks above bypass the browser event loop. Apply
+      // the same locomotion refresh that the next game tick performs so the
+      // assertion does not depend on a throttled CI frame being scheduled.
+      Reflect.get(scene, "syncPlayerLocomotionPose").call(scene, 0, body.blocked.down);
     });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
