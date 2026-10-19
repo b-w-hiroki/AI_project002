@@ -610,10 +610,10 @@ test("league columns remain separated on compact screens and rotation", async ({
       return { text: label.text, x: bounds.x, right: bounds.right, y: bounds.y, bottom: bounds.bottom };
     }));
   });
-  const verifyColumns = async () => {
+  const verifyColumns = async (ratingText = "1480") => {
     await expect.poll(async () => (await tableState()).length).toBe(23);
     const labels = await tableState();
-    expect(labels[0].text).toContain("Rating 1480");
+    expect(labels[0].text).toContain(`Rating ${ratingText}`);
     expect(labels.filter(label => label.text === "あなた / カイト")).toHaveLength(1);
     for (let i = 0; i < 7; i++) {
       const [rank, name, rating] = labels.slice(1 + i * 3, 4 + i * 3);
@@ -635,6 +635,26 @@ test("league columns remain separated on compact screens and rotation", async ({
   await tapPoint(page, 150, 407);
   await expect.poll(async () => (await tableState()).at(-1)?.text).toBe("現在トップ！ 首位を守ろう");
   expect((await tableState())[2].text).toBe("あなた / カイト");
+  await tapPoint(page, 400, 385);
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_total_eval_v1", String(Number.MAX_SAFE_INTEGER));
+    localStorage.setItem("karma_quest_best_stage_v1", "12");
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => Math.round((await page.locator("canvas").boundingBox())?.width ?? 0)).toBe(314);
+  await page.screenshot({ path: "../../docs/review/karma-large-score-home.png" });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("累計評価 9007.1兆");
+  await tapPoint(page, 315, 758);
+  await verifyColumns("9007.1兆");
+  const portraitLabels = await tableState();
+  expect(portraitLabels[0].x).toBeGreaterThan(35);
+  expect(portraitLabels[0].right).toBeLessThan(415);
+  await page.screenshot({ path: "../../docs/review/karma-large-score-league.png" });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await verifyColumns("9007.1兆");
+  await page.screenshot({ path: "../../docs/review/karma-large-score-landscape.png" });
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(String(Number.MAX_SAFE_INTEGER));
 });
 
 test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {

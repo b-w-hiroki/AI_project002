@@ -1,5 +1,14 @@
 # TODO
 
+## 2026-10-19 Karma Quest 大きい評価点の表示
+
+- [x] 万・億・兆の表示をホームと縦横リーグで統一
+- [x] リーグの到達年ボーナス加算でも整数上限を維持
+- [x] 通常値・大きい値・縦横回転をChromium / WebKitで確認
+- [ ] 最新mainとの統合検証、PRレビュー、実機と外部Portalの確認
+
+詳細: `docs/review/karma-large-score-display-2026-10-19.md`
+
 ## 2026-10-19 Karma Quest 進行記録の検証
 
 - [x] 到達年と累計評価の読み込み・保存値を検証
