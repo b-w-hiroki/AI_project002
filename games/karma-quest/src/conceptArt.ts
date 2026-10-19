@@ -476,10 +476,16 @@ function button(
     g.fillStyle(base, 1).fillPoints(outline(4), true);
     const top = state === "pressed" ? base : blue ? 0x1974af : 0xa63142;
     const left = x - width / 2 + 14, upper = y - height / 2 + 5;
+    // Canvas ignores gradient styles, so provide the enamel face and edge
+    // lighting explicitly. Keep pressed feedback visible in both renderers.
+    const canvas = scene.game.renderer.type === Phaser.CANVAS;
+    if (canvas) g.fillStyle(top, 1);
     g.fillGradientStyle(top, top, base, base, 1).fillRect(left, upper, width - 28, height - 10);
     // Enamel reflection and a recessed lower edge give the metal rim depth.
+    if (canvas) g.fillStyle(0xbdeaff, state === "pressed" ? 0.06 : 0.14);
     g.fillGradientStyle(0xbdeaff, 0xbdeaff, top, top, 0.22, 0.22, 0, 0)
       .fillRect(left, upper, width - 28, 13);
+    if (canvas) g.fillStyle(0x071322, 0.3);
     g.fillGradientStyle(0x071322, 0x071322, 0x071322, 0x071322, 0, 0, 0.6, 0.6)
       .fillRect(left, y + height / 2 - 22, width - 28, 17);
     g.lineStyle(4, blue ? 0x2c9dda : 0xcb4b53, 0.2).strokePoints(outline(7), true);
@@ -842,6 +848,7 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   shade.fillStyle(0x071017, 0.14).fillRect(0, 0, 450, 800);
   root.add(shade);
   const heading = scene.add.graphics();
+  heading.fillStyle(0x07131e, 0.9);
   heading.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0.97, 0.97, 0, 0).fillRect(8, 8, 434, 76);
   heading.lineStyle(1, 0xd5ad60, 0.6).lineBetween(32, 67, 418, 67);
   root.add(heading);

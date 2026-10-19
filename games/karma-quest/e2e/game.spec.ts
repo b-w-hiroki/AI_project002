@@ -419,6 +419,30 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
+test("Canvas choice buttons darken on press and cancel on drag out", async ({ page, browserName }) => {
+  test.skip(browserName !== "webkit", "Canvas fallback regression");
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  const pixel = () => page.locator("canvas").evaluate(node => {
+    const context = (node as HTMLCanvasElement).getContext("2d")!;
+    return Array.from(context.getImageData(125, 580, 1, 1).data).slice(0, 3);
+  });
+  // Sample the enamel face away from text, icons, and borders.
+  await expect.poll(pixel).toEqual([25, 116, 175]);
+  const box = (await page.locator("canvas").boundingBox())!;
+  await page.mouse.move(box.x + 225, box.y + 598);
+  await page.mouse.down();
+  await expect.poll(pixel).toEqual([16, 59, 105]);
+  await page.mouse.move(box.x + 225, box.y + 550);
+  await page.mouse.up();
+  await expect.poll(pixel).toEqual([25, 116, 175]);
+  expect(await phase(page)).toBe("karma");
+});
+
 test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
   // The responsive controller keeps a 3px edge on each side, so 456x806 renders the
   // 450x800 design canvas at its native size for pixel-level mock comparison.
