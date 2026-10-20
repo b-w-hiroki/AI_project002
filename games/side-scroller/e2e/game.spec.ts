@@ -23,6 +23,11 @@ async function tapGamePoint(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(point.x, point.y);
 }
 
+async function touchGamePoint(page: Page, x: number, y: number): Promise<void> {
+  const point = await canvasPoint(page, x, y);
+  await page.touchscreen.tap(point.x, point.y);
+}
+
 async function enterBattleForVisualQa(page: Page): Promise<void> {
   // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
   // LoadoutScene の開始ボタンを押したあと、GameScene と player の生成完了まで待つ。
@@ -165,13 +170,27 @@ test("ゲームが起動して canvas が表示される", async ({ page }) => {
 });
 
 test("右キーでプレイヤーが移動する（画面が変化する）", async ({ page }) => {
-  const canvas = page.locator("canvas");
-  const before = await canvas.screenshot();
+  await page.goto("/?visualqa=battle");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+  const beforeX = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite).x;
+  });
   await page.keyboard.down("ArrowRight");
-  await page.waitForTimeout(500);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
+  })).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite).x;
+  })).toBeGreaterThan(beforeX);
   await page.keyboard.up("ArrowRight");
-  const after = await canvas.screenshot();
-  expect(before.equals(after)).toBe(false);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
+  })).toBe(false);
 });
 
 test("攻撃キー(X)で剣の演出が表示される", async ({ page }) => {
@@ -856,7 +875,7 @@ test.describe("phone visual QA", () => {
       restartKey.enabled = true;
       restartKey.reset();
     });
-    await tapGamePoint(page, 400, 348);
+    await touchGamePoint(page, 400, 348);
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const status = Reflect.get(scene, "status") as string;
