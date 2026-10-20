@@ -1109,7 +1109,10 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     metricChip(scene, root, 264, 633, "体力", "", 0x70529a),
     metricChip(scene, root, 362, 633, "魔力", "", 0xb48727),
   ];
+  const journeyLabel = button(scene, root, 225, 719, 360, 80, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"), undefined, false);
   root.setData("refreshChronicle", () => {
+    journeyLabel.setText(scene.journeyPending ? "旅の準備中…" : scene.journeyError ? "読み込みを再試行" : "もう一度旅に出る");
+    (journeyLabel.getData("setBusy") as (busy: boolean) => void)(!!scene.journeyPending);
     const history = scene.choiceHistory ?? [];
     const latest = history.at(-1);
     const previous = history.at(-2);
@@ -1123,7 +1126,6 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     const values = deriveStats(scene.karma ?? initialKarma());
     [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
   });
-  button(scene, root, 225, 719, 360, 80, "もう一度旅に出る", 0x0758a4, () => invoke(scene, "startRun"));
   screenFrame(scene, root);
   return root;
 }
@@ -1174,7 +1176,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
     body.setName("landscape-home-request-body").setPosition(655, 212).setWordWrapWidth(226, true).setFontSize(22);
   }
   const journeyLabel = button(scene, root, 591, 397, 382, 80, final ? "もう一度旅に出る" : "依頼を聞く", 0x0758a4,
-    () => invoke(scene, "startRun"));
+    () => invoke(scene, "startRun"), undefined, !final);
   const frame = scene.add.graphics().lineStyle(2, 0xe3bd69, 0.96).strokeRoundedRect(8, 8, 374, 434, 10);
   ornament(frame, 8, 8, 374, 434);
   root.add(frame);

@@ -2437,3 +2437,46 @@ test("report year updates through rotation and the final year", { tag: "@webkit-
   await tapPoint(page, 609, 405);
   await expect.poll(() => phase(page)).toBe("final");
 });
+
+
+test("portrait chronicle replay shows loading failure and retries across rotation", { tag: "@webkit-regression" }, async ({ page }) => {
+  allowedConsoleErrors.get(page)?.push(/Failed to load resource: net::ERR_FAILED/);
+  await useNativePortrait(page);
+  // Enter the final view before deferred journey textures are cached, to exercise recovery.
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "titleGroup").setVisible(false);
+    Reflect.get(scene, "showFinal").call(scene);
+  });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("もう一度旅に出る");
+  let fail = true;
+  let attempts = 0;
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/kq-bg-dialogue-arcade-v1.webp", async route => {
+    attempts++;
+    if (fail) { await route.abort(); return; }
+    await gate;
+    await route.continue();
+  });
+  await tapPoint(page, 225, 719);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("読み込みを再試行");
+  expect(await phase(page)).toBe("final");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-replay-retry-portrait.png" });
+  const failedAttempts = attempts;
+  fail = false;
+  await tapPoint(page, 225, 719);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("旅の準備中…");
+  await expect.poll(() => attempts).toBe(failedAttempts + 1);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-replay-loading-portrait.png" });
+  await tapPoint(page, 225, 719);
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("旅の準備中…");
+  await tapPoint(page, 591, 397);
+  expect(attempts).toBe(failedAttempts + 1);
+  expect(await phase(page)).toBe("final");
+  release();
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
+});
