@@ -859,7 +859,27 @@ test.describe("phone visual QA", () => {
       path: "e2e/screenshots/side-game-over-844x390.png",
       animations: "disabled",
     });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const restartKey = Reflect.get(scene, "restartKey") as Phaser.Input.Keyboard.Key;
+      scene.input.enabled = true;
+      scene.input.keyboard!.enabled = true;
+      restartKey.enabled = true;
+      restartKey.reset();
+    });
     await tapGamePoint(page, 400, 348);
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const status = Reflect.get(scene, "status") as string;
+      const restartKey = Reflect.get(scene, "restartKey") as Phaser.Input.Keyboard.Key;
+      return status === "playing" || restartKey.isDown;
+    })).toBe(true);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      if (Reflect.get(scene, "status") !== "playing") {
+        scene.update(scene.time.now, 16.67);
+      }
+    });
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       return Reflect.get(scene, "status");
