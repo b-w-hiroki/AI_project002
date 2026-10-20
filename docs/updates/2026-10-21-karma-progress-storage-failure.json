@@ -1,0 +1,45 @@
+{
+  "summary": "保存領域が利用できない場合のKarma通常進行と共通利用記録の例外を処理",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "最高到達・評価のセッション保持と再読み込み時の制限を記録"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "キー単位の例外処理とメモリ保持の責務を記録"
+      }
+    },
+    "platform": {
+      "spec": {
+        "status": "updated",
+        "reason": "利用記録の保存失敗で起動・入力を止めない契約を記録"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "localStorage取得を含めてload/save内で例外処理する設計を記録"
+      }
+    },
+    "color-match": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "共通利用記録の単体検査追加のみ。固有のルール・画面・保存は変更なし"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "共通利用記録の例外契約はplatform文書に記録。作品固有の責務に変更なし"
+      }
+    }
+  },
+  "validation": [
+    "6作品のlint/typecheck/unit/build成功。単体計515件（Karma127、Color33、Fist60、Potion85、Sangoku69、Side141）。Color既存unused import警告3件あり、エラーなし",
+    "Chromium/WebKit各5件成功: getter拒否・read拒否・write失敗の3状態、通常保存表示、音設定失敗。2年分の報告・翌年進行・ホームの評価と最高到達・再読み込みで未保存値を復元しないことを検証",
+    "初回getter拒否のE2Eで共通利用記録による起動停止を再現。localStorage取得を例外境界内に移して再検査",
+    "docs/review/karma-progress-unavailable-chromium.png と karma-progress-unavailable-webkit.pngで保存不能時のホーム表示を確認"
+  ],
+  "limitations": [
+    "レイドの保存・報酬受取は今回のフォールバック対象外。複数キーの整合性と保存失敗のUI通知は別途対応が必要",
+    "物理iOS Safari / Android Chrome・外部Portal未確認。未マージ・未公開"
+  ]
+}

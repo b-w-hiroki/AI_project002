@@ -43,6 +43,62 @@ test("representative phone and tablet sizes preserve the canvas", async ({ page 
   await expectResponsiveCanvas(page);
 });
 
+for (const failure of ["getter", "read", "write"] as const) {
+  test(`journey continues when progress storage ${failure} fails`, { tag: "@webkit-regression" }, async ({ page }) => {
+    await page.addInitScript(mode => {
+      if (mode === "getter") {
+        Object.defineProperty(window, "localStorage", { get() { throw new DOMException("Storage denied", "SecurityError"); } });
+      } else {
+        const method = mode === "read" ? "getItem" : "setItem";
+        const original = Storage.prototype[method];
+        Object.defineProperty(Storage.prototype, method, { value(key: string, value?: string) {
+          if (key === "karma_quest_best_stage_v1" || key === "karma_quest_total_eval_v1") {
+            throw new DOMException("Storage unavailable", mode === "write" ? "QuotaExceededError" : "SecurityError");
+          }
+          return Reflect.apply(original, this, value === undefined ? [key] : [key, value]);
+        } });
+      }
+    }, failure);
+    await page.reload();
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    await useNativePortrait(page);
+    await tapPoint(page, 225, 682);
+    await expect.poll(() => phase(page)).toBe("karma");
+    for (let year = 1; year <= 2; year++) {
+      await page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+      });
+      await expect.poll(() => phase(page)).toBe("report");
+      await tapPoint(page, 225, 291);
+      await tapPoint(page, 225, 680);
+      await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(year + 1);
+      await expect.poll(() => phase(page)).toBe("karma");
+    }
+    const evaluation = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const value = Number(Reflect.get(scene, "runEvaluation"));
+      Reflect.get(scene, "showTitle").call(scene);
+      return value;
+    });
+    expect(evaluation).toBeGreaterThan(0);
+    const counters = () => page.evaluate(() => {
+      const result: Record<string, string> = {};
+      const visit = (node: Phaser.GameObjects.GameObject) => {
+        if (node.name === "home-total-evaluation" || node.name === "home-best-stage") result[node.name] = (node as Phaser.GameObjects.Text).text;
+        if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+      return result;
+    });
+    await expect.poll(counters).toEqual({ "home-total-evaluation": `累計評価 ${evaluation}`, "home-best-stage": "最高到達 3年" });
+    if (failure === "getter") await page.locator("canvas").screenshot({ path: `../../docs/review/karma-progress-unavailable-${test.info().project.name || "chromium"}.png` });
+    await page.reload();
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    await expect.poll(counters).toEqual({ "home-total-evaluation": "累計評価 0", "home-best-stage": "最高到達 0年" });
+  });
+}
+
 test("stalled portal initialization falls back to a playable home", async ({ page }) => {
   await page.addInitScript(() => {
     Reflect.set(window, "__qaPortalStarts", 0);
