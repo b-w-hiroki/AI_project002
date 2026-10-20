@@ -1,0 +1,14 @@
+{
+  "summary": "ホームの縦横ナビを指離し確定へ統一し、依頼文と準備中表示を整理",
+  "areas": {"karma-quest": {
+    "spec": {"status":"updated","reason":"18項目のナビ確定・中断規則と依頼改行・準備中表示を記録"},
+    "design": {"status":"updated","reason":"ownedTap再利用と表示用改行、全8依頼・ナビの境界と操作検査を記録"}
+  }},
+  "validation": [
+    "Chromium/WebKitで既存のナビ関連4件と追加の押下キャンセル1件成功",
+    "全8依頼の原文一致・2行以内・枠内の検査を両ブラウザで成功",
+    "Windowsホーム基準画像2枚を実画像確認後に更新。許容差は変更なし",
+    "docs/review/karma-flow-audit-2026-10-21.mdに6画面の実画像と確認範囲を記録"
+  ],
+  "limitations": ["最終ビルドとLinux画像比較は検証中", "実機・外部Portal未確認。全作品の改善点ゼロを意味しない"]
+}
