@@ -618,7 +618,11 @@ test("report action explains empty selection and reflects the selected count", {
     let value = "";
     const visit = (node: Phaser.GameObjects.GameObject) => {
       if (Reflect.get(node, "visible") === false) return;
-      if (node.name === "report-submit-label") value = (node as Phaser.GameObjects.Text).text;
+      if (node.name === "report-submit-label") {
+        const label = node as Phaser.GameObjects.Text;
+        if (label.alpha !== 1 || label.parentContainer.alpha !== 1) throw new Error("Report guidance text must remain fully opaque");
+        value = label.text;
+      }
       if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
     };
     window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
@@ -627,14 +631,14 @@ test("report action explains empty selection and reflects the selected count", {
   await expect.poll(label).toBe("出来事を選んでください");
   await tapPoint(page, 225, 680);
   expect(await phase(page)).toBe("report");
-  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-empty-guidance.png" });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-empty-contrast.png" });
   await tapPoint(page, 225, 291);
   await expect.poll(label).toBe("1件を報告する");
   await page.setViewportSize({ width: 806, height: 456 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect.poll(label).toBe("1件を報告する");
-  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-ready-guidance.png" });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-ready-contrast.png" });
   await tapPoint(page, 215, 150);
   await expect.poll(label).toBe("出来事を選んでください");
   await tapPoint(page, 609, 405);

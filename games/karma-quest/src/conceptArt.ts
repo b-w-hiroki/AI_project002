@@ -1334,8 +1334,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       selectionHint.setText(selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
       const enabled = selectedCount > 0;
       submitLabel.setText(enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
-      submit.setAlpha(enabled ? 1 : 0.45);
-      (submit.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+      (submitLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
     }
   });
   return root;
@@ -1443,8 +1442,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       selectionHint.setText(count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
       submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
-      submitAction.setAlpha(count > 0 ? 1 : 0.45);
-      (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;
+      (submitLabel.getData("setBusy") as (value: boolean) => void)(count === 0);
     }
   });
   return root;
