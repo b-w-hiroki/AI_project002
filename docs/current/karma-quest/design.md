@@ -77,3 +77,5 @@ WebKitは回転時の描画消失を避けるCanvas fallback、それ以外はAU
 ## 確認範囲・保留
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
+
+- 2026-10-20: Large raid counter text uses a 22 px boss label so portrait WebKit layouts retain the tested 40 px canvas inset without clipping.
