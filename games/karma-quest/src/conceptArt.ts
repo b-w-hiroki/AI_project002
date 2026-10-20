@@ -1163,7 +1163,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
   const body = text(scene, root, 591, 218, "", 23, "#43382e", "700", 338);
   const footer = text(scene, root, 591, 302, "", 20, "#43382e", "700", 338);
   const replayHint = final
-    ? text(scene, root, 591, 345, "", 14, "#6a4a2a", "800", 338).setName("landscape-replay-hint")
+    ? text(scene, root, 591, 329, "", 20, "#6a4a2a", "800", 338).setName("landscape-replay-hint")
     : undefined;
   if (final) {
     journalEmblem(scene, root, 510, 43);
@@ -1201,7 +1201,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       footer.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
       const summary = summarizeJourney(history);
       const prompt = replayPrompt(summary);
-      replayHint?.setText(scene.lang === "en" ? prompt.en : prompt.ja);
+      replayHint?.setText(scene.lang === "en" ? prompt.en : prompt.shortJa);
       const stats = deriveStats(scene.karma ?? initialKarma());
       [stats.atk, stats.def, stats.hp, stats.magic].forEach((value, i) => statValues[i]?.setText(String(value)));
     } else {
