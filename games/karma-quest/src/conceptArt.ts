@@ -1133,7 +1133,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     eventTitle.setText(latest ? `${latest.year}年目\n${latest.outcome.title}` : "旅の記録");
     eventBody.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
     previousTitle.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
-    recordCount.setText(`この旅で刻んだ選択：${history.length}件`);
+    recordCount.setText(`この旅の評価 ${scoreDisplay(scene.runEvaluation ?? 0)} · 選択${history.length}件`);
     const summary = summarizeJourney(history);
     const prompt = replayPrompt(summary);
     replayHint.setText(scene.lang === "en" ? prompt.en : prompt.ja);
