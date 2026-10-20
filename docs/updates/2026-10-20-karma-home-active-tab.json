@@ -1,0 +1,24 @@
+{
+  "summary": "WebKitの縦ホームで王都の選択面を補完",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "現在位置を青い面と下線で示す表示契約を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "Canvas用の通常塗りを追加し既存のWebGLと入力を維持"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromium/WebKitでホーム画像比較、ナビの開閉、準備中項目のカーソル検査が各3件成功",
+    "docs/review/karma-home-active-tab-webkit.pngを目視確認。基準画像と許容差は変更なし"
+  ],
+  "limitations": [
+    "既定15177ポート使用中のためKARMA_E2E_PORT=15178で実行",
+    "Linux・物理端末・外部Portal未確認"
+  ]
+}
