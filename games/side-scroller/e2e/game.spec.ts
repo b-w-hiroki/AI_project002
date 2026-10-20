@@ -874,12 +874,6 @@ test.describe("phone visual QA", () => {
       const restartKey = Reflect.get(scene, "restartKey") as Phaser.Input.Keyboard.Key;
       return status === "playing" || restartKey.isDown;
     })).toBe(true);
-    await page.evaluate(() => {
-      const scene = window.__qaGame.scene.getScene("GameScene");
-      if (Reflect.get(scene, "status") !== "playing") {
-        scene.update(scene.time.now, 16.67);
-      }
-    });
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       return Reflect.get(scene, "status");

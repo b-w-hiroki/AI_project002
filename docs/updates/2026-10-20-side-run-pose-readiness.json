@@ -16,7 +16,7 @@
     "The test requires browser ArrowRight input to reach Phaser key state and render hero-run-art while the live body moves.",
     "Browser ArrowRight, X, and Shift input must reach Phaser key state before the production movement, attack, and guard handlers are exercised.",
     "A cold WebKit document may reload once, but the same visible Canvas requirement and normal test timeout remain active.",
-    "The game-over retry must reach the Phaser restart key through a real pointer tap before the production update path restarts the scene.",
+    "The game-over retry must reach the Phaser restart key through a real pointer tap and restart through the natural Phaser update loop.",
     "Idle, attack, guard, hurt, and unchanged hitbox assertions remain active."
   ],
   "limitations": [
