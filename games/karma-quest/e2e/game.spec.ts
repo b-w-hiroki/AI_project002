@@ -1201,6 +1201,7 @@ test("large raid counters fit mobile panels without changing saved values", { ta
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(async () => (await labels()).map(label => label.text)).toContain("評価 +20億 獲得。Lv.1億 が出現！");
+  await expect.poll(async () => (await labels()).every(label => label.left >= 80 && label.right <= 720)).toBe(true);
   for (const label of await labels()) {
     expect(label.left, label.text).toBeGreaterThanOrEqual(80);
     expect(label.right, label.text).toBeLessThanOrEqual(720);
