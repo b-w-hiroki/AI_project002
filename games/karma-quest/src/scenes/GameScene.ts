@@ -5,6 +5,7 @@ import {
   type Deity,
 } from "../logic/legend";
 import Phaser from "phaser";
+import { loadSoundPreference, saveSoundPreference } from "../logic/soundPreference";
 import { BattleResult, autoBattle } from "../logic/battle";
 import {
   Encounter,
@@ -55,7 +56,6 @@ import {
   TYPE,
 } from "../ui/theme";
 
-const SOUND_PREF_KEY = "karma_quest_sound_v1";
 const TOTAL_STAGES = 12;
 const BATTLE_CHEER_WINDOW_MS = 1800;
 /** スマホでの片手持ちを想定した縦持ちレイアウト。中央X座標 */
@@ -116,10 +116,7 @@ export class GameScene extends Phaser.Scene {
   private cheerCount = 0;
   private highlightRows: HighlightRow[] = [];
 
-  private soundOn =
-    typeof localStorage !== "undefined"
-      ? localStorage.getItem(SOUND_PREF_KEY) !== "off"
-      : true;
+  private soundOn = loadSoundPreference();
   private soundIcon!: Phaser.GameObjects.Graphics;
 
   private titleGroup!: Phaser.GameObjects.Container;
@@ -307,7 +304,7 @@ export class GameScene extends Phaser.Scene {
 
   public toggleSound(): boolean {
     this.soundOn = !this.soundOn;
-    localStorage.setItem(SOUND_PREF_KEY, this.soundOn ? "on" : "off");
+    saveSoundPreference(this.soundOn);
     this.soundIcon.destroy();
     this.soundIcon = drawSpeakerIcon(this, 395, 100, this.soundOn, 18);
     this.titleGroup.add(this.soundIcon);

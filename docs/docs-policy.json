@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "areas": {
+    "potion-workshop": {
+      "prefixes": [
+        "games/potion-workshop/"
+      ],
+      "spec": "docs/current/potion-workshop/spec.md",
+      "design": "docs/current/potion-workshop/design.md"
+    },
+    "side-scroller": {
+      "prefixes": [
+        "games/side-scroller/"
+      ],
+      "spec": "docs/current/side-scroller/spec.md",
+      "design": "docs/current/side-scroller/design.md"
+    },
+    "color-match": {
+      "prefixes": [
+        "games/color-match/"
+      ],
+      "spec": "docs/current/color-match/spec.md",
+      "design": "docs/current/color-match/design.md"
+    },
+    "fist-legend": {
+      "prefixes": [
+        "games/fist-legend/"
+      ],
+      "spec": "docs/current/fist-legend/spec.md",
+      "design": "docs/current/fist-legend/design.md"
+    },
+    "karma-quest": {
+      "prefixes": [
+        "games/karma-quest/"
+      ],
+      "spec": "docs/current/karma-quest/spec.md",
+      "design": "docs/current/karma-quest/design.md"
+    },
+    "sangoku-tap": {
+      "prefixes": [
+        "games/sangoku-tap/"
+      ],
+      "spec": "docs/current/sangoku-tap/spec.md",
+      "design": "docs/current/sangoku-tap/design.md"
+    },
+    "platform": {
+      "prefixes": [
+        "games/shared/",
+        ".github/",
+        "scripts/"
+      ],
+      "files": [
+        "index.html",
+        "README.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "CHANGELOG.md",
+        "RELEASE-CANDIDATE.md",
+        "docs/docs-policy.json",
+        "docs/documentation-workflow.md",
+        "docs/current/README.md"
+      ],
+      "spec": "docs/current/platform-spec.md",
+      "design": "docs/current/platform-design.md"
+    }
+  }
+}

@@ -208,6 +208,75 @@ test("English fallback localizes the title and first request flow", async ({ pag
   expect(state.faction).toMatch(/Faction/);
 });
 
+test("common buttons only confirm the pointer that pressed them", async ({ page }) => {
+  await tapPoint(page, 47, 253);
+  const emit = (event: string, id: number) => page.evaluate(({ event, id }) => {
+    let target: Phaser.GameObjects.GameObject | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("cta:効果音")) target = node;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    if (!target) throw new Error("Visible sound control missing");
+    target.emit(event, { id });
+  }, { event, id });
+  const enabled = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "isSoundEnabled").call(scene);
+  });
+  await emit("pointerdown", 1);
+  await emit("pointerdown", 2);
+  await emit("pointerup", 2);
+  expect(await enabled()).toBe(true);
+  await emit("pointerout", 2);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await emit("pointerdown", 1);
+  await emit("pointerout", 1);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await tapPoint(page, 225, 475);
+  expect(await enabled()).toBe(true);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-pointer-owner.png" });
+});
+
+test("sound settings remain usable when their storage access is denied", async ({ page }) => {
+  await page.addInitScript(() => {
+    const read = Storage.prototype.getItem;
+    const write = Storage.prototype.setItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (key === "karma_quest_sound_v1") throw new DOMException("Blocked", "SecurityError");
+      return read.call(this, key);
+    };
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === "karma_quest_sound_v1") throw new DOMException("Full", "QuotaExceededError");
+      write.call(this, key, value);
+    };
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  const enabled = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "isSoundEnabled").call(scene);
+  });
+  expect(await enabled()).toBe(true);
+  await tapPoint(page, 47, 253);
+  for (const expected of [false, true, false]) {
+    await tapPoint(page, 225, 475);
+    await expect.poll(enabled).toBe(expected);
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-sound-storage-denied.png" });
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  expect(await enabled()).toBe(true);
+});
+
 test("sound preference is operable in both home layouts and survives reload", async ({ page }) => {
   await page.addInitScript(() => {
     Reflect.set(window, "__qaAudioStarts", 0);
@@ -417,6 +486,327 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   }))).toEqual({ width: 800, height: 450 });
   await checkFrame(page, "landscape-after-choice");
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
+});
+
+test("custom selections only confirm their pressing pointer", async ({ page }) => {
+  await useNativePortrait(page);
+  const emit = (name: string, event: string, id: number) => page.evaluate(({ name, event, id }) => {
+    let target: Phaser.GameObjects.GameObject | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === name) target = node;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    if (!target) throw new Error(`Missing visible selection: ${name}`);
+    target.emit(event, { id });
+  }, { name, event, id });
+  const foreignRelease = async (name: string) => {
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerdown", 102);
+    await emit(name, "pointerup", 102);
+    await emit(name, "pointerout", 102);
+  };
+  await foreignRelease("home-start-card");
+  expect(await phase(page)).toBe("title");
+  await emit("home-start-card", "pointerup", 101);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    const name = `report-row-${wide ? "wide" : "portrait"}:0`;
+    // Test pointer ownership after resize settles; resize itself intentionally cancels presses.
+    await page.evaluate(() => new Promise<void>(resolve => {
+      const scale = window.__qaGame.scale;
+      let timer: ReturnType<typeof setTimeout>;
+      const settled = () => { scale.off("resize", changed); resolve(); };
+      const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
+      scale.on("resize", changed);
+      changed();
+    }));
+    await foreignRelease(name);
+    expect(await selected()).toBe(0);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerout", 101);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(1);
+    await emit(name, "pointerdown", 101);
+    await emit(name, "pointerup", 101);
+    expect(await selected()).toBe(0);
+  }
+  const deity = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"));
+  await foreignRelease("report-god-wide:mercy");
+  expect(await deity()).toBe("valor");
+  await emit("report-god-wide:mercy", "pointerup", 101);
+  expect(await deity()).toBe("mercy");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-selection-pointer-owner.png" });
+});
+
+test("landscape report marks the selected deity and preserves it through rotation", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const labels = () => page.evaluate(() => {
+    const result: string[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("report-god-label:")) result.push((node as Phaser.GameObjects.Text).text);
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return result;
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
+  await tapPoint(page, 699, 144);
+  await expect.poll(labels).toEqual(["軍神", "✓ 慈愛神"]);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-god-selected.png" });
+  await useNativePortrait(page);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(labels).toEqual(["軍神", "✓ 慈愛神"]);
+  await tapPoint(page, 519, 144);
+  await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
+});
+
+test("report action explains empty selection and reflects the selected count", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const label = () => page.evaluate(() => {
+    let value = "";
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "report-submit-label") value = (node as Phaser.GameObjects.Text).text;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return value;
+  });
+  await expect.poll(label).toBe("出来事を選んでください");
+  await tapPoint(page, 225, 680);
+  expect(await phase(page)).toBe("report");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-empty-guidance.png" });
+  await tapPoint(page, 225, 291);
+  await expect.poll(label).toBe("1件を報告する");
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(label).toBe("1件を報告する");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-ready-guidance.png" });
+  await tapPoint(page, 215, 150);
+  await expect.poll(label).toBe("出来事を選んでください");
+  await tapPoint(page, 609, 405);
+  expect(await phase(page)).toBe("report");
+  await tapPoint(page, 215, 150);
+  await expect.poll(label).toBe("1件を報告する");
+  await tapPoint(page, 609, 405);
+  await expect.poll(() => phase(page)).not.toBe("report");
+});
+
+test("landscape report shows the authoritative evaluation preview", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let display = "";
+    let top = 0, bottom = 0;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "landscape-report-preview") {
+        const text = node as Phaser.GameObjects.Text;
+        display = text.text; top = text.getBounds().top; bottom = text.getBounds().bottom;
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return { display, source: (Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text, top, bottom };
+  });
+  await expect.poll(async () => (await read()).display).toContain("評価 0");
+  await tapPoint(page, 215, 150);
+  await expect.poll(async () => (await read()).display).toContain("選択 1/2");
+  for (const x of [519, 699]) {
+    await tapPoint(page, x, 144);
+    await expect.poll(async () => { const result = await read(); return result.display === result.source; }).toBe(true);
+    const result = await read();
+    expect(result.display).toMatch(/評価 [1-9]/);
+    expect(result.top).toBeGreaterThan(174);
+    expect(result.bottom).toBeLessThan(375);
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-report-evaluation.png" });
+});
+
+test("report explains how to replace a full selection in both layouts", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deeds", [{ id: "help", label: "村人を助けた", quality: 4, tag: "mercy" }]);
+    Reflect.set(scene, "cheerCount", 1);
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let hint = "";
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "report-selection-hint") hint = (node as Phaser.GameObjects.Text).text;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return { hint, selected: (Reflect.get(scene, "highlightRows") as Array<{selected: boolean}>).map(row => row.selected) };
+  });
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 365);
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+  await tapPoint(page, 225, 439);
+  expect((await read()).selected).toEqual([true, true, false]);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-limit-portrait.png" });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-limit-landscape.png" });
+  await tapPoint(page, 215, 150);
+  await expect.poll(async () => (await read()).hint).toContain("最大2つ");
+  await tapPoint(page, 215, 310);
+  await expect.poll(async () => (await read()).selected).toEqual([false, true, true]);
+  await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
+});
+
+test("home and report selections cancel interrupted presses", async ({ page }) => {
+  await useNativePortrait(page);
+  const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
+    const box = (await page.locator("canvas").boundingBox())!;
+    const size = await page.locator("canvas").evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+    await page.mouse.move(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+    await page.mouse.down();
+    await page.evaluate(kind => {
+      if (kind === "blur") {
+        window.dispatchEvent(new Event("blur")); window.dispatchEvent(new Event("focus"));
+      } else {
+        window.__qaGame.events.emit("hidden"); window.__qaGame.events.emit("visible");
+      }
+    }, kind);
+    await page.mouse.up();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  };
+  await interrupt(225, 682, "blur");
+  expect(await phase(page)).toBe("title");
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    for (const kind of ["blur", "hidden"] as const) {
+      await interrupt(wide ? 215 : 225, wide ? 150 : 291, kind);
+      expect(await selected()).toBe(0);
+    }
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    expect(await selected()).toBe(1);
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    expect(await selected()).toBe(0);
+  }
+  await interrupt(699, 144, "hidden");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("valor");
+  await tapPoint(page, 699, 144);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-interrupted.png" });
+});
+
+test("interrupted choice presses cancel before a fresh tap", async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  for (const interruption of ["blur", "hidden", "rotation"] as const) {
+    const box = (await page.locator("canvas").boundingBox())!;
+    await page.mouse.move(box.x + 225, box.y + 598);
+    await page.mouse.down();
+    if (interruption === "rotation") {
+      await page.setViewportSize({ width: 806, height: 456 });
+      await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+      await useNativePortrait(page);
+    } else {
+      await page.evaluate(kind => {
+        if (kind === "blur") {
+          window.dispatchEvent(new Event("blur"));
+          window.dispatchEvent(new Event("focus"));
+        } else {
+          // Browser automation cannot hide a real tab reliably; exercise the
+          // same Phaser events emitted by its visibility handler.
+          window.__qaGame.events.emit("hidden");
+          window.__qaGame.events.emit("visible");
+        }
+      }, interruption);
+    }
+    await page.mouse.up();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await phase(page)).toBe("karma");
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-choice-interrupted.png" });
+  await tapPoint(page, 225, 598);
+  await expect.poll(() => phase(page)).toBe("reaction");
+});
+
+test("Canvas choice buttons darken on press and cancel on drag out", async ({ page, browserName }) => {
+  test.skip(browserName !== "webkit", "Canvas fallback regression");
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  const pixel = () => page.locator("canvas").evaluate(node => {
+    const context = (node as HTMLCanvasElement).getContext("2d")!;
+    return Array.from(context.getImageData(125, 580, 1, 1).data).slice(0, 3);
+  });
+  // Sample the enamel face away from text, icons, and borders.
+  await expect.poll(pixel).toEqual([25, 116, 175]);
+  const box = (await page.locator("canvas").boundingBox())!;
+  await page.mouse.move(box.x + 225, box.y + 598);
+  await page.mouse.down();
+  await expect.poll(pixel).toEqual([16, 59, 105]);
+  await page.mouse.move(box.x + 225, box.y + 550);
+  await page.mouse.up();
+  await expect.poll(pixel).toEqual([25, 116, 175]);
+  expect(await phase(page)).toBe("karma");
 });
 
 test("portrait choice keeps the approved visual mock skeleton", async ({ page }) => {
@@ -697,6 +1087,54 @@ test("league columns remain separated on compact screens and rotation", async ({
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(String(Number.MAX_SAFE_INTEGER));
 });
 
+test("large raid counters fit mobile panels without changing saved values", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", JSON.stringify({ level: 100000000, hp: 0, defeats: 99999999 }));
+    localStorage.setItem("karma_quest_total_eval_v1", "0");
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.waitForFunction(() => window.__qaGame.scale.parentSize.width <= 320);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 135, 758);
+  const labels = () => page.evaluate(() => {
+    const result: { text: string; left: number; right: number }[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("raid-modal")) {
+        for (const child of (node as Phaser.GameObjects.Container).list) {
+          if (child.type !== "Text") continue;
+          const label = child as Phaser.GameObjects.Text;
+          const bounds = label.getBounds();
+          result.push({ text: label.text, left: bounds.left, right: bounds.right });
+        }
+      } else if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return result;
+  });
+  await expect.poll(async () => (await labels()).length).toBeGreaterThan(0);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-large-portrait.png" });
+  expect((await labels()).map(label => label.text)).toContain("評価 +20億 を受け取る");
+  for (const label of await labels()) {
+    expect(label.left, label.text).toBeGreaterThanOrEqual(40);
+    expect(label.right, label.text).toBeLessThanOrEqual(410);
+  }
+  await tapPoint(page, 225, 510);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await labels()).map(label => label.text)).toContain("評価 +20億 獲得。Lv.1億 が出現！");
+  for (const label of await labels()) {
+    expect(label.left, label.text).toBeGreaterThanOrEqual(80);
+    expect(label.right, label.text).toBeLessThanOrEqual(720);
+  }
+  await page.waitForFunction(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-large-landscape.png" });
+  expect(await page.evaluate(() => ({
+    raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
+    evaluation: localStorage.getItem("karma_quest_total_eval_v1"),
+  }))).toEqual({ raid: { level: 100000001, hp: 35000000900, maxHp: 35000000900, defeats: 100000000 }, evaluation: "2000000060" });
+});
+
 test("solo raid persists damage, rewards evaluation, and advances boss level", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(() => {
@@ -800,6 +1238,25 @@ test("raid defeat and reward feedback survive rotation without duplicate rewards
   await tapPoint(page, 150, 348);
   await expect.poll(raidText).toContain("魔王へ攻撃");
   expect((await raidText()).join(" ")).not.toContain("獲得");
+});
+
+test("corrupt raid level cannot manufacture a claimable defeat after reload", async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem("karma_quest_solo_raid_v1", '{"level":0,"hp":0,"defeats":9}');
+    localStorage.setItem("karma_quest_total_eval_v1", "40");
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  await tapPoint(page, 135, 758);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("魔王へ攻撃");
+  expect((await loadingFeedback(page)).texts.join(" ")).toContain("HP 900 / 900");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-raid-corrupt-level.png" });
+  await tapPoint(page, 225, 510);
+  const save = await page.evaluate(() => ({
+    raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
+    evaluation: Number(localStorage.getItem("karma_quest_total_eval_v1")),
+  }));
+  expect(save).toEqual({ raid: { level: 1, defeats: 0, hp: 800, maxHp: 900 }, evaluation: 40 });
 });
 
 test("incomplete raid save recovers without granting an unearned reward", async ({ page }) => {
@@ -924,9 +1381,84 @@ test("portrait battle keeps the approved visual mock", async ({ page }) => {
     if (typeof showBattle === "function") showBattle.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("battle");
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-battle-current.png" });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-battle-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });
+});
+
+test("portrait report preserves selection limits and rotation state", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "stage", 12);
+    Reflect.set(scene, "deeds", [
+      { id: "one", label: "王都の民へ食料を届けた", quality: 4, tag: "mercy" },
+      { id: "two", label: "旅人に道を案内した", quality: 4, tag: "valor" },
+    ]);
+    Reflect.set(scene, "cheerCount", 1);
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  await expect.poll(() => phase(page)).toBe("report");
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  const targets = await page.evaluate(() => {
+    const found: Array<{ x: number; y: number; width: number; height: number }> = [];
+    const walk = (items: Phaser.GameObjects.GameObject[]) => {
+      for (const item of items) {
+        if (["cta:軍神", "cta:慈愛神"].includes(item.name)) {
+          const bounds = (item as Phaser.GameObjects.Zone).getBounds();
+          found.push({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height });
+        }
+        const children = (item as Phaser.GameObjects.Container).list;
+        if (Array.isArray(children)) walk(children);
+      }
+    };
+    walk(window.__qaGame.scene.getScene("GameScene").children.list);
+    return found.sort((a, b) => a.x - b.x);
+  });
+  expect(targets).toHaveLength(2);
+  const box = (await page.locator("canvas").boundingBox())!;
+  for (const target of targets) {
+    expect(target.height * box.height / 800).toBeGreaterThanOrEqual(44);
+    expect(target.y + target.height).toBeLessThan(291 - 32);
+  }
+  expect(targets[0]!.x + targets[0]!.width).toBeLessThan(targets[1]!.x);
+  const deity = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"));
+  // Hit the new upper/lower margins outside the visible 56px button.
+  await tapPoint(page, 323, 183);
+  expect(await deity()).toBe("mercy");
+  await tapPoint(page, 127, 243);
+  expect(await deity()).toBe("valor");
+  await page.mouse.move(box.x + 323 * box.width / 450, box.y + 183 * box.height / 800);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 225 * box.width / 450, box.y + 250 * box.height / 800);
+  await page.mouse.up();
+  expect(await deity()).toBe("valor");
+  expect(await selected()).toBe(0);
+  await tapPoint(page, 225, 680);
+  expect(await phase(page)).toBe("report");
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 365);
+  await tapPoint(page, 225, 439);
+  expect(await selected()).toBe(2);
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 513);
+  expect(await selected()).toBe(2);
+  await tapPoint(page, 323, 213);
+  await page.setViewportSize({ width: 800, height: 450 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  expect(await selected()).toBe(2);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await tapPoint(page, 225, 680);
+  await expect.poll(() => phase(page)).toBe("final");
 });
 
 test("portrait report keeps the approved visual mock", async ({ page }) => {
@@ -950,6 +1482,7 @@ test("portrait report keeps the approved visual mock", async ({ page }) => {
     if (typeof refresh === "function") refresh.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("report");
+  await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-report-current.png" });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-report-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,
   });

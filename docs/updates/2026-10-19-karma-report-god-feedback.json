@@ -1,0 +1,11 @@
+{
+  "summary": "横画面の報告先をチェック印と背景・枠で識別できるようにする",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "選択中の神様の視覚表現と回転後の状態維持を明記した"},
+      "design": {"status": "updated", "reason": "神様の表示要素を保持し既存deityから選択状態を描画する設計を追加した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKitで選択印の切替と縦横回転後の維持を確認", "docs/review/karma-report-god-selected.pngを目視確認"],
+  "limitations": ["物理iOS/Android・外部Portal未確認"]
+}

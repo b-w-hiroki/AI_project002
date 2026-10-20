@@ -10,6 +10,7 @@
 
 
 ## Start here
+0. `docs/current/README.md` と対象作品の `spec.md` / `design.md`。更新時は `docs/documentation-workflow.md` に従い、実装と同じPRで本文または影響なしの理由を記録する。
 1. `CLAUDE.md`
 2. `docs/review/final-release-gate-2026-09-27.md`
 3. `docs/review/game-finish-qa-template.md`
@@ -53,3 +54,9 @@
 - v1.0.0前に物理iOS Safari / Android Chromeと外部Portal Previewが必要。
 - RC中に大きな新機能を混ぜない。新しい継続プレイ機能はv1.1 Epicへ。
 - release資料は `RELEASE-CANDIDATE.md` / `CHANGELOG.md` / final release gateを正とする。
+
+## Documentation gate
+- 各アップデートで仕様・設計への影響を判断し、`docs/updates/` に新しいJSON記録を追加する。
+- 更新ありは対応文書の本文も同じPRで修正。更新不要は具体的な理由を書く。将来案を現行動作と混ぜない。
+- コミット後に `python scripts/check_docs.py --base <PRのbase> --head HEAD` を実行する。
+- CIは更新漏れとリンクを検査する。意味の整合はコード・テスト・実画面と照合してレビューする。

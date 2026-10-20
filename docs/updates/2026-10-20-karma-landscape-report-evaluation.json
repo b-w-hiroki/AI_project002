@@ -1,0 +1,11 @@
+{
+  "summary": "横画面の報告プレビューにも評価点を表示する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "横画面でも報告前の評価点を確認できる表示契約を追加した"},
+      "design": {"status": "updated", "reason": "横画面の独自要約を廃しGameSceneの既存プレビューを参照するよう統一した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で未選択の評価0、選択後の評価、両神様で正本との一致、上下の非重複を確認", "docs/review/karma-landscape-report-evaluation.pngを目視確認"],
+  "limitations": ["物理iOS/Android・外部Portal未確認"]
+}

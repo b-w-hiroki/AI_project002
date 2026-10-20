@@ -17,6 +17,14 @@ AIフル活用でゲーム開発
 
 各ゲームは独立した Phaser + TypeScript + Vite プロジェクト。開発ルールは `CLAUDE.md` を参照。
 
+## 現行仕様・設計と更新運用
+
+- [6作品の仕様書・設計書](docs/current/README.md)
+- [アップデート時の文書更新ワークフロー](docs/documentation-workflow.md)
+- [仕様・設計の変更記録](docs/updates)
+
+コードと同じPRで仕様・設計を更新し、変更がない場合も理由を記録します。Documentation CIが更新漏れを検査します。過去の構想資料と、現在の実装・公開状況は区別します。
+
 ## ゲーム性・ビジュアル統合改修（2026-09-06）
 
 - [統合設計と今回の実装範囲](docs/design/game-evolution.md)

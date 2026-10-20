@@ -1,0 +1,16 @@
+{
+  "summary": "WebKitの王都ホームで章見出しの下地が透ける問題を修正",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "王都ホームの見出しがWebKitでも不透明な背景を持つ表示契約を明記した"},
+      "design": {"status": "updated", "reason": "Canvasで無視されるグラデーションの前に通常の塗り色を指定する描画手順を追加した"}
+    }
+  },
+  "validation": [
+    "npm run lint / npm run typecheck / npm run build: 成功",
+    "npm test: 14ファイル109件成功",
+    "Chromium: portrait title keeps / home progress の3件成功。既存タイトル画像基準の変更なし",
+    "WebKit: 同じ3件成功。karma-title-mock-webkit-win32.pngを実画像確認して更新"
+  ],
+  "limitations": ["物理iPhone/Androidおよび外部Portalでは未確認。Linuxの画像基準は変更していない"]
+}

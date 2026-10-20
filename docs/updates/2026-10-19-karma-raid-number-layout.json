@@ -1,0 +1,11 @@
+{
+  "summary": "レイドの大きな数値を省略表示しスマホのパネル内に収める",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "レイド数値の省略表示と実際の保存・報酬額が変わらない契約を記載した"},
+      "design": {"status": "updated", "reason": "既存scoreDisplayをレイド表示層で再利用する責務と検証方法を記載した"}
+    }
+  },
+  "validation": ["変更前の320px画面で魔王情報の枠外表示を実画像で確認", "単体122件、lint・typecheck・build成功", "Chromium・WebKit各2件で大きな数値の表示境界、正確な保存額、回転、二重受取防止を確認", "docs/review/karma-raid-large-before.png、karma-raid-large-portrait.png、karma-raid-large-landscape.pngを目視確認"],
+  "limitations": ["物理iOS/Androidと外部Portalは未確認", "大きな数値は境界検査用の保存データであり、実プレイの到達記録ではない"]
+}

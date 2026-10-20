@@ -1,0 +1,36 @@
+name: Documentation
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Base ref for the documentation comparison
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test documentation guard
+        run: python -m unittest discover -s scripts/tests -p 'test_docs*.py'
+      - name: Check documentation impact
+        shell: python
+        run: |
+          import json, os, subprocess
+          from pathlib import Path
+          event = json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          pr = event.get('pull_request')
+          base = pr['base']['sha'] if pr else event['inputs']['base']
+          head = pr['head']['sha'] if pr else os.environ['GITHUB_SHA']
+          subprocess.run(['python', 'scripts/check_docs.py', '--base', base, '--head', head], check=True)
