@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+buildFinalのcityShadeはCanvas rendererの場合だけ(34,473)から382×47pxを濃紺・alpha 0.88で塗る。グラデーションが無視されるCanvasでも街名に下地を確保し、WebGLの既存グラデーションは維持する。Windows WebKitの年代記画像基準は実画像・差分の確認後に更新する。
 buildFinalのjourneyLabelはrefreshChronicleでjourneyPending/journeyErrorを参照し、横画面と同じ文言・setBusyを使う。年代記の縦横CTAはlockAfterAction=falseとし、280msの固定ロックを重ねない。再入防止はstartRunラッパーのjourneyPendingガードが担う。
 refreshReportPreviewはstage >= TOTAL_STAGESをdeityWishのfinalYearへ渡す。年の判定はGameSceneに置き、表示側に12年の定数を複製しない。縦横とも同じプレビューを表示し、i18nで日本語・英語の最終案内を管理する。
 縦横のreport-yearはrefreshJourneyでGameScene.stageを参照して更新する。独立した年カウンターや保存キーは追加しない。1年目と12年目で回転後の文言と見出し領域内の文字境界をE2E検査する。

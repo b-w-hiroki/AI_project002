@@ -1,0 +1,25 @@
+{
+  "summary": "Canvas描画で欠けていた年代記の街名の下地を補完",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "WebKitで街名を背景から分離する表示契約を追加"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "Canvas専用の通常塗りとWebGLの既存グラデーションの分岐を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Windows WebKitの差分が街名背面に限定されることを実画像で確認後、該当基準画像を更新。更新なしの再実行成功",
+    "Chromiumは従来の基準画像のまま成功",
+    "docs/review/karma-chronicle-city-contrast-webkit.pngを目視確認"
+  ],
+  "limitations": [
+    "Linux・物理iOS/Android・外部Portal未確認",
+    "基準画像の許容差は変更なし"
+  ]
+}
