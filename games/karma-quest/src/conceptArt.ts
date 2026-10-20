@@ -1096,7 +1096,12 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     .setName("chronicleReplayHint");
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   const cityShade = scene.add.graphics();
-  cityShade.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 0.98, 0.98).fillRect(34, 437, 382, 83);
+  if (scene.game.renderer.type === Phaser.CANVAS) {
+    // Canvas ignores gradient fills; keep the caption legible over sunlit stone.
+    cityShade.fillStyle(0x07131e, 0.88).fillRect(34, 473, 382, 47);
+  } else {
+    cityShade.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0, 0, 0.98, 0.98).fillRect(34, 437, 382, 83);
+  }
   cityShade.lineStyle(1, 0xb79451, 0.65).strokeRect(34, 412, 382, 108);
   root.add(cityShade);
   text(scene, root, 225, 491, "王都ルナディス — 始まりの街", 21, "#fffaf0", "900").setStroke("#091420", 1);
