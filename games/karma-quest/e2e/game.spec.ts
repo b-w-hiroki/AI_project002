@@ -1614,6 +1614,12 @@ test("portrait report keeps the approved visual mock", async ({ page }) => {
     if (typeof refresh === "function") refresh.call(scene);
   });
   await expect.poll(() => phase(page)).toBe("report");
+  // Pixel tolerances must not hide stale selection guidance or CTA copy.
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toEqual(expect.arrayContaining([
+    "2件選択中 · 変更するには選択を外す",
+    "2件を報告する",
+    "慈愛神 · 選択 2/2 · 評価 8\n支援と生還を好む。\n次年は安定した加護",
+  ]));
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-report-current.png" });
   await expect(page.locator("canvas")).toHaveScreenshot("karma-report-mock.png", {
     animations: "disabled", maxDiffPixelRatio: 0.035,

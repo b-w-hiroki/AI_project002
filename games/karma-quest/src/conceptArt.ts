@@ -1331,7 +1331,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       });
       const god = Reflect.get(scene, "deity") as Deity;
       godLabels.forEach((label, i) => { (label.getData("setBusy") as (value: boolean) => void)(!!scene.reportSubmitting); const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
-      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
+      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text.replace("。", "。\n"));
       const selectedCount = source.filter(row => row.selected).length;
       selectionHint.setText(scene.reportSubmitting ? "報告を受け付けました" : selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
       const enabled = selectedCount > 0 && !scene.reportSubmitting;

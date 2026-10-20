@@ -1,0 +1,24 @@
+{
+  "summary": "縦報告の神様説明を文の区切りで改行し、画像比較を文言検査で補完",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "日本語の縦報告の説明改行を記載"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "表示層での改行と画像比較に加える文言検査を記載"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体122件成功",
+    "ChromiumとWebKitでportrait report keeps the approved visual mockが各1件成功。既存基準画像と許容差を維持",
+    "docs/review/karma-report-readable-lines.pngを目視確認"
+  ],
+  "limitations": [
+    "物理iOS/Android・外部Portal未確認",
+    "今回の画像比較実行環境はWindows。Linux未実行"
+  ]
+}
