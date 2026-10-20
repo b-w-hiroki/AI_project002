@@ -35,12 +35,14 @@ stateDiagram-v2
 raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。maxHpはレベルから再導出する。
 loadRaidはレベルを検証してからHPを復元する。不正なレベルの場合はレコード全体をnewRaid()へ戻し、そのHP=0をLv.1の撃破状態へ転用しない。正常なレベルの途中HP・撃破済み状態は維持し、読み込みだけでは保存を書き換えない。
 [scoreDisplay](../../../games/karma-quest/src/logic/scoreDisplay.ts) は表示専用。元の数値を短縮文字列で上書きしない。
+buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の数値をscoreDisplayで整形する。raidPanel.lastActionは表示用文字列のみ保持し、レイド状態と評価の保存は整形前の値を使用する。大きな保存値で縦横の文字境界・受取後の正確な保存値をE2Eで検査する。
 ストレージ利用禁止・容量不足を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
-cancelOnInterruptionへRESIZE/BLUR/HIDDENの登録とGameObject破棄時の解除を集約する。共通buttonに加え、ホームの出発Zone、縦横の報告行Zone、横の神様選択Zoneが使用する。コールバックは各操作のarmedのみ解除し、選択状態はGameSceneに維持する。
-共通buttonはScale.RESIZE、Core.BLUR、Core.HIDDENでarmedを解除する。busy／processing中の描画は維持し、押下待ちのみidleへ戻す。ZoneのDESTROYで3つの監視を解除し、Scene再作成後に古いボタンへ通知しない。ブラウザのblur/focus、回転とPhaserのhidden/visibleイベントで回帰検査する。
+共通buttonは押下状態をpressedPointer（Pointer.idまたはundefined）で保持し、所有者以外のpointerdown/up/outを無視する。busyへの切替・中断・確定・所有者の領域外移動でIDを解除する。別ポインターのhoverで押下色を上書きしない。専用の出発カード・報告選択Zoneはこの変更の対象外。
+cancelOnInterruptionへRESIZE/BLUR/HIDDENの登録とGameObject破棄時の解除を集約する。共通buttonに加え、ホームの出発Zone、縦横の報告行Zone、横の神様選択Zoneが使用する。コールバックは各操作の押下待ち状態のみ解除し、選択状態はGameSceneに維持する。
+共通buttonはScale.RESIZE、Core.BLUR、Core.HIDDENでpressedPointerを解除する。busy／processing中の描画は維持し、押下待ちのみidleへ戻す。ZoneのDESTROYで3つの監視を解除し、Scene再作成後に古いボタンへ通知しない。ブラウザのblur/focus、回転とPhaserのhidden/visibleイベントで回帰検査する。
 共通buttonは表示の高さと任意のhitHeightを分離し、Zoneの高さは両者の大きい方を使う。縦報告の神様ボタンのみ表示56px／入力64pxを指定する。320px幅でCSS換算した入力領域、隣接領域との非重複、上下端の選択、領域外へのドラッグキャンセルをE2Eで検査する。
 buildPortraitJourneyは日本語の縦討伐・報告の表示層。既存の背景・勇者画像、requestCard、buttonを再利用し、GameSceneの能力・結果・選択・評価を参照する。報告行は指を離した際に既存の行操作へ委譲し、報酬や選択上限を表示側で再実装しない。入力を受ける背景Zoneで下層への入力漏れを防ぐ。英語と横画面は既存経路を維持する。
 conceptArtの共通buttonはCanvasの場合に通常のfillStyleで面・反射・下端を塗り分ける。WebGLのグラデーションは維持する。押下色とドラッグアウトによるキャンセルをWebKitの実Canvas画素・進行状態で検査する。依頼見出しも通常の塗り色を先に指定する。

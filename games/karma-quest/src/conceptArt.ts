@@ -217,18 +217,18 @@ function buildRaidModal(
     const stats = deriveStats(scene.karma ?? initialKarma());
     const preview = raidDamage(stats);
     const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
-    boss.setText(`異界魔王 Lv.${state.level}  ·  撃破 ${state.defeats}`);
+    boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
     detail.setText(
-      `HP ${state.hp} / ${state.maxHp}\n` +
-      `現在の勇者なら 1回 約${preview} ダメージ\n` +
-      `撃破報酬: 評価 +${raidReward(state)}`,
+      `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
+      `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
+      `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
     );
     hpBg.clear().fillStyle(0x3a2c31, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
     hpFill.clear();
     if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
-    actionLabel?.setText(state.hp <= 0 ? `評価 +${raidReward(state)} を受け取る` : "魔王へ攻撃");
+    actionLabel?.setText(state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
     actionResult.setText(scene.raidPanel?.lastAction ?? "");
   };
 
@@ -248,14 +248,14 @@ function buildRaidModal(
         addTotalEvaluation(reward);
         const next = advanceRaid(state);
         saveRaid(localStorage, next);
-        scene.raidPanel = { lastAction: `評価 +${reward} 獲得。Lv.${next.level} が出現！` };
+        scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
         scene.cameras.main.flash(180, 232, 196, 102);
       } else {
         const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
         saveRaid(localStorage, result.next);
         scene.raidPanel = { lastAction: result.defeated
-          ? `-${result.damage}  魔王撃破！`
-          : `-${result.damage} ダメージ` };
+          ? `-${scoreDisplay(result.damage)}  魔王撃破！`
+          : `-${scoreDisplay(result.damage)} ダメージ` };
         scene.cameras.main.shake(120, 0.004);
       }
       refresh();
@@ -470,7 +470,7 @@ function button(
   hitHeight = height,
 ): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
-  let armed = false;
+  let pressedPointer: number | undefined;
   let processing = false;
   let busy = false;
   const outline = (inset: number) => {
@@ -544,24 +544,33 @@ function button(
   labelText.setData("setBusy", (value: boolean) => {
     if (busy === value) return;
     busy = value;
-    armed = false;
+    pressedPointer = undefined;
     zone.input!.enabled = !value;
     paint(value ? "processing" : "idle");
   });
-  zone.on("pointerover", () => { if (!processing && !busy) paint("focus"); });
-  zone.on("pointerdown", () => { if (!processing && !busy) { armed = true; paint("pressed"); } });
-  zone.on("pointerup", () => {
-    if (!armed || processing || busy) return;
-    armed = false;
+  zone.on("pointerover", () => { if (pressedPointer === undefined && !processing && !busy) paint("focus"); });
+  zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer === undefined && !processing && !busy) {
+      pressedPointer = pointer.id;
+      paint("pressed");
+    }
+  });
+  zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== pointer.id || processing || busy) return;
+    pressedPointer = undefined;
     processing = true;
     paint("processing");
     onClick();
     if (!lockAfterAction) { processing = false; paint("idle"); return; }
     scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
   });
-  zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
+  zone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== undefined && pressedPointer !== pointer.id) return;
+    pressedPointer = undefined;
+    if (!processing && !busy) paint("idle");
+  });
   const cancelPress = () => {
-    armed = false;
+    pressedPointer = undefined;
     if (!processing && !busy) paint("idle");
   };
   // Resizing or leaving the window must not leave a pending click behind.
