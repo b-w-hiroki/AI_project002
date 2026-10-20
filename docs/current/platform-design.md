@@ -34,6 +34,7 @@ flowchart TD
 対象ゲーム内で npm ci → npm run lint → npm run typecheck → npm test → npm run build。
 画面変更は npx playwright test と必要な --browser=webkit を実施し、実スクショを見る。ブラウザ追加インストールは実行環境の規則に従う。
 [Browser E2E](../../.github/workflows/e2e.yml)、[WebKit](../../.github/workflows/webkit.yml)、[Portal readiness](../../.github/workflows/crazygames-readiness.yml) は別の検査。
+Karma QuestのWebKit抽出は既存のスモーク条件に加えてPlaywrightの@webkit-regressionタグを含む。新しいWebKit回帰テストはこのタグで追加し、--listと同じ抽出条件で対象と実行結果を確認する。タイトル変更だけで検査対象から外れないようにする。workflowの起動条件はmain宛PR・mainへのpush・手動実行であり、積み重ねPRの全てで自動実行されるわけではない。
 画像基準更新は意図した差分を目視し、OS別画像と根拠を残す。単純な更新コマンド成功は品質確認の代わりではない。
 
 ## 文書同期の構成

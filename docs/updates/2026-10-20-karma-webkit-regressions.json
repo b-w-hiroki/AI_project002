@@ -1,0 +1,15 @@
+{
+  "summary": "最近のKarma回帰テスト15件をWebKit CI対象へ追加",
+  "areas": {
+    "platform": {
+      "spec": {"status": "unchanged", "reason": "CIのテスト抽出を拡張するのみで配布動作や利用者向け機能は変更しない"},
+      "design": {"status": "updated", "reason": "タグによるWebKit回帰検査の追加手順と既存起動条件を記録した"}
+    },
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "既存テストをCI対象に加えるのみでゲームの表示や操作は変更しない"},
+      "design": {"status": "updated", "reason": "最近の回帰テストをWebKitタグで選択する検証構成を記録した"}
+    }
+  },
+  "validation": ["タグ付き一覧で追加15件を確認", "lint・typecheck成功", "CIと同じ抽出条件のローカルWebKit全28件成功", "初回27件成功・回転テスト1件失敗。回転のサイズ更新待ちを補い対象3回成功後、全28件を再実行して成功"],
+  "limitations": ["ローカルWebKit検査とGitHubのLinux WebKit実行は別", "物理iOS/Android・外部Portal未確認"]
+}
