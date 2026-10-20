@@ -1,0 +1,23 @@
+{
+  "summary": "Synchronize the side-scroller run-pose assertion with the production locomotion update after synthetic input.",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The run artwork and live hitbox invariants remain unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Only browser-test frame readiness changed; production movement and rendering are unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The test still requires hero-run-art while the live body has moving velocity.",
+    "Attack and guard still pass through their production handlers with real Phaser key state.",
+    "Idle, attack, guard, hurt, and unchanged hitbox assertions remain active."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}

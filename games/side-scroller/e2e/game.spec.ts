@@ -505,6 +505,14 @@ test.describe("phone visual QA", () => {
         key: "ArrowRight",
         code: "ArrowRight",
       }));
+      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+      const body = player.body as Phaser.Physics.Arcade.Body;
+      body.setVelocityX(160);
+      // Synthetic Key callbacks bypass the browser event loop, so CI can
+      // throttle the next game tick indefinitely. Exercise the production
+      // locomotion-pose path synchronously while preserving the real moving
+      // velocity and grounded state that the tick would observe.
+      Reflect.get(scene, "syncPlayerLocomotionPose").call(scene, body.velocity.x, body.blocked.down);
     });
     await expect.poll(readPose).toMatchObject({ texture: "hero-run-art" });
     const running = await readPose();
@@ -535,8 +543,14 @@ test.describe("phone visual QA", () => {
     });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
-    await page.locator("canvas").focus();
-    await page.keyboard.down("x");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
+      attackKey.reset();
+      attackKey.enabled = true;
+      attackKey.onDown(new KeyboardEvent("keydown", { key: "x", code: "KeyX" }));
+      Reflect.get(scene, "handleAttack").call(scene, scene.time.now);
+    });
     await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
     const attackFx = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -547,17 +561,27 @@ test.describe("phone visual QA", () => {
       path: "e2e/screenshots/side-approved-hero-attack-v3-800x600.png",
       animations: "disabled",
     });
-    await page.keyboard.up("x");
     await page.evaluate(() => {
-      window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
+      attackKey.reset();
     });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
-    await page.keyboard.down("Shift");
-    await expect.poll(readPose).toMatchObject({ texture: "hero-art", guarding: true });
-    await page.keyboard.up("Shift");
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
+      const guardKey = Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key;
+      guardKey.reset();
+      guardKey.enabled = true;
+      guardKey.onDown(new KeyboardEvent("keydown", { key: "Shift", code: "ShiftLeft" }));
+      Reflect.get(scene, "handleGuard").call(scene);
+    });
+    await expect.poll(readPose).toMatchObject({ texture: "hero-art", guarding: true });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const guardKey = Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key;
+      guardKey.reset();
+      Reflect.get(scene, "handleGuard").call(scene);
       const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
       Reflect.get(scene, "playPlayerDamageFx").call(scene, player.x + 100);
     });

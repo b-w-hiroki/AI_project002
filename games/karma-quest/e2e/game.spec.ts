@@ -2502,10 +2502,9 @@ test("reaction heading remains readable across renderers and rotation", { tag: "
     await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("選択の結果");
     if (test.info().project.use.browserName === "webkit") {
       // Sample the caption face away from its letters and rim, in Canvas coordinates.
-      const rgb = await page.locator("canvas").evaluate((canvas, x) => Array.from(
-        (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(x, 49, 1, 1).data,
-      ), wide ? 68 : 110);
-      expect(rgb.slice(0, 3)).toEqual([246, 221, 161]);
+      await expect.poll(() => page.locator("canvas").evaluate((canvas, x) => Array.from(
+        (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(x, 49, 1, 1).data.slice(0, 3),
+      ), wide ? 68 : 110)).toEqual([246, 221, 161]);
     }
     await page.locator("canvas").screenshot({ path: `../../docs/review/karma-reaction-heading-${wide ? "landscape" : "portrait"}.png` });
   }
