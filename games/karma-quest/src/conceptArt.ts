@@ -1087,7 +1087,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const pageRules = scene.add.graphics();
   pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(36, 138, 152, 158);
   // One continuous journal page: rules separate entries without nesting cards.
-  for (const y of [119, 315, 412]) {
+  for (const y of [119, 293, 412]) {
     pageRules.lineStyle(1, 0xb79451, 0.55).lineBetween(46, y, 404, y);
     pageRules.fillStyle(0xb79451, 0.8).fillPoints([
       new Phaser.Math.Vector2(225, y - 4), new Phaser.Math.Vector2(229, y),
@@ -1097,9 +1097,9 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   root.add(pageRules);
   const eventTitle = text(scene, root, 304, 154, "", 22, "#35281e", "900", 204).setName("chronicleTitle");
   const eventBody = text(scene, root, 304, 244, "", 21, "#43382e", "700", 200).setAlign("left").setName("chronicleBody");
-  const previousTitle = text(scene, root, 225, 333, "", 21, "#35281e", "900", 350)
+  const previousTitle = text(scene, root, 225, 311, "", 21, "#35281e", "900", 350)
     .setName("chroniclePreviousTitle");
-  const recordCount = text(scene, root, 225, 366, "", 21, "#43382e", "700", 350)
+  const recordCount = text(scene, root, 225, 354, "", 21, "#43382e", "700", 350)
     .setName("chronicleRecordCount");
   const replayHint = text(scene, root, 225, 398, "", 14, "#6a4a2a", "800", 350)
     .setName("chronicleReplayHint");
@@ -1133,7 +1133,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     eventTitle.setText(latest ? `${latest.year}年目\n${latest.outcome.title}` : "旅の記録");
     eventBody.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
     previousTitle.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");
-    recordCount.setText(`この旅で刻んだ選択：${history.length}件`);
+    recordCount.setText(`この旅の評価 ${scoreDisplay(scene.runEvaluation ?? 0)} · 選択${history.length}件`);
     const summary = summarizeJourney(history);
     const prompt = replayPrompt(summary);
     replayHint.setText(scene.lang === "en" ? prompt.en : prompt.ja);

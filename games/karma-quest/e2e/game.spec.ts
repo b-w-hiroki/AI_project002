@@ -1672,7 +1672,7 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
     return root.list.filter(item => item instanceof Object && "text" in item).map(item => Reflect.get(item, "text"));
-  })).toEqual(expect.arrayContaining(["2年目\n支援を見送りました", "1年目 · 鉄を届けました", "この旅で刻んだ選択：2件", "14", "9", "44", "5"]));
+  })).toEqual(expect.arrayContaining(["2年目\n支援を見送りました", "1年目 · 鉄を届けました", "この旅の評価 180 · 選択2件", "14", "9", "44", "5"]));
   const chronicleSpacing = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const root = scene.children.list.find(item => item.getData("refreshChronicle")) as Phaser.GameObjects.Container;
@@ -2583,7 +2583,20 @@ test("landscape chronicle shows run evaluation without changing saved totals", {
     if (value === 288) await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-run-evaluation.png" });
   }
   await page.setViewportSize({ width: 456, height: 806 });
-  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("この旅で刻んだ選択：12件");
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("この旅の評価 1234.5万 · 選択12件");
+  const portrait = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.list.find(node => node.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+    const summary = (root.getByName("chronicleRecordCount") as Phaser.GameObjects.Text).getBounds();
+    const previous = (root.getByName("chroniclePreviousTitle") as Phaser.GameObjects.Text).getBounds();
+    const hint = (root.getByName("chronicleReplayHint") as Phaser.GameObjects.Text).getBounds();
+    return { left: summary.left, right: summary.right, before: summary.top - previous.bottom, after: hint.top - summary.bottom };
+  });
+  expect(portrait.left).toBeGreaterThan(25);
+  expect(portrait.right).toBeLessThan(425);
+  expect(portrait.before).toBeGreaterThan(2);
+  expect(portrait.after).toBeGreaterThan(2);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-portrait-run-evaluation.png" });
   await page.setViewportSize({ width: 806, height: 456 });
   await expect.poll(async () => (await read())?.text).toContain("1234.5万");
 });
