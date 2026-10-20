@@ -1,0 +1,24 @@
+{
+  "summary": "縦年代記の再開時に準備中・再試行を表示し即時再試行を可能にする",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "再開CTAの縦横共通の待機・失敗・再試行表示を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "状態同期と固定280msロックを外す責務分担を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromium再試行E2E成功、WebKit再試行E2E3回成功。両ブラウザで既存年代記画像比較成功",
+    "docs/review/karma-replay-retry-portrait.pngとkarma-replay-loading-portrait.pngを目視確認"
+  ],
+  "limitations": [
+    "未キャッシュの読み込み失敗を検査するためホームから年代記へ直接遷移。12年通しの再プレイではない",
+    "物理端末・外部Portal未確認"
+  ]
+}
