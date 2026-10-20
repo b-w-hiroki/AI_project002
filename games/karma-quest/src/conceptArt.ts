@@ -1101,7 +1101,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     .setName("chroniclePreviousTitle");
   const recordCount = text(scene, root, 225, 354, "", 21, "#43382e", "700", 350)
     .setName("chronicleRecordCount");
-  const replayHint = text(scene, root, 225, 398, "", 14, "#6a4a2a", "800", 350)
+  const replayHint = text(scene, root, 225, 398, "", 20, "#6a4a2a", "800", 350)
     .setName("chronicleReplayHint");
   artWindow(scene, root, BG_KEY, 34, 412, 382, 108);
   const cityShade = scene.add.graphics();
@@ -1136,7 +1136,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
     recordCount.setText(`この旅の評価 ${scoreDisplay(scene.runEvaluation ?? 0)} · 選択${history.length}件`);
     const summary = summarizeJourney(history);
     const prompt = replayPrompt(summary);
-    replayHint.setText(scene.lang === "en" ? prompt.en : prompt.ja);
+    replayHint.setText(scene.lang === "en" ? prompt.en : prompt.shortJa);
     const values = deriveStats(scene.karma ?? initialKarma());
     [values.atk, values.def, values.hp, values.magic].forEach((value, i) => stats[i]?.setText(String(value)));
   });
