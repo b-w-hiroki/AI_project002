@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+横年代記のlandscape-run-summaryはGameScene.runEvaluationをscoreDisplayで整形し、choiceHistory.lengthと併記する。累計評価のlocalStorageは参照・更新しない。既存の20px・338px幅のstatus領域を使い、0・通常値・大きな値で見出しと記録の間に収まることを検査する。
 縦ホームnavの現在タブ面はCanvasの場合にfillStyle(0x254b65,0.82)を設定してから既存矩形を描画する。WebGLは従来のグラデーションを使い、選択下線と入力Zoneは変更しない。
 buildReactionはCanvasで年表示背面の上部33pxを濃紺alpha 0.94で塗り、見出し面に通常fillStyleの明るい金色を指定する。WebGLは既存グラデーションを維持する。WebKit E2Eで縦横の見出し面の画素と次場面への遷移を検査する。
 PlaywrightのbaseURL・起動確認URL・Vite待受は127.0.0.1とKARMA_E2E_PORT（既定15177）で統一する。localhostのアドレス選択に依存させず、--strictPortで使用中ポートからの自動移動を防ぐ。KARMA_REUSE_SERVER=1を使う場合も同じIPv4待受とポートのサーバーを用意する。これはE2E用の接続契約であり、配信設定や保存キーは変更しない。

@@ -20,6 +20,7 @@ type Runtime = Phaser.Scene & {
   reportSubmitting?: boolean;
   phase?: "title" | "karma" | "reaction" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
+  runEvaluation?: number;
   karma?: KarmaState;
   currentRequest?: KarmaRequest | null;
   homeRequest?: KarmaRequest;
@@ -1203,7 +1204,7 @@ function buildLandscapeOverview(scene: Runtime, final: boolean): Phaser.GameObje
       const history = scene.choiceHistory ?? [];
       const latest = history.at(-1), previous = history.at(-2);
       (root.getData("refreshOutcomeArt") as () => void)();
-      status.setText(`この旅で刻んだ選択：${history.length}件`);
+      status.setText(`この旅の評価 ${scoreDisplay(scene.runEvaluation ?? 0)} · 選択${history.length}件`).setName("landscape-run-summary");
       heading.setText(latest ? `${latest.year}年目 · ${latest.outcome.title}` : "旅の記録");
       body.setText(latest?.outcome.body.replace(/\n/g, "") ?? "まだ選択の記録がありません。");
       footer.setText(previous ? `${previous.year}年目 · ${previous.outcome.title}` : "次の旅も、あなたの選択から");

@@ -1,0 +1,25 @@
+{
+  "summary": "横年代記に今回の旅の評価と選択件数を併記",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "累計と区別した旅単位の評価表示を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "runEvaluationとscoreDisplayの参照および文字境界検査を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromium/WebKitで評価表示と保存値非変更、回転・再開の関連2件が各成功",
+    "docs/review/karma-landscape-run-evaluation.pngを確認"
+  ],
+  "limitations": [
+    "検証値と履歴はE2Eから設定。12年通しの再プレイではない",
+    "今回の評価表示追加は日本語の横年代記のみ",
+    "Linux・実機・外部Portal未確認"
+  ]
+}
