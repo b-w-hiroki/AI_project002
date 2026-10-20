@@ -259,28 +259,17 @@ test.describe("phone visual QA", () => {
     expect(controls.labels).not.toEqual(expect.arrayContaining(["←", "→", "↑", "↓"]));
 
     const beforeX = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x);
-    await page.evaluate(() => {
+    const dragStart = await canvasPoint(page, 70, 680);
+    const dragEnd = await canvasPoint(page, 155, 680);
+    await page.mouse.move(dragStart.x, dragStart.y);
+    await page.mouse.down();
+    await page.mouse.move(dragEnd.x, dragEnd.y, { steps: 4 });
+    await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
-      const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container;
-      const findNamed = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.GameObject | undefined => {
-        for (const node of nodes) {
-          if (node.name === "direct-move-zone") return node;
-          if (node.type === "Container") {
-            const nested = findNamed((node as Phaser.GameObjects.Container).list);
-            if (nested) return nested;
-          }
-        }
-        return undefined;
-      };
-      const directZone = findNamed(mock.list) as Phaser.GameObjects.Zone;
-      const pointer = { id: 31, x: 70, y: 680 } as Phaser.Input.Pointer;
-      directZone.emit("pointerdown", pointer);
-      scene.input.emit("pointermove", { ...pointer, x: 155 });
-    });
+      return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
+    })).toBe(true);
     await expect.poll(() => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x)).toBeGreaterThan(beforeX + 4);
-    await page.evaluate(() => {
-      window.__qaGame.scene.getScene("GameScene").input.emit("pointerup", { id: 31 });
-    });
+    await page.mouse.up();
     await expect.poll(() => page.evaluate(() => {
       const player = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite;
       return Math.abs((player.body as Phaser.Physics.Arcade.Body).velocity.x);
