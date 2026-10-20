@@ -1,0 +1,11 @@
+{
+  "summary": "不正なレイドレベルの復旧時に撃破報酬が発生しないよう修正",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "不正レベルはHPと撃破数を引き継がず未撃破Lv.1へ復旧する条件を明記した"},
+      "design": {"status": "updated", "reason": "レベル検証をHP復元より先に行い、不正時にレコード全体を初期化する順序を記載した"}
+    }
+  },
+  "validation": ["単体116件、lint・typecheck・build成功。不正レベル7種類のHP=0と途中HPを検査", "Chromium/WebKit各3件成功。再読み込み後に攻撃が表示され、評価が増えずHPが減ることを確認", "正常な途中HP・撃破報酬・回転後の操作の既存検査も成功", "docs/review/karma-raid-corrupt-level.pngを目視確認"],
+  "limitations": ["物理端末・外部Portal未確認。保存領域の利用禁止・容量不足への対応は本変更に含めない"]
+}

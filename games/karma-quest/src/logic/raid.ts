@@ -42,8 +42,11 @@ export function loadRaid(store: RaidStore): RaidState {
     const record = parsed as Partial<Record<keyof RaidState, unknown>>;
     // Save files contain numbers. Do not coerce missing/null/string HP to zero:
     // zero is an actual defeated boss with a reward waiting to be claimed.
-    const level = nonNegativeInteger(record.level) && record.level >= 1
-      && Number.isSafeInteger(raidMaxHp(record.level + 1)) ? record.level : 1;
+    // HP belongs to a specific boss. Never transfer a corrupt boss's zero HP
+    // onto level 1: that would manufacture a claimable defeat during recovery.
+    if (!nonNegativeInteger(record.level) || record.level < 1
+      || !Number.isSafeInteger(raidMaxHp(record.level + 1))) return newRaid();
+    const level = record.level;
     const defeats = nonNegativeInteger(record.defeats) && record.defeats < Number.MAX_SAFE_INTEGER ? record.defeats : 0;
     const maxHp = raidMaxHp(level);
     const hp = nonNegativeInteger(record.hp) ? Math.min(maxHp, record.hp) : maxHp;
