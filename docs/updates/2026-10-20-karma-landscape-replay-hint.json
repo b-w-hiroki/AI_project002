@@ -1,0 +1,24 @@
+{
+  "summary": "横年代記の次の旅ヒントを短文化・拡大し羊皮紙内へ配置",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "横画面の短文・20px表示と縦画面の従来文維持を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "shortJaと横専用の座標・文字境界検査を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromium/WebKitで4種の文言と文字境界、縦へ戻した際の文言を各1件確認",
+    "docs/review/karma-replay-hint-landscape.pngを目視確認"
+  ],
+  "limitations": [
+    "初回Chromiumは開発サーバーへの接続エラー。再実行成功",
+    "物理端末・外部Portal未確認"
+  ]
+}

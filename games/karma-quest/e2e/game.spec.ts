@@ -2442,3 +2442,46 @@ test("portrait chronicle replay shows loading failure and retries across rotatio
   await expect.poll(() => phase(page)).toBe("karma");
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
 });
+
+
+test("landscape replay hints remain readable for every journey style", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+    Reflect.get(scene, "showFinal").call(scene);
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  for (const [accepted, expected] of [
+    [[true, true], "次の旅は、断る選択も試そう"],
+    [[false, false], "次の旅は、支援を増やそう"],
+    [[true, false], "次の旅は、別の派閥を支援"],
+    [[], "次の旅は、方針を決めて挑戦"],
+  ] as const) {
+    await page.evaluate(values => {
+      Reflect.set(window.__qaGame.scene.getScene("GameScene"), "choiceHistory", values.map((value, i) => ({
+        year: i + 1,
+        outcome: { faction: "warrior", requestId: "qa", title: value ? "鉄を届けました" : "支援を見送りました", body: "王都の人々に届けました。", quote: "", deltas: [0, 0, 0, 0] },
+      })));
+    }, accepted);
+    const read = () => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.list.find(node => Reflect.get(node, "visible") && node.getData("refreshOverview")) as Phaser.GameObjects.Container;
+      const label = root?.getByName("landscape-replay-hint") as Phaser.GameObjects.Text;
+      if (!label) return null;
+      const b = label.getBounds();
+      return { text: label.text, size: parseFloat(String(label.style.fontSize)), top: b.top, bottom: b.bottom, left: b.left, right: b.right };
+    });
+    await expect.poll(async () => (await read())?.text).toBe(expected);
+    const hint = (await read())!;
+    expect(hint.size).toBe(20);
+    expect(hint.top).toBeGreaterThan(314);
+    expect(hint.bottom).toBeLessThan(344);
+    expect(hint.left).toBeGreaterThan(410);
+    expect(hint.right).toBeLessThan(772);
+    if (accepted.length === 0) await page.locator("canvas").screenshot({ path: "../../docs/review/karma-replay-hint-landscape.png" });
+  }
+  await page.setViewportSize({ width: 456, height: 806 });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("次の旅：選択方針を一つ決めて、結末を変えてみよう");
+});

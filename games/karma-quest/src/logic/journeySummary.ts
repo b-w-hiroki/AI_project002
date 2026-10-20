@@ -56,27 +56,31 @@ export function summarizeJourney(history: readonly ChoiceRecord[]): JourneySumma
   };
 }
 
-export function replayPrompt(summary: JourneySummary): { ja: string; en: string } {
+export function replayPrompt(summary: JourneySummary): { ja: string; shortJa: string; en: string } {
   if (summary.style === "supportive") {
     return {
       ja: "次の旅：断る選択を増やし、別の勢力図を試そう",
+      shortJa: "次の旅は、断る選択も試そう",
       en: "NEXT RUN: Decline more requests and shape a different world",
     };
   }
   if (summary.style === "selective") {
     return {
       ja: "次の旅：支援を増やし、別の勇者像を試そう",
+      shortJa: "次の旅は、支援を増やそう",
       en: "NEXT RUN: Support more requests and shape a different hero",
     };
   }
   if (summary.leadingFaction) {
     return {
       ja: "次の旅：別の派閥を優先し、結末の差を確かめよう",
+      shortJa: "次の旅は、別の派閥を支援",
       en: "NEXT RUN: Favor another faction and compare the ending",
     };
   }
   return {
     ja: "次の旅：選択方針を一つ決めて、結末を変えてみよう",
+      shortJa: "次の旅は、方針を決めて挑戦",
     en: "NEXT RUN: Commit to a different strategy and change the ending",
   };
 }
