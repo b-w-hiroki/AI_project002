@@ -382,9 +382,13 @@ class SideBattleView {
     const onWindowPointerUp = (event: PointerEvent) => {
       if (nativePointerId === null || event.pointerId === nativePointerId) release();
     };
+    // WebKit can occasionally drop Phaser's pointerup for mouse-driven drags.
+    // Keep mouse release independent while preserving pointer ownership for touch.
+    const onWindowMouseUp = () => release();
     const onPointerCancel = () => release();
     window.addEventListener("blur", onBlur);
     window.addEventListener("pointerup", onWindowPointerUp);
+    window.addEventListener("mouseup", onWindowMouseUp);
     window.addEventListener("pointercancel", onPointerCancel);
     this.releaseDirectMove = () => {
       release();
@@ -393,6 +397,7 @@ class SideBattleView {
       this.scene.input.off("gameout", release);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("pointerup", onWindowPointerUp);
+      window.removeEventListener("mouseup", onWindowMouseUp);
       window.removeEventListener("pointercancel", onPointerCancel);
     };
     this.controls.add([zone, guide]);
