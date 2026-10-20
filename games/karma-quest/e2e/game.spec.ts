@@ -2523,3 +2523,29 @@ test("landscape replay hints remain readable for every journey style", { tag: "@
   await page.setViewportSize({ width: 456, height: 806 });
   await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("次の旅：選択方針を一つ決めて、結末を変えてみよう");
 });
+
+
+test("reaction heading remains readable across renderers and rotation", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+    Reflect.set(scene, "currentRequest", { id: "mage_stone", faction: "mage", text: "魔石がほしい", karmaDelta: 5 });
+    await Reflect.get(scene, "onKarmaChoice").call(scene, true);
+  });
+  await expect.poll(() => phase(page)).toBe("reaction");
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("選択の結果");
+    if (test.info().project.use.browserName === "webkit") {
+      // Sample the caption face away from its letters and rim, in Canvas coordinates.
+      await expect.poll(() => page.locator("canvas").evaluate((canvas, x) => Array.from(
+        (canvas as HTMLCanvasElement).getContext("2d")!.getImageData(x, 49, 1, 1).data.slice(0, 3),
+      ), wide ? 68 : 110)).toEqual([246, 221, 161]);
+    }
+    await page.locator("canvas").screenshot({ path: `../../docs/review/karma-reaction-heading-${wide ? "landscape" : "portrait"}.png` });
+  }
+  await tapPoint(page, 579, 376);
+  await expect.poll(() => phase(page)).toMatch(/^(encounter|battle)$/);
+});
