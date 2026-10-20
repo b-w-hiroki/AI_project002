@@ -623,6 +623,45 @@ test("report action explains empty selection and reflects the selected count", a
   await expect.poll(() => phase(page)).not.toBe("report");
 });
 
+test("landscape report shows the authoritative evaluation preview", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let display = "";
+    let top = 0, bottom = 0;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === "landscape-report-preview") {
+        const text = node as Phaser.GameObjects.Text;
+        display = text.text; top = text.getBounds().top; bottom = text.getBounds().bottom;
+      }
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    scene.children.list.forEach(visit);
+    return { display, source: (Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text, top, bottom };
+  });
+  await expect.poll(async () => (await read()).display).toContain("評価 0");
+  await tapPoint(page, 215, 150);
+  await expect.poll(async () => (await read()).display).toContain("選択 1/2");
+  for (const x of [519, 699]) {
+    await tapPoint(page, x, 144);
+    await expect.poll(async () => { const result = await read(); return result.display === result.source; }).toBe(true);
+    const result = await read();
+    expect(result.display).toMatch(/評価 [1-9]/);
+    expect(result.top).toBeGreaterThan(174);
+    expect(result.bottom).toBeLessThan(375);
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-report-evaluation.png" });
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {

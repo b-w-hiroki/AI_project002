@@ -1395,7 +1395,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     report.add(hit);
     return { god, x, g, label };
   });
-  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
+  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320).setName("landscape-report-preview");
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
   const submitLabel = button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   root.setData("refreshJourney", () => {
@@ -1430,10 +1430,9 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
         bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(29, y - 36, 372, 72);
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
       });
-      const god = Reflect.get(scene, "deity") as Deity;
       const count = source.filter(row => row.selected).length;
       submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
-      preview.setText(`${DEITIES[god].name}へ報告\n選択 ${count}/2\n${DEITIES[god].wish}`);
+      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       submitAction.setAlpha(count > 0 ? 1 : 0.45);
       (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;
     }
