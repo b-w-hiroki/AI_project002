@@ -62,6 +62,17 @@ for (const failure of ["getter", "read", "write"] as const) {
     await page.reload();
     await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
     await useNativePortrait(page);
+    if (failure !== "write") {
+      await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeInformation")?.title)).toBe("進行は今回のみ保持");
+      if (failure === "getter") {
+        await page.locator("canvas").screenshot({ path: `../../docs/review/karma-progress-notice-${test.info().project.name || "chromium"}.png` });
+        await page.setViewportSize({ width: 844, height: 390 });
+        await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+        await page.locator("canvas").screenshot({ path: `../../docs/review/karma-progress-notice-wide-${test.info().project.name || "chromium"}.png` });
+        await useNativePortrait(page);
+      }
+      await tapPoint(page, 225, 551);
+    }
     await tapPoint(page, 225, 682);
     await expect.poll(() => phase(page)).toBe("karma");
     for (let year = 1; year <= 2; year++) {
@@ -2750,3 +2761,36 @@ test("home navigation confirms on release and cancels interrupted gestures", { t
     await expect.poll(state).toEqual(idle);
   }
 });
+for (const failKey of ["karma_quest_raid_claim_v1", "karma_quest_solo_raid_v1", "karma_quest_total_eval_v1"]) {
+  test(`raid claim stays consistent when ${failKey} write fails`, { tag: "@webkit-regression" }, async ({ page }) => {
+    await page.evaluate(key => {
+      localStorage.setItem("karma_quest_solo_raid_v1", '{"level":1,"defeats":0,"hp":0}');
+      localStorage.setItem("karma_quest_total_eval_v1", "500");
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (name, value) {
+        if (name === key) throw new DOMException("Full", "QuotaExceededError");
+        original.call(this, name, value);
+      };
+    }, failKey);
+    await tapPoint(page, 135, 758);
+    await tapPoint(page, 225, 510);
+    if (failKey === "karma_quest_raid_claim_v1") {
+      await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeInformation")?.title)).toBe("保存できません");
+      expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe("500");
+      await page.locator("canvas").screenshot({ path: `../../docs/review/karma-raid-storage-error-${test.info().project.name || "chromium"}.png` });
+      await page.setViewportSize({ width: 844, height: 390 });
+      await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+      await page.locator("canvas").screenshot({ path: `../../docs/review/karma-raid-storage-error-wide-${test.info().project.name || "chromium"}.png` });
+    }
+    await page.reload(); // Restore browser storage methods; preserve committed data.
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    if (failKey === "karma_quest_raid_claim_v1") await page.setViewportSize({ width: 390, height: 844 });
+    await tapPoint(page, 135, 758);
+    const text = () => loadingFeedback(page).then(value => value.texts.join(" "));
+    await expect.poll(text).toContain(failKey === "karma_quest_raid_claim_v1" ? "評価 +80 を受け取る" : "魔王へ攻撃");
+    await tapPoint(page, 225, 510);
+    await tapPoint(page, 225, 604);
+    await expect.poll(text).toContain("累計評価 580");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").level)).toBe(2);
+  });
+}

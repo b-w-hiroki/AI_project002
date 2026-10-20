@@ -36,7 +36,7 @@ raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。max
 loadRaidはレベルを検証してからHPを復元する。不正なレベルの場合はレコード全体をnewRaid()へ戻し、そのHP=0をLv.1の撃破状態へ転用しない。正常なレベルの途中HP・撃破済み状態は維持し、読み込みだけでは保存を書き換えない。
 [scoreDisplay](../../../games/karma-quest/src/logic/scoreDisplay.ts) は表示専用。元の数値を短縮文字列で上書きしない。
 buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の数値をscoreDisplayで整形する。raidPanel.lastActionは表示用文字列のみ保持し、レイド状態と評価の保存は整形前の値を使用する。大きな保存値で縦横の文字境界・受取後の正確な保存値をE2Eで検査する。
-progress.tsはcreateProgressStorageのクロージャに値と利用不能キーを保持する。取得・read・write例外後は該当キーをページ終了までメモリ専用に固定し、古い永続値の再読込や自動再保存で進行を巻き戻さない。正常時のキー・形式・数値検証は維持する。レイドの保存と報酬加算は別処理であり、その例外や複数キーの整合性を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
+progress.tsはcreateProgressStorageのクロージャに値と利用不能キーを保持する。取得・read・write例外後は該当キーをページ終了までメモリ専用に固定し、古い永続値の再読込や自動再保存で進行を巻き戻さない。正常時のキー・形式・数値検証は維持する。claimStorageはkarma_quest_raid_claim_v1に次ボスJSONと累計評価文字列を一度にsetItemして受取を確定する。存在中はこの記録を正とし、旧キーへの反映と記録削除が途中失敗しても、次回読み込みは確定済み値を返す。記録が残る間の評価加算・レイド攻撃も記録を先に更新する。旧セーブは記録なしで従来どおり読み、正常反映後は記録を削除する。不正な確定記録は黙って無視せずレイド操作を止める。複数タブ・旧版クライアントとの同時書き込みは保証しない。保存キーを手作業で削除する復旧は行わない。日本語ホームの保存通知は既存homeInformationを使用し、Scene単位で一度表示する。レイドの例外は同じ案内UIで操作を中断する。
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証

@@ -1,4 +1,5 @@
-/** ベスト到達ステージ・累計評価の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
+import { claimStorage } from "./claimStorage";
+/** ベスト到達ステージ・累計評価の永続化（localStorage）。Phaser非依存の保存ロジック */
 
 const BEST_STAGE_KEY = "karma_quest_best_stage_v1";
 const TOTAL_EVAL_KEY = "karma_quest_total_eval_v1";
@@ -9,7 +10,7 @@ function validCounter(value: number, maximum = Number.MAX_SAFE_INTEGER): boolean
   return Number.isSafeInteger(value) && value >= 0 && value <= maximum;
 }
 
-export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | "setItem"> = () => localStorage) {
+export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | "setItem"> = () => claimStorage) {
   const session = new Map<string, number>();
   const unavailable = new Set<string>();
 
@@ -68,7 +69,7 @@ export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | 
     return next;
   }
 
-  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation };
+  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, hasUnavailableProgress: () => unavailable.size > 0 };
 }
 
-export const { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation } = createProgressStorage();
+export const { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, hasUnavailableProgress } = createProgressStorage();

@@ -1,12 +1,13 @@
+import { claimStorage, claimReward } from "./logic/claimStorage";
 import Phaser from "phaser";
 import { deriveStats, dominantFaction, initialKarma, FACTION_LABEL, type Faction, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
-import { addTotalEvaluation, loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import { hasUnavailableProgress, loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import { formatLeague, leagueSnapshot } from "./logic/league";
 import { scoreDisplay } from "./logic/scoreDisplay";
-import { advanceRaid, attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
+import { attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
 import { replayPrompt, summarizeJourney } from "./logic/journeySummary";
@@ -214,24 +215,31 @@ function buildRaidModal(
   modal.add([hpBg, hpFill]);
   const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520).setStroke("#7c3d2a", 0);
 
+  const storageError = () => {
+    scene.raidPanel = undefined;
+    modal.setVisible(false);
+    scene.homeInformation = { title: "保存できません", description: "レイドを中断しました。\n保存設定・空き容量を\n確認してお試しください。" };
+  };
   const refresh = () => {
-    const state = loadRaid(localStorage);
-    const stats = deriveStats(scene.karma ?? initialKarma());
-    const preview = raidDamage(stats);
-    const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
-    boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
-    detail.setText(
-      `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
-      `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
-      `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
-    );
-    hpBg.clear().fillStyle(0x3a2c31, 1)
-      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
-    hpFill.clear();
-    if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
-      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
-    actionLabel?.setText(state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
-    actionResult.setText(scene.raidPanel?.lastAction ?? "");
+    try {
+      const state = loadRaid(claimStorage);
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      const preview = raidDamage(stats);
+      const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
+      boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
+      detail.setText(
+        `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
+        `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
+        `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
+      );
+      hpBg.clear().fillStyle(0x3a2c31, 1)
+        .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
+      hpFill.clear();
+      if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
+        .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
+      actionLabel?.setText(state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
+      actionResult.setText(scene.raidPanel?.lastAction ?? "");
+    } catch { storageError(); }
   };
 
   const actionLabel = button(
@@ -244,23 +252,25 @@ function buildRaidModal(
     "魔王へ攻撃",
     0x981d25,
     () => {
-      const state = loadRaid(localStorage);
-      if (state.hp <= 0) {
-        const reward = raidReward(state);
-        addTotalEvaluation(reward);
-        const next = advanceRaid(state);
-        saveRaid(localStorage, next);
-        scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
-        scene.cameras.main.flash(180, 232, 196, 102);
-      } else {
-        const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
-        saveRaid(localStorage, result.next);
-        scene.raidPanel = { lastAction: result.defeated
-          ? `-${scoreDisplay(result.damage)}  魔王撃破！`
-          : `-${scoreDisplay(result.damage)} ダメージ` };
-        scene.cameras.main.shake(120, 0.004);
-      }
-      refresh();
+      try {
+        const state = loadRaid(claimStorage);
+        if (state.hp <= 0) {
+          if (hasUnavailableProgress()) throw new Error("Progress is session-only");
+          const claimed = claimReward();
+          if (!claimed) return;
+          const { reward, next } = claimed;
+          scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
+          scene.cameras.main.flash(180, 232, 196, 102);
+        } else {
+          const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
+          saveRaid(claimStorage, result.next);
+          scene.raidPanel = { lastAction: result.defeated
+            ? `-${scoreDisplay(result.damage)}  魔王撃破！`
+            : `-${scoreDisplay(result.damage)} ダメージ` };
+          scene.cameras.main.shake(120, 0.004);
+        }
+        refresh();
+      } catch { storageError(); }
     },
     undefined,
     false,
@@ -293,7 +303,7 @@ function buildRaidModal(
     scene.homeInformation = undefined;
     scene.raidPanel = { lastAction: "" };
     refresh();
-    modal.setVisible(true);
+    modal.setVisible(!!scene.raidPanel);
   });
   parent.add(modal);
   return modal;
@@ -1495,6 +1505,11 @@ function build(scene: Runtime): MockUi {
 }
 
 function refresh(scene: Runtime): void {
+  if (scene.lang !== "en" && scene.phase === "title" && hasUnavailableProgress()
+    && !scene.data.get("storageNoticeShown") && !scene.homeInformation && !scene.raidPanel) {
+    scene.data.set("storageNoticeShown", true);
+    scene.homeInformation = { title: "進行は今回のみ保持", description: "端末に保存できません。\n再読み込みすると、未保存の\n到達年・評価は失われます。" };
+  }
   if (scene.phase !== "title") {
     scene.homeInformation = undefined;
     scene.raidPanel = undefined;
