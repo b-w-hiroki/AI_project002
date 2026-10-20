@@ -15,10 +15,10 @@ function finiteNonNegative(value: unknown): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 export function telemetryKey(gameId: string): string { return `${PREFIX}:${gameId}`; }
-export function loadLocalTelemetry(gameId: string, store: TelemetryStore = localStorage): LocalTelemetryData {
-  const raw = store.getItem(telemetryKey(gameId));
-  if (!raw) return emptyLocalTelemetry();
+export function loadLocalTelemetry(gameId: string, store?: TelemetryStore): LocalTelemetryData {
   try {
+    const raw = (store ?? localStorage).getItem(telemetryKey(gameId));
+    if (!raw) return emptyLocalTelemetry();
     const parsed = JSON.parse(raw) as Partial<LocalTelemetryData>;
     return {
       sessions: Math.floor(finiteNonNegative(parsed.sessions)),
@@ -29,20 +29,21 @@ export function loadLocalTelemetry(gameId: string, store: TelemetryStore = local
     };
   } catch { return emptyLocalTelemetry(); }
 }
-export function saveLocalTelemetry(gameId: string, data: LocalTelemetryData, store: TelemetryStore = localStorage): void {
-  store.setItem(telemetryKey(gameId), JSON.stringify(data));
+export function saveLocalTelemetry(gameId: string, data: LocalTelemetryData, store?: TelemetryStore): void {
+  // Optional diagnostics must never prevent startup or player input.
+  try { (store ?? localStorage).setItem(telemetryKey(gameId), JSON.stringify(data)); } catch { /* Storage may be denied or full. */ }
 }
-export function recordLocalSessionStart(gameId: string, now = Date.now(), store: TelemetryStore = localStorage): LocalTelemetryData {
+export function recordLocalSessionStart(gameId: string, now = Date.now(), store?: TelemetryStore): LocalTelemetryData {
   const current = loadLocalTelemetry(gameId, store);
   const next = { ...current, sessions: current.sessions + 1, lastStartedAt: now, lastActiveAt: now };
   saveLocalTelemetry(gameId, next, store); return next;
 }
-export function recordLocalFirstAction(gameId: string, now = Date.now(), store: TelemetryStore = localStorage): LocalTelemetryData {
+export function recordLocalFirstAction(gameId: string, now = Date.now(), store?: TelemetryStore): LocalTelemetryData {
   const current = loadLocalTelemetry(gameId, store);
   const next = { ...current, firstActions: current.firstActions + 1, lastActiveAt: now };
   saveLocalTelemetry(gameId, next, store); return next;
 }
-export function recordLocalActiveTime(gameId: string, deltaMs: number, now = Date.now(), store: TelemetryStore = localStorage): LocalTelemetryData {
+export function recordLocalActiveTime(gameId: string, deltaMs: number, now = Date.now(), store?: TelemetryStore): LocalTelemetryData {
   const current = loadLocalTelemetry(gameId, store);
   const next = { ...current, totalActiveMs: current.totalActiveMs + Math.max(0, Math.floor(finiteNonNegative(deltaMs))), lastActiveAt: now };
   saveLocalTelemetry(gameId, next, store); return next;

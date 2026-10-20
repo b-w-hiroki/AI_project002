@@ -11,10 +11,14 @@ function installStorage(initial: Record<string, string> = {}) {
   return map;
 }
 
-beforeEach(() => installStorage());
+beforeEach(() => {
+  installStorage();
+  ({ addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } = createProgressStorage());
+});
 afterEach(() => vi.unstubAllGlobals());
 
-import { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } from "../src/logic/progress";
+import { createProgressStorage } from "../src/logic/progress";
+let { addTotalEvaluation, loadBestStage, loadTotalEvaluation, saveBestStage } = createProgressStorage();
 
 describe("progress durability", () => {
   it.each(["13", "99", "1.5", "Infinity", "9007199254740992"])("rejects impossible saved year %s without rewriting storage", raw => {
@@ -62,5 +66,64 @@ describe("progress durability", () => {
     });
     expect(loadBestStage()).toBe(0);
     expect(loadTotalEvaluation()).toBe(0);
+  });
+});
+
+
+describe("unavailable progress storage", () => {
+  it("survives a denied localStorage getter and accumulates session progress", () => {
+    const progress = createProgressStorage(() => { throw new Error("SecurityError"); });
+    expect(progress.loadBestStage()).toBe(0);
+    progress.saveBestStage(4);
+    progress.saveBestStage(2);
+    expect(progress.loadBestStage()).toBe(4);
+    expect(progress.addTotalEvaluation(80)).toBe(80);
+    expect(progress.addTotalEvaluation(20)).toBe(100);
+    expect(progress.loadTotalEvaluation()).toBe(100);
+  });
+
+  it("keeps loaded values after quota failure without rereading stale counters", () => {
+    const map = new Map([["karma_quest_total_eval_v1", "500"], ["karma_quest_best_stage_v1", "7"]]);
+    const setItem = vi.fn(() => { throw new Error("QuotaExceededError"); });
+    const store = { getItem: (key: string) => map.get(key) ?? null, setItem };
+    const progress = createProgressStorage(() => store);
+    expect(progress.addTotalEvaluation(80)).toBe(580);
+    expect(progress.addTotalEvaluation(20)).toBe(600);
+    progress.saveBestStage(8);
+    progress.saveBestStage(2);
+    expect(progress.loadBestStage()).toBe(8);
+    expect(setItem).toHaveBeenCalledTimes(2);
+    // A reload restores only the data actually saved on the device.
+    expect(createProgressStorage(() => store).loadTotalEvaluation()).toBe(500);
+    expect(map.get("karma_quest_best_stage_v1")).toBe("7");
+  });
+
+  it("retains the last readable value when reads become unavailable", () => {
+    let denied = false;
+    const setItem = vi.fn();
+    const progress = createProgressStorage(() => ({
+      getItem: () => { if (denied) throw new Error("SecurityError"); return "100"; },
+      setItem,
+    }));
+    expect(progress.loadTotalEvaluation()).toBe(100);
+    denied = true;
+    expect(progress.addTotalEvaluation(20)).toBe(120);
+    denied = false;
+    expect(progress.loadTotalEvaluation()).toBe(120);
+    expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it("does not resurrect a removed counter if a later read fails", () => {
+    let value: string | null = "100";
+    let denied = false;
+    const progress = createProgressStorage(() => ({
+      getItem: () => { if (denied) throw new Error("SecurityError"); return value; },
+      setItem: () => undefined,
+    }));
+    expect(progress.loadTotalEvaluation()).toBe(100);
+    value = null;
+    expect(progress.loadTotalEvaluation()).toBe(0);
+    denied = true;
+    expect(progress.loadTotalEvaluation()).toBe(0);
   });
 });

@@ -36,7 +36,7 @@ raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。max
 loadRaidはレベルを検証してからHPを復元する。不正なレベルの場合はレコード全体をnewRaid()へ戻し、そのHP=0をLv.1の撃破状態へ転用しない。正常なレベルの途中HP・撃破済み状態は維持し、読み込みだけでは保存を書き換えない。
 [scoreDisplay](../../../games/karma-quest/src/logic/scoreDisplay.ts) は表示専用。元の数値を短縮文字列で上書きしない。
 buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の数値をscoreDisplayで整形する。raidPanel.lastActionは表示用文字列のみ保持し、レイド状態と評価の保存は整形前の値を使用する。大きな保存値で縦横の文字境界・受取後の正確な保存値をE2Eで検査する。
-ストレージ利用禁止・容量不足を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
+progress.tsはcreateProgressStorageのクロージャに値と利用不能キーを保持する。取得・read・write例外後は該当キーをページ終了までメモリ専用に固定し、古い永続値の再読込や自動再保存で進行を巻き戻さない。正常時のキー・形式・数値検証は維持する。レイドの保存と報酬加算は別処理であり、その例外や複数キーの整合性を全面的に吸収する設計ではない。キー変更は移行・復旧方針を仕様書と変更記録に書く。
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
@@ -78,4 +78,9 @@ WebKitは回転時の描画消失を避けるCanvas fallback、それ以外はAU
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
 
+ホームのbuildTitle.addRouteと横ホームのナビの項目はownedTapを使い、pointerdownで即時実行しない。縦10項目・横8項目の押下中／別ポインター／領域外解除、リサイズ・blur・hidden、実ブラウザのドラッグとタップをE2E検査する。
+
+HOME_REQUEST_LINESは既知の依頼文5件の表示改行のみを保持する。原文や任意の未知文を置き換えず、縦home-request-bodyへ適用する。本文中心y=694。8依頼の原文一致・2行以内・記号単独行なし・カード内境界をE2E検査する。準備中の2項目は状態表示の下に鞄アイコンを描画しない。
+
+討伐終了表示のE2EはSceneのpostupdateで結果を捕捉し、そのフレームでテスト用時計を停止する。700msの報告遷移を外部ポーリングで取り逃さず、描画が遅いCIでは15秒まで待つ。ゲームの1800ms声援受付・700ms結果表示は変更しない。
 - 2026-10-20: Large raid counter text uses a 22 px boss label so portrait WebKit layouts retain the tested 40 px canvas inset without clipping.

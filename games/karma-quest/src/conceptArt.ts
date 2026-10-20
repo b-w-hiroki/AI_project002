@@ -689,6 +689,16 @@ function leagueTable(scene: Runtime, modal: Phaser.GameObjects.Container, portra
   return root;
 }
 
+// Preserve the exact request wording while keeping trailing punctuation
+// with its sentence. Only known copy gets an intentional phrase break.
+const HOME_REQUEST_LINES: Record<string, string> = {
+  "鉄が足りなくて剣が作れない…": "鉄が足りなくて\n剣が作れない…",
+  "魔物が恐ろしくて行商できない…": "魔物が恐ろしくて\n行商できない…",
+  "関所の通行料をまけてほしい…": "関所の通行料を\nまけてほしい…",
+  "金が足りなくて酒が飲めないぜ…": "金が足りなくて\n酒が飲めないぜ…",
+  "魔法の研究に魔石がほしいのです…": "魔法の研究に\n魔石がほしいのです…",
+};
+
 function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6100).setVisible(false);
   cover(scene, root, HOME_BG_KEY);
@@ -756,7 +766,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
         ink.lineBetween(39 + side * 3, y + dy, 39 + side * 10, y + dy - 2);
     }
     if (index === 2) { ink.fillCircle(39, y - 8, 6); ink.fillRoundedRect(31, y, 16, 13, 5); ink.fillCircle(26, y - 5, 4); ink.fillCircle(52, y - 5, 4); }
-    if (index === 3) { ink.strokeRoundedRect(26, y - 5, 26, 21, 3); ink.strokeRoundedRect(33, y - 12, 12, 10, 3); }
+    // The unavailable inventory uses its status in the icon slot.
     root.add(ink.setX(8));
     text(scene, root, 47, y + 25, label, 20, "#fff3ce", "800").setStroke("#091420", 0);
   }
@@ -770,7 +780,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   requestCard(scene, root, 225, 682, 414, 92);
   requesterPortrait(scene, root, 31, 648, 72, 66, true);
   const homeRequestTitle = text(scene, root, 260, 655, "", 20, "#3c2a1e", "900").setName("home-request-title");
-  const homeRequestBody = text(scene, root, 263, 692, "", 21, "#43382e", "700", 276).setName("home-request-body");
+  const homeRequestBody = text(scene, root, 263, 694, "", 21, "#43382e", "700", 276).setName("home-request-body");
   root.setData("refreshRequest", () => {
     totalEvaluation.setText(`累計評価 ${scoreDisplay(loadTotalEvaluation())}`);
     bestStage.setText(`最高到達 ${loadBestStage()}年`);
@@ -784,7 +794,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     homeRequestBody
       .setFontSize(requestCopy.length > 44 ? 15 : requestCopy.length > 30 ? 18 : 21)
       .setLineSpacing(requestCopy.length > 30 ? 2 : 5)
-      .setText(requestCopy);
+      .setText(HOME_REQUEST_LINES[requestCopy] ?? requestCopy);
   });
   text(scene, root, 418, 682, "›", 34, "#8a6726", "900");
   const nav = scene.add.graphics();
@@ -812,7 +822,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
     icons.fillCircle(225 + dx, dx === 0 ? 738 : 742, dx === 0 ? 5 : 4);
     icons.fillRoundedRect(220 + dx, dx === 0 ? 746 : 750, 10, dx === 0 ? 14 : 10, 3);
   }
-  icons.strokeRoundedRect(387, 741, 26, 20, 3).strokeRoundedRect(394, 733, 12, 12, 4);
+  // The unavailable shop uses its status in the icon slot.
   root.add(icons);
   // Availability is visible before opening the explanatory modal.
   for (const [x, y] of [[47, 505], [400, 746]] as const) {
@@ -867,9 +877,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   ];
   const addRoute = (x: number, y: number, w: number, h: number, name: string, action: () => void, available = true) => {
     const hit = scene.add.zone(x, y, w, h).setName(name).setInteractive({ useHandCursor: available });
-    // Navigation has no destructive action. Activate on pointerdown so a
-    // resize/render frame between touchstart and touchend cannot drop the tap.
-    hit.on("pointerdown", action);
+    // Match primary actions: release to confirm; dragging or interruption cancels.
+    ownedTap(scene, hit, action);
     root.add(hit);
   };
   routes.forEach((route, i) => addRoute(51 + i * 87, 758, 85, 68, `home-nav:${i}`, route, i !== 4));
@@ -1268,7 +1277,7 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
     text(scene, root, x, unavailable ? y - 7 : y, label, 20, "#fff3ce", "800").setStroke("#091420", 0);
     if (unavailable) text(scene, root, x, y + 11, "準備中", 11, "#d8c9ab", "700").setStroke("#091420", 0);
     const hit = scene.add.zone(x, y, 84, 56).setName(`home-nav-wide:${label}`).setInteractive({ useHandCursor: !unavailable });
-    hit.on("pointerdown", action);
+    ownedTap(scene, hit, action);
     root.add(hit);
   });
   root.bringToTop(raidModal);

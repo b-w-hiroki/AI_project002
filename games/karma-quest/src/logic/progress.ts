@@ -9,33 +9,66 @@ function validCounter(value: number, maximum = Number.MAX_SAFE_INTEGER): boolean
   return Number.isSafeInteger(value) && value >= 0 && value <= maximum;
 }
 
-function loadNumber(key: string, maximum = Number.MAX_SAFE_INTEGER): number {
-  const raw = localStorage.getItem(key);
-  if (!raw) return 0;
-  const n = Number(raw);
-  // Invalid records are ignored, not rewritten merely by viewing the home screen.
-  return validCounter(n, maximum) ? n : 0;
-}
+export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | "setItem"> = () => localStorage) {
+  const session = new Map<string, number>();
+  const unavailable = new Set<string>();
 
-export function loadBestStage(): number {
-  return loadNumber(BEST_STAGE_KEY, MAX_STAGE);
-}
-
-export function saveBestStage(stage: number): void {
-  if (validCounter(stage, MAX_STAGE) && stage > loadBestStage()) {
-    localStorage.setItem(BEST_STAGE_KEY, String(stage));
+  function loadNumber(key: string, maximum = Number.MAX_SAFE_INTEGER): number {
+    if (unavailable.has(key)) return session.get(key) ?? 0;
+    let raw: string | null;
+    try {
+      raw = getStore().getItem(key);
+    } catch {
+      unavailable.add(key);
+      return session.get(key) ?? 0;
+    }
+    if (!raw) {
+      session.set(key, 0);
+      return 0;
+    }
+    const n = Number(raw);
+    // Invalid records are ignored, not rewritten merely by viewing the home screen.
+    const value = validCounter(n, maximum) ? n : 0;
+    session.set(key, value);
+    return value;
   }
+
+  function saveNumber(key: string, value: number): void {
+    session.set(key, value);
+    if (unavailable.has(key)) return;
+    try {
+      getStore().setItem(key, String(value));
+    } catch {
+      // Keep this counter session-only until reload. Retrying against stale data
+      // could discard rewards or overwrite progress from another tab.
+      unavailable.add(key);
+    }
+  }
+
+  function loadBestStage(): number {
+    return loadNumber(BEST_STAGE_KEY, MAX_STAGE);
+  }
+
+  function saveBestStage(stage: number): void {
+    if (validCounter(stage, MAX_STAGE) && stage > loadBestStage()) {
+      saveNumber(BEST_STAGE_KEY, stage);
+    }
+  }
+
+  function loadTotalEvaluation(): number {
+    return loadNumber(TOTAL_EVAL_KEY);
+  }
+
+  function addTotalEvaluation(amount: number): number {
+    const current = loadTotalEvaluation();
+    if (!validCounter(amount)) return current;
+    // Saturate before addition so a valid reward cannot write an unsafe integer.
+    const next = current + Math.min(amount, Number.MAX_SAFE_INTEGER - current);
+    saveNumber(TOTAL_EVAL_KEY, next);
+    return next;
+  }
+
+  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation };
 }
 
-export function loadTotalEvaluation(): number {
-  return loadNumber(TOTAL_EVAL_KEY);
-}
-
-export function addTotalEvaluation(amount: number): number {
-  const current = loadTotalEvaluation();
-  if (!validCounter(amount)) return current;
-  // Saturate before addition so a valid reward cannot write an unsafe integer.
-  const next = current + Math.min(amount, Number.MAX_SAFE_INTEGER - current);
-  localStorage.setItem(TOTAL_EVAL_KEY, String(next));
-  return next;
-}
+export const { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation } = createProgressStorage();
