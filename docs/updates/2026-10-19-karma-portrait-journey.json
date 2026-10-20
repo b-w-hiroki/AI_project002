@@ -1,0 +1,11 @@
+{
+  "summary": "日本語縦画面の討伐と報告を王都・依頼と共通の造形へ統一",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "討伐の勇者表示と報告の羊皮紙・選択印・回転時の状態継続を明記した"},
+      "design": {"status": "updated", "reason": "GameSceneに状態を保持したまま縦画面の表示層を追加する責務を記載した"}
+    }
+  },
+  "validation": ["lint・typecheck・build成功、単体109件成功", "WebKitの2画面の実スクリーンショット確認", "WebKitで12年の縦横タッチ進行、報告上限・未選択送信防止・回転後の継続を確認", "Linux CI run 39219639308: 全48件成功。画像基準を実画面確認して更新、許容差変更なし"],
+  "limitations": ["物理iOS/Androidと外部Portalは未確認。モック完全一致とは扱わない"]
+}

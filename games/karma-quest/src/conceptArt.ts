@@ -41,6 +41,7 @@ type MockUi = {
   landscapeTitle?: Phaser.GameObjects.Container;
   landscapeFinal?: Phaser.GameObjects.Container;
   landscapeJourney?: Phaser.GameObjects.Container;
+  portraitJourney?: Phaser.GameObjects.Container;
   yearText: Phaser.GameObjects.Text;
   requestTitle: Phaser.GameObjects.Text;
   requestText: Phaser.GameObjects.Text;
@@ -216,18 +217,18 @@ function buildRaidModal(
     const stats = deriveStats(scene.karma ?? initialKarma());
     const preview = raidDamage(stats);
     const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
-    boss.setText(`異界魔王 Lv.${state.level}  ·  撃破 ${state.defeats}`);
+    boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
     detail.setText(
-      `HP ${state.hp} / ${state.maxHp}\n` +
-      `現在の勇者なら 1回 約${preview} ダメージ\n` +
-      `撃破報酬: 評価 +${raidReward(state)}`,
+      `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
+      `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
+      `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
     );
     hpBg.clear().fillStyle(0x3a2c31, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
     hpFill.clear();
     if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
       .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
-    actionLabel?.setText(state.hp <= 0 ? `評価 +${raidReward(state)} を受け取る` : "魔王へ攻撃");
+    actionLabel?.setText(state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
     actionResult.setText(scene.raidPanel?.lastAction ?? "");
   };
 
@@ -247,14 +248,14 @@ function buildRaidModal(
         addTotalEvaluation(reward);
         const next = advanceRaid(state);
         saveRaid(localStorage, next);
-        scene.raidPanel = { lastAction: `評価 +${reward} 獲得。Lv.${next.level} が出現！` };
+        scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
         scene.cameras.main.flash(180, 232, 196, 102);
       } else {
         const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
         saveRaid(localStorage, result.next);
         scene.raidPanel = { lastAction: result.defeated
-          ? `-${result.damage}  魔王撃破！`
-          : `-${result.damage} ダメージ` };
+          ? `-${scoreDisplay(result.damage)}  魔王撃破！`
+          : `-${scoreDisplay(result.damage)} ダメージ` };
         scene.cameras.main.shake(120, 0.004);
       }
       refresh();
@@ -443,6 +444,32 @@ function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: 
   return text(scene, root, x + 29, y, value, 22, "#17663f", "900").setStroke("#17663f", 0).setName(`stat-value:${label}`);
 }
 
+function cancelOnInterruption(scene: Runtime, target: Phaser.GameObjects.GameObject, cancel: () => void): void {
+  scene.scale.on(Phaser.Scale.Events.RESIZE, cancel);
+  scene.game.events.on(Phaser.Core.Events.BLUR, cancel);
+  scene.game.events.on(Phaser.Core.Events.HIDDEN, cancel);
+  target.once(Phaser.GameObjects.Events.DESTROY, () => {
+    scene.scale.off(Phaser.Scale.Events.RESIZE, cancel);
+    scene.game.events.off(Phaser.Core.Events.BLUR, cancel);
+    scene.game.events.off(Phaser.Core.Events.HIDDEN, cancel);
+  });
+}
+
+/** Custom selection zones use the same pointer ownership as the framed CTA. */
+function ownedTap(scene: Runtime, zone: Phaser.GameObjects.Zone, action: () => void): void {
+  let owner: number | undefined;
+  cancelOnInterruption(scene, zone, () => { owner = undefined; });
+  zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => { owner ??= pointer.id; });
+  zone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+    if (owner === pointer.id) owner = undefined;
+  });
+  zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (owner !== pointer.id) return;
+    owner = undefined;
+    action();
+  });
+}
+
 function button(
   scene: Runtime,
   root: Phaser.GameObjects.Container,
@@ -455,9 +482,10 @@ function button(
   onClick: () => void,
   detail?: string,
   lockAfterAction = true,
+  hitHeight = height,
 ): Phaser.GameObjects.Text {
   const g = scene.add.graphics();
-  let armed = false;
+  let pressedPointer: number | undefined;
   let processing = false;
   let busy = false;
   const outline = (inset: number) => {
@@ -476,10 +504,16 @@ function button(
     g.fillStyle(base, 1).fillPoints(outline(4), true);
     const top = state === "pressed" ? base : blue ? 0x1974af : 0xa63142;
     const left = x - width / 2 + 14, upper = y - height / 2 + 5;
+    // Canvas ignores gradient styles, so provide the enamel face and edge
+    // lighting explicitly. Keep pressed feedback visible in both renderers.
+    const canvas = scene.game.renderer.type === Phaser.CANVAS;
+    if (canvas) g.fillStyle(top, 1);
     g.fillGradientStyle(top, top, base, base, 1).fillRect(left, upper, width - 28, height - 10);
     // Enamel reflection and a recessed lower edge give the metal rim depth.
+    if (canvas) g.fillStyle(0xbdeaff, state === "pressed" ? 0.06 : 0.14);
     g.fillGradientStyle(0xbdeaff, 0xbdeaff, top, top, 0.22, 0.22, 0, 0)
       .fillRect(left, upper, width - 28, 13);
+    if (canvas) g.fillStyle(0x071322, 0.3);
     g.fillGradientStyle(0x071322, 0x071322, 0x071322, 0x071322, 0, 0, 0.6, 0.6)
       .fillRect(left, y + height / 2 - 22, width - 28, 17);
     g.lineStyle(4, blue ? 0x2c9dda : 0xcb4b53, 0.2).strokePoints(outline(7), true);
@@ -520,27 +554,42 @@ function button(
   root.add(g);
   const labelText = text(scene, root, detail ? x + 12 : x, detail ? y - 13 : y, label, 26, "#fffaf0", "900", detail ? width - 106 : width - 70).setStroke("#091420", 1);
   if (detail) labelText.setData("detailText", text(scene, root, x, y + 19, detail, 19, "#eadfca", "700", width - 76).setStroke("#091420", 0));
-  const zone = scene.add.zone(x, y, width, height).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
+  const zone = scene.add.zone(x, y, width, Math.max(height, hitHeight)).setName(`cta:${label}`).setInteractive({ useHandCursor: true });
   root.add(zone);
   labelText.setData("setBusy", (value: boolean) => {
     if (busy === value) return;
     busy = value;
-    armed = false;
+    pressedPointer = undefined;
     zone.input!.enabled = !value;
     paint(value ? "processing" : "idle");
   });
-  zone.on("pointerover", () => { if (!processing && !busy) paint("focus"); });
-  zone.on("pointerdown", () => { if (!processing && !busy) { armed = true; paint("pressed"); } });
-  zone.on("pointerup", () => {
-    if (!armed || processing || busy) return;
-    armed = false;
+  zone.on("pointerover", () => { if (pressedPointer === undefined && !processing && !busy) paint("focus"); });
+  zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer === undefined && !processing && !busy) {
+      pressedPointer = pointer.id;
+      paint("pressed");
+    }
+  });
+  zone.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== pointer.id || processing || busy) return;
+    pressedPointer = undefined;
     processing = true;
     paint("processing");
     onClick();
     if (!lockAfterAction) { processing = false; paint("idle"); return; }
     scene.time.delayedCall(280, () => { processing = false; paint("idle"); });
   });
-  zone.on("pointerout", () => { armed = false; if (!processing) paint("idle"); });
+  zone.on("pointerout", (pointer: Phaser.Input.Pointer) => {
+    if (pressedPointer !== undefined && pressedPointer !== pointer.id) return;
+    pressedPointer = undefined;
+    if (!processing && !busy) paint("idle");
+  });
+  const cancelPress = () => {
+    pressedPointer = undefined;
+    if (!processing && !busy) paint("idle");
+  };
+  // Resizing or leaving the window must not leave a pending click behind.
+  cancelOnInterruption(scene, zone, cancelPress);
   return labelText;
 }
 
@@ -648,6 +697,9 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   // Do not draw the superseded compact header underneath: Canvas renderers
   // can expose it through the chapter's gradient and show stale progress.
   const chapter = scene.add.graphics();
+  // Canvas ignores gradient styles. Seed an opaque fill so the header keeps
+  // its contrast there; WebGL replaces this style with the gradient below.
+  chapter.fillStyle(0x07131e, 1);
   chapter.fillGradientStyle(0x07131e, 0x18374c, 0x07131e, 0x102a3e, 1, 1, 1, 1)
     .fillRoundedRect(12, 12, 426, 100, 10);
   chapter.lineStyle(2, 0xd5ad60, 0.96).strokeRoundedRect(12, 12, 426, 100, 10);
@@ -770,10 +822,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   fitted(scene, root, APPROVED_AVATAR_KEY, 48, 151, 52, 52)?.setName("approved-home-avatar");
   screenFrame(scene, root);
   const start = scene.add.zone(225, 682, 420, 92).setInteractive({ useHandCursor: true });
-  let startArmed = false;
-  start.on("pointerdown", () => { startArmed = true; });
-  start.on("pointerout", () => { startArmed = false; });
-  start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
+  start.setName("home-start-card");
+  ownedTap(scene, start, () => invoke(scene, "startRun"));
   root.add(start);
 
   const raidModal = buildRaidModal(scene, root, true);
@@ -839,6 +889,7 @@ function buildChoice(scene: Runtime): Pick<MockUi, "choiceRoot" | "yearText" | "
   shade.fillStyle(0x071017, 0.14).fillRect(0, 0, 450, 800);
   root.add(shade);
   const heading = scene.add.graphics();
+  heading.fillStyle(0x07131e, 0.9);
   heading.fillGradientStyle(0x07131e, 0x07131e, 0x07131e, 0x07131e, 0.97, 0.97, 0, 0).fillRect(8, 8, 434, 76);
   heading.lineStyle(1, 0xd5ad60, 0.6).lineBetween(32, 67, 418, 67);
   root.add(heading);
@@ -1207,6 +1258,87 @@ function buildLandscapeHomeNavigation(scene: Runtime, root: Phaser.GameObjects.C
   root.add(modal);
 }
 
+function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
+  const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
+  cover(scene, root, HOME_BG_KEY);
+  root.add(scene.add.graphics().fillStyle(0x07131e, 0.55).fillRect(0, 0, 450, 800));
+  // Block underlying controls. GameScene remains the sole owner of progression.
+  root.add(scene.add.zone(225, 400, 450, 800).setInteractive());
+  const battle = scene.add.container(0, 0), report = scene.add.container(0, 0);
+  root.add([battle, report]);
+  hudPlate(scene, battle, 225, 60, 414, 80);
+  const heading = text(scene, battle, 225, 60, "", 30);
+  const hero = fitted(scene, battle, HERO_DIALOGUE_KEY, 225, 240, 380, 276);
+  registerHeroKarmaVisual(scene, battle, hero, 225, 240, 330, 260, 48, 325);
+  requestCard(scene, battle, 225, 440, 414, 128);
+  const stats = text(scene, battle, 225, 410, "", 24, "#43382e", "700", 370);
+  const result = text(scene, battle, 225, 468, "", 25, "#43382e", "900", 370);
+  hudPlate(scene, battle, 225, 514, 374, 36);
+  const count = text(scene, battle, 225, 514, "", 20, "#fff3ce");
+  const cheer = scene.add.container(0, 0); battle.add(cheer);
+  button(scene, cheer, 225, 568, 374, 64, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  hudPlate(scene, battle, 225, 686, 414, 110);
+  text(scene, battle, 225, 686, "選んだ道が、勇者の力になる。\nこの年の記録を、神様へ届けよう。", 22, "#fff3ce", "700", 370);
+  requestCard(scene, report, 225, 400, 426, 772);
+  hudPlate(scene, report, 225, 72, 396, 90);
+  text(scene, report, 225, 58, "神様への報告", 30);
+  text(scene, report, 225, 91, "この年の出来事を、年代記へ", 20, "#fff3ce");
+  const selectionHint = text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380).setName("report-selection-hint");
+  const gods = ["valor", "mercy"] as const;
+  const godLabels = gods.map((god, i) => button(scene, report, 127 + i * 196, 213, 184, 56, DEITIES[god].name, 0x0758a4,
+    // 64 design pixels = 44.7 CSS pixels on the 314px canvas of a 320px phone.
+    () => { if (scene.phase === "report") { Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview"); } }, undefined, false, 64));
+  type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
+  const rows = Array.from({ length: 4 }, (_, i) => {
+    const y = 291 + i * 74;
+    const layer = scene.add.container(0, 0); report.add(layer);
+    const bg = scene.add.graphics(); layer.add(bg);
+    const label = text(scene, layer, 225, y, "", 21, "#43382e", "700", 330);
+    const hit = scene.add.zone(225, y, 374, 64).setName(`report-row-portrait:${i}`).setInteractive();
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
+      (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
+    });
+    layer.add(hit);
+    return { layer, bg, label, y };
+  });
+  const preview = text(scene, report, 225, 594, "", 21, "#43382e", "700", 366);
+  const submit = scene.add.container(0, 0); report.add(submit);
+  const submitLabel = button(scene, submit, 225, 680, 374, 72, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
+  text(scene, report, 225, 752, "あなたが紡いだ、この世界の物語", 19, "#705631");
+  root.setData("refreshJourney", () => {
+    battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (battle.visible) {
+      refreshHeroKarmaVisual(scene, battle);
+      const source = Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container;
+      for (const [target, name] of [[heading, "battleHeading"], [stats, "battleStats"], [result, "battleResult"], [count, "cheerCountText"]] as const)
+        target.setText((source.getByName(name) as Phaser.GameObjects.Text)?.text ?? "");
+      const enabled = !Reflect.get(scene, "currentBattleResult");
+      cheer.setAlpha(enabled ? 1 : 0.45);
+      (cheer.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+    if (report.visible) {
+      const source = Reflect.get(scene, "highlightRows") as Row[];
+      rows.forEach(({ layer, bg, label, y }, i) => {
+        const row = source[i]; layer.setVisible(!!row); if (!row) return;
+        label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(38, y - 32, 374, 64);
+        bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.35).strokeRect(38, y - 32, 374, 64);
+      });
+      const god = Reflect.get(scene, "deity") as Deity;
+      godLabels.forEach((label, i) => { const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
+      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
+      const selectedCount = source.filter(row => row.selected).length;
+      selectionHint.setText(selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
+      const enabled = selectedCount > 0;
+      submitLabel.setText(enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
+      submit.setAlpha(enabled ? 1 : 0.45);
+      (submit.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+    }
+  });
+  return root;
+}
+
 function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const root = scene.add.container(0, 0).setDepth(6200).setVisible(false);
   artWindow(scene, root, HOME_BG_KEY, 0, 0, 800, 450);
@@ -1232,7 +1364,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
   button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
   text(scene, report, 400, 36, "神様への報告", 30);
-  text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21);
+  const selectionHint = text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21).setName("report-selection-hint");
   requestCard(scene, report, 215, 271, 400, 330);
   requestCard(scene, report, 609, 240, 366, 270);
   type Row = { selected: boolean; highlight: { label: string }; container: Phaser.GameObjects.Container };
@@ -1243,37 +1375,41 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     const bg = scene.add.graphics(); layer.add(bg);
     const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
-    let armed = false;
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => {
-      if (!armed || scene.phase !== "report") return;
-      armed = false;
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
       (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
     });
     layer.add(hit);
     return { layer, bg, label, y };
   });
-  for (const [i, god] of (["valor", "mercy"] as const).entries()) {
+  const godChoices = (["valor", "mercy"] as const).map((god, i) => {
     const x = 519 + i * 180;
     const g = scene.add.graphics(); report.add(g);
     g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
-    text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
+    const label = text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e").setName(`report-god-label:${god}`);
     const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
-    let armed = false;
-    hit.on("pointerdown", () => { armed = true; });
-    hit.on("pointerout", () => { armed = false; });
-    hit.on("pointerup", () => {
-      if (!armed || scene.phase !== "report") return;
-      armed = false; Reflect.set(scene, "deity", god); invoke(scene, "refreshReportPreview");
+    ownedTap(scene, hit, () => {
+      if (scene.phase !== "report") return;
+      Reflect.set(scene, "deity", god);
+      invoke(scene, "refreshReportPreview");
     });
     report.add(hit);
-  }
-  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
+    return { god, x, g, label };
+  });
+  const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320).setName("landscape-report-preview");
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
-  button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
+  const submitLabel = button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (report.visible) {
+      const selectedGod = Reflect.get(scene, "deity") as Deity;
+      for (const { god, x, g, label } of godChoices) {
+        const selected = god === selectedGod;
+        g.clear().fillStyle(selected ? 0xd8e8ed : 0xf4e8ca, selected ? 1 : 0.2).fillRect(x - 81, 114, 162, 60);
+        g.lineStyle(selected ? 3 : 1, selected ? 0x8a6726 : 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
+        label.setText(`${selected ? "✓ " : ""}${DEITIES[god].name}`).setColor(selected ? "#123f59" : "#35281e");
+      }
+    }
     if (encounter.visible) {
       const value = Reflect.get(scene, "currentEncounter") as Encounter | null;
       encounterText.setText(value?.text ?? ""); optionA.setText(value?.choiceA.label ?? ""); optionB.setText(value?.choiceB.label ?? "");
@@ -1295,9 +1431,10 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
         bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(29, y - 36, 372, 72);
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
       });
-      const god = Reflect.get(scene, "deity") as Deity;
       const count = source.filter(row => row.selected).length;
-      preview.setText(`${DEITIES[god].name}へ報告\n選択 ${count}/2\n${DEITIES[god].wish}`);
+      selectionHint.setText(count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
+      submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
+      preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       submitAction.setAlpha(count > 0 ? 1 : 0.45);
       (submitAction.getByName("cta:報告する") as Phaser.GameObjects.Zone).input!.enabled = count > 0;
     }
@@ -1313,6 +1450,8 @@ function build(scene: Runtime): MockUi {
   const reaction = buildReaction(scene);
   const finalRoot = buildFinal(scene);
   const ui = { titleRoot, ...choice, ...reaction, finalRoot, landscapeTitle, landscapeFinal: buildLandscapeOverview(scene, true), landscapeChoice: buildLandscapeChoice(scene), landscapeReaction: buildReaction(scene, true), landscapeJourney: buildLandscapeJourney(scene) };
+  const portraitJourney = buildPortraitJourney(scene);
+  Object.assign(ui, { portraitJourney });
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -1335,6 +1474,7 @@ function refresh(scene: Runtime): void {
         ui.finalRoot,
         ui.landscapeFinal,
         ui.landscapeJourney,
+        ui.portraitJourney,
       ]) root?.setVisible(false);
     }
     return;
@@ -1368,6 +1508,8 @@ function refresh(scene: Runtime): void {
   }
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
+  ui.portraitJourney?.setVisible(portrait && ["battle", "report"].includes(scene.phase ?? ""));
+  if (ui.portraitJourney?.visible) (ui.portraitJourney.getData("refreshJourney") as () => void)();
   ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
   if (ui.landscapeJourney?.visible) (ui.landscapeJourney.getData("refreshJourney") as () => void)();
   for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {

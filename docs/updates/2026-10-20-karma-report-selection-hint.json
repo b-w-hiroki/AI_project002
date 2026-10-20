@@ -1,0 +1,11 @@
+{
+  "summary": "報告の選択上限に達した際の変更方法を案内する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "2件選択時の解除案内と通常案内への復帰を明記した"},
+      "design": {"status": "updated", "reason": "既存の選択件数に基づく縦横の案内更新を記録した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で上限維持、案内切替、回転、解除後の入れ替えを確認", "docs/review/karma-report-limit-portrait.pngとkarma-report-limit-landscape.pngを目視確認"],
+  "limitations": ["物理iOS/Android・外部Portal未確認"]
+}

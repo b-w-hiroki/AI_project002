@@ -25,6 +25,14 @@ describe("solo raid", () => {
     expect(fromRaw('{"level":1e309,"hp":1e309,"defeats":1e309}')).toEqual(newRaid());
   });
 
+  it.each([undefined, null, "1", 0, -1, 1.5, Number.MAX_SAFE_INTEGER])(
+    "does not recover a reward or partial HP from corrupt level %s", level => {
+      for (const hp of [0, 300]) {
+        expect(fromRaw(JSON.stringify({ level, defeats: 9, hp }))).toEqual(newRaid());
+      }
+    },
+  );
+
   it("scales boss HP by level", () => {
     expect(raidMaxHp(1)).toBe(900);
     expect(raidMaxHp(3)).toBe(1600);

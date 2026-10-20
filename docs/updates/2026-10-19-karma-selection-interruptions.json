@@ -1,0 +1,11 @@
+{
+  "summary": "ホームと報告の選択操作にも中断キャンセルを統一",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "出発カード・記録行・横の報告先選択でも中断後に再タップが必要な契約を記載した"},
+      "design": {"status": "updated", "reason": "中断監視と破棄時解除を共通化し、独自Zoneへ適用する責務を記載した"}
+    }
+  },
+  "validation": ["単体116件、lint・typecheck・build成功", "WebKitでホーム・縦横の記録選択・横の神様選択と既存CTAの中断キャンセル2件成功", "Chromiumで同じ操作と報告画面の既存画像比較3件成功", "docs/review/karma-report-interrupted.pngを目視確認"],
+  "limitations": ["非表示化はPhaserイベントによる検査。物理端末のバックグラウンド移行は未確認", "英語フォールバックと押下直後に動くナビは今回の対象外"]
+}
