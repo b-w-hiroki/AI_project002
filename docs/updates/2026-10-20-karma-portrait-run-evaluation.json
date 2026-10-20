@@ -13,6 +13,7 @@
     }
   },
   "validation": [
+    "Linux WebKit の文字メトリクスでも前回記録と評価行の間隔を 2px より大きく保つ",
     "lint・typecheck・build成功、単体123件成功",
     "Chromium/WebKitで既存年代記画像比較と評価表示・保存値非変更・回転の各2件成功",
     "docs/review/karma-portrait-run-evaluation.pngで大きな値の収まりを目視確認。画像基準と許容差は変更なし"

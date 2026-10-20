@@ -1087,7 +1087,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   const pageRules = scene.add.graphics();
   pageRules.lineStyle(1, 0xb79451, 0.65).strokeRect(36, 138, 152, 158);
   // One continuous journal page: rules separate entries without nesting cards.
-  for (const y of [119, 315, 412]) {
+  for (const y of [119, 305, 412]) {
     pageRules.lineStyle(1, 0xb79451, 0.55).lineBetween(46, y, 404, y);
     pageRules.fillStyle(0xb79451, 0.8).fillPoints([
       new Phaser.Math.Vector2(225, y - 4), new Phaser.Math.Vector2(229, y),
@@ -1097,7 +1097,7 @@ function buildFinal(scene: Runtime): Phaser.GameObjects.Container {
   root.add(pageRules);
   const eventTitle = text(scene, root, 304, 154, "", 22, "#35281e", "900", 204).setName("chronicleTitle");
   const eventBody = text(scene, root, 304, 244, "", 21, "#43382e", "700", 200).setAlign("left").setName("chronicleBody");
-  const previousTitle = text(scene, root, 225, 333, "", 21, "#35281e", "900", 350)
+  const previousTitle = text(scene, root, 225, 323, "", 21, "#35281e", "900", 350)
     .setName("chroniclePreviousTitle");
   const recordCount = text(scene, root, 225, 366, "", 21, "#43382e", "700", 350)
     .setName("chronicleRecordCount");
