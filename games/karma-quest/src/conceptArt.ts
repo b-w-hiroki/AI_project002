@@ -1301,7 +1301,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
     });
     layer.add(hit);
-    return { layer, bg, label, y };
+    return { layer, bg, label, y, hit };
   });
   const preview = text(scene, report, 225, 594, "", 21, "#43382e", "700", 366);
   const submit = scene.add.container(0, 0); report.add(submit);
@@ -1320,7 +1320,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
     }
     if (report.visible) {
       const source = Reflect.get(scene, "highlightRows") as Row[];
-      rows.forEach(({ layer, bg, label, y }, i) => {
+      rows.forEach(({ layer, bg, label, y, hit }, i) => {
+        hit.input!.enabled = !scene.reportSubmitting;
         const row = source[i]; layer.setVisible(!!row); if (!row) return;
         label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
         if (bg.getData("renderedSelection") === row.selected) return;
@@ -1329,10 +1330,10 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.35).strokeRect(38, y - 32, 374, 64);
       });
       const god = Reflect.get(scene, "deity") as Deity;
-      godLabels.forEach((label, i) => { const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
+      godLabels.forEach((label, i) => { (label.getData("setBusy") as (value: boolean) => void)(!!scene.reportSubmitting); const deity = gods[i]!; label.setText(`${god === deity ? "✓ " : ""}${DEITIES[deity].name}`); });
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       const selectedCount = source.filter(row => row.selected).length;
-      selectionHint.setText(selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
+      selectionHint.setText(scene.reportSubmitting ? "報告を受け付けました" : selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
       const enabled = selectedCount > 0 && !scene.reportSubmitting;
       submitLabel.setText(scene.reportSubmitting ? "報告しました" : enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
       (submitLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
@@ -1382,7 +1383,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       (Reflect.get(scene, "highlightRows") as Row[])[i]?.container.emit("pointerdown");
     });
     layer.add(hit);
-    return { layer, bg, label, y };
+    return { layer, bg, label, y, hit };
   });
   const godChoices = (["valor", "mercy"] as const).map((god, i) => {
     const x = 519 + i * 180;
@@ -1396,7 +1397,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       invoke(scene, "refreshReportPreview");
     });
     report.add(hit);
-    return { god, x, g, label };
+    return { god, x, g, label, hit };
   });
   const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320).setName("landscape-report-preview");
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
@@ -1405,6 +1406,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report" || !!scene.reportSubmitting);
     if (report.visible) {
+      for (const { hit } of godChoices) hit.input!.enabled = !scene.reportSubmitting;
       const selectedGod = Reflect.get(scene, "deity") as Deity;
       if (selectedGod !== renderedGod) {
         renderedGod = selectedGod;
@@ -1431,7 +1433,8 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     }
     if (report.visible) {
       const source = Reflect.get(scene, "highlightRows") as Row[];
-      rows.forEach(({ layer, bg, label, y }, i) => {
+      rows.forEach(({ layer, bg, label, y, hit }, i) => {
+        hit.input!.enabled = !scene.reportSubmitting;
         const row = source[i]; layer.setVisible(!!row); if (!row) return;
         label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
         if (bg.getData("renderedSelection") === row.selected) return;
@@ -1440,7 +1443,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
       });
       const count = source.filter(row => row.selected).length;
-      selectionHint.setText(count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
+      selectionHint.setText(scene.reportSubmitting ? "報告を受け付けました" : count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
       submitLabel.setText(scene.reportSubmitting ? "報告しました" : count > 0 ? `${count}件を報告する` : "出来事を選んでください");
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       (submitLabel.getData("setBusy") as (value: boolean) => void)(count === 0 || !!scene.reportSubmitting);
