@@ -114,6 +114,7 @@ export class GameScene extends Phaser.Scene {
   private encounterBonus = 0;
   private currentBattleResult: BattleResult | null = null;
   private cheerCount = 0;
+  public reportSubmitting = false;
   private highlightRows: HighlightRow[] = [];
 
   private soundOn = loadSoundPreference();
@@ -170,6 +171,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.reportSubmitting = false;
     cg.gameplayStart();
     this.cameras.main.setBackgroundColor(0x14201c);
     this.buildTitleScreen();
@@ -990,7 +992,8 @@ export class GameScene extends Phaser.Scene {
       `${tr(this.lang, "評価", "Evaluation")} +${evaluation}`,
       hexToCss(THEME.accent),
     );
-    this.time.delayedCall(500, () => this.nextStage());
+    this.reportSubmitting = true;
+    this.time.delayedCall(500, () => { this.reportSubmitting = false; this.nextStage(); });
   }
 
   private spawnFloatingText(

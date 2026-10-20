@@ -774,6 +774,34 @@ test("report row frames redraw only when their selection changes", { tag: "@webk
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-row-redraw.png" });
 });
 
+test("report confirmation stays visible until the next year without duplicate rewards", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+    scene.time.timeScale = 0;
+  });
+  await tapPoint(page, 225, 291);
+  await tapPoint(page, 225, 680);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("報告しました");
+  const evaluation = await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"));
+  expect(Number(evaluation)).toBeGreaterThan(0);
+  await tapPoint(page, 225, 680);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-sent-portrait.png" });
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("報告しました");
+  await tapPoint(page, 609, 405);
+  expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(evaluation);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-sent-landscape.png" });
+  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 1; });
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(2);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "reportSubmitting"))).toBe(false);
+});
+
 test("home and report selections cancel interrupted presses", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
