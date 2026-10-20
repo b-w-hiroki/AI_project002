@@ -1,0 +1,24 @@
+{
+  "summary": "横討伐の声援情報を背景から分離して可読性を改善",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "横向きの声援案内・回数に濃紺の下地を付ける表示契約を追加"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "hudPlate再利用と隣接UIとの間隔を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体122件成功",
+    "Chromium/WebKitで討伐決着・回転・入力無効化と次戦復帰を各1件確認",
+    "docs/review/karma-cheer-panel-active-landscape.pngとkarma-cheer-panel-landscape.pngで文字と枠の収まりを確認"
+  ],
+  "limitations": [
+    "物理iOS/Androidと外部Portal未確認",
+    "決着後の確認時はScene時計を停止"
+  ]
+}

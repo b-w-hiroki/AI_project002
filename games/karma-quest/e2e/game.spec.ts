@@ -2336,7 +2336,7 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
     await expect.poll(state).toEqual([{ text: "討伐終了", alpha: 1, enabled: false }]);
     await tapPoint(page, wide ? 591 : 225, wide ? 396 : 568);
     expect(await cheers()).toBe(1);
-    await page.locator("canvas").screenshot({ path: `../../docs/review/karma-cheer-complete-${wide ? "landscape" : "portrait"}.png` });
+    await page.locator("canvas").screenshot({ path: `../../docs/review/karma-cheer-panel-${wide ? "landscape" : "portrait"}.png` });
   }
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -2345,4 +2345,5 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
   await expect.poll(state).toEqual([{ text: "おうえん！", alpha: 1, enabled: true }]);
   await tapPoint(page, 591, 396);
   await expect.poll(cheers).toBe(1);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-cheer-panel-active-landscape.png" });
 });

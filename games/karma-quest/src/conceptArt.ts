@@ -1363,6 +1363,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const battleHeading = text(scene, battle, 591, 59, "", 26, "#35281e", "900", 340);
   const battleStats = text(scene, battle, 591, 140, "", 24, "#43382e", "700", 340);
   const battleResult = text(scene, battle, 591, 220, "", 23, "#43382e", "700", 340);
+  hudPlate(scene, battle, 591, 314, 374, 48);
   const cheerCount = text(scene, battle, 591, 314, "", 22, "#fff3ce", "700", 350);
   const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
   const cheerLabel = button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
