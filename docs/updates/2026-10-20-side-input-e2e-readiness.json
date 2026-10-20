@@ -1,0 +1,24 @@
+{
+  "summary": "Make Side Scroller browser-input regression checks wait for the actual battle state and use the configured touch input path.",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "Movement, restart behavior, controls, and player-facing content are unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "This update only strengthens browser automation around existing keyboard and touch behavior."
+      }
+    }
+  },
+  "validation": [
+    "The ArrowRight check now enters a real battle, verifies the Phaser key state, observes player movement through the natural update loop, and verifies key release.",
+    "The phone restart check now sends a real touch-screen tap in its touch-enabled browser context instead of a synthetic mouse click.",
+    "The two affected checks passed 20 of 20 repetitions each in WebKit and 10 of 10 repetitions each in Chromium.",
+    "Side Scroller lint, typecheck, build, and all 141 unit tests passed."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}
