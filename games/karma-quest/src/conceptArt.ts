@@ -790,6 +790,8 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   nav.fillStyle(0x07131e, 0.9).fillRect(8, 734, 434, 58);
   nav.fillGradientStyle(0x314451, 0x314451, 0x07131e, 0x07131e, 0.48).fillRect(10, 737, 430, 52);
   nav.lineStyle(1.5, 0xe2bd6b, 0.68).lineBetween(10, 734, 440, 734);
+  // The current tab must remain visibly selected when Canvas skips gradients.
+  if (scene.game.renderer.type === Phaser.CANVAS) nav.fillStyle(0x254b65, 0.82);
   nav.fillGradientStyle(0x254b65, 0x254b65, 0x102c52, 0x102c52, 0.82).fillRect(18, 740, 68, 40);
   nav.lineStyle(1.5, 0xe2bd6b, 0.8).lineBetween(24, 784, 80, 784);
   for (const divider of [94, 180, 270, 356]) {
