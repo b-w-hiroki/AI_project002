@@ -1,5 +1,5 @@
 {
-  "summary": "Synchronize the side-scroller run-pose assertion with the production locomotion update after synthetic input.",
+  "summary": "Synchronize side-scroller browser-input pose assertions and cold WebKit canvas readiness without weakening their requirements.",
   "areas": {
     "side-scroller": {
       "spec": {
@@ -8,13 +8,14 @@
       },
       "design": {
         "status": "unchanged",
-        "reason": "Only browser-test frame readiness changed; production movement and rendering are unchanged."
+        "reason": "Only browser-test input and initial-canvas readiness changed; production movement and rendering are unchanged."
       }
     }
   },
   "validation": [
-    "The test still requires hero-run-art while the live body has moving velocity.",
-    "Attack and guard still pass through their production handlers with real Phaser key state.",
+    "The test requires browser ArrowRight input to reach Phaser key state and render hero-run-art while the live body moves.",
+    "Browser ArrowRight, X, and Shift input must reach Phaser key state before the production movement, attack, and guard handlers are exercised.",
+    "A cold WebKit document may reload once, but the same visible Canvas requirement and normal test timeout remain active.",
     "Idle, attack, guard, hurt, and unchanged hitbox assertions remain active."
   ],
   "limitations": [

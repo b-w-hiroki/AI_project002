@@ -91,7 +91,16 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
   });
   await page.goto("/");
-  await page.locator("canvas").waitFor();
+  const canvas = page.locator("canvas");
+  try {
+    await canvas.waitFor({ timeout: 10_000 });
+  } catch {
+    // WebKit can reach the first cold Vite document before its transformed
+    // module has finished loading. Retry the navigation once, while keeping
+    // the normal per-test timeout and the same visible-canvas requirement.
+    await page.reload();
+    await canvas.waitFor({ timeout: 15_000 });
+  }
   await page.waitForFunction(() => !!window.__qaGame);
   await page.waitForTimeout(500); // 初回描画待ち
 });
@@ -501,18 +510,21 @@ test.describe("phone visual QA", () => {
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const cursors = Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys;
-      cursors.right.onDown(new KeyboardEvent("keydown", {
-        key: "ArrowRight",
-        code: "ArrowRight",
-      }));
-      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
-      const body = player.body as Phaser.Physics.Arcade.Body;
-      body.setVelocityX(160);
-      // Synthetic Key callbacks bypass the browser event loop, so CI can
-      // throttle the next game tick indefinitely. Exercise the production
-      // locomotion-pose path synchronously while preserving the real moving
-      // velocity and grounded state that the tick would observe.
-      Reflect.get(scene, "syncPlayerLocomotionPose").call(scene, body.velocity.x, body.blocked.down);
+      scene.input.keyboard!.enabled = true;
+      cursors.right.enabled = true;
+      cursors.right.reset();
+    });
+    await page.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
+    await page.keyboard.down("ArrowRight");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const cursors = Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys;
+      return cursors.right.isDown;
+    })).toBe(true);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "handleMovement").call(scene);
     });
     await expect.poll(readPose).toMatchObject({ texture: "hero-run-art" });
     const running = await readPose();
@@ -521,34 +533,33 @@ test.describe("phone visual QA", () => {
       animations: "disabled",
     });
 
-    await page.evaluate(() => {
+    await page.keyboard.up("ArrowRight");
+    await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const cursors = Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys;
-      cursors.right.onUp(new KeyboardEvent("keyup", {
-        key: "ArrowRight",
-        code: "ArrowRight",
-      }));
-      // Key#onUp intentionally returns early while the keyboard plugin is
-      // disabled (which can briefly happen around focus changes in WebKit).
-      // Reset the synthetic key unconditionally so this pose test cannot
-      // leave movement latched after its own injected input.
-      cursors.right.reset();
-      const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
-      const body = player.body as Phaser.Physics.Arcade.Body;
-      body.setVelocityX(0);
-      // The synthetic Key callbacks above bypass the browser event loop. Apply
-      // the same locomotion refresh that the next game tick performs so the
-      // assertion does not depend on a throttled CI frame being scheduled.
-      Reflect.get(scene, "syncPlayerLocomotionPose").call(scene, 0, body.blocked.down);
+      return cursors.right.isDown;
+    })).toBe(false);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "handleMovement").call(scene);
     });
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
+    await page.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
       attackKey.reset();
       attackKey.enabled = true;
-      attackKey.onDown(new KeyboardEvent("keydown", { key: "x", code: "KeyX" }));
+    });
+    await page.keyboard.down("x");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return (Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key).isDown;
+    })).toBe(true);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.get(scene, "handleAttack").call(scene, scene.time.now);
     });
     await expect.poll(readPose).toMatchObject({ texture: "hero-attack-art" });
@@ -561,26 +572,34 @@ test.describe("phone visual QA", () => {
       path: "e2e/screenshots/side-approved-hero-attack-v3-800x600.png",
       animations: "disabled",
     });
-    await page.evaluate(() => {
-      const scene = window.__qaGame.scene.getScene("GameScene");
-      const attackKey = Reflect.get(scene, "attackKey") as Phaser.Input.Keyboard.Key;
-      attackKey.reset();
-    });
+    await page.keyboard.up("x");
     await expect.poll(readPose, { timeout: 2_000 }).toMatchObject({ texture: "hero-art" });
 
+    await page.bringToFront();
+    await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const guardKey = Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key;
       guardKey.reset();
       guardKey.enabled = true;
-      guardKey.onDown(new KeyboardEvent("keydown", { key: "Shift", code: "ShiftLeft" }));
+    });
+    await page.keyboard.down("Shift");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown;
+    })).toBe(true);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.get(scene, "handleGuard").call(scene);
     });
     await expect.poll(readPose).toMatchObject({ texture: "hero-art", guarding: true });
+    await page.keyboard.up("Shift");
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown;
+    })).toBe(false);
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
-      const guardKey = Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key;
-      guardKey.reset();
       Reflect.get(scene, "handleGuard").call(scene);
       const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
       Reflect.get(scene, "playPlayerDamageFx").call(scene, player.x + 100);
