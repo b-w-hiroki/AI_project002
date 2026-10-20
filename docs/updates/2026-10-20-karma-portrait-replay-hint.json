@@ -1,14 +1,26 @@
 {
   "summary": "スマホ縦年代記の再プレイヒントを20pxへ拡大し縦横の短文を統一",
-  "areas": {"karma-quest": {
-    "spec": {"status":"updated","reason":"縦横で同じ短いヒントを表示する契約へ更新"},
-    "design": {"status":"updated","reason":"縦の文字サイズと配置、4種類の境界・回転検査を記録"}
-  }},
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦横で同じ短いヒントを表示する契約へ更新"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "縦の文字サイズと配置、4種類の境界・回転検査を記録"
+      }
+    }
+  },
   "validation": [
     "lint・typecheck・build成功、単体123件成功",
-    "Chromium/WebKitで4種類のヒントの文字境界・回転検査成功",
-    "Windows画像差分を目視確認して年代記の基準画像2枚を更新。比較許容差は変更なし",
+    "Windows Chromium/WebKit各2件成功。4種類のヒント・文字境界・回転・年代記画像比較を検証",
+    "Windows基準画像2枚とLinux基準画像1枚を実画像確認後に更新。比較許容差は変更なし。Linuxの差分は評価・ヒント行の領域(64,354)-(383,409)内",
+    "Linux Browser E2E初回は66成功・1スキップ・年代記旧基準画像との差分1失敗。基準更新後の再実行は67成功・1スキップ。run 39443049646で6作品のchecks/E2Eすべて成功",
     "docs/review/karma-replay-hint-portrait.pngで実画面を確認"
   ],
-  "limitations": ["Linux画像比較は検証中。物理端末と外部Portal未確認", "履歴を設定した検証用画面を含む"]
+  "limitations": [
+    "物理iOS/Android・外部Portal未確認。未マージ・未公開",
+    "履歴を設定した検証用画面を含む"
+  ]
 }
