@@ -1,0 +1,11 @@
+{
+  "summary": "報告完了時の案内と選択入力を確定状態に揃える",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "報告完了時の受付済み案内と選択入力の無効化・復帰を明記した"},
+      "design": {"status": "updated", "reason": "表示キャッシュに依存せず入力可否を同期する更新順序を記録した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKitで縦横の入力無効化、受付済み案内、二重加算防止、次年の報告での入力復帰を確認", "docs/review/karma-report-locked-portrait.pngとkarma-report-locked-landscape.pngを目視確認"],
+  "limitations": ["報告完了待機中は検査用にScene時計を停止して確認", "物理iOS/Android・外部Portal未確認"]
+}

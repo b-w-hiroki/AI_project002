@@ -775,6 +775,16 @@ test("report row frames redraw only when their selection changes", { tag: "@webk
 });
 
 test("report confirmation stays visible until the next year without duplicate rewards", { tag: "@webkit-regression" }, async ({ page }) => {
+  const inputs = () => page.evaluate(() => {
+    const values: boolean[] = [];
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (/^(report-row-(portrait|wide):|report-god-wide:|cta:(軍神|慈愛神)$)/.test(node.name)) values.push(!!node.input?.enabled);
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    return values;
+  });
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -786,20 +796,28 @@ test("report confirmation stays visible until the next year without duplicate re
   await tapPoint(page, 225, 291);
   await tapPoint(page, 225, 680);
   await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("報告しました");
+  await expect.poll(inputs).toEqual([false, false, false]);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("報告を受け付けました");
   const evaluation = await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"));
   expect(Number(evaluation)).toBeGreaterThan(0);
   await tapPoint(page, 225, 680);
-  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-sent-portrait.png" });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-locked-portrait.png" });
   await page.setViewportSize({ width: 806, height: 456 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("報告しました");
   await tapPoint(page, 609, 405);
+  await expect.poll(inputs).toEqual([false, false, false]);
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(evaluation);
-  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-sent-landscape.png" });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-locked-landscape.png" });
   await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 1; });
   await expect.poll(() => phase(page)).toBe("karma");
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(2);
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "reportSubmitting"))).toBe(false);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  await expect.poll(inputs).toEqual([true, true, true]);
 });
 
 test("home and report selections cancel interrupted presses", { tag: "@webkit-regression" }, async ({ page }) => {
