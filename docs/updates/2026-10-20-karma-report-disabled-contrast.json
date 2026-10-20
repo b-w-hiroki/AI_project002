@@ -1,0 +1,11 @@
+{
+  "summary": "無効な報告ボタンでも必要な操作の案内を読みやすくする",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "案内文字を薄くせずボタン面の暗さで無効状態を示す表示へ変更した"},
+      "design": {"status": "updated", "reason": "親Containerの半透明化を共通buttonの状態更新へ置き換えた"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で文字と親の不透明度、未選択時の抑止、選択・解除・回転・報告完了を確認", "docs/review/karma-report-empty-contrast.pngとkarma-report-ready-contrast.pngを目視確認"],
+  "limitations": ["物理iOS/Android・外部Portal未確認"]
+}

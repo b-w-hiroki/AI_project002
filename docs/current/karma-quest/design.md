@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+報告CTAの無効化は親Containerのalphaを下げず、共通buttonのsetBusyを利用する。文字を不透明に保ち、Graphicsの暗い面とZoneの入力無効化を同期する。選択件数が0から変化した時に通常表示へ戻す。
 最近の入力所有者・中断・音設定保存失敗・報告UI・レイド復旧等の回帰テストは@webkit-regressionタグでWebKit CIの対象にする。従来のスモーク対象も維持し、追加時はタグ付き一覧とCI同等の抽出実行を確認する。
 縦横の報告記録のGraphicsはrenderedSelectionを保持し、初回と選択状態の変更時だけ背景・枠を再構築する。行の可視状態と本文は毎回確認し、同じ選択状態でも別の年の記録本文を更新する。
 縦横のreport-selection-hintはhighlightRowsの選択件数で案内文を切り替える。選択制限自体はGameSceneに残し、表示側で選択の入れ替えを行わない。
