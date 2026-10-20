@@ -1,0 +1,11 @@
+{
+  "summary": "横画面の神様選択で状態不変時の描画命令再構築を省く",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "選択印・操作・回転後の表示を維持し描画更新の頻度だけを変更する"},
+      "design": {"status": "updated", "reason": "描画済みの神様を保持し変更時だけ枠と文字を更新する責務を追加した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で10フレーム待機中の対象Graphics.clearが0回、選択変更時に2枠分の2回であることを確認", "選択切替・回転後の表示を検証しdocs/review/karma-report-god-redraw.pngを目視確認"],
+  "limitations": ["FPS・消費電力・体感速度の改善量は未測定", "物理iOS/Android・外部Portal未確認"]
+}
