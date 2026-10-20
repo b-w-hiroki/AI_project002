@@ -1,0 +1,23 @@
+{
+  "summary": "Stabilize the Karma cheer completion rotation regression check",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "Cheer behavior, completion state, and reset behavior are unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "The existing portrait and landscape cheer presentation is unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The WebKit regression waits for the 800 px landscape canvas before checking the existing disabled completion CTA.",
+    "The report regression waits for both deity CTA targets before applying the existing size and position assertions.",
+    "The completion CTA assertion remains unchanged and must still become active again for the next battle."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices and external portal previews remain unverified."
+  ]
+}
