@@ -1379,11 +1379,11 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     layer.add(hit);
     return { layer, bg, label, y };
   });
-  for (const [i, god] of (["valor", "mercy"] as const).entries()) {
+  const godChoices = (["valor", "mercy"] as const).map((god, i) => {
     const x = 519 + i * 180;
     const g = scene.add.graphics(); report.add(g);
     g.lineStyle(1, 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
-    text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
+    const label = text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e").setName(`report-god-label:${god}`);
     const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
     ownedTap(scene, hit, () => {
       if (scene.phase !== "report") return;
@@ -1391,12 +1391,22 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       invoke(scene, "refreshReportPreview");
     });
     report.add(hit);
-  }
+    return { god, x, g, label };
+  });
   const preview = text(scene, report, 609, 261, "", 22, "#43382e", "700", 320);
   const submitAction = scene.add.container(0, 0); report.add(submitAction);
   button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false);
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    if (report.visible) {
+      const selectedGod = Reflect.get(scene, "deity") as Deity;
+      for (const { god, x, g, label } of godChoices) {
+        const selected = god === selectedGod;
+        g.clear().fillStyle(selected ? 0xd8e8ed : 0xf4e8ca, selected ? 1 : 0.2).fillRect(x - 81, 114, 162, 60);
+        g.lineStyle(selected ? 3 : 1, selected ? 0x8a6726 : 0xb79451, 1).strokeRect(x - 81, 114, 162, 60);
+        label.setText(`${selected ? "✓ " : ""}${DEITIES[god].name}`).setColor(selected ? "#123f59" : "#35281e");
+      }
+    }
     if (encounter.visible) {
       const value = Reflect.get(scene, "currentEncounter") as Encounter | null;
       encounterText.setText(value?.text ?? ""); optionA.setText(value?.choiceA.label ?? ""); optionB.setText(value?.choiceB.label ?? "");
