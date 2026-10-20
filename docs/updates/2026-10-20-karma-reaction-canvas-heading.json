@@ -1,0 +1,25 @@
+{
+  "summary": "Canvasの選択結果画面で見出し面と年表示の明暗差を補完",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦横の年表示下地と明るい金色の見出し面を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "Canvas用の通常塗りとWebGLの既存表現維持を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromiumで結果画面の既存画像比較と回転・遷移の2件成功",
+    "WebKitで縦横の金色面の実画素、回転と次場面遷移を確認",
+    "docs/review/karma-reaction-heading-portrait.pngとkarma-reaction-heading-landscape.pngを目視確認"
+  ],
+  "limitations": [
+    "Linux・物理端末・外部Portal未確認",
+    "画素検査は見出し面の1点。年表示下地は実画像で確認"
+  ]
+}

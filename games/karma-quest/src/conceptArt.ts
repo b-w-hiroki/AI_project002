@@ -1000,7 +1000,11 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
   }
   const width = landscape ? 350 : 434;
   const lighting = scene.add.graphics();
-  lighting.fillGradientStyle(0x061522, 0x061522, 0x061522, 0x061522, 0.94, 0.94, 0, 0).fillRect(8, 8, width, 120);
+  if (scene.game.renderer.type === Phaser.CANVAS) {
+    lighting.fillStyle(0x061522, 0.94).fillRect(8, 8, width, 33);
+  } else {
+    lighting.fillGradientStyle(0x061522, 0x061522, 0x061522, 0x061522, 0.94, 0.94, 0, 0).fillRect(8, 8, width, 120);
+  }
   lighting.lineStyle(1, 0xe0bb69, 0.8).lineBetween(landscape ? 72 : 114, 84, landscape ? 294 : 336, 84);
   screen.add(lighting);
   text(scene, screen, landscape ? 183 : 225, 29, "", 18, "#f4dfaa", "800").setStroke("#091420", 1).setName("reactionYear");
@@ -1011,6 +1015,8 @@ function buildReaction(scene: Runtime, landscape = false): Pick<MockUi, "reactio
     [headingX + 146, 61], [headingX + 132, 81], [headingX - 132, 81],
   ].map(([x, y]) => new Phaser.Math.Vector2(x, y));
   banner.fillStyle(0xa77b36, 1).fillPoints(bannerShape, true);
+  // Canvas ignores gradient commands; provide a light gold face behind dark lettering.
+  if (scene.game.renderer.type === Phaser.CANVAS) banner.fillStyle(0xf6dda1, 1);
   banner.fillGradientStyle(0xf6dda1, 0xf6dda1, 0xc69a53, 0xc69a53, 1).fillRect(headingX - 127, 44, 254, 34);
   banner.lineStyle(1, 0xffedba, 1).strokePoints(bannerShape, true);
   screen.add(banner);
