@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+PlaywrightのbaseURL・起動確認URL・Vite待受は127.0.0.1とKARMA_E2E_PORT（既定15177）で統一する。localhostのアドレス選択に依存させず、--strictPortで使用中ポートからの自動移動を防ぐ。KARMA_REUSE_SERVER=1を使う場合も同じIPv4待受とポートのサーバーを用意する。これはE2E用の接続契約であり、配信設定や保存キーは変更しない。
 replayPromptはja/enに加えてshortJaを返し、日本語の横年代記のみshortJaを使う。landscape-replay-hintは中心(591,329)、20px、折返し幅338px。4種類の文言が前の記録の下端314より下、羊皮紙下端344より上に収まることをE2E検査する。
 buildFinalのcityShadeはCanvas rendererの場合だけ(34,473)から382×47pxを濃紺・alpha 0.88で塗る。グラデーションが無視されるCanvasでも街名に下地を確保し、WebGLの既存グラデーションは維持する。Windows WebKitの年代記画像基準は実画像・差分の確認後に更新する。
 buildFinalのjourneyLabelはrefreshChronicleでjourneyPending/journeyErrorを参照し、横画面と同じ文言・setBusyを使う。年代記の縦横CTAはlockAfterAction=falseとし、280msの固定ロックを重ねない。再入防止はstartRunラッパーのjourneyPendingガードが担う。

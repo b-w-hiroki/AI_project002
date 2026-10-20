@@ -1,0 +1,26 @@
+{
+  "summary": "Karma Quest E2Eの接続先をIPv4ループバックへ固定し全体回帰を確認",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "検証サーバーの待受・接続設定だけを変更し、ゲームの表示・操作・保存・配信仕様は変更しない"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "E2EのIPv4待受、strictPortと既存サーバー再利用の接続契約を記録"
+      }
+    }
+  },
+  "validation": [
+    "変更前のChromium全体: 64件成功、Canvas専用1件対象外、1件はbeforeEachでERR_CONNECTION_REFUSED",
+    "変更後のChromium全体: 65件成功、Canvas専用1件対象外。縦横を切り替える12年通しプレイ成功",
+    "変更後のWebKit: CIと同じgrep対象33件すべて成功（Windowsローカル実行）",
+    "lint・typecheck・build、単体123件成功"
+  ],
+  "limitations": [
+    "接続エラーの根本原因を特定したとは断定しない。IPv6のみの待受を確認し、接続先選択の曖昧さを除去した",
+    "Linux CI・物理iOS/Android・外部Portalは今回未実行",
+    "画面変更なし。テストで再生成された既存画像はコミット対象から除外"
+  ]
+}
