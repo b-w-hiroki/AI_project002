@@ -2297,3 +2297,52 @@ test("unavailable home routes do not advertise an active hand cursor", async ({ 
   await expect.poll(() => readCursor("home-nav-wide:ワールド")).toBe("pointer");
   await expect.poll(() => readCursor("home-nav-wide:ショップ")).not.toBe("pointer");
 });
+
+
+test("battle cheer completion remains readable and resets next battle", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "titleGroup").setVisible(false);
+    Reflect.get(scene, "showBattlePhase").call(scene);
+    scene.time.timeScale = 0;
+  });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("おうえん！");
+  await tapPoint(page, 225, 568);
+  const cheers = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "cheerCount"));
+  await expect.poll(cheers).toBe(1);
+  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 1; });
+  await expect.poll(() => page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult"))).toBe(true);
+  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 0; });
+  await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(false);
+  const state = () => page.evaluate(() => {
+    const found: { text: string; alpha: number; enabled: boolean }[] = [];
+    const visit = (nodes: Phaser.GameObjects.GameObject[], alpha = 1) => {
+      for (const node of nodes) {
+        if (Reflect.get(node, "visible") === false) continue;
+        const opacity = alpha * (Reflect.get(node, "alpha") ?? 1);
+        if (node.name === "cta:おうえん！") {
+          const label = (node.parentContainer.list.find(child => child.type === "Text") as Phaser.GameObjects.Text);
+          found.push({ text: label.text, alpha: opacity * label.alpha, enabled: !!node.input?.enabled });
+        }
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, opacity);
+      }
+    };
+    visit(window.__qaGame.scene.getScene("GameScene").children.list);
+    return found;
+  });
+  for (const wide of [false, true]) {
+    if (wide) await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(state).toEqual([{ text: "討伐終了", alpha: 1, enabled: false }]);
+    await tapPoint(page, wide ? 591 : 225, wide ? 396 : 568);
+    expect(await cheers()).toBe(1);
+    await page.locator("canvas").screenshot({ path: `../../docs/review/karma-cheer-complete-${wide ? "landscape" : "portrait"}.png` });
+  }
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showBattlePhase").call(scene);
+  });
+  await expect.poll(state).toEqual([{ text: "おうえん！", alpha: 1, enabled: true }]);
+  await tapPoint(page, 591, 396);
+  await expect.poll(cheers).toBe(1);
+});

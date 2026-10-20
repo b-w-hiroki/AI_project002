@@ -1277,7 +1277,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   hudPlate(scene, battle, 225, 514, 374, 36);
   const count = text(scene, battle, 225, 514, "", 20, "#fff3ce");
   const cheer = scene.add.container(0, 0); battle.add(cheer);
-  button(scene, cheer, 225, 568, 374, 64, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  const cheerLabel = button(scene, cheer, 225, 568, 374, 64, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
   hudPlate(scene, battle, 225, 686, 414, 110);
   text(scene, battle, 225, 686, "選んだ道が、勇者の力になる。\nこの年の記録を、神様へ届けよう。", 22, "#fff3ce", "700", 370);
   requestCard(scene, report, 225, 400, 426, 772);
@@ -1315,8 +1315,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       for (const [target, name] of [[heading, "battleHeading"], [stats, "battleStats"], [result, "battleResult"], [count, "cheerCountText"]] as const)
         target.setText((source.getByName(name) as Phaser.GameObjects.Text)?.text ?? "");
       const enabled = !Reflect.get(scene, "currentBattleResult");
-      cheer.setAlpha(enabled ? 1 : 0.45);
-      (cheer.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+      cheerLabel.setText(enabled ? "おうえん！" : "討伐終了");
+      (cheerLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
     }
     if (report.visible) {
       const source = Reflect.get(scene, "highlightRows") as Row[];
@@ -1365,7 +1365,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const battleResult = text(scene, battle, 591, 220, "", 23, "#43382e", "700", 340);
   const cheerCount = text(scene, battle, 591, 314, "", 22, "#fff3ce", "700", 350);
   const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
-  button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
+  const cheerLabel = button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
   text(scene, report, 400, 36, "神様への報告", 30);
   const selectionHint = text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21).setName("report-selection-hint");
   requestCard(scene, report, 215, 271, 400, 330);
@@ -1428,8 +1428,8 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       battleHeading.setText(source("battleHeading")); battleStats.setText(source("battleStats"));
       battleResult.setText(source("battleResult")); cheerCount.setText(source("cheerCountText"));
       const enabled = !Reflect.get(scene, "currentBattleResult");
-      cheerAction.setAlpha(enabled ? 1 : 0.45);
-      (cheerAction.getByName("cta:おうえん！") as Phaser.GameObjects.Zone).input!.enabled = enabled;
+      cheerLabel.setText(enabled ? "おうえん！" : "討伐終了");
+      (cheerLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
     }
     if (report.visible) {
       const source = Reflect.get(scene, "highlightRows") as Row[];

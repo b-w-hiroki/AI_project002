@@ -1,0 +1,24 @@
+{
+  "summary": "討伐決着後の声援CTAを読みやすい終了表示へ統一",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "決着後の文言と無効表示、次戦での復帰を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "縦横で共通CTAのsetBusyを利用する設計へ更新"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体122件成功",
+    "Chromium/WebKitで実戦闘タイマー後の文言・不透明度・入力無効化、回転、次戦の復帰を各1件確認",
+    "docs/review/karma-cheer-complete-portrait.pngとkarma-cheer-complete-landscape.pngを目視確認"
+  ],
+  "limitations": [
+    "決着後の検査中はScene時計を停止して700msの表示を保持",
+    "物理iOS/Androidと外部Portal未確認"
+  ]
+}
