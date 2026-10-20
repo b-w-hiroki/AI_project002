@@ -1,0 +1,24 @@
+{
+  "summary": "Release direct mouse-drag movement reliably when WebKit omits Phaser's pointerup delivery.",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "Direct drag movement and multi-touch pointer ownership behavior are unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "A window mouseup fallback complements the existing Phaser pointerup, pointercancel, gameout, and blur release paths."
+      }
+    }
+  },
+  "validation": [
+    "The unchanged browser drag test still requires real pointer input, Phaser right-key state, natural-loop player movement, and zero horizontal velocity after release.",
+    "The multi-touch test still requires a second pointer not to steal the active drag and only the owner release to clear touch movement.",
+    "The natural drag/release flow passed 20 of 20 serial WebKit repetitions after the fallback was added.",
+    "Side Scroller lint, typecheck, build, and all 141 unit tests passed."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}
