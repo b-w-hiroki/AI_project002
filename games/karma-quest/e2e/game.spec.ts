@@ -2372,18 +2372,30 @@ test("report year updates through rotation and the final year", { tag: "@webkit-
     visit(window.__qaGame.scene.getScene("GameScene").children.list);
     return found;
   });
-  for (const year of [1, 12]) {
-    await page.evaluate(value => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "stage", value), year);
+  for (const year of [1, 11, 12]) {
+    await page.evaluate(value => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "stage", value);
+      Reflect.get(scene, "refreshReportPreview").call(scene);
+    }, year);
     for (const wide of [false, true]) {
       await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
       const expected = wide ? `${year}年目 · 神様への報告` : `${year}年目の出来事を、年代記へ`;
       await expect.poll(async () => (await read()).map(item => item.text)).toEqual([expected]);
+      const preview = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "reportPreview").text as string);
+      if (year === 12) {
+        expect(preview).toContain("最後の報告を、年代記へ");
+        expect(preview).not.toContain("次年");
+      } else expect(preview).toContain("次年");
       const [label] = await read();
       expect(label!.left).toBeGreaterThan(wide ? 20 : 27);
       expect(label!.right).toBeLessThan(wide ? 780 : 423);
       expect(label!.top).toBeGreaterThan(wide ? 0 : 73);
       expect(label!.bottom).toBeLessThan(wide ? 60 : 117);
-      if (year === 12) await page.locator("canvas").screenshot({ path: `../../docs/review/karma-report-year-${wide ? "landscape" : "portrait"}.png` });
+      if (year === 12) await page.locator("canvas").screenshot({ path: `../../docs/review/karma-final-report-${wide ? "landscape" : "portrait"}.png` });
     }
   }
+  await tapPoint(page, 215, 150);
+  await tapPoint(page, 609, 405);
+  await expect.poll(() => phase(page)).toBe("final");
 });

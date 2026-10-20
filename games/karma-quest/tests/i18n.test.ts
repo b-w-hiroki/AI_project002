@@ -47,3 +47,14 @@ describe("CrazyGames locale priority", () => {
     expect(detectLang("?lang=ja", "en-US", "en-US")).toBe("ja");
   });
 });
+
+it("final report guidance preserves preferences without promising another year", () => {
+  for (const deity of ["valor", "mercy"] as const) {
+    expect(deityWish("ja", deity, true)).toContain("最後の報告を、年代記へ");
+    expect(deityWish("ja", deity, true)).not.toContain("次年");
+    expect(deityWish("en", deity, true)).toContain("final report");
+    expect(deityWish("en", deity, true)).not.toContain("Next year");
+    expect(deityWish("ja", deity)).toContain("次年");
+    expect(deityWish("en", deity)).toContain("Next year");
+  }
+});
