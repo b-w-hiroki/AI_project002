@@ -1491,7 +1491,7 @@ test("landscape home and chronicle support starting, rotating, and replaying", a
     const scene = window.__qaGame.scene.getScene("GameScene");
     const root = scene.children.list.find(item => item.getData("refreshOverview") && Reflect.get(item, "visible")) as Phaser.GameObjects.Container;
     return root?.list.filter(item => "text" in item).map(item => Reflect.get(item, "text"));
-  })).toEqual(expect.arrayContaining(["1年目 · 魔石を与えました", "この旅で刻んだ選択：1件", "9"]));
+  })).toEqual(expect.arrayContaining(["1年目 · 魔石を与えました", "この旅の評価 0 · 選択1件", "9"]));
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").children.list
     .filter(child => child.depth >= 2000 && child.depth <= 2002).length)).toBe(0);
   await tapPoint(page, 591, 397);
@@ -2511,4 +2511,42 @@ test("reaction heading remains readable across renderers and rotation", { tag: "
   }
   await tapPoint(page, 579, 376);
   await expect.poll(() => phase(page)).toMatch(/^(encounter|battle)$/);
+});
+
+
+test("landscape chronicle shows run evaluation without changing saved totals", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    await Reflect.get(scene, "startRun").call(scene);
+    Reflect.set(scene, "choiceHistory", Array.from({ length: 12 }, (_, i) => ({ year: i + 1,
+      outcome: { faction: "warrior", requestId: "qa", title: "鉄を届けました", body: "王都に鉄が届いた。", quote: "", deltas: [0, 0, 0, 0] },
+    })));
+    localStorage.setItem("karma_quest_total_eval_v1", "9999");
+    Reflect.get(scene, "showFinal").call(scene);
+  });
+  await page.setViewportSize({ width: 806, height: 456 });
+  const read = () => page.evaluate(() => {
+    const root = window.__qaGame.scene.getScene("GameScene").children.list.find(node => Reflect.get(node, "visible") && node.getData("refreshOverview")) as Phaser.GameObjects.Container;
+    const label = root?.getByName("landscape-run-summary") as Phaser.GameObjects.Text;
+    if (!label) return null;
+    const b = label.getBounds();
+    return { text: label.text, left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+  });
+  for (const [value, display] of [[0, "0"], [288, "288"], [12345678, "1234.5万"]] as const) {
+    await page.evaluate(score => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "runEvaluation", score), value);
+    await expect.poll(async () => (await read())?.text).toBe(`この旅の評価 ${display} · 選択12件`);
+    const bounds = (await read())!;
+    expect(bounds.left).toBeGreaterThan(396);
+    expect(bounds.right).toBeLessThan(786);
+    expect(bounds.top).toBeGreaterThan(69);
+    expect(bounds.bottom).toBeLessThan(108);
+    expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe("9999");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "runEvaluation"))).toBe(value);
+    if (value === 288) await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-run-evaluation.png" });
+  }
+  await page.setViewportSize({ width: 456, height: 806 });
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("この旅で刻んだ選択：12件");
+  await page.setViewportSize({ width: 806, height: 456 });
+  await expect.poll(async () => (await read())?.text).toContain("1234.5万");
 });
