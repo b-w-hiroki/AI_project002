@@ -1,0 +1,11 @@
+{
+  "summary": "報告記録の選択枠を状態変更時だけ再構築する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "選択ルール・記録本文・視覚表現を維持し枠の更新頻度だけを変更する"},
+      "design": {"status": "updated", "reason": "縦横の行Graphicsに前回の選択状態を保持する更新方針を追加した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKit各1件で縦横の10フレーム待機中の枠再構築0回、選択・解除で各1回を確認", "docs/review/karma-report-row-redraw.pngを目視確認"],
+  "limitations": ["FPS・消費電力・体感速度の改善量は未測定", "物理iOS/Android・外部Portal未確認"]
+}
