@@ -964,7 +964,7 @@ export class GameScene extends Phaser.Scene {
       .filter((r) => r.selected)
       .map((r) => r.highlight);
     this.reportPreview.setText(
-      `${deityName(this.lang, this.deity)} · ${tr(this.lang, "選択", "Selected")} ${selected.length}/2 · ${tr(this.lang, "評価", "Evaluation")} ${scoreDeeds(selected, this.deity)}\n${deityWish(this.lang, this.deity)}`,
+      `${deityName(this.lang, this.deity)} · ${tr(this.lang, "選択", "Selected")} ${selected.length}/2 · ${tr(this.lang, "評価", "Evaluation")} ${scoreDeeds(selected, this.deity)}\n${deityWish(this.lang, this.deity, this.stage >= TOTAL_STAGES)}`,
     );
     this.submitButton.setEnabled(selected.length > 0);
   }

@@ -1,0 +1,24 @@
+{
+  "summary": "最終報告で存在しない次年の加護を案内する表示を修正",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "最終年と通常年の案内の違いを明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "GameSceneの最終年判定とi18nの文言切替を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体123件成功",
+    "Chromium/WebKitで1・11・12年目の案内、回転、最終報告から年代記への遷移を各1件検証",
+    "docs/review/karma-final-report-portrait.pngとkarma-final-report-landscape.pngを目視確認"
+  ],
+  "limitations": [
+    "年はテストから設定。12年通し再プレイではない",
+    "英語文言は単体テスト確認。英語画面・物理端末・外部Portalは未確認"
+  ]
+}

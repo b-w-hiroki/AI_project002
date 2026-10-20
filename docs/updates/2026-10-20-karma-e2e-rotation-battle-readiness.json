@@ -1,0 +1,22 @@
+{
+  "summary": "Make Karma browser regression tests synchronize with rebuilt landscape input and accelerated battle completion.",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The navigation, battle result, and completion-state acceptance criteria remain unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Only browser-test timing and readiness detection changed; runtime behavior is unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The rotated home test waits for the visible enabled journey input before tapping it.",
+    "The cheer test observes battle completion on each animation frame and freezes the Phaser clock immediately after a real result before checking the disabled completion control."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}

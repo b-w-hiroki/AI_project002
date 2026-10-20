@@ -267,6 +267,10 @@ test("browser back returns to an error-free workshop", async ({ page }) => {
   await page.goto("/?return-check=1");
   await page.locator("canvas").waitFor();
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    return !scene.load.isLoading() && scene.textures.exists("pw-hero-stirring-v2");
+  }), { timeout: 10_000 }).toBe(true);
   await page.goBack();
   await page.locator("canvas").waitFor();
   await page.waitForFunction(() => !!window.__qaGame);

@@ -94,7 +94,13 @@ export function deityName(lang: Lang, deity: Deity): string {
     ? tr(lang, "軍神", "God of Valor")
     : tr(lang, "慈愛神", "Goddess of Mercy");
 }
-export function deityWish(lang: Lang, deity: Deity): string {
+export function deityWish(lang: Lang, deity: Deity, finalYear = false): string {
+  if (finalYear) {
+    const preference = deity === "valor"
+      ? tr(lang, "武勇を求める。", "Values valor. ")
+      : tr(lang, "支援と生還を好む。", "Values support and survival. ");
+    return preference + tr(lang, "最後の報告を、年代記へ", "Send your final report to the chronicle.");
+  }
   return deity === "valor"
     ? tr(lang, "武勇を求める。次年は強敵と大きな加護", "Values valor. Next year brings a stronger foe and a greater blessing.")
     : tr(lang, "支援と生還を好む。次年は安定した加護", "Values support and survival. Next year brings a steady blessing.");

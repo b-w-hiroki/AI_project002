@@ -1089,6 +1089,20 @@ test("home information survives rotation and closes across both layouts", async 
   await expect.poll(visiblePanel).toContain("カイトの能力");
   await tapPoint(page, 400, 385);
   await expect.poll(visiblePanel).toEqual([]);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let ready = false;
+    const visit = (nodes: Phaser.GameObjects.GameObject[], visible = true) => {
+      for (const node of nodes) {
+        const nodeVisible = visible && Reflect.get(node, "visible") !== false;
+        if (!nodeVisible) continue;
+        if (node.type === "Zone" && node.x === 591 && node.y === 397 && !!node.input?.enabled) ready = true;
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, nodeVisible);
+      }
+    };
+    visit(scene.children.list);
+    return ready;
+  })).toBe(true);
   await tapPoint(page, 591, 397);
   await expect.poll(() => phase(page)).toBe("karma");
 });
@@ -2317,9 +2331,24 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
   await tapPoint(page, 225, 568);
   const cheers = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "cheerCount"));
   await expect.poll(cheers).toBe(1);
-  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 1; });
-  await expect.poll(() => page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult"))).toBe(true);
-  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 0; });
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const deadline = performance.now() + 10_000;
+    scene.time.timeScale = 1;
+    const waitForResult = () => {
+      if (Reflect.get(scene, "currentBattleResult")) {
+        scene.time.timeScale = 0;
+        resolve();
+        return;
+      }
+      if (performance.now() >= deadline) {
+        reject(new Error("Battle result did not settle within 10 seconds"));
+        return;
+      }
+      requestAnimationFrame(waitForResult);
+    };
+    waitForResult();
+  }));
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(false);
   const state = () => page.evaluate(() => {
     const found: { text: string; alpha: number; enabled: boolean }[] = [];
@@ -2381,18 +2410,30 @@ test("report year updates through rotation and the final year", { tag: "@webkit-
     visit(window.__qaGame.scene.getScene("GameScene").children.list);
     return found;
   });
-  for (const year of [1, 12]) {
-    await page.evaluate(value => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "stage", value), year);
+  for (const year of [1, 11, 12]) {
+    await page.evaluate(value => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "stage", value);
+      Reflect.get(scene, "refreshReportPreview").call(scene);
+    }, year);
     for (const wide of [false, true]) {
       await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
       const expected = wide ? `${year}年目 · 神様への報告` : `${year}年目の出来事を、年代記へ`;
       await expect.poll(async () => (await read()).map(item => item.text)).toEqual([expected]);
+      const preview = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "reportPreview").text as string);
+      if (year === 12) {
+        expect(preview).toContain("最後の報告を、年代記へ");
+        expect(preview).not.toContain("次年");
+      } else expect(preview).toContain("次年");
       const [label] = await read();
       expect(label!.left).toBeGreaterThan(wide ? 20 : 27);
       expect(label!.right).toBeLessThan(wide ? 780 : 423);
       expect(label!.top).toBeGreaterThan(wide ? 0 : 73);
       expect(label!.bottom).toBeLessThan(wide ? 60 : 117);
-      if (year === 12) await page.locator("canvas").screenshot({ path: `../../docs/review/karma-report-year-${wide ? "landscape" : "portrait"}.png` });
+      if (year === 12) await page.locator("canvas").screenshot({ path: `../../docs/review/karma-final-report-${wide ? "landscape" : "portrait"}.png` });
     }
   }
+  await tapPoint(page, 215, 150);
+  await tapPoint(page, 609, 405);
+  await expect.poll(() => phase(page)).toBe("final");
 });

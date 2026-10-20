@@ -1,0 +1,22 @@
+{
+  "summary": "Wait for Potion Workshop's requested artwork to finish loading before the browser-history regression navigates away.",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The browser-back recovery and error-free runtime requirements remain unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Only browser-test navigation readiness changed; runtime loading behavior is unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The history test requires the Phaser loader to be idle and the stirring hero texture to exist before leaving the page.",
+    "Request, console, and page errors continue to fail the test."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}

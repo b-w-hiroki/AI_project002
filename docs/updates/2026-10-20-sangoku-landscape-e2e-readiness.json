@@ -1,0 +1,22 @@
+{
+  "summary": "Synchronize landscape expedition E2E input with the rebuilt Phaser interaction layer after viewport rotation.",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The player-visible behavior and acceptance criteria are unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Only browser-test readiness detection changed; runtime layout and controls are unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The helper waits for the 800px landscape canvas, camp view, and enabled sortie input zone before tapping.",
+    "The road transition assertion and cinematic assertions remain unchanged."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}
