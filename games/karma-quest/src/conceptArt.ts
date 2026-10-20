@@ -1292,7 +1292,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   const rows = Array.from({ length: 4 }, (_, i) => {
     const y = 291 + i * 74;
     const layer = scene.add.container(0, 0); report.add(layer);
-    const bg = scene.add.graphics(); layer.add(bg);
+    const bg = scene.add.graphics().setName(`report-row-frame:${i}`); layer.add(bg);
     const label = text(scene, layer, 225, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(225, y, 374, 64).setName(`report-row-portrait:${i}`).setInteractive();
     ownedTap(scene, hit, () => {
@@ -1322,6 +1322,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       rows.forEach(({ layer, bg, label, y }, i) => {
         const row = source[i]; layer.setVisible(!!row); if (!row) return;
         label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        if (bg.getData("renderedSelection") === row.selected) return;
+        bg.setData("renderedSelection", row.selected);
         bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(38, y - 32, 374, 64);
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.35).strokeRect(38, y - 32, 374, 64);
       });
@@ -1372,7 +1374,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     const y = 150 + i * 80;
     const layer = scene.add.container(0, 0);
     report.add(layer);
-    const bg = scene.add.graphics(); layer.add(bg);
+    const bg = scene.add.graphics().setName(`report-row-frame:${i}`); layer.add(bg);
     const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
     ownedTap(scene, hit, () => {
@@ -1432,6 +1434,8 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       rows.forEach(({ layer, bg, label, y }, i) => {
         const row = source[i]; layer.setVisible(!!row); if (!row) return;
         label.setText(`${row.selected ? "✓ " : ""}${row.highlight.label}`);
+        if (bg.getData("renderedSelection") === row.selected) return;
+        bg.setData("renderedSelection", row.selected);
         bg.clear().fillStyle(0xb79451, row.selected ? 0.24 : 0.04).fillRect(29, y - 36, 372, 72);
         bg.lineStyle(row.selected ? 2 : 1, 0xb79451, row.selected ? 1 : 0.25).strokeRect(29, y - 36, 372, 72);
       });

@@ -723,6 +723,53 @@ test("report explains how to replace a full selection in both layouts", async ({
   await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
 });
 
+test("report row frames redraw only when their selection changes", async ({ page }) => {
+  await useNativePortrait(page);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const frames = await page.evaluate(() => {
+      Reflect.set(window, "__rowFrameClears", 0);
+      let count = 0;
+      const visit = (node: Phaser.GameObjects.GameObject) => {
+        if (Reflect.get(node, "visible") === false) return;
+        if (node.name.startsWith("report-row-frame:")) {
+          count++;
+          const graphics = node as Phaser.GameObjects.Graphics;
+          const clear = graphics.clear;
+          graphics.clear = function () {
+            Reflect.set(window, "__rowFrameClears", Number(Reflect.get(window, "__rowFrameClears")) + 1);
+            return clear.call(this);
+          };
+        }
+        if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+      return count;
+    });
+    expect(frames).toBe(1);
+    const clears = () => page.evaluate(() => Reflect.get(window, "__rowFrameClears"));
+    await page.evaluate(() => new Promise<void>(resolve => {
+      let count = 0;
+      const step = () => { if (++count >= 10) resolve(); else requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }));
+    expect(await clears()).toBe(0);
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    await expect.poll(clears).toBe(1);
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    await expect.poll(clears).toBe(2);
+  }
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-row-redraw.png" });
+});
+
 test("home and report selections cancel interrupted presses", async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
