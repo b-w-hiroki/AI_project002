@@ -948,6 +948,7 @@ test("portrait choice keeps the approved visual mock skeleton", async ({ page })
     animations: "disabled",
     maxDiffPixelRatio: 0.005,
   });
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-choice-audit-current.png" });
 });
 
 async function useNativePortrait(page: Page) {
@@ -1913,6 +1914,22 @@ test("requester portraits follow every request in home and rotated dialogue", as
       Reflect.set(scene, "phase", "title"); Reflect.set(scene, "homeRequest", request);
     }, request);
     await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
+    const readHomeCopy = () => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.list.find(node => node.getData("refreshRequest")) as Phaser.GameObjects.Container;
+      const label = root.getByName("home-request-body") as Phaser.GameObjects.Text;
+      const b = label.getBounds();
+      return { text: label.text, lines: label.getWrappedText(), top: b.top, bottom: b.bottom, left: b.left, right: b.right };
+    });
+    await expect.poll(async () => (await readHomeCopy()).text.replace(/\n/g, "")).toBe(request.text);
+    const homeCopy = await readHomeCopy();
+    expect(homeCopy.lines.length).toBeLessThanOrEqual(2);
+    expect(homeCopy.lines).not.toContain("…");
+    expect(homeCopy.top).toBeGreaterThan(668);
+    expect(homeCopy.bottom).toBeLessThan(720);
+    expect(homeCopy.left).toBeGreaterThan(110);
+    expect(homeCopy.right).toBeLessThan(412);
+
     await page.setViewportSize({ width: 800, height: 360 });
     await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
     await expect.poll(portraits).toEqual([`kq-dialogue-${request.faction}-${request.faction === "warrior" ? "v3" : "v1"}`]);
@@ -2331,24 +2348,23 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
   await tapPoint(page, 225, 568);
   const cheers = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "cheerCount"));
   await expect.poll(cheers).toBe(1);
-  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+  await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    const deadline = performance.now() + 10_000;
-    scene.time.timeScale = 1;
-    const waitForResult = () => {
-      if (Reflect.get(scene, "currentBattleResult")) {
-        scene.time.timeScale = 0;
-        resolve();
-        return;
-      }
-      if (performance.now() >= deadline) {
-        reject(new Error("Battle result did not settle within 10 seconds"));
-        return;
-      }
-      requestAnimationFrame(waitForResult);
+    // Freeze in the result's own frame, before the 700ms report transition.
+    // A remote browser poll can miss that interval on a loaded CI runner.
+    const freezeResult = () => {
+      if (!Reflect.get(scene, "currentBattleResult")) return;
+      scene.time.timeScale = 0;
+      scene.events.off("postupdate", freezeResult);
     };
-    waitForResult();
-  }));
+    scene.events.on("postupdate", freezeResult);
+    scene.time.timeScale = 1;
+  });
+  // Phaser time advances with rendered frames, which can lag wall time on CI.
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return !!Reflect.get(scene, "currentBattleResult") && scene.time.timeScale === 0;
+  }), { timeout: 15000 }).toBe(true);
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(false);
   const state = () => page.evaluate(() => {
     const found: { text: string; alpha: number; enabled: boolean }[] = [];
@@ -2616,4 +2632,65 @@ test("landscape chronicle shows run evaluation without changing saved totals", {
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-portrait-run-evaluation.png" });
   await page.setViewportSize({ width: 806, height: 456 });
   await expect.poll(async () => (await read())?.text).toContain("1234.5万");
+});
+
+test("home navigation confirms on release and cancels interrupted gestures", { tag: "@webkit-regression" }, async ({ page }) => {
+  const state = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { phase: Reflect.get(scene, "phase"), information: Reflect.get(scene, "homeInformation")?.title ?? null, raid: !!Reflect.get(scene, "raidPanel") };
+  });
+  const idle = { phase: "title", information: null, raid: false };
+  const emit = (name: string, event: string, id = 101) => page.evaluate(({ name, event, id }) => {
+    let found: Phaser.GameObjects.GameObject | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name === name) found = node;
+      if (node.type === "Container") (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    if (!found) throw new Error(`Missing navigation ${name}`);
+    found.emit(event, { id });
+  }, { name, event, id });
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const names = wide
+      ? ["案内", "ワールド", "仲間", "図鑑", "持ち物", "リーグ", "ショップ", "王都"].map(label => `home-nav-wide:${label}`)
+      : [...Array.from({ length: 5 }, (_, i) => `home-nav:${i}`), ...Array.from({ length: 5 }, (_, i) => `home-rail:${i}`)];
+    for (const name of names) {
+      await emit(name, "pointerdown");
+      expect(await state()).toEqual(idle);
+      await emit(name, "pointerup", 102);
+      expect(await state()).toEqual(idle);
+      await emit(name, "pointerout");
+      await emit(name, "pointerup");
+      expect(await state()).toEqual(idle);
+    }
+    const target = wide ? "home-nav-wide:仲間" : "home-nav:2";
+    for (const interruption of ["blur", "hidden", "resize"]) {
+      await emit(target, "pointerdown");
+      if (interruption === "resize") {
+        await page.setViewportSize(wide ? { width: 808, height: 456 } : { width: 458, height: 806 });
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      } else {
+        await page.evaluate(event => window.__qaGame.scene.getScene("GameScene").game.events.emit(event), interruption);
+      }
+      await emit(target, "pointerup");
+      expect(await state()).toEqual(idle);
+    }
+    // Real browser input: dragging away must not open a panel.
+    const box = (await page.locator("canvas").boundingBox())!;
+    const x = wide ? 238 : 225, y = wide ? 348 : 758;
+    await page.mouse.move(box.x + x * box.width / (wide ? 800 : 450), box.y + y * box.height / (wide ? 450 : 800));
+    await page.mouse.down();
+    expect(await state()).toEqual(idle);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.up();
+    expect(await state()).toEqual(idle);
+    await tapPoint(page, x, y);
+    await expect.poll(state).toEqual({ ...idle, information: "カイトの能力" });
+    await page.locator("canvas").screenshot({ path: `../../docs/review/karma-navigation-release-${wide ? "landscape" : "portrait"}.png` });
+    await tapPoint(page, wide ? 400 : 225, wide ? 385 : 551);
+    await expect.poll(state).toEqual(idle);
+  }
 });
