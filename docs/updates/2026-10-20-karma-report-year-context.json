@@ -1,0 +1,24 @@
+{
+  "summary": "報告画面へ現在の年を表示し縦横で進行状況を共有",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦横の報告見出しに現在年を表示する契約を追加"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "GameScene.stageを参照する表示更新と境界検査を記録"
+      }
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体122件成功",
+    "Chromium/WebKitで年表示と回転・文字境界検査、既存の報告画像比較を各2件実行し成功",
+    "docs/review/karma-report-year-portrait.pngとkarma-report-year-landscape.pngで12年目の収まりを目視確認"
+  ],
+  "limitations": [
+    "年表示の検査ではScene.stageを1と12に設定。12年通しの再プレイではない",
+    "物理iOS/Androidと外部Portal未確認"
+  ]
+}

@@ -2356,3 +2356,43 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
   await expect.poll(cheers).toBe(1);
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-cheer-panel-active-landscape.png" });
 });
+
+
+test("report year updates through rotation and the final year", { tag: "@webkit-regression" }, async ({ page }) => {
+  await useNativePortrait(page);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "titleGroup").setVisible(false);
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const read = () => page.evaluate(() => {
+    const found: { text: string; left: number; right: number; top: number; bottom: number }[] = [];
+    const visit = (nodes: Phaser.GameObjects.GameObject[]) => {
+      for (const node of nodes) {
+        if (Reflect.get(node, "visible") === false) continue;
+        if (node.name === "report-year") {
+          const label = node as Phaser.GameObjects.Text;
+          const bounds = label.getBounds();
+          found.push({ text: label.text, left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom });
+        }
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list);
+      }
+    };
+    visit(window.__qaGame.scene.getScene("GameScene").children.list);
+    return found;
+  });
+  for (const year of [1, 12]) {
+    await page.evaluate(value => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "stage", value), year);
+    for (const wide of [false, true]) {
+      await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+      const expected = wide ? `${year}年目 · 神様への報告` : `${year}年目の出来事を、年代記へ`;
+      await expect.poll(async () => (await read()).map(item => item.text)).toEqual([expected]);
+      const [label] = await read();
+      expect(label!.left).toBeGreaterThan(wide ? 20 : 27);
+      expect(label!.right).toBeLessThan(wide ? 780 : 423);
+      expect(label!.top).toBeGreaterThan(wide ? 0 : 73);
+      expect(label!.bottom).toBeLessThan(wide ? 60 : 117);
+      if (year === 12) await page.locator("canvas").screenshot({ path: `../../docs/review/karma-report-year-${wide ? "landscape" : "portrait"}.png` });
+    }
+  }
+});
