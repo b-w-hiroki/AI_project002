@@ -33,4 +33,6 @@
 
 ## 最終検証
 
-lint・typecheck・build成功、単体123件成功。Windows Chromium全68件成功（Canvas専用1件スキップ）、WebKit回帰36件成功。Linux最終[Browser E2E](https://github.com/b-w-hiroki/AI_project002/actions/runs/39452141365)も68件成功・1件スキップ、全6作品のchecks/E2E成功。ホーム基準画像はOS別の実画面で更新し、比較許容差は維持。途中で既存の討伐テストの短い待機を検出し、ゲーム挙動は維持したまま結果をフレーム内で捕捉する検証へ変更。Chromium/WebKit各5並列の反復でも成功した。
+lint・typecheck・build成功、単体123件成功。Windows Chromium全68件成功（Canvas専用1件スキップ）、WebKit回帰36件成功。土台側の追加変更を統合する前のLinux全体[Browser E2E](https://github.com/b-w-hiroki/AI_project002/actions/runs/39452141365)も68件成功・1件スキップ、全6作品のchecks/E2E成功。ホーム基準画像はOS別の実画面で更新し、比較許容差は維持。途中で既存の討伐テストの短い待機を検出し、ゲーム挙動は維持したまま結果をフレーム内で捕捉する検証へ変更。Chromium/WebKit各5並列の反復でも成功した。
+
+その後、土台ブランチf33f570の追加修正を統合。レイド・年代記・回転待機の変更を維持して競合を解消した。統合後もlint/typecheck/build・単体123件成功、Windows Chromium/WebKit各8件成功。年代記のLinux基準を実画像で更新し、ゲームコード9579accと同一の検証用ブランチで[Linux限定検証8件](https://github.com/b-w-hiroki/AI_project002/actions/runs/39455004468)が成功。全6作品の全体再実行は統合前、統合後は影響箇所の限定検証として区別する。
