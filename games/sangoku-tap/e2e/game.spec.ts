@@ -121,6 +121,24 @@ async function tapPoint(page: Page, x: number, y: number) {
 
 const expeditionView = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("ExpeditionScene"), "view"));
 
+async function waitForLandscapeCamp(page: Page) {
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const landscapeRoot = scene.children.list.find(child =>
+      child.type === "Container" && child.depth === 5000 && child.visible,
+    ) as Phaser.GameObjects.Container | undefined;
+    const sortieZone = landscapeRoot?.list.find(child =>
+      child.type === "Zone" && child.x === 710 && child.y === 389 && !!child.input?.enabled,
+    );
+    return {
+      canvasWidth: canvas?.width ?? 0,
+      view: Reflect.get(scene, "view"),
+      sortieReady: !!sortieZone,
+    };
+  })).toEqual({ canvasWidth: 800, view: "camp", sortieReady: true });
+}
+
 async function checkFrame(page: Page, name: string) {
   await expect.poll(async () => {
     const box = await page.locator("canvas").boundingBox();
@@ -152,7 +170,7 @@ test("landscape home reaches formation and battle without a rotation blocker", a
 
   await tapPoint(page, 628, 298);
   await expect.poll(() => expeditionView(page)).toBe("camp");
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("ExpeditionScene");
     const root = Reflect.get(scene, "root") as Phaser.GameObjects.Container | undefined;
@@ -173,7 +191,7 @@ test("touch opens campaign and starts an expedition after rotation", async ({ pa
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await checkFrame(page, "portrait-campaign");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   const before = await page.locator("canvas").screenshot();
   await tapPoint(page, 700, 389);
   await expect.poll(async () => !(await page.locator("canvas").screenshot()).equals(before)).toBe(true);
@@ -241,7 +259,7 @@ test("expedition result is visually reviewable after a clear", async ({ page }) 
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await tapPoint(page, 700, 389);
   await expect.poll(() => expeditionView(page)).toBe("road");
   await page.evaluate(() => {
@@ -259,7 +277,7 @@ test("regional gatekeepers keep distinct chapter identity", async ({ page }) => 
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await tapPoint(page, 700, 389);
   await expect.poll(() => expeditionView(page)).toBe("road");
 
@@ -301,7 +319,7 @@ test("gatekeeper clear uses the dedicated strike cinematic", async ({ page }) =>
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await tapPoint(page, 700, 389);
   await expect.poll(() => expeditionView(page)).toBe("road");
 
@@ -328,7 +346,7 @@ test("small skirmish win shows attack and hit impact", async ({ page }) => {
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await tapPoint(page, 700, 389);
   await expect.poll(() => expeditionView(page)).toBe("road");
 
@@ -432,7 +450,7 @@ test("defeat result shows secured coins instead of projected loot", async ({ pag
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+  await waitForLandscapeCamp(page);
   await tapPoint(page, 700, 389);
   await expect.poll(() => expeditionView(page)).toBe("road");
   const labels = await page.evaluate(() => {
