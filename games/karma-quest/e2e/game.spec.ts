@@ -2328,9 +2328,23 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
   await tapPoint(page, 225, 568);
   const cheers = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "cheerCount"));
   await expect.poll(cheers).toBe(1);
-  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 1; });
-  await expect.poll(() => page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult"))).toBe(true);
-  await page.evaluate(() => { window.__qaGame.scene.getScene("GameScene").time.timeScale = 0; });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    // Freeze in the result's own frame, before the 700ms report transition.
+    // A remote browser poll can miss that interval on a loaded CI runner.
+    const freezeResult = () => {
+      if (!Reflect.get(scene, "currentBattleResult")) return;
+      scene.time.timeScale = 0;
+      scene.events.off("postupdate", freezeResult);
+    };
+    scene.events.on("postupdate", freezeResult);
+    scene.time.timeScale = 1;
+  });
+  // Phaser time advances with rendered frames, which can lag wall time on CI.
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return !!Reflect.get(scene, "currentBattleResult") && scene.time.timeScale === 0;
+  }), { timeout: 15000 }).toBe(true);
   await expect.poll(() => page.evaluate(() => window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(false);
   const state = () => page.evaluate(() => {
     const found: { text: string; alpha: number; enabled: boolean }[] = [];
