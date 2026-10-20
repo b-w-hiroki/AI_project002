@@ -208,7 +208,7 @@ test("English fallback localizes the title and first request flow", async ({ pag
   expect(state.faction).toMatch(/Faction/);
 });
 
-test("common buttons only confirm the pointer that pressed them", async ({ page }) => {
+test("common buttons only confirm the pointer that pressed them", { tag: "@webkit-regression" }, async ({ page }) => {
   await tapPoint(page, 47, 253);
   const emit = (event: string, id: number) => page.evaluate(({ event, id }) => {
     let target: Phaser.GameObjects.GameObject | undefined;
@@ -243,7 +243,7 @@ test("common buttons only confirm the pointer that pressed them", async ({ page 
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-pointer-owner.png" });
 });
 
-test("sound settings remain usable when their storage access is denied", async ({ page }) => {
+test("sound settings remain usable when their storage access is denied", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.addInitScript(() => {
     const read = Storage.prototype.getItem;
     const write = Storage.prototype.setItem;
@@ -488,7 +488,7 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
-test("custom selections only confirm their pressing pointer", async ({ page }) => {
+test("custom selections only confirm their pressing pointer", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   const emit = (name: string, event: string, id: number) => page.evaluate(({ name, event, id }) => {
     let target: Phaser.GameObjects.GameObject | undefined;
@@ -552,7 +552,7 @@ test("custom selections only confirm their pressing pointer", async ({ page }) =
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-selection-pointer-owner.png" });
 });
 
-test("landscape report marks the selected deity and preserves it through rotation", async ({ page }) => {
+test("landscape report marks the selected deity and preserves it through rotation", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -606,7 +606,7 @@ test("landscape report marks the selected deity and preserves it through rotatio
   await expect.poll(labels).toEqual(["✓ 軍神", "慈愛神"]);
 });
 
-test("report action explains empty selection and reflects the selected count", async ({ page }) => {
+test("report action explains empty selection and reflects the selected count", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -645,7 +645,7 @@ test("report action explains empty selection and reflects the selected count", a
   await expect.poll(() => phase(page)).not.toBe("report");
 });
 
-test("landscape report shows the authoritative evaluation preview", async ({ page }) => {
+test("landscape report shows the authoritative evaluation preview", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -684,7 +684,7 @@ test("landscape report shows the authoritative evaluation preview", async ({ pag
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-landscape-report-evaluation.png" });
 });
 
-test("report explains how to replace a full selection in both layouts", async ({ page }) => {
+test("report explains how to replace a full selection in both layouts", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -723,7 +723,7 @@ test("report explains how to replace a full selection in both layouts", async ({
   await expect.poll(async () => (await read()).hint).toContain("変更するには選択を外す");
 });
 
-test("report row frames redraw only when their selection changes", async ({ page }) => {
+test("report row frames redraw only when their selection changes", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await tapPoint(page, 225, 682);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -770,7 +770,7 @@ test("report row frames redraw only when their selection changes", async ({ page
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-row-redraw.png" });
 });
 
-test("home and report selections cancel interrupted presses", async ({ page }) => {
+test("home and report selections cancel interrupted presses", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
     const box = (await page.locator("canvas").boundingBox())!;
@@ -817,7 +817,7 @@ test("home and report selections cancel interrupted presses", async ({ page }) =
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-interrupted.png" });
 });
 
-test("interrupted choice presses cancel before a fresh tap", async ({ page }) => {
+test("interrupted choice presses cancel before a fresh tap", { tag: "@webkit-regression" }, async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -854,7 +854,7 @@ test("interrupted choice presses cancel before a fresh tap", async ({ page }) =>
   await expect.poll(() => phase(page)).toBe("reaction");
 });
 
-test("Canvas choice buttons darken on press and cancel on drag out", async ({ page, browserName }) => {
+test("Canvas choice buttons darken on press and cancel on drag out", { tag: "@webkit-regression" }, async ({ page, browserName }) => {
   test.skip(browserName !== "webkit", "Canvas fallback regression");
   await useNativePortrait(page);
   await page.evaluate(async () => {
@@ -982,6 +982,18 @@ test("home navigation opens and closes information without starting a journey be
 });
 
 test("home information survives rotation and closes across both layouts", async ({ page }) => {
+  const rotate = async (viewport: { width: number; height: number }) => {
+    await page.setViewportSize(viewport);
+    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(viewport.width > viewport.height ? 800 : 450);
+    await page.evaluate(() => new Promise<void>(resolve => {
+      const scale = window.__qaGame.scale;
+      let timer: ReturnType<typeof setTimeout>;
+      const settled = () => { scale.off("resize", changed); resolve(); };
+      const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
+      scale.on("resize", changed);
+      changed();
+    }));
+  };
   const visiblePanel = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const values: string[] = [];
@@ -999,7 +1011,7 @@ test("home information survives rotation and closes across both layouts", async 
   await tapPoint(page, 47, 253);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-portrait.png" });
-  await page.setViewportSize({ width: 844, height: 390 });
+  await rotate({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await tapPoint(page, 591, 397);
@@ -1008,22 +1020,22 @@ test("home information survives rotation and closes across both layouts", async 
   await tapPoint(page, 400, 316);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("karma_quest_sound_v1"))).toBe("off");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-landscape.png" });
-  await page.setViewportSize({ width: 320, height: 568 });
+  await rotate({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("効果音 OFF");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-compact.png" });
-  await page.setViewportSize({ width: 844, height: 390 });
+  await rotate({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await tapPoint(page, 400, 385);
   await expect.poll(visiblePanel).toEqual([]);
-  await page.setViewportSize({ width: 320, height: 568 });
+  await rotate({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
   await expect.poll(visiblePanel).toEqual([]);
   await tapPoint(page, 225, 758);
   await expect.poll(visiblePanel).toContain("カイトの能力");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-character-rotated.png" });
-  await page.setViewportSize({ width: 844, height: 390 });
+  await rotate({ width: 844, height: 390 });
   await expect.poll(visiblePanel).toContain("カイトの能力");
   await tapPoint(page, 400, 385);
   await expect.poll(visiblePanel).toEqual([]);
@@ -1156,7 +1168,7 @@ test("league columns remain separated on compact screens and rotation", async ({
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBe(String(Number.MAX_SAFE_INTEGER));
 });
 
-test("large raid counters fit mobile panels without changing saved values", async ({ page }) => {
+test("large raid counters fit mobile panels without changing saved values", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_solo_raid_v1", JSON.stringify({ level: 100000000, hp: 0, defeats: 99999999 }));
     localStorage.setItem("karma_quest_total_eval_v1", "0");
@@ -1192,6 +1204,7 @@ test("large raid counters fit mobile panels without changing saved values", asyn
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(async () => (await labels()).map(label => label.text)).toContain("評価 +20億 獲得。Lv.1億 が出現！");
+  await expect.poll(async () => (await labels()).every(label => label.left >= 80 && label.right <= 720)).toBe(true);
   for (const label of await labels()) {
     expect(label.left, label.text).toBeGreaterThanOrEqual(80);
     expect(label.right, label.text).toBeLessThanOrEqual(720);
@@ -1309,7 +1322,7 @@ test("raid defeat and reward feedback survive rotation without duplicate rewards
   expect((await raidText()).join(" ")).not.toContain("獲得");
 });
 
-test("corrupt raid level cannot manufacture a claimable defeat after reload", async ({ page }) => {
+test("corrupt raid level cannot manufacture a claimable defeat after reload", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_solo_raid_v1", '{"level":0,"hp":0,"defeats":9}');
     localStorage.setItem("karma_quest_total_eval_v1", "40");
@@ -1328,7 +1341,7 @@ test("corrupt raid level cannot manufacture a claimable defeat after reload", as
   expect(save).toEqual({ raid: { level: 1, defeats: 0, hp: 800, maxHp: 900 }, evaluation: 40 });
 });
 
-test("incomplete raid save recovers without granting an unearned reward", async ({ page }) => {
+test("incomplete raid save recovers without granting an unearned reward", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_solo_raid_v1", '{"level":3,"defeats":2}');
     localStorage.setItem("karma_quest_total_eval_v1", "0");
@@ -1456,7 +1469,7 @@ test("portrait battle keeps the approved visual mock", async ({ page }) => {
   });
 });
 
-test("portrait report preserves selection limits and rotation state", async ({ page }) => {
+test("portrait report preserves selection limits and rotation state", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.evaluate(async () => {
     const scene = window.__qaGame.scene.getScene("GameScene");

@@ -1,0 +1,23 @@
+{
+  "summary": "Keep large Karma raid counters inside the portrait WebKit safe inset",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The raid flow, values, and persistence behavior are unchanged."
+      },
+      "design": {
+        "status": "updated",
+        "reason": "The portrait boss label now uses 22 px type to preserve the existing 40 px tested canvas inset on Linux WebKit."
+      }
+    }
+  },
+  "validation": [
+    "The large raid counter WebKit regression keeps every raid modal label within its asserted portrait and landscape bounds.",
+    "The rotation assertion waits for the landscape raid modal bounds instead of sampling the outgoing portrait modal.",
+    "The saved raid values remain unchanged across portrait and landscape layouts."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices and external portal previews remain unverified."
+  ]
+}
