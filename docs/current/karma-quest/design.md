@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+縦報告のpreviewはGameScene.reportPreview.textの最初の句点の後に改行を加える。表示層だけで文の区切りを整え、横画面と計算元の文字列は維持する。報告の画像比較では選択案内・CTA・評価と説明の文言も検査し、画素許容差による文字差分の見逃しを防ぐ。
 reportSubmitting中は縦横の記録Zoneと横の神様Zoneのinput.enabledをfalseにし、縦の神様CTAはsetBusyで無効化する。状態解除後のrefreshJourneyで復帰する。選択枠の描画キャッシュより前に入力可否を更新し、枠の再描画が不要な場合も入力状態を同期する。
 GameScene.reportSubmittingは報告確定から次年遷移までの表示用状態。評価確定後にtrue、500ms後のnextStage直前とScene作成時にfalseへ戻す。日本語の縦横Journeyはこの間もreportを表示し、CTAを無効化する。入力の確定可否は既存phaseガードで管理し、評価を表示側で再加算しない。
 報告CTAの無効化は親Containerのalphaを下げず、共通buttonのsetBusyを利用する。文字を不透明に保ち、Graphicsの暗い面とZoneの入力無効化を同期する。選択件数が0から変化した時に通常表示へ戻す。
