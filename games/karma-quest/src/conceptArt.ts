@@ -1283,7 +1283,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   requestCard(scene, report, 225, 400, 426, 772);
   hudPlate(scene, report, 225, 72, 396, 90);
   text(scene, report, 225, 58, "神様への報告", 30);
-  text(scene, report, 225, 91, "この年の出来事を、年代記へ", 20, "#fff3ce");
+  const reportYear = text(scene, report, 225, 91, "", 20, "#fff3ce").setName("report-year");
   const selectionHint = text(scene, report, 225, 151, "出来事を最大2つ選び、神様へ報告", 21, "#43382e", "700", 380).setName("report-selection-hint");
   const gods = ["valor", "mercy"] as const;
   const godLabels = gods.map((god, i) => button(scene, report, 127 + i * 196, 213, 184, 56, DEITIES[god].name, 0x0758a4,
@@ -1319,6 +1319,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       (cheerLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
     }
     if (report.visible) {
+      reportYear.setText(`${scene.stage ?? 1}年目の出来事を、年代記へ`);
       const source = Reflect.get(scene, "highlightRows") as Row[];
       rows.forEach(({ layer, bg, label, y, hit }, i) => {
         hit.input!.enabled = !scene.reportSubmitting;
@@ -1367,7 +1368,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const cheerCount = text(scene, battle, 591, 314, "", 22, "#fff3ce", "700", 350);
   const cheerAction = scene.add.container(0, 0); battle.add(cheerAction);
   const cheerLabel = button(scene, cheerAction, 591, 396, 382, 80, "おうえん！", 0x0758a4, () => invoke(scene, "onCheerTap"), undefined, false);
-  text(scene, report, 400, 36, "神様への報告", 30);
+  const reportYear = text(scene, report, 400, 36, "", 30).setName("report-year");
   const selectionHint = text(scene, report, 400, 77, "出来事を最大2つ選び、報告する神様を選んでください", 21).setName("report-selection-hint");
   requestCard(scene, report, 215, 271, 400, 330);
   requestCard(scene, report, 609, 240, 366, 270);
@@ -1407,6 +1408,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   root.setData("refreshJourney", () => {
     encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report" || !!scene.reportSubmitting);
     if (report.visible) {
+      reportYear.setText(`${scene.stage ?? 1}年目 · 神様への報告`);
       for (const { hit } of godChoices) hit.input!.enabled = !scene.reportSubmitting;
       const selectedGod = Reflect.get(scene, "deity") as Deity;
       if (selectedGod !== renderedGod) {

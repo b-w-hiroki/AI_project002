@@ -40,6 +40,7 @@ buildRaidModalは魔王情報、HP、攻撃予測、報酬CTA、操作結果の�
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 ## 描画・検証
+縦横のreport-yearはrefreshJourneyでGameScene.stageを参照して更新する。独立した年カウンターや保存キーは追加しない。1年目と12年目で回転後の文言と見出し領域内の文字境界をE2E検査する。
 横討伐のcheerCountの背面へ既存hudPlateを追加する。中心(591,314)、374×48設計px、結果カード下端278から12px、CTA上端356まで18pxの間隔を取る。Canvasでも通常fillStyleの濃色下地を持ち、新規画像は追加しない。
 縦横JourneyのcheerLabelはcurrentBattleResultから文言とsetBusyを同期する。親Containerのalphaを下げず、共通CTAの暗い面と入力無効化を利用する。戦闘時計・報告への遷移・声援の計算はGameSceneに維持する。
 縦報告のpreviewはGameScene.reportPreview.textの最初の句点の後に改行を加える。表示層だけで文の区切りを整え、横画面と計算元の文字列は維持する。報告の画像比較では選択案内・CTA・評価と説明の文言も検査し、画素許容差による文字差分の見逃しを防ぐ。
