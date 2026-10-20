@@ -1,14 +1,28 @@
 {
   "summary": "ホームの縦横ナビを指離し確定へ統一し、依頼文と準備中表示を整理",
-  "areas": {"karma-quest": {
-    "spec": {"status":"updated","reason":"18項目のナビ確定・中断規則と依頼改行・準備中表示を記録"},
-    "design": {"status":"updated","reason":"ownedTap再利用と表示用改行、全8依頼・ナビの境界と操作検査を記録"}
-  }},
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "18項目のナビ確定・中断規則と依頼改行・準備中表示を記録"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "ownedTap再利用と表示用改行、全8依頼・ナビの境界と操作検査を記録"
+      }
+    }
+  },
   "validation": [
-    "Chromium/WebKitで既存のナビ関連4件と追加の押下キャンセル1件成功",
-    "全8依頼の原文一致・2行以内・枠内の検査を両ブラウザで成功",
-    "Windowsホーム基準画像2枚を実画像確認後に更新。許容差は変更なし",
+    "lint・typecheck・build成功、単体123件成功",
+    "Windows Chromium全68件成功・1件スキップ（Canvas専用検査）。WebKit CI相当の回帰36件成功",
+    "全8依頼の原文一致・2行以内・枠内検査を両ブラウザで成功。ナビ18項目の押下キャンセル・実タップも検証",
+    "Windowsホーム基準2枚とLinux基準1枚を実画像確認後に更新。比較許容差は変更なし",
+    "Linux初回は旧ホーム画像基準との差分のみ失敗。再実行で既存の討伐結果待ち5秒の不足を検出し、フレーム内捕捉と15秒待機へ修正。Chromium/WebKitそれぞれ5並列反復成功",
+    "Linux最終run 39452141365は68件成功・1件スキップ。全6作品のchecksとE2Eすべて成功",
     "docs/review/karma-flow-audit-2026-10-21.mdに6画面の実画像と確認範囲を記録"
   ],
-  "limitations": ["最終ビルドとLinux画像比較は検証中", "実機・外部Portal未確認。全作品の改善点ゼロを意味しない"]
+  "limitations": [
+    "物理iOS Safari / Android Chrome・外部Portal未確認。未マージ・未公開",
+    "レビューはKarma Questの6画面。全作品・全状態の改善点ゼロやアクセシビリティ完全適合は認定しない"
+  ]
 }

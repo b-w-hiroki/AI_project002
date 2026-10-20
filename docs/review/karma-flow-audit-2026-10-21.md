@@ -30,3 +30,7 @@
 - 物理iOS Safari / Android Chrome、外部Portalは未確認。RCの公開判定は保留。
 - スクリーンリーダー、キーボードのみの操作、OS文字拡大への対応をスクリーンショットから認定しない。
 - 全画面・全作品の「改善点ゼロ」とは判定しない。新機能や演出全面刷新は今回のRC修正に混ぜない。
+
+## 最終検証
+
+lint・typecheck・build成功、単体123件成功。Windows Chromium全68件成功（Canvas専用1件スキップ）、WebKit回帰36件成功。Linux最終[Browser E2E](https://github.com/b-w-hiroki/AI_project002/actions/runs/39452141365)も68件成功・1件スキップ、全6作品のchecks/E2E成功。ホーム基準画像はOS別の実画面で更新し、比較許容差は維持。途中で既存の討伐テストの短い待機を検出し、ゲーム挙動は維持したまま結果をフレーム内で捕捉する検証へ変更。Chromium/WebKit各5並列の反復でも成功した。
