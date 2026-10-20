@@ -206,7 +206,7 @@ function buildRaidModal(
   const panelH = portrait ? 560 : 382;
   requestCard(scene, modal, cx, cy, panelW, panelH);
   text(scene, modal, cx, portrait ? 152 : 66, "異界の魔王襲来", portrait ? 30 : 28, "#35281e", "900");
-  const boss = text(scene, modal, cx, portrait ? 216 : 118, "", portrait ? 23 : 22, "#5b2334", "900").setStroke("#5b2334", 0);
+  const boss = text(scene, modal, cx, portrait ? 216 : 118, "", 22, "#5b2334", "900").setStroke("#5b2334", 0);
   const detail = text(scene, modal, cx, portrait ? 290 : 184, "", portrait ? 20 : 19, "#43382e", "700", portrait ? 330 : 560);
   const hpBg = scene.add.graphics();
   const hpFill = scene.add.graphics();
