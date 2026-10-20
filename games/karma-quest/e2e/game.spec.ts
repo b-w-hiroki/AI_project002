@@ -208,6 +208,41 @@ test("English fallback localizes the title and first request flow", async ({ pag
   expect(state.faction).toMatch(/Faction/);
 });
 
+test("common buttons only confirm the pointer that pressed them", async ({ page }) => {
+  await tapPoint(page, 47, 253);
+  const emit = (event: string, id: number) => page.evaluate(({ event, id }) => {
+    let target: Phaser.GameObjects.GameObject | undefined;
+    const visit = (node: Phaser.GameObjects.GameObject) => {
+      if (Reflect.get(node, "visible") === false) return;
+      if (node.name.startsWith("cta:効果音")) target = node;
+      if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+    };
+    window.__qaGame.scene.getScene("GameScene").children.list.forEach(visit);
+    if (!target) throw new Error("Visible sound control missing");
+    target.emit(event, { id });
+  }, { event, id });
+  const enabled = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "isSoundEnabled").call(scene);
+  });
+  await emit("pointerdown", 1);
+  await emit("pointerdown", 2);
+  await emit("pointerup", 2);
+  expect(await enabled()).toBe(true);
+  await emit("pointerout", 2);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await emit("pointerdown", 1);
+  await emit("pointerout", 1);
+  await emit("pointerup", 1);
+  expect(await enabled()).toBe(false);
+  await tapPoint(page, 225, 475);
+  expect(await enabled()).toBe(true);
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-pointer-owner.png" });
+});
+
 test("sound settings remain usable when their storage access is denied", async ({ page }) => {
   await page.addInitScript(() => {
     const read = Storage.prototype.getItem;
