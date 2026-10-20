@@ -1534,7 +1534,7 @@ test("portrait report preserves selection limits and rotation state", { tag: "@w
   });
   await expect.poll(() => phase(page)).toBe("report");
   const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
-  const targets = await page.evaluate(() => {
+  const readTargets = () => page.evaluate(() => {
     const found: Array<{ x: number; y: number; width: number; height: number }> = [];
     const walk = (items: Phaser.GameObjects.GameObject[]) => {
       for (const item of items) {
@@ -1549,6 +1549,8 @@ test("portrait report preserves selection limits and rotation state", { tag: "@w
     walk(window.__qaGame.scene.getScene("GameScene").children.list);
     return found.sort((a, b) => a.x - b.x);
   });
+  await expect.poll(async () => (await readTargets()).length).toBe(2);
+  const targets = await readTargets();
   expect(targets).toHaveLength(2);
   const box = (await page.locator("canvas").boundingBox())!;
   for (const target of targets) {
@@ -2332,8 +2334,11 @@ test("battle cheer completion remains readable and resets next battle", { tag: "
     return found;
   });
   for (const wide of [false, true]) {
-    if (wide) await page.setViewportSize({ width: 844, height: 390 });
-    await expect.poll(state).toEqual([{ text: "討伐終了", alpha: 1, enabled: false }]);
+    if (wide) {
+      await page.setViewportSize({ width: 844, height: 390 });
+      await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
+    }
+    await expect.poll(state, { timeout: 10_000 }).toEqual([{ text: "討伐終了", alpha: 1, enabled: false }]);
     await tapPoint(page, wide ? 591 : 225, wide ? 396 : 568);
     expect(await cheers()).toBe(1);
     await page.locator("canvas").screenshot({ path: `../../docs/review/karma-cheer-panel-${wide ? "landscape" : "portrait"}.png` });
