@@ -419,6 +419,53 @@ test("touch starts a journey and a choice records a deed after rotation", async 
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/landscape-after-choice.png" });
 });
 
+test("home and report selections cancel interrupted presses", async ({ page }) => {
+  await useNativePortrait(page);
+  const interrupt = async (x: number, y: number, kind: "blur" | "hidden") => {
+    const box = (await page.locator("canvas").boundingBox())!;
+    const size = await page.locator("canvas").evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+    await page.mouse.move(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+    await page.mouse.down();
+    await page.evaluate(kind => {
+      if (kind === "blur") {
+        window.dispatchEvent(new Event("blur")); window.dispatchEvent(new Event("focus"));
+      } else {
+        window.__qaGame.events.emit("hidden"); window.__qaGame.events.emit("visible");
+      }
+    }, kind);
+    await page.mouse.up();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  };
+  await interrupt(225, 682, "blur");
+  expect(await phase(page)).toBe("title");
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "deity", "valor");
+    Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
+  });
+  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
+  for (const wide of [false, true]) {
+    await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    for (const kind of ["blur", "hidden"] as const) {
+      await interrupt(wide ? 215 : 225, wide ? 150 : 291, kind);
+      expect(await selected()).toBe(0);
+    }
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    expect(await selected()).toBe(1);
+    await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
+    expect(await selected()).toBe(0);
+  }
+  await interrupt(699, 144, "hidden");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("valor");
+  await tapPoint(page, 699, 144);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"))).toBe("mercy");
+  await page.locator("canvas").screenshot({ path: "../../docs/review/karma-report-interrupted.png" });
+});
+
 test("interrupted choice presses cancel before a fresh tap", async ({ page }) => {
   await useNativePortrait(page);
   await page.evaluate(async () => {

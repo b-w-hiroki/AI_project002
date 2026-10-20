@@ -444,6 +444,17 @@ function metricChip(scene: Phaser.Scene, root: Phaser.GameObjects.Container, x: 
   return text(scene, root, x + 29, y, value, 22, "#17663f", "900").setStroke("#17663f", 0).setName(`stat-value:${label}`);
 }
 
+function cancelOnInterruption(scene: Runtime, target: Phaser.GameObjects.GameObject, cancel: () => void): void {
+  scene.scale.on(Phaser.Scale.Events.RESIZE, cancel);
+  scene.game.events.on(Phaser.Core.Events.BLUR, cancel);
+  scene.game.events.on(Phaser.Core.Events.HIDDEN, cancel);
+  target.once(Phaser.GameObjects.Events.DESTROY, () => {
+    scene.scale.off(Phaser.Scale.Events.RESIZE, cancel);
+    scene.game.events.off(Phaser.Core.Events.BLUR, cancel);
+    scene.game.events.off(Phaser.Core.Events.HIDDEN, cancel);
+  });
+}
+
 function button(
   scene: Runtime,
   root: Phaser.GameObjects.Container,
@@ -554,14 +565,7 @@ function button(
     if (!processing && !busy) paint("idle");
   };
   // Resizing or leaving the window must not leave a pending click behind.
-  scene.scale.on(Phaser.Scale.Events.RESIZE, cancelPress);
-  scene.game.events.on(Phaser.Core.Events.BLUR, cancelPress);
-  scene.game.events.on(Phaser.Core.Events.HIDDEN, cancelPress);
-  zone.once(Phaser.GameObjects.Events.DESTROY, () => {
-    scene.scale.off(Phaser.Scale.Events.RESIZE, cancelPress);
-    scene.game.events.off(Phaser.Core.Events.BLUR, cancelPress);
-    scene.game.events.off(Phaser.Core.Events.HIDDEN, cancelPress);
-  });
+  cancelOnInterruption(scene, zone, cancelPress);
   return labelText;
 }
 
@@ -797,6 +801,7 @@ function buildTitle(scene: Runtime): Phaser.GameObjects.Container {
   let startArmed = false;
   start.on("pointerdown", () => { startArmed = true; });
   start.on("pointerout", () => { startArmed = false; });
+  cancelOnInterruption(scene, start, () => { startArmed = false; });
   start.on("pointerup", () => { if (startArmed) { startArmed = false; invoke(scene, "startRun"); } });
   root.add(start);
 
@@ -1270,6 +1275,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
     const label = text(scene, layer, 225, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(225, y, 374, 64).setName(`report-row-portrait:${i}`).setInteractive();
     let armed = false;
+    cancelOnInterruption(scene, hit, () => { armed = false; });
     hit.on("pointerdown", () => { armed = true; });
     hit.on("pointerout", () => { armed = false; });
     hit.on("pointerup", () => {
@@ -1351,6 +1357,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     const label = text(scene, layer, 215, y, "", 21, "#43382e", "700", 330);
     const hit = scene.add.zone(215, y, 374, 72).setName(`report-row-wide:${i}`).setInteractive({ useHandCursor: true });
     let armed = false;
+    cancelOnInterruption(scene, hit, () => { armed = false; });
     hit.on("pointerdown", () => { armed = true; });
     hit.on("pointerout", () => { armed = false; });
     hit.on("pointerup", () => {
@@ -1368,6 +1375,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
     text(scene, report, x, 144, DEITIES[god].name, 25, "#35281e");
     const hit = scene.add.zone(x, 144, 162, 60).setName(`report-god-wide:${god}`).setInteractive({ useHandCursor: true });
     let armed = false;
+    cancelOnInterruption(scene, hit, () => { armed = false; });
     hit.on("pointerdown", () => { armed = true; });
     hit.on("pointerout", () => { armed = false; });
     hit.on("pointerup", () => {
