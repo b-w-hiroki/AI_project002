@@ -1,0 +1,11 @@
+{
+  "summary": "報告確定後も画面を保持して送信完了を示す",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "updated", "reason": "次年遷移まで報告画面と送信完了表示を保持する動作を追加した"},
+      "design": {"status": "updated", "reason": "報告確定から次年までの表示状態と初期化・解除の責務を記録した"}
+    }
+  },
+  "validation": ["lint・typecheck・build、単体122件成功", "Chromium・WebKitで報告待機中の表示、回転、二重加算防止、次年遷移を確認。WebKitで既存の選択案内テストも成功", "docs/review/karma-report-sent-portrait.pngとkarma-report-sent-landscape.pngを目視確認"],
+  "limitations": ["待機中の検査はScene時計を停止して行い、再開後の次年遷移を確認", "物理iOS/Android・外部Portal未確認"]
+}

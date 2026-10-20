@@ -17,6 +17,7 @@ type SceneMethod = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type MethodTable = Record<string, SceneMethod | undefined>;
 type Runtime = Phaser.Scene & {
   lang?: "ja" | "en";
+  reportSubmitting?: boolean;
   phase?: "title" | "karma" | "reaction" | "encounter" | "battle" | "report" | "final" | "transition";
   stage?: number;
   karma?: KarmaState;
@@ -1307,7 +1308,7 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
   const submitLabel = button(scene, submit, 225, 680, 374, 72, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   text(scene, report, 225, 752, "あなたが紡いだ、この世界の物語", 19, "#705631");
   root.setData("refreshJourney", () => {
-    battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report" || !!scene.reportSubmitting);
     if (battle.visible) {
       refreshHeroKarmaVisual(scene, battle);
       const source = Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container;
@@ -1332,8 +1333,8 @@ function buildPortraitJourney(scene: Runtime): Phaser.GameObjects.Container {
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
       const selectedCount = source.filter(row => row.selected).length;
       selectionHint.setText(selectedCount >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、神様へ報告");
-      const enabled = selectedCount > 0;
-      submitLabel.setText(enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
+      const enabled = selectedCount > 0 && !scene.reportSubmitting;
+      submitLabel.setText(scene.reportSubmitting ? "報告しました" : enabled ? `${selectedCount}件を報告する` : "出来事を選んでください");
       (submitLabel.getData("setBusy") as (value: boolean) => void)(!enabled);
     }
   });
@@ -1402,7 +1403,7 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
   const submitLabel = button(scene, submitAction, 609, 405, 358, 64, "報告する", 0x0758a4, () => invoke(scene, "onSubmitReport"), undefined, false).setName("report-submit-label");
   let renderedGod: Deity | undefined;
   root.setData("refreshJourney", () => {
-    encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report");
+    encounter.setVisible(scene.phase === "encounter"); battle.setVisible(scene.phase === "battle"); report.setVisible(scene.phase === "report" || !!scene.reportSubmitting);
     if (report.visible) {
       const selectedGod = Reflect.get(scene, "deity") as Deity;
       if (selectedGod !== renderedGod) {
@@ -1440,9 +1441,9 @@ function buildLandscapeJourney(scene: Runtime): Phaser.GameObjects.Container {
       });
       const count = source.filter(row => row.selected).length;
       selectionHint.setText(count >= 2 ? "2件選択中 · 変更するには選択を外す" : "出来事を最大2つ選び、報告する神様を選んでください");
-      submitLabel.setText(count > 0 ? `${count}件を報告する` : "出来事を選んでください");
+      submitLabel.setText(scene.reportSubmitting ? "報告しました" : count > 0 ? `${count}件を報告する` : "出来事を選んでください");
       preview.setText((Reflect.get(scene, "reportPreview") as Phaser.GameObjects.Text).text);
-      (submitLabel.getData("setBusy") as (value: boolean) => void)(count === 0);
+      (submitLabel.getData("setBusy") as (value: boolean) => void)(count === 0 || !!scene.reportSubmitting);
     }
   });
   return root;
@@ -1514,9 +1515,9 @@ function refresh(scene: Runtime): void {
   }
   const { width, height } = scene.scale.gameSize;
   const portrait = height >= width;
-  ui.portraitJourney?.setVisible(portrait && ["battle", "report"].includes(scene.phase ?? ""));
+  ui.portraitJourney?.setVisible(portrait && (["battle", "report"].includes(scene.phase ?? "") || !!scene.reportSubmitting));
   if (ui.portraitJourney?.visible) (ui.portraitJourney.getData("refreshJourney") as () => void)();
-  ui.landscapeJourney?.setVisible(!portrait && ["encounter", "battle", "report"].includes(scene.phase ?? ""));
+  ui.landscapeJourney?.setVisible(!portrait && (["encounter", "battle", "report"].includes(scene.phase ?? "") || !!scene.reportSubmitting));
   if (ui.landscapeJourney?.visible) (ui.landscapeJourney.getData("refreshJourney") as () => void)();
   for (const root of [ui.reactionRoot, ui.landscapeReaction?.reactionRoot, ui.finalRoot]) {
     const refreshArt = root?.getData("refreshOutcomeArt") as (() => void) | undefined;
