@@ -1667,7 +1667,7 @@ test("portrait final keeps the approved visual mock", async ({ page }) => {
   });
   expect(chronicleSpacing.gap).toBeGreaterThanOrEqual(2);
   expect(chronicleSpacing.replayBottom).toBeLessThanOrEqual(410);
-  expect(chronicleSpacing.replayFontSize).toBeGreaterThanOrEqual(14);
+  expect(chronicleSpacing.replayFontSize).toBeGreaterThanOrEqual(20);
   await page.locator("canvas").screenshot({
     path: "e2e/screenshots/portrait-final-chronicle.png",
     animations: "disabled",
@@ -2480,10 +2480,27 @@ test("landscape replay hints remain readable for every journey style", { tag: "@
     expect(hint.bottom).toBeLessThan(344);
     expect(hint.left).toBeGreaterThan(410);
     expect(hint.right).toBeLessThan(772);
-    if (accepted.length === 0) await page.locator("canvas").screenshot({ path: "../../docs/review/karma-replay-hint-landscape.png" });
+    await page.setViewportSize({ width: 456, height: 806 });
+    await expect.poll(async () => (await loadingFeedback(page)).texts).toContain(expected);
+    const portrait = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const root = scene.children.list.find(node => node.getData("refreshChronicle")) as Phaser.GameObjects.Container;
+      const label = root.getByName("chronicleReplayHint") as Phaser.GameObjects.Text;
+      const b = label.getBounds();
+      const record = (root.getByName("chronicleRecordCount") as Phaser.GameObjects.Text).getBounds();
+      return { size: parseFloat(String(label.style.fontSize)), left: b.left, right: b.right, gap: b.top - record.bottom, bottom: b.bottom };
+    });
+    expect(portrait.size).toBe(20);
+    expect(portrait.left).toBeGreaterThan(34);
+    expect(portrait.right).toBeLessThan(416);
+    expect(portrait.gap).toBeGreaterThanOrEqual(2);
+    expect(portrait.bottom).toBeLessThanOrEqual(410);
+    if (accepted.length === 0) await page.locator("canvas").screenshot({ path: "../../docs/review/karma-replay-hint-portrait.png" });
+    await page.setViewportSize({ width: 806, height: 456 });
+    await expect.poll(async () => (await read())?.text).toBe(expected);
   }
   await page.setViewportSize({ width: 456, height: 806 });
-  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("次の旅：選択方針を一つ決めて、結末を変えてみよう");
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("次の旅は、方針を決めて挑戦");
 });
 
 
