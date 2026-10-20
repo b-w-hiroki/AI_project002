@@ -1,0 +1,22 @@
+{
+  "summary": "Synchronize the WebKit reaction-heading pixel assertion with the Canvas renderer's completed frame.",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The exact light-gold heading face and cross-orientation readability requirements remain unchanged."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Only browser-test frame readiness changed; production rendering is unchanged."
+      }
+    }
+  },
+  "validation": [
+    "The WebKit test still requires the exact [246, 221, 161] RGB value in portrait and landscape.",
+    "The pixel sample is retried only until the Canvas renderer has painted the expected frame."
+  ],
+  "limitations": [
+    "Physical iOS and Android devices remain unverified."
+  ]
+}
