@@ -1,0 +1,202 @@
+{
+  "guardPoint": {
+    "x": 231.11999999999998,
+    "y": 635.04
+  },
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "samples": [
+    {
+      "phase": "before-press",
+      "keyDown": false,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 21,
+      "time": 745,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 22,
+      "time": 761,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 31,
+      "time": 880,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 57,
+      "time": 1148,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 109,
+      "time": 1656,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 212,
+      "time": 2665,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 316,
+      "time": 3679,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 415,
+      "time": 4687,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held",
+      "keyDown": true,
+      "guarding": false,
+      "crouching": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": true,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 516,
+      "time": 5702,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    }
+  ],
+  "evidenceType": "injected negative control, not the CI root cause"
+}

@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
@@ -800,7 +801,7 @@ test.describe("phone visual QA", () => {
     });
   });
 
-  test("mobile guard button holds and releases guard state", async ({ page }) => {
+  test("mobile guard button holds and releases guard state", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?visualqa=battle");
     await page.locator("canvas").waitFor();
@@ -814,26 +815,53 @@ test.describe("phone visual QA", () => {
       Reflect.get(window.__qaGame.scene.getScene("GameScene"), "crouching") as boolean
     )).toBe(false);
 
+    const samples: unknown[] = [];
+    const sample = async (phase: string) => {
+      const state = await page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        return {
+          keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
+          guarding: Reflect.get(scene, "guarding") as boolean,
+          crouching: Reflect.get(scene, "crouching") as boolean,
+          status: Reflect.get(scene, "status"),
+          styleChoosing: Reflect.get(scene, "styleChoosing"),
+          tipsVisible: Reflect.get(scene, "tipsVisible"),
+          summonOverlayVisible: Reflect.get(scene, "summonOverlayVisible"),
+          stageBuffOverlayVisible: Reflect.get(scene, "stageBuffOverlayVisible"),
+          sceneActive: scene.sys.isActive(), scenePaused: scene.sys.isPaused(),
+          frame: scene.game.loop.frame, time: scene.time.now,
+          visibility: document.visibilityState, focused: document.hasFocus(),
+          canvas: { width: scene.game.canvas.width, height: scene.game.canvas.height },
+        };
+      });
+      samples.push({ phase, ...state });
+      return state;
+    };
     const guardPoint = await canvasPoint(page, 268, 756);
-    await page.mouse.move(guardPoint.x, guardPoint.y);
-    await page.mouse.down();
-    await expect.poll(() => page.evaluate(() => {
-      const scene = window.__qaGame.scene.getScene("GameScene");
-      return {
-        keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
-        guarding: Reflect.get(scene, "guarding") as boolean,
-        crouching: Reflect.get(scene, "crouching") as boolean,
-      };
-    })).toEqual({ keyDown: true, guarding: true, crouching: false });
-
-    await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => {
-      const scene = window.__qaGame.scene.getScene("GameScene");
-      return {
-        keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
-        guarding: Reflect.get(scene, "guarding") as boolean,
-      };
-    })).toEqual({ keyDown: false, guarding: false });
+    const artifact = `e2e/screenshots/side-guard-${testInfo.project.name || "chromium"}-${testInfo.repeatEachIndex}`;
+    try {
+      await sample("before-press");
+      await page.mouse.move(guardPoint.x, guardPoint.y);
+      await page.mouse.down();
+      await expect.poll(async () => {
+        const { keyDown, guarding, crouching } = await sample("held");
+        return { keyDown, guarding, crouching };
+      }).toEqual({ keyDown: true, guarding: true, crouching: false });
+      await page.mouse.up();
+      await expect.poll(async () => {
+        const { keyDown, guarding } = await sample("released");
+        return { keyDown, guarding };
+      }).toEqual({ keyDown: false, guarding: false });
+    } catch (error) {
+      await mkdir("e2e/screenshots", { recursive: true });
+      await page.screenshot({ path: `${artifact}.png` }).catch(() => undefined);
+      throw error;
+    } finally {
+      await mkdir("e2e/screenshots", { recursive: true });
+      const path = `${artifact}.json`;
+      await writeFile(path, JSON.stringify({ guardPoint, viewport: page.viewportSize(), samples }, null, 2));
+      await testInfo.attach("guard-state", { path, contentType: "application/json" });
+    }
   });
 
   test("visual QA: game over hides touch controls", async ({ page }) => {

@@ -20,6 +20,8 @@
 [tests](../../../games/side-scroller/tests) と [E2E](../../../games/side-scroller/e2e/game.spec.ts) で通常・必要な旧経路、回転、移動、攻撃、表示するウェーブを検査する。
 [UI再設計](../../design/side-scroller-uiux-reboot.md) は詳細な意図の参照先。未実装案を現行仕様へ混ぜない。
 
+ガードE2Eは押下前・保持中・解放後のキーとガード状態に加え、画面停止条件・フレーム・Scene状態・フォーカス・CanvasサイズをJSONへ記録する。失敗時のスクリーンショットとともに既存のe2e/screenshots artifactへ保存し、再発時の切り分けに使う。合格条件と5秒の検査待機は変更しない。
+
 ## 確認範囲・保留
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
