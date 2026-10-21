@@ -2949,3 +2949,38 @@ test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").hp)).toBe(0);
   expect(await page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "raidPanel"))).toBe(false);
 });
+
+
+for (const hook of ["gameplayStart", "happytime"] as const) {
+  test(`portal ${hook} exception does not stop the journey`, { tag: "@webkit-regression" }, async ({ page }) => {
+    await page.addInitScript(failingHook => {
+      Reflect.set(window, "__portalFailures", 0);
+      const fail = () => {
+        Reflect.set(window, "__portalFailures", Number(Reflect.get(window, "__portalFailures")) + 1);
+        throw new Error("Portal notification unavailable");
+      };
+      Reflect.set(window, "CrazyGames", { SDK: {
+        init: async () => {}, user: { systemInfo: { locale: "ja" } },
+        game: { gameplayStart: () => {}, happytime: () => {}, [failingHook]: fail },
+      } });
+    }, hook);
+    await page.reload();
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    await tapPoint(page, 225, 682);
+    await expect.poll(() => phase(page)).toBe("karma");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(window, "__originalRandom", Math.random);
+      Math.random = () => 0; // Deterministic victory exercises happytime.
+      Reflect.get(scene, "showBattlePhase").call(scene);
+      scene.time.timeScale = 5;
+    });
+    await expect.poll(() => phase(page), { timeout: 10000 }).toBe("report");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult")?.win)).toBe(true);
+    expect(await page.evaluate(() => Reflect.get(window, "__portalFailures"))).toBe(1);
+    await page.evaluate(() => {
+      Math.random = Reflect.get(window, "__originalRandom");
+      window.__qaGame.scene.getScene("GameScene").time.timeScale = 1;
+    });
+  });
+}

@@ -90,11 +90,20 @@ export async function initCrazyGames(): Promise<boolean> {
   }
 }
 
+function notifyGame(method: keyof CrazyGamesSDK["game"]): void {
+  try { sdk?.game[method](); }
+  catch {
+    // Optional portal notifications must not interrupt scene creation or the
+    // victory-to-report transition. Keep the already selected locale stable.
+    sdk = null;
+  }
+}
+
 export const cg = {
-  gameplayStart: () => sdk?.game.gameplayStart(),
-  gameplayStop: () => sdk?.game.gameplayStop(),
+  gameplayStart: () => notifyGame("gameplayStart"),
+  gameplayStop: () => notifyGame("gameplayStop"),
   /** ポジティブな瞬間（購入成功など）に呼ぶとポータル側で演出・広告最適化に使われる */
-  happytime: () => sdk?.game.happytime(),
-  loadingStart: () => sdk?.game.loadingStart(),
-  loadingStop: () => sdk?.game.loadingStop(),
+  happytime: () => notifyGame("happytime"),
+  loadingStart: () => notifyGame("loadingStart"),
+  loadingStop: () => notifyGame("loadingStop"),
 };
