@@ -30,6 +30,8 @@ stateDiagram-v2
 画像準備中・失敗・再試行と、ページ停止／復帰時の重複選択をE2Eで検査する。
 [CrazyGames初期化](../../../games/karma-quest/src/platform/crazygames.ts) は8秒の待機上限を持つ。タイムアウト後の遅延完了で二重開始しない。
 
+outcomeLoaderはPromiseをpendingへ登録してから画像登録・開始を実行する。同期イベントによる失敗もpendingを確実に削除する。画像登録・開始の例外はfalseへ変換し、成功・失敗・shutdown共通の一度だけの後始末でリスナーとpendingを解除する。同じ画像の進行中要求は引き続き共有する。
+
 ## 永続化境界
 [progress.ts](../../../games/karma-quest/src/logic/progress.ts): karma_quest_best_stage_v1、karma_quest_total_eval_v1（数値文字列）。
 raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。maxHpはレベルから再導出する。
