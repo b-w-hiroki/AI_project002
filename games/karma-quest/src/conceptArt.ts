@@ -1,12 +1,14 @@
+import { withSaveLock } from "./logic/saveLock";
+import { claimStorage, claimReward } from "./logic/claimStorage";
 import Phaser from "phaser";
 import { deriveStats, dominantFaction, initialKarma, FACTION_LABEL, type Faction, type KarmaRequest, type KarmaState } from "./logic/karma";
 import { GameScene } from "./scenes/GameScene";
 import { PORTRAIT_BLUEPRINT } from "./portraitBlueprint";
 import { requestOutcome } from "./logic/requestOutcome";
-import { addTotalEvaluation, loadBestStage, loadTotalEvaluation } from "./logic/progress";
+import { hasUnavailableProgress, loadBestStage, loadTotalEvaluation } from "./logic/progress";
 import { formatLeague, leagueSnapshot } from "./logic/league";
 import { scoreDisplay } from "./logic/scoreDisplay";
-import { advanceRaid, attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
+import { attackRaid, loadRaid, raidDamage, raidReward, saveRaid } from "./logic/raid";
 import type { Encounter } from "./logic/encounter";
 import { DEITIES, type Deity } from "./logic/legend";
 import { replayPrompt, summarizeJourney } from "./logic/journeySummary";
@@ -214,24 +216,34 @@ function buildRaidModal(
   modal.add([hpBg, hpFill]);
   const actionResult = text(scene, modal, cx, portrait ? 425 : 278, "", portrait ? 18 : 17, "#7c3d2a", "800", portrait ? 330 : 520).setStroke("#7c3d2a", 0);
 
+  let actionPending = false;
+  let displayedBoss: { level: number; defeated: boolean } | undefined;
+  const storageError = () => {
+    scene.raidPanel = undefined;
+    modal.setVisible(false);
+    scene.homeInformation = { title: "保存できません", description: "レイドを中断しました。\n保存設定・空き容量を\n確認してお試しください。" };
+  };
   const refresh = () => {
-    const state = loadRaid(localStorage);
-    const stats = deriveStats(scene.karma ?? initialKarma());
-    const preview = raidDamage(stats);
-    const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
-    boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
-    detail.setText(
-      `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
-      `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
-      `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
-    );
-    hpBg.clear().fillStyle(0x3a2c31, 1)
-      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
-    hpFill.clear();
-    if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
-      .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
-    actionLabel?.setText(state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
-    actionResult.setText(scene.raidPanel?.lastAction ?? "");
+    try {
+      const state = loadRaid(claimStorage);
+      displayedBoss = { level: state.level, defeated: state.hp <= 0 };
+      const stats = deriveStats(scene.karma ?? initialKarma());
+      const preview = raidDamage(stats);
+      const ratio = state.maxHp > 0 ? Phaser.Math.Clamp(state.hp / state.maxHp, 0, 1) : 0;
+      boss.setText(`異界魔王 Lv.${scoreDisplay(state.level)}  ·  撃破 ${scoreDisplay(state.defeats)}`);
+      detail.setText(
+        `HP ${scoreDisplay(state.hp)} / ${scoreDisplay(state.maxHp)}\n` +
+        `現在の勇者なら 1回 約${scoreDisplay(preview)} ダメージ\n` +
+        `撃破報酬: 評価 +${scoreDisplay(raidReward(state))}`,
+      );
+      hpBg.clear().fillStyle(0x3a2c31, 1)
+        .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, portrait ? 300 : 490, 18, 9);
+      hpFill.clear();
+      if (ratio > 0) hpFill.fillStyle(0xa93b4c, 1)
+        .fillRoundedRect(cx - (portrait ? 150 : 245), portrait ? 356 : 235, (portrait ? 300 : 490) * ratio, 18, 9);
+      actionLabel?.setText(actionPending ? "保存待ち…" : state.hp <= 0 ? `評価 +${scoreDisplay(raidReward(state))} を受け取る` : "魔王へ攻撃");
+      actionResult.setText(scene.raidPanel?.lastAction ?? "");
+    } catch { storageError(); }
   };
 
   const actionLabel = button(
@@ -243,24 +255,38 @@ function buildRaidModal(
     portrait ? 72 : 62,
     "魔王へ攻撃",
     0x981d25,
-    () => {
-      const state = loadRaid(localStorage);
-      if (state.hp <= 0) {
-        const reward = raidReward(state);
-        addTotalEvaluation(reward);
-        const next = advanceRaid(state);
-        saveRaid(localStorage, next);
-        scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
-        scene.cameras.main.flash(180, 232, 196, 102);
-      } else {
-        const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
-        saveRaid(localStorage, result.next);
-        scene.raidPanel = { lastAction: result.defeated
-          ? `-${scoreDisplay(result.damage)}  魔王撃破！`
-          : `-${scoreDisplay(result.damage)} ダメージ` };
-        scene.cameras.main.shake(120, 0.004);
+    async () => {
+      if (actionPending || !displayedBoss) return;
+      actionPending = true;
+      actionLabel.setText("保存待ち…");
+      const expected = displayedBoss;
+      const panelAtPress = scene.raidPanel;
+      try {
+        await withSaveLock(() => {
+          if (scene.phase !== "title" || scene.raidPanel !== panelAtPress) return;
+          const state = loadRaid(claimStorage);
+          if (state.level !== expected.level || (state.hp <= 0) !== expected.defeated) return;
+          if (state.hp <= 0) {
+            if (hasUnavailableProgress()) throw new Error("Progress is session-only");
+            const claimed = claimReward();
+            if (!claimed) return;
+            const { reward, next } = claimed;
+            scene.raidPanel = { lastAction: `評価 +${scoreDisplay(reward)} 獲得。Lv.${scoreDisplay(next.level)} が出現！` };
+            scene.cameras.main.flash(180, 232, 196, 102);
+          } else {
+            const result = attackRaid(state, deriveStats(scene.karma ?? initialKarma()));
+            saveRaid(claimStorage, result.next);
+            scene.raidPanel = { lastAction: result.defeated
+              ? `-${scoreDisplay(result.damage)}  魔王撃破！`
+              : `-${scoreDisplay(result.damage)} ダメージ` };
+            scene.cameras.main.shake(120, 0.004);
+          }
+        });
+      } catch { if (scene.raidPanel === panelAtPress) storageError(); }
+      finally {
+        actionPending = false;
+        if (scene.raidPanel) refresh();
       }
-      refresh();
     },
     undefined,
     false,
@@ -293,7 +319,7 @@ function buildRaidModal(
     scene.homeInformation = undefined;
     scene.raidPanel = { lastAction: "" };
     refresh();
-    modal.setVisible(true);
+    modal.setVisible(!!scene.raidPanel);
   });
   parent.add(modal);
   return modal;
@@ -1494,12 +1520,44 @@ function build(scene: Runtime): MockUi {
   return ui;
 }
 
+function refreshEnglishStorageNotice(scene: Runtime): void {
+  const portrait = scene.scale.gameSize.height >= scene.scale.gameSize.width;
+  let root = scene.data.get("englishStorageNotice") as Phaser.GameObjects.Container | undefined;
+  if (scene.phase !== "title" || scene.homeInformation?.title !== "Progress is not saved") {
+    root?.setVisible(false);
+    return;
+  }
+  if (root && root.getData("portrait") !== portrait) { root.destroy(); root = undefined; }
+  if (!root) {
+    // The fallback landscape home is at depth 5200. Keep the modal above it.
+    root = scene.add.container(0, 0).setName("english-storage-notice").setDepth(10000);
+    root.setData("portrait", portrait);
+    const w = portrait ? 450 : 800, h = portrait ? 800 : 450;
+    root.add(scene.add.graphics().fillStyle(0x030a14, 0.84).fillRect(0, 0, w, h));
+    root.add(scene.add.zone(w / 2, h / 2, w, h).setInteractive());
+    requestCard(scene, root, w / 2, portrait ? 385 : 225, portrait ? 398 : 680, portrait ? 458 : 420);
+    text(scene, root, w / 2, portrait ? 204 : 65, "Progress is not saved", 28, "#35281e", "900", portrait ? 340 : 600);
+    text(scene, root, w / 2, portrait ? 358 : 200, "Progress stays in this tab only.\nReloading loses unsaved progress.\nCheck browser storage settings.", 23, "#43382e", "700", portrait ? 330 : 600);
+    button(scene, root, w / 2, portrait ? 551 : 380, 326, portrait ? 80 : 64, "Back to Home", 0x0758a4, () => { scene.homeInformation = undefined; }, undefined, false);
+    scene.data.set("englishStorageNotice", root);
+  }
+  root.setVisible(true);
+}
+
 function refresh(scene: Runtime): void {
+  if (scene.phase === "title" && hasUnavailableProgress()
+    && !scene.data.get("storageNoticeShown") && !scene.homeInformation && !scene.raidPanel) {
+    scene.data.set("storageNoticeShown", true);
+    scene.homeInformation = scene.lang === "en"
+      ? { title: "Progress is not saved", description: "Progress stays in this tab only.\nReloading loses unsaved progress.\nCheck browser storage settings." }
+      : { title: "進行は今回のみ保持", description: "端末に保存できません。\n再読み込みすると、未保存の\n到達年・評価は失われます。" };
+  }
   if (scene.phase !== "title") {
     scene.homeInformation = undefined;
     scene.raidPanel = undefined;
   }
   if (scene.lang === "en") {
+    refreshEnglishStorageNotice(scene);
     const ui = uiByScene.get(scene);
     if (ui) {
       for (const root of [

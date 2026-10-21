@@ -1,4 +1,6 @@
-/** ベスト到達ステージ・累計評価の永続化（localStorage）。Phaser非依存の純粋関数として分離 */
+import { withSaveLock } from "./saveLock";
+import { claimStorage } from "./claimStorage";
+/** ベスト到達ステージ・累計評価の永続化（localStorage）。Phaser非依存の保存ロジック */
 
 const BEST_STAGE_KEY = "karma_quest_best_stage_v1";
 const TOTAL_EVAL_KEY = "karma_quest_total_eval_v1";
@@ -9,7 +11,7 @@ function validCounter(value: number, maximum = Number.MAX_SAFE_INTEGER): boolean
   return Number.isSafeInteger(value) && value >= 0 && value <= maximum;
 }
 
-export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | "setItem"> = () => localStorage) {
+export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | "setItem"> = () => claimStorage) {
   const session = new Map<string, number>();
   const unavailable = new Set<string>();
 
@@ -68,7 +70,24 @@ export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | 
     return next;
   }
 
-  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation };
+  function useSessionOnly(): void {
+    loadBestStage();
+    loadTotalEvaluation();
+    unavailable.add(BEST_STAGE_KEY);
+    unavailable.add(TOTAL_EVAL_KEY);
+  }
+  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, useSessionOnly, hasUnavailableProgress: () => unavailable.size > 0 };
 }
 
-export const { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation } = createProgressStorage();
+const progress = createProgressStorage();
+export const { loadBestStage, loadTotalEvaluation, hasUnavailableProgress } = progress;
+export async function saveBestStage(stage: number): Promise<void> {
+  try { await withSaveLock(() => progress.saveBestStage(stage)); }
+  catch { progress.useSessionOnly(); progress.saveBestStage(stage); }
+}
+export async function addTotalEvaluation(amount: number): Promise<number> {
+  // The action itself absorbs storage failures. A lock failure instead opts the
+  // tab into session-only progress, never an unprotected persistent write.
+  try { return await withSaveLock(() => progress.addTotalEvaluation(amount)); }
+  catch { progress.useSessionOnly(); return progress.addTotalEvaluation(amount); }
+}

@@ -356,7 +356,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     // Best Year describes the furthest year reached, including interrupted runs.
-    saveBestStage(this.stage);
+    void saveBestStage(this.stage);
     this.showKarmaPhase();
   }
 
@@ -969,7 +969,7 @@ export class GameScene extends Phaser.Scene {
     this.submitButton.setEnabled(selected.length > 0);
   }
 
-  private onSubmitReport(): void {
+  private async onSubmitReport(): Promise<void> {
     if (this.phase !== "report") return;
     this.playSound(sfx.reportSubmit);
     const selected = this.highlightRows
@@ -985,14 +985,14 @@ export class GameScene extends Phaser.Scene {
       `${tr(this.lang, "第", "Year ")}${this.stage}${tr(this.lang, "年目", "")} · ${deityName(this.lang, this.deity)}\n${selected.map((d) => d.label).join(" / ")}`,
     );
     this.runEvaluation += evaluation;
-    addTotalEvaluation(evaluation);
+    this.reportSubmitting = true;
+    await addTotalEvaluation(evaluation);
     this.spawnFloatingText(
       CX,
       630,
       `${tr(this.lang, "評価", "Evaluation")} +${evaluation}`,
       hexToCss(THEME.accent),
     );
-    this.reportSubmitting = true;
     this.time.delayedCall(500, () => { this.reportSubmitting = false; this.nextStage(); });
   }
 
@@ -1113,7 +1113,7 @@ export class GameScene extends Phaser.Scene {
     this.battleGroup.setVisible(false);
     this.reportGroup.setVisible(false);
 
-    saveBestStage(TOTAL_STAGES);
+    void saveBestStage(TOTAL_STAGES);
     const faction = dominantFaction(this.karma);
 
     const heading = this.finalGroup.getByName(
