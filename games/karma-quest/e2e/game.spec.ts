@@ -2931,6 +2931,34 @@ test("save lock timeout keeps report visible and avoids duplicate submission", {
   expect(progress.records).toBe(1);
 });
 
+test("session-only progress bypasses subsequent lock waits", { tag: "@webkit-regression" }, async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const path = "/src/logic/progress.ts";
+    const progress = await import(path);
+    let release!: () => void;
+    let acquired!: () => void;
+    const ready = new Promise<void>(resolve => { acquired = resolve; });
+    const held = navigator.locks.request("karma_quest_progress_v1", () => new Promise<void>(resolve => {
+      release = resolve;
+      acquired();
+    }));
+    await ready;
+    try {
+      await progress.addTotalEvaluation(80); // First timeout switches to memory.
+      const completed = await Promise.race([
+        Promise.all([progress.addTotalEvaluation(20), progress.saveBestStage(4)]).then(() => true),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(false), 500)),
+      ]);
+      return {
+        completed, best: progress.loadBestStage(), total: progress.loadTotalEvaluation(),
+        queued: (await navigator.locks.query()).pending?.length,
+        saved: localStorage.getItem("karma_quest_total_eval_v1"),
+      };
+    } finally { release(); await held; }
+  });
+  expect(result).toEqual({ completed: true, best: 4, total: 100, queued: 0, saved: null });
+});
+
 test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_solo_raid_v1", '{"level":1,"hp":0,"maxHp":900,"defeats":0}');
