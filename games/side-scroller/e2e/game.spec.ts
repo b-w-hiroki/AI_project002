@@ -1001,3 +1001,35 @@ test("battle HUD reports the live wave without a false level or wave cap", async
   expect(labels.join(" ")).not.toMatch(/LV\.28|WAVE \d+\/3/);
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/side-live-hud-390x844.png", animations: "disabled" });
 });
+
+
+test("rapid re-press keeps the newest battle input held", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?visualqa=battle");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+  const results = await page.evaluate(async () => {
+    const path = "/src/mockBattleView.ts";
+    const { BattleInputAdapter } = await import(path);
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const adapter = new BattleInputAdapter(scene);
+    const original = window.requestAnimationFrame;
+    const queue: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = callback => { queue.push(callback); return queue.length; };
+    const flush = () => { queue.splice(0).forEach(callback => callback(performance.now())); };
+    try {
+      return ["guard", "attack", "skill", "left", "right", "up", "down"].map(binding => {
+        const action = ["guard", "attack", "skill"].includes(binding);
+        const key = action ? Reflect.get(scene, `${binding}Key`) : Reflect.get(scene, "cursors")[binding];
+        key.reset();
+        const press = () => action ? adapter.pressAction(binding) : adapter.press(binding);
+        const release = () => action ? adapter.releaseAction(binding) : adapter.release(binding);
+        press(); release(); press(); flush();
+        const held = key.isDown;
+        release(); flush();
+        return { binding, held, released: !key.isDown };
+      });
+    } finally { window.requestAnimationFrame = original; }
+  });
+  expect(results).toEqual(["guard", "attack", "skill", "left", "right", "up", "down"].map(binding => ({ binding, held: true, released: true })));
+});

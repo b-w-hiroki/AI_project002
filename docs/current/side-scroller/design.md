@@ -14,7 +14,11 @@
 [loadout](../../../games/side-scroller/src/logic/loadout.ts) のWeaponTemplate→WeaponInstanceを戦闘用WeaponDefへ変換する。
 武器切替の実行と物理への適用はScene側。描画だけで武器能力を変更しない。
 
+BattleInputAdapterはキーごとに押下識別子をWeakMapで保持し、次フレームへ送る解放時に照合する。押し直されたキーへの古いonUpを無視し、短いタップをフレームへ渡す従来の遅延解放は維持する。
+
 ## 永続化と検証
+
+
 キーはai_project002_sideScroller_loadout_v1とai_project002_sideScroller_bestWave_v1。ロードアウトと最高記録は別管理。
 [progress](../../../games/side-scroller/src/logic/progress.ts) とloadoutのパース・既定値を変更時に確認する。
 [tests](../../../games/side-scroller/tests) と [E2E](../../../games/side-scroller/e2e/game.spec.ts) で通常・必要な旧経路、回転、移動、攻撃、表示するウェーブを検査する。
