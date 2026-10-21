@@ -1,3 +1,4 @@
+import { withSaveLock } from "./saveLock";
 import { claimStorage } from "./claimStorage";
 /** ベスト到達ステージ・累計評価の永続化（localStorage）。Phaser非依存の保存ロジック */
 
@@ -69,7 +70,24 @@ export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | 
     return next;
   }
 
-  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, hasUnavailableProgress: () => unavailable.size > 0 };
+  function useSessionOnly(): void {
+    loadBestStage();
+    loadTotalEvaluation();
+    unavailable.add(BEST_STAGE_KEY);
+    unavailable.add(TOTAL_EVAL_KEY);
+  }
+  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, useSessionOnly, hasUnavailableProgress: () => unavailable.size > 0 };
 }
 
-export const { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, hasUnavailableProgress } = createProgressStorage();
+const progress = createProgressStorage();
+export const { loadBestStage, loadTotalEvaluation, hasUnavailableProgress } = progress;
+export async function saveBestStage(stage: number): Promise<void> {
+  try { await withSaveLock(() => progress.saveBestStage(stage)); }
+  catch { progress.useSessionOnly(); progress.saveBestStage(stage); }
+}
+export async function addTotalEvaluation(amount: number): Promise<number> {
+  // The action itself absorbs storage failures. A lock failure instead opts the
+  // tab into session-only progress, never an unprotected persistent write.
+  try { return await withSaveLock(() => progress.addTotalEvaluation(amount)); }
+  catch { progress.useSessionOnly(); return progress.addTotalEvaluation(amount); }
+}

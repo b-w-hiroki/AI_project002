@@ -8,7 +8,7 @@ type Claim = { raid: string; total: string };
 
 /** The single journal write commits both values. Legacy keys are only mirrors
  * while a journal remains, so a failed mirror write cannot repeat a reward.
- * Single-tab contract: localStorage does not provide cross-tab transactions.
+ * Runtime callers wrap read/modify/write operations in the shared save lock.
  */
 export function createClaimStorage(getStore: () => Store = () => localStorage) {
   function pending(store: Store): Claim | null {
