@@ -255,7 +255,7 @@ test.describe("phone visual QA", () => {
     expect(legacy).toBe(false);
   });
 
-  test("direct drag moves the hero without a fixed directional pad", async ({ page }) => {
+  test("direct drag moves the hero without a fixed directional pad", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?visualqa=battle");
     await page.waitForFunction(() => !!window.__qaGame);
@@ -281,19 +281,51 @@ test.describe("phone visual QA", () => {
     const beforeX = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x);
     const dragStart = await canvasPoint(page, 70, 680);
     const dragEnd = await canvasPoint(page, 155, 680);
-    await page.mouse.move(dragStart.x, dragStart.y);
-    await page.mouse.down();
-    await page.mouse.move(dragEnd.x, dragEnd.y, { steps: 4 });
-    await expect.poll(() => page.evaluate(() => {
-      const scene = window.__qaGame.scene.getScene("GameScene");
-      return (Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys).right.isDown;
-    })).toBe(true);
-    await expect.poll(() => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite).x)).toBeGreaterThan(beforeX + 4);
-    await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => {
-      const player = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "player") as Phaser.Physics.Arcade.Sprite;
-      return Math.abs((player.body as Phaser.Physics.Arcade.Body).velocity.x);
-    })).toBeLessThan(1);
+    const samples: unknown[] = [];
+    const sample = async (phase: string) => {
+      const state = await page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const player = Reflect.get(scene, "player") as Phaser.Physics.Arcade.Sprite;
+        const body = player.body as Phaser.Physics.Arcade.Body;
+        const cursors = Reflect.get(scene, "cursors") as Phaser.Types.Input.Keyboard.CursorKeys;
+        return {
+          x: player.x, y: player.y, velocity: { x: body.velocity.x, y: body.velocity.y },
+          bodyEnabled: body.enable, physicsPaused: scene.physics.world.isPaused,
+          left: cursors.left.isDown, right: cursors.right.isDown,
+          guardKey: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown,
+          guarding: Reflect.get(scene, "guarding"), status: Reflect.get(scene, "status"),
+          styleChoosing: Reflect.get(scene, "styleChoosing"), tipsVisible: Reflect.get(scene, "tipsVisible"),
+          summonOverlayVisible: Reflect.get(scene, "summonOverlayVisible"),
+          stageBuffOverlayVisible: Reflect.get(scene, "stageBuffOverlayVisible"),
+          sceneActive: scene.sys.isActive(), scenePaused: scene.sys.isPaused(),
+          frame: scene.game.loop.frame, time: scene.time.now,
+          visibility: document.visibilityState, focused: document.hasFocus(),
+          canvas: { width: scene.game.canvas.width, height: scene.game.canvas.height },
+        };
+      });
+      samples.push({ phase, ...state });
+      return state;
+    };
+    const artifact = `e2e/screenshots/side-drag-${testInfo.project.name || "chromium"}-${testInfo.repeatEachIndex}`;
+    try {
+      await sample("before-drag");
+      await page.mouse.move(dragStart.x, dragStart.y);
+      await page.mouse.down();
+      await page.mouse.move(dragEnd.x, dragEnd.y, { steps: 4 });
+      await expect.poll(async () => (await sample("held-input")).right).toBe(true);
+      await expect.poll(async () => (await sample("moving")).x).toBeGreaterThan(beforeX + 4);
+      await page.mouse.up();
+      await expect.poll(async () => Math.abs((await sample("released")).velocity.x)).toBeLessThan(1);
+    } catch (error) {
+      await mkdir("e2e/screenshots", { recursive: true });
+      await page.screenshot({ path: `${artifact}.png` }).catch(() => undefined);
+      throw error;
+    } finally {
+      await mkdir("e2e/screenshots", { recursive: true });
+      const path = `${artifact}.json`;
+      await writeFile(path, JSON.stringify({ beforeX, dragStart, dragEnd, viewport: page.viewportSize(), samples }, null, 2));
+      await testInfo.attach("drag-state", { path, contentType: "application/json" });
+    }
 
     // A second finger must not steal the active drag. Releasing the owner
     // clears movement even if another pointer is still present.
