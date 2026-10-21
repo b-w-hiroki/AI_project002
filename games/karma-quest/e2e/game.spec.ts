@@ -2949,3 +2949,34 @@ test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").hp)).toBe(0);
   expect(await page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "raidPanel"))).toBe(false);
 });
+
+
+test("malformed claim total preserves saves and allows a session journey", { tag: "@webkit-regression" }, async ({ page }) => {
+  const saved = await page.evaluate(() => {
+    const journal = JSON.stringify({ raid: JSON.stringify({ level: 2, hp: 1250, maxHp: 1250, defeats: 1 }), total: "" });
+    localStorage.setItem("karma_quest_raid_claim_v1", journal);
+    localStorage.setItem("karma_quest_total_eval_v1", "500");
+    return journal;
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  const information = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeInformation")?.title);
+  await expect.poll(information).toBe("進行は今回のみ保持");
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 135, 758);
+  await expect.poll(information).toBe("保存できません");
+  const result = await page.evaluate(async () => {
+    const path = "/src/logic/progress.ts";
+    const progress = await import(path);
+    await progress.addTotalEvaluation(20);
+    return {
+      journal: localStorage.getItem("karma_quest_raid_claim_v1"),
+      total: localStorage.getItem("karma_quest_total_eval_v1"),
+      session: progress.loadTotalEvaluation(),
+    };
+  });
+  expect(result).toEqual({ journal: saved, total: "500", session: 20 });
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+});

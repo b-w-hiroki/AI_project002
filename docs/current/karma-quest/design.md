@@ -44,7 +44,10 @@ progress.tsはcreateProgressStorageのクロージャに値と利用不能キー
 
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
+claimStorage.pendingは評価文字列について安全な非負整数の検証に加え、String(Number(total))との一致を要求する。受取記録の書き手が出力しない空白・指数・16進・先頭ゼロなどを拒否し、旧キーへの反映や記録削除を行わない。既存の通常保存キーの読込規則は変更しない。
+
 ## 描画・検証
+
 縦年代記のchronicleRecordCountもrunEvaluationをscoreDisplayで整形し、選択件数と併記する。21px・350px幅の既存領域を使う。大きな評価点でも前の記録と再プレイヒントに重ならない文字境界と、縦横回転後の同値表示をE2E検査する。
 横年代記のlandscape-run-summaryはGameScene.runEvaluationをscoreDisplayで整形し、choiceHistory.lengthと併記する。累計評価のlocalStorageは参照・更新しない。既存の20px・338px幅のstatus領域を使い、0・通常値・大きな値で見出しと記録の間に収まることを検査する。
 縦ホームnavの現在タブ面はCanvasの場合にfillStyle(0x254b65,0.82)を設定してから既存矩形を描画する。WebGLは従来のグラデーションを使い、選択下線と入力Zoneは変更しない。
