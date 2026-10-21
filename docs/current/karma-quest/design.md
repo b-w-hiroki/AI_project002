@@ -30,7 +30,10 @@ stateDiagram-v2
 画像準備中・失敗・再試行と、ページ停止／復帰時の重複選択をE2Eで検査する。
 [CrazyGames初期化](../../../games/karma-quest/src/platform/crazygames.ts) は8秒の待機上限を持つ。タイムアウト後の遅延完了で二重開始しない。
 
+platform/crazygames.tsのnotifyGameがSDK通知5種の同期例外を境界で吸収し、失敗後はsdk参照を解除する。Scene.createや勝利処理へ例外を伝えず、確定済みPortal localeは変更しない。SDKの正常なメソッド呼出はgameをthisとして維持する。
+
 ## 永続化境界
+
 [progress.ts](../../../games/karma-quest/src/logic/progress.ts): karma_quest_best_stage_v1、karma_quest_total_eval_v1（数値文字列）。
 raid.ts: karma_quest_solo_raid_v1（level / hp / maxHp / defeatsのJSON）。maxHpはレベルから再導出する。
 loadRaidはレベルを検証してからHPを復元する。不正なレベルの場合はレコード全体をnewRaid()へ戻し、そのHP=0をLv.1の撃破状態へ転用しない。正常なレベルの途中HP・撃破済み状態は維持し、読み込みだけでは保存を書き換えない。
