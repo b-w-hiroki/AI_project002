@@ -21,8 +21,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          # ���|�W�g�������͐ÓI�n�u�y�[�W�݂̂� package-lock.json ���������߁A
-          # �e�Q�[���̃��b�N�t�@�C���𖾎��I�Ɏw�肷��
+          # リポジトリ直下は静的ハブページのみで package-lock.json が無いため、
+          # 各ゲームのロックファイルを明示的に指定する
           cache-dependency-path: |
             games/potion-workshop/package-lock.json
             games/side-scroller/package-lock.json
@@ -31,7 +31,7 @@ jobs:
             games/karma-quest/package-lock.json
             games/sangoku-tap/package-lock.json
 
-      # �|�[�V�����H�[�i/potion-workshop/ �T�u�p�X�Ŕz�M�j
+      # ポーション工房（/potion-workshop/ サブパスで配信）
       - run: npm ci
         working-directory: games/potion-workshop
       - run: npm run lint
@@ -43,7 +43,7 @@ jobs:
       - run: npm run build
         working-directory: games/potion-workshop
 
-      # �����̐X�i/side-scroller/ �T�u�p�X�Ŕz�M�j
+      # 剣戟の森（/side-scroller/ サブパスで配信）
       - run: npm ci
         working-directory: games/side-scroller
       - run: npm run lint
@@ -55,7 +55,7 @@ jobs:
       - run: npm run build
         working-directory: games/side-scroller
 
-      # �J���[�}�b�`�i/color-match/ �T�u�p�X�Ŕz�M�j
+      # カラーマッチ（/color-match/ サブパスで配信）
       - run: npm ci
         working-directory: games/color-match
       - run: npm run lint
@@ -67,7 +67,7 @@ jobs:
       - run: npm run build
         working-directory: games/color-match
 
-      # �e���`�i/fist-legend/ �T�u�p�X�Ŕz�M�j
+      # 覇拳伝（/fist-legend/ サブパスで配信）
       - run: npm ci
         working-directory: games/fist-legend
       - run: npm run lint
@@ -79,7 +79,7 @@ jobs:
       - run: npm run build
         working-directory: games/fist-legend
 
-      # �J���}�N�G�X�g�i/karma-quest/ �T�u�p�X�Ŕz�M�j
+      # カルマクエスト（/karma-quest/ サブパスで配信）
       - run: npm ci
         working-directory: games/karma-quest
       - run: npm run lint
@@ -91,7 +91,7 @@ jobs:
       - run: npm run build
         working-directory: games/karma-quest
 
-      # �O���|�`�|�`�i/sangoku-tap/ �T�u�p�X�Ŕz�M�j
+      # 三国ポチポチ（/sangoku-tap/ サブパスで配信）
       - run: npm ci
         working-directory: games/sangoku-tap
       - run: npm run lint
@@ -103,7 +103,7 @@ jobs:
       - run: npm run build
         working-directory: games/sangoku-tap
 
-      # ���[�g�i�Q�[���ꗗ�̃n�u�y�[�W�j+ �e�Q�[���̃r���h���ʕ���1�� dist/ �ɂ܂Ƃ߂�
+      # ルート（ゲーム一覧のハブページ）+ 各ゲームのビルド成果物を1つの dist/ にまとめる
       - run: |
           mkdir -p dist
           cp index.html dist/index.html
@@ -120,7 +120,7 @@ jobs:
           mkdir -p dist/sangoku-tap
           cp -r games/sangoku-tap/dist/. dist/sangoku-tap/
 
-      # CrazyGames / PLiCy���e�p: �e�Q�[����dist���e��ZIP������1��Actions artifact�ւ܂Ƃ߂�
+      # CrazyGames / PLiCy投稿用: 各ゲームのdist内容をZIP化して1つのActions artifactへまとめる
       - name: Package release ZIPs
         run: |
           mkdir -p release-packages
@@ -170,7 +170,7 @@ jobs:
     steps:
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         with:
-          # Pages ���ݒ�̃��|�W�g���ł������ŗL��������
+          # Pages 未設定のリポジトリでも自動で有効化する
           enablement: true
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
