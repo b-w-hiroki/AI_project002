@@ -1,0 +1,24 @@
+{
+  "summary": "素早い押し直しが古い遅延解放で解除される問題を修正",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "updated",
+        "reason": "7種類の操作で新しい押下を古い指離し処理から保護する動作を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "BattleInputAdapterのキー別押下識別子で遅延解放を照合する設計を追加"
+      }
+    }
+  },
+  "validation": [
+    "修正前WebKitで7入力すべてが押し直し後に解除されることを再現",
+    "修正後Chromium/WebKit各3件成功: 再押下7入力、通常ガード、ドラッグ移動",
+    "単体141件・lint/typecheck/build成功"
+  ],
+  "limitations": [
+    "既存CIのkeyDown=true/guarding=falseとは別の問題であり、その根本原因を特定したとは扱わない",
+    "実機・外部Portal未確認。表示レイアウト・素材変更なし"
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "beforeX": 180,
+  "dragStart": {
+    "x": 64.80000000000001,
+    "y": 571.1999999999999
+  },
+  "dragEnd": {
+    "x": 136.2,
+    "y": 571.1999999999999
+  },
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "samples": [
+    {
+      "phase": "before-drag",
+      "x": 180,
+      "y": 457,
+      "velocity": {
+        "x": 0,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": false,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 24,
+      "time": 756,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "held-input",
+      "x": 180,
+      "y": 457,
+      "velocity": {
+        "x": 220,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": true,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 26,
+      "time": 782,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "moving",
+      "x": 180,
+      "y": 457,
+      "velocity": {
+        "x": 220,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": true,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 27,
+      "time": 794,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "moving",
+      "x": 205.6666666666666,
+      "y": 457.00000000000006,
+      "velocity": {
+        "x": 220,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": true,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 36,
+      "time": 909,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "released",
+      "x": 209.33333333333326,
+      "y": 457,
+      "velocity": {
+        "x": 220,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": false,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 37,
+      "time": 920,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    },
+    {
+      "phase": "released",
+      "x": 209.33333333333326,
+      "y": 457.00000000000006,
+      "velocity": {
+        "x": 0,
+        "y": 0
+      },
+      "bodyEnabled": true,
+      "physicsPaused": false,
+      "left": false,
+      "right": false,
+      "guardKey": false,
+      "guarding": false,
+      "status": "playing",
+      "styleChoosing": false,
+      "tipsVisible": false,
+      "summonOverlayVisible": false,
+      "stageBuffOverlayVisible": false,
+      "sceneActive": true,
+      "scenePaused": false,
+      "frame": 48,
+      "time": 1036,
+      "visibility": "visible",
+      "focused": true,
+      "canvas": {
+        "width": 450,
+        "height": 800
+      }
+    }
+  ]
+}
