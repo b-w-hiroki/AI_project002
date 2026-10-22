@@ -4,6 +4,7 @@ import type { Opponent } from "../logic/opponent";
 import { fighterById, type FighterId } from "../logic/team";
 import { detectLang, fighterName, moveLabel, moveTell, opponentName as localizedOpponentName, opponentType, tr } from "../logic/i18n";
 import { text, button } from "./controls";
+import { exchangeGuide } from "../logic/playGuide";
 
 export type BattleView = {
   battleGroup: Phaser.GameObjects.Container;
@@ -133,7 +134,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     .setPosition(18, portrait ? 18 : 50)
     .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
     .setText(`${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
-  ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}`);
+  ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1
     ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
     : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`);

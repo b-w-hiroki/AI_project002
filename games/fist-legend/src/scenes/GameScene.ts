@@ -1495,9 +1495,11 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       .text(tx, 175, tr(this.lang, "ガチャ", "Gacha"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5);
     const costText = this.add
-      .text(tx, 215, `${tr(this.lang, "1回", "1 Pull")} · ${tr(this.lang, "豪拳石", "Fist Gems")} ${GACHA_COST}`, {
+      .text(tx, 220, `${tr(this.lang, "1回", "1 Pull")} · ${tr(this.lang, "豪拳石", "Fist Gems")} ${GACHA_COST}\n${tr(this.lang, "演出のみ・所持や能力には反映されません", "Preview only · no collection or stat changes")}`, {
         ...TYPE.body,
         color: THEME.textMuted,
+        fontSize: "14px",
+        align: "center",
       })
       .setOrigin(0.5);
     const resultText = this.add
@@ -1533,17 +1535,18 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     );
 
     this.gachaGroup.add([
-      panel,
-      slot,
-      this.gachaCharPlaceholder,
+      panel.setName("gacha-panel"),
+      slot.setName("gacha-slot"),
+      this.gachaCharPlaceholder.setName("gacha-placeholder"),
       ...(this.gachaCharImage ? [this.gachaCharImage] : []),
-      heading,
-      costText,
+      heading.setName("gacha-heading"),
+      costText.setName("gacha-cost"),
       resultText,
       balanceText,
-      drawBtn.container,
-      backBtn.container,
+      drawBtn.container.setName("gacha-draw"),
+      backBtn.container.setName("gacha-back"),
     ]);
+    this.gachaCharImage?.setName("gacha-image");
     this.gachaGroup.setVisible(false);
   }
 

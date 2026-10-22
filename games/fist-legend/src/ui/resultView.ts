@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import type { BattleOutcome } from "../logic/battle";
+import type { BattleOutcome, BattleState } from "../logic/battle";
+import { finishReason } from "../logic/playGuide";
 import { plannedMove, type Opponent } from "../logic/opponent";
 import type { FighterId } from "../logic/team";
 import { teamTacticalRead } from "../logic/teamTactics";
@@ -12,6 +13,7 @@ export type ResultView = {
   resultHero?: Phaser.GameObjects.Image;
   resultEnemy?: Phaser.GameObjects.Image;
   resultFinish: Phaser.GameObjects.Text;
+  resultReason: Phaser.GameObjects.Text;
   resultHeading: Phaser.GameObjects.Text;
   resultStats: Phaser.GameObjects.Text;
   resultReward: Phaser.GameObjects.Container;
@@ -22,6 +24,7 @@ export type ResultView = {
   resultTitle: Phaser.GameObjects.Container;
 };
 export type ResultModel = {
+  battle: Pick<BattleState, "playerHp" | "enemyHp">;
   lastOutcome?: BattleOutcome | null;
   lastReward?: number;
   lastBalance?: number;
@@ -94,9 +97,10 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
     .setPadding(14)
     .setName("mobile-result-finish");
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
+  const resultReason = text(scene, 225, 245, "", 16, "#fff1d5").setName("mobile-result-reason");
   const reward = buildRewardMedallion(scene);
   const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc").setName("mobile-result-next");
-  resultGroup.add([resultFinish, resultHeading, reward.container, resultStats]);
+  resultGroup.add([resultFinish, resultReason, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, actions.primary);
   const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title);
 
@@ -109,6 +113,7 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
     resultHero,
     resultEnemy,
     resultFinish,
+    resultReason,
     resultHeading,
     resultStats,
     resultReward: reward.container,
@@ -161,9 +166,10 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
   }
   ui.resultFinish
     .setPosition(width / 2, portrait ? 195 : 92)
-    .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
+    .setText(outcome === "playerWin" ? (model.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (model.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
     .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
     .setScale(portrait ? 1 : 0.72);
+  ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 16 : 14).setText(finishReason(lang, model.battle));
   ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
   ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
   ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));

@@ -1,6 +1,7 @@
 import { createBattleView, renderBattleView, type BattleView } from "./ui/battleView";
 import { createResultView, renderResultView, type ResultView } from "./ui/resultView";
 import { fitFighter } from "./ui/art";
+import { layoutGacha } from "./ui/gachaLayout";
 import { createTitleView, renderTitleView, type TitleView } from "./ui/titleView";
 import Phaser from "phaser";
 import { bindResponsiveScene, type ViewportLayout } from "../../shared/mobile";
@@ -145,11 +146,16 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   scene.titleGroup?.setVisible(!ui.phone && scene.phase === "title");
   scene.resultGroup?.setVisible(!ui.phone && scene.phase === "result");
   (scene.battleGroup?.getByName("legacy-battle-hud") as Phaser.GameObjects.Container | null)?.setVisible(!ui.phone);
-  if (!ui.phone) { applySurface(scene, 800, 600); return; }
+  if (!ui.phone) {
+    if (scene.gachaGroup) layoutGacha(scene.gachaGroup, false, 600);
+    applySurface(scene, 800, 600); return;
+  }
 
   ui.portrait = layout.isPortrait;
   if (scene.gachaGroup?.visible) {
-    applySurface(scene, 800, 600);
+    const height = ui.portrait ? portraitSurfaceHeight() : 600;
+    applySurface(scene, ui.portrait ? 450 : 800, height);
+    layoutGacha(scene.gachaGroup, ui.portrait, height);
     ui.root.setVisible(false);
     return;
   }
@@ -185,7 +191,9 @@ function refresh(scene: Runtime): void {
   scene.resultGroup?.setVisible(false);
   if (scene.gachaGroup?.visible) {
     ui.root.setVisible(false);
-    applySurface(scene, 800, 600);
+    const height = ui.portrait ? portraitSurfaceHeight() : 600;
+    applySurface(scene, ui.portrait ? 450 : 800, height);
+    layoutGacha(scene.gachaGroup, ui.portrait, height);
     return;
   }
 
@@ -220,8 +228,9 @@ function refresh(scene: Runtime): void {
     return;
   }
 
-  if (scene.phase === "result") {
+  if (scene.phase === "result" && scene.battle) {
     renderResultView(ui.resultView, {
+      battle: scene.battle,
       lastOutcome: scene.lastOutcome,
       lastReward: scene.lastReward,
       lastBalance: scene.lastBalance,

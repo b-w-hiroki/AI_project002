@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { OPPONENTS, type Opponent } from "../logic/opponent";
 import { FIGHTERS, type FighterId } from "../logic/team";
-import { detectLang, fighterName, moveLabel, opponentHint, opponentName as localizedOpponentName, tr } from "../logic/i18n";
+import { detectLang, fighterName, opponentHint, opponentName as localizedOpponentName, tr } from "../logic/i18n";
 import { text, button } from "./controls";
 
 export type TitleView = {
@@ -40,7 +40,7 @@ export function createTitleView(scene: Phaser.Scene, actions: TitleActions): Tit
   ]);
   const titleGroup = scene.add.container(0, 0);
   const title = text(scene, 225, 118, tr(lang, "覇拳伝", "Fist Legend"), 38, "#ffe1a8");
-  const subtitle = text(scene, 225, 170, `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}\n${tr(lang, "相手の構えを読み、一撃を通せ。", "Read the stance. Land the decisive hit.")}`, 19, "#f4d4bb");
+  const subtitle = text(scene, 225, 170, tr(lang, "対戦で練習\n3連戦で腕試し\n物語で章を進める", "Battle · Practice\nGauntlet · Test your skill\nStory · Advance chapters"), 19, "#f4d4bb").setName("title-mode-guide");
   const titleStatus = text(scene, 225, 225, "", 20, "#d9c4ad");
   const titleHint = text(scene, 225, 444, "", 19, "#ffe0a0").setName("title-opponent-hint");
   const teamText = text(scene, 225, 474, "", 19, "#ffe6b5").setName("title-team-summary");

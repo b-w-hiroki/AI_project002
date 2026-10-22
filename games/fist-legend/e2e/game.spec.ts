@@ -165,6 +165,59 @@ async function checkFrame(page: Page, name: string) {
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
 }
 
+async function visibleCopy(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const collect = (nodes: Phaser.GameObjects.GameObject[]): string[] => nodes.flatMap(node => {
+      if (!Reflect.get(node, "visible")) return [];
+      if (node.type === "Container") return collect((node as Phaser.GameObjects.Container).list);
+      return node.type === "Text" ? [(node as Phaser.GameObjects.Text).text] : [];
+    });
+    return collect(window.__qaGame.scene.getScene("GameScene").children.list);
+  });
+}
+
+test("first loop explains modes, coaches a counter, and reports an HP decision", async ({ page }) => {
+  await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
+  await tapVisibleText(page, "蹴");
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(() => visibleCopy(page)).toContain("時間切れ · 残りHP 75 対 25");
+  await expect.poll(() => visibleCopy(page)).toContain("WIN");
+  await checkFrame(page, "portrait-result-hp-decision");
+  await tapVisibleText(page, "もう一度");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
+});
+
+test("gacha discloses its illustrative scope before a draw", async ({ page }) => {
+  await tapVisibleText(page, "ガチャ");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("演出のみ・所持や能力には反映されません"))).toBe(true);
+  await checkFrame(page, "portrait-gacha-scope");
+  for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    const portrait = viewport.height > viewport.width;
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(portrait ? 450 : 800);
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const group = Reflect.get(scene, "gachaGroup") as Phaser.GameObjects.Container;
+      const cost = (group.getByName("gacha-cost") as Phaser.GameObjects.Text).getBounds();
+      const draw = group.getByName("gacha-draw") as Phaser.GameObjects.Container;
+      const back = group.getByName("gacha-back") as Phaser.GameObjects.Container;
+      return cost.left >= 0 && cost.right <= window.__qaGame.canvas.width && draw.getBounds().bottom < back.getBounds().top;
+    })).toBe(true);
+    await checkFrame(page, `gacha-scope-${viewport.width}`);
+  }
+  await tapVisibleText(page, "タイトルへ戻る");
+  await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
+});
+
 async function resultCharactersAreClear(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");

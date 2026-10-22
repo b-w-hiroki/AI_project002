@@ -29,7 +29,9 @@
 
 mobileLayoutはホーム・戦闘・結果Viewを生成してScene状態と接続し、表示切替と共通レスポンシブ基盤への接続を担当する。実際の戦闘人物の配置はScene側のスプライトを扱うため接続側に残し、戦闘判定・攻撃演出をViewへ移さない。
 
-スマホ用の主要3画面はView分離済み。ガチャ、デスクトップ用既存画面、prototypeラップによる接続、他作品は移行対象外として残る。全作品のUI移行済みとは扱わない。
+スマホ用の主要3画面はView分離済み。ガチャはSceneが生成と操作を保持し、[ui/gachaLayout.ts](../../../games/fist-legend/src/ui/gachaLayout.ts)が既存ノードの縦持ち配置と回転時の復元を担当する。人物画像は均等スケール、ボタンの縦持ちヒット領域は68論理pxへ拡張する。デスクトップ用既存画面、prototypeラップによる接続、他作品は移行対象外として残る。全作品のUI移行済みとは扱わない。
+
+[logic/playGuide.ts](../../../games/fist-legend/src/logic/playGuide.ts)が最初の3応酬の案内と決着理由を作る。相性はteamTacticalReadの既存対応を再利用し、戦闘ルールや保存を変更しない。ResultModelへ実際のplayerHp/enemyHpを渡し、HPが残る時間判定をK.O.と誤表示しない。ホームのモード説明と案内は日本語・英語に対応する。
 [progress](../../../games/fist-legend/src/logic/progress.ts): fist_legend_currency_v1 / fist_legend_win_count_v1 / fist_legend_team_v1 / fist_legend_story_progress_v1。
 [gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。
