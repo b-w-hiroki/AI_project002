@@ -1,0 +1,20 @@
+{
+  "summary": "覇拳伝の戦闘HUDと操作をBattleModel/BattleActions/BattleViewに分離",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "予兆・HP・ゲージ・操作位置・戦闘判定・保存・演出は維持し、画面生成と描画の責務を移動"},
+      "design": {"status": "updated", "reason": "戦闘Viewの読み取りモデル・操作コールバック・フレーム更新とScene接続の分担を記録"}
+    }
+  },
+  "validation": [
+    "単体60件、typecheck、lint、build成功",
+    "Chromium全18件・WebKit全18件成功。回転後の対戦操作、交代、覇者モード、結果、3連戦、ストーリー、保存を検査",
+    "docs/review/fist-battle-view-2026-10-22の縦横の戦闘画像を目視確認し、交代後の画像も保存",
+    "git diff --check成功"
+  ],
+  "limitations": [
+    "ガチャ・デスクトップ用既存画面・prototypeラップの接続と他作品は未移行",
+    "実機・外部Portal未確認。最新版の外部Playbookはアクセス制限により未確認",
+    "git書き込み拒否が継続しているためローカル保存のみ。コミット・push・コミット後文書検査は未完了"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "summary": "覇拳伝ホームを表示モデル・操作コールバック・描画Viewへ分離し、UI部品を共用化",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "直前のホーム改善の見た目・操作位置・保存とモード遷移を維持し、実装責務のみ変更"},
+      "design": {"status": "updated", "reason": "TitleModel/TitleActions/TitleViewの契約、controls共用、状態変更時だけの描画更新を記録"}
+    }
+  },
+  "validation": [
+    "単体60件、typecheck、lint、build成功",
+    "Chromium/WebKit各5件: 小型縦画面、英語、回転して対戦操作、ガチャと結果、3人編成と保存",
+    "docs/review/fist-title-art-2026-10-21の縦・横・小型スクリーンショットを組み直し後に再取得"
+  ],
+  "limitations": [
+    "ホームが最初の移行対象。戦闘・結果の画面分離と他5作品への適用は未実施",
+    "ローカル作業ツリーを基準とする。外部Playbook最新版とリモート最新との差分は現在のアクセス制限で未確認",
+    "実機・外部Portal未確認。git書き込み拒否のためコミット・push・コミット後文書検査は未完了"
+  ]
+}

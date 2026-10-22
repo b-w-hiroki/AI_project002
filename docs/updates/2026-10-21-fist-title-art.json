@@ -1,0 +1,19 @@
+{
+  "summary": "覇拳伝のスマホホームに既存の闘技場と主人公を組み込み、単色画面を改善",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "ホームのイラスト、縦横比維持、説明と人物の分離、欠損時の表示を記録"},
+      "design": {"status": "updated", "reason": "titleArtの描画順と既存テクスチャ再利用、回転時の配置責務を記録"}
+    }
+  },
+  "validation": [
+    "単体60件、lint、typecheck、build成功",
+    "Chromium/WebKit各3件成功: 小型縦画面の操作領域、英語表示、対戦開始と回転後の攻撃",
+    "docs/review/fist-title-art-2026-10-21に390x844、320x568、844x390の実画面を保存。初回に見つけた説明と人物の重なりを縦横それぞれ修正"
+  ],
+  "limitations": [
+    "モック完全再現ではない。ボタン階層や編成の見せ方には追加改善の余地がある",
+    "実機Safari/Androidと外部Portalは未確認",
+    "現在の環境では.git書き込みとGitHub CLI設定の読取が拒否されるため、コミット・push・コミット後の文書検査は未完了"
+  ]
+}

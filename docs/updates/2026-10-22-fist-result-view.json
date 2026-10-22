@@ -1,0 +1,19 @@
+{
+  "summary": "覇拳伝の結果をResultModel/ResultActions/ResultViewへ分離し、背景の引き延ばしを修正",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "結果背景を縦横比維持のcover表示に変更。勝敗・報酬・次戦動作は維持"},
+      "design": {"status": "updated", "reason": "結果Viewの生成・描画・操作契約と、人物の均等スケール共用処理を記録"}
+    }
+  },
+  "validation": [
+    "単体60件、typecheck、lint、build成功",
+    "Chromium全18件、WebKit全18件でホーム・対戦・結果・再戦・3連戦・ストーリー・編成保存を検証",
+    "docs/review/fist-result-view-2026-10-22に縦・横・小型画面と勝利結果の実画像を保存"
+  ],
+  "limitations": [
+    "戦闘Viewと他作品は未移行。既存のprototypeラップによる接続は継続",
+    "実機・外部Portalは未検証",
+    "現在の環境では.git書き込みが拒否されるためローカル保存のみ。コミット・push・コミット後文書検査は未完了"
+  ]
+}
