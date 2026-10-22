@@ -71,9 +71,9 @@ export function createTitleView(scene: Phaser.Scene, actions: TitleActions): Tit
     );
     teamButtons.push(b);
   });
-  button(scene, titleGroup, 82, 565, 118, 54, tr(lang, "対戦", "Battle"), 0xa9402d, () => actions.startBattle()).setName("title-battle");
-  button(scene, titleGroup, 225, 565, 118, 54, tr(lang, "3連戦", "Gauntlet"), 0x8a6118, () => actions.startSeries()).setName("title-series");
-  button(scene, titleGroup, 368, 565, 118, 54, tr(lang, "物語", "Story"), 0x5d3e76, () => actions.startStory()).setName("title-story");
+  button(scene, titleGroup, 82, 565, 118, 62, tr(lang, "対戦", "Battle"), 0xa9402d, () => actions.startBattle()).setName("title-battle");
+  button(scene, titleGroup, 225, 565, 118, 62, tr(lang, "3連戦", "Gauntlet"), 0x8a6118, () => actions.startSeries()).setName("title-series");
+  button(scene, titleGroup, 368, 565, 118, 62, tr(lang, "物語", "Story"), 0x5d3e76, () => actions.startStory()).setName("title-story");
   button(scene, titleGroup, 225, 630, 330, 46, tr(lang, "ガチャ", "Gacha"), 0x334c70, () => actions.openGacha()).setName("title-gacha");
 
 
