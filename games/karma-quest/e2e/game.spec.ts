@@ -3042,3 +3042,21 @@ for (const hook of ["gameplayStart", "happytime"] as const) {
     });
   });
 }
+
+test("journey retries after the loader throws during image registration", { tag: "@webkit-regression" }, async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const original = scene.load.image;
+    scene.load.image = function (...args) {
+      scene.load.image = original;
+      throw new Error(`Image registration failed: ${String(args[0])}`);
+    };
+  });
+  await tapPoint(page, 225, 682);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("読込失敗・依頼を押して再試行");
+  expect(await phase(page)).toBe("title");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyPending"))).toBe(false);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
+});

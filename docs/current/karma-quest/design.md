@@ -32,6 +32,9 @@ stateDiagram-v2
 
 platform/crazygames.tsのnotifyGameがSDK通知5種の同期例外を境界で吸収し、失敗後はsdk参照を解除する。Scene.createや勝利処理へ例外を伝えず、確定済みPortal localeは変更しない。SDKの正常なメソッド呼出はgameをthisとして維持する。
 
+outcomeLoaderはPromiseをpendingへ登録してから画像登録・開始を実行する。同期イベントによる失敗もpendingを確実に削除する。画像登録・開始の例外はfalseへ変換し、成功・失敗・shutdown共通の一度だけの後始末でリスナーとpendingを解除する。同じ画像の進行中要求は引き続き共有する。
+
+
 ## 永続化境界
 
 [progress.ts](../../../games/karma-quest/src/logic/progress.ts): karma_quest_best_stage_v1、karma_quest_total_eval_v1（数値文字列）。

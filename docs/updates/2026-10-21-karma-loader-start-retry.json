@@ -1,0 +1,25 @@
+{
+  "summary": "画像読み込み開始時の例外と同期失敗から再試行可能にする",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "読み込み開始例外でも待機を解除して再試行できることを明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "開始前のpending登録と成功・失敗・shutdown共通の一度だけの後始末を記録"
+      }
+    }
+  },
+  "validation": [
+    "修正前に画像登録例外・開始例外・同期失敗後の再試行の単体3件失敗を確認",
+    "修正後の単体138件・lint/typecheck/build成功。追加テストのNode型参照不足を修正後typecheck再実行成功",
+    "Chromium/WebKit各3件成功: 通信失敗再試行、遅延画像読込、登録例外後の旅開始",
+    "画面配置・文言・素材は変更なし"
+  ],
+  "limitations": [
+    "物理端末・外部Portal未確認",
+    "未統合PRとは独立したmain基点の修正"
+  ]
+}
