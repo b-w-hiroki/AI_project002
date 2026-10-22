@@ -1,0 +1,26 @@
+{
+  "summary": "Split the long Karma Quest home rotation E2E scenario while retaining cross-layout continuity and real journey-start checks",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "The game rules and user-visible behavior are unchanged; only browser test structure and diagnostic output changed."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "Portrait, landscape, compact layout, panel closing, and journey-start expectations remain in the browser tests."
+      }
+    }
+  },
+  "validation": [
+    "PR #395 Browser E2E run 39713747115 attempt 1: 82 passed, 1 skipped, 2 failed; the home rotation scenario exhausted its whole-test 30-second budget and best-year transition timed out. Unchanged attempt 2 passed 84 with 1 skipped; no root cause was established.",
+    "PR #397 head 527f6fa Browser E2E run 39722581398: 83 passed, 1 skipped, 1 failed; the same home rotation scenario exhausted its whole-test 30-second budget at the final journey-start assertion. The best-year scenario passed.",
+    "The original scenario was divided into two independently bounded tests. The first checks home information through portrait, landscape, and compact rotations and closure; the second checks character information through compact-to-landscape rotation, closure, and a single real journey-start tap. The touch helper reads canvas geometry and backing size in one browser snapshot.",
+    "Local Chromium runs: both revised scenarios passed 4 of 4 each; the strengthened journey phase and loading-state assertion passed 4 more runs. Karma Quest typecheck and lint passed."
+  ],
+  "limitations": [
+    "The original CI logs do not distinguish a missed final tap from delayed journey art loading. The revised journey assertion exposes phase, journeyPending, and journeyError; on failure the existing CI artifact path also saves accepted game-object input events, scene/frame state, timing, and canvas geometry. The cause remains unproven until a failing run supplies state evidence.",
+    "Playwright error-context files are not uploaded by the current workflow. The new focused failure JSON uses its existing screenshots artifact path. The known best-year timing failure remains separately tracked in docs/TODO.md.",
+    "A passing local run does not establish that the revised exact-head CI will pass."
+  ]
+}

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
 import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 import { KARMA_REQUESTS } from "../src/logic/karma";
@@ -479,9 +480,12 @@ test("portrait navigation remains at least 14 physical pixels at 375px", async (
 
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
-  const box = (await canvas.boundingBox())!;
-  const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
-  await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+  const size = await canvas.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return { x: box.x, y: box.y, width: box.width, height: box.height,
+      canvasWidth: (node as HTMLCanvasElement).width, canvasHeight: (node as HTMLCanvasElement).height };
+  });
+  await page.touchscreen.tap(size.x + x * size.width / size.canvasWidth, size.y + y * size.height / size.canvasHeight);
 }
 
 test("notch insets and changing browser height preserve choices and touch coordinates", async ({ page }) => {
@@ -1184,15 +1188,53 @@ test("character information survives rotation and journey starts after closing",
     visit(scene.children.list);
     return ready;
   })).toBe(true);
-  await tapPoint(page, 591, 397);
-  await expect.poll(() => page.evaluate(() => {
+  await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
-    return {
-      phase: Reflect.get(scene, "phase"),
-      journeyPending: Reflect.get(scene, "journeyPending") === true,
-      journeyError: Reflect.get(scene, "journeyError") === true,
-    };
-  })).toEqual({ phase: "karma", journeyPending: false, journeyError: false });
+    const events: { kind: string; target: string; frame: number }[] = [];
+    Reflect.set(window, "__journeyInputEvents", events);
+    for (const kind of ["gameobjectdown", "gameobjectup"]) {
+      scene.input.on(kind, (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
+        events.push({ kind, target: target.name || target.type, frame: window.__qaGame.loop.frame });
+      });
+    }
+  });
+  const beforeTap = await page.evaluate(() => ({ frame: window.__qaGame.loop.frame, time: performance.now() }));
+  await tapPoint(page, 591, 397);
+  try {
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return {
+        phase: Reflect.get(scene, "phase"),
+        journeyPending: Reflect.get(scene, "journeyPending") === true,
+        journeyError: Reflect.get(scene, "journeyError") === true,
+      };
+    })).toEqual({ phase: "karma", journeyPending: false, journeyError: false });
+  } catch (error) {
+    // The CI screenshot artifact also preserves input acceptance and loading state.
+    try {
+      const state = await page.evaluate(() => {
+        const game = window.__qaGame;
+        const scene = game.scene.getScene("GameScene");
+        const canvas = game.canvas;
+        const box = canvas.getBoundingClientRect();
+        return {
+          phase: Reflect.get(scene, "phase"),
+          journeyPending: Reflect.get(scene, "journeyPending") === true,
+          journeyError: Reflect.get(scene, "journeyError") === true,
+          active: scene.sys.isActive(),
+          paused: scene.sys.isPaused(),
+          frame: game.loop.frame,
+          time: performance.now(),
+          inputEvents: Reflect.get(window, "__journeyInputEvents"),
+          canvas: { x: box.x, y: box.y, width: box.width, height: box.height,
+            backingWidth: canvas.width, backingHeight: canvas.height },
+        };
+      });
+      await mkdir("e2e/screenshots", { recursive: true });
+      await writeFile("e2e/screenshots/home-rotation-failure.json", JSON.stringify({ beforeTap, after: state }, null, 2));
+    } catch { /* Keep the original assertion failure if diagnostic collection fails. */ }
+    throw error;
+  }
 });
 
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
