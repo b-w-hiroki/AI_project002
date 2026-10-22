@@ -1100,20 +1100,21 @@ test("home navigation opens and closes information without starting a journey be
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
-test("home information survives rotation and closes across both layouts", async ({ page }) => {
-  const rotate = async (viewport: { width: number; height: number }) => {
-    await page.setViewportSize(viewport);
-    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(viewport.width > viewport.height ? 800 : 450);
-    await page.evaluate(() => new Promise<void>(resolve => {
-      const scale = window.__qaGame.scale;
-      let timer: ReturnType<typeof setTimeout>;
-      const settled = () => { scale.off("resize", changed); resolve(); };
-      const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
-      scale.on("resize", changed);
-      changed();
-    }));
-  };
-  const visiblePanel = () => page.evaluate(() => {
+async function rotateHome(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(viewport.width > viewport.height ? 800 : 450);
+  await page.evaluate(() => new Promise<void>(resolve => {
+    const scale = window.__qaGame.scale;
+    let timer: ReturnType<typeof setTimeout>;
+    const settled = () => { scale.off("resize", changed); resolve(); };
+    const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
+    scale.on("resize", changed);
+    changed();
+  }));
+}
+
+function visibleHomePanel(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const values: string[] = [];
     for (const root of scene.children.list) {
@@ -1127,6 +1128,11 @@ test("home information survives rotation and closes across both layouts", async 
     }
     return values;
   });
+}
+
+test("home information survives rotation and closes across both layouts", async ({ page }) => {
+  const rotate = (viewport: { width: number; height: number }) => rotateHome(page, viewport);
+  const visiblePanel = () => visibleHomePanel(page);
   await tapPoint(page, 47, 253);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-portrait.png" });
@@ -1151,6 +1157,12 @@ test("home information survives rotation and closes across both layouts", async 
   await rotate({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
   await expect.poll(visiblePanel).toEqual([]);
+});
+
+test("character information survives rotation and journey starts after closing", async ({ page }) => {
+  const rotate = (viewport: { width: number; height: number }) => rotateHome(page, viewport);
+  const visiblePanel = () => visibleHomePanel(page);
+  await rotate({ width: 320, height: 568 });
   await tapPoint(page, 225, 758);
   await expect.poll(visiblePanel).toContain("カイトの能力");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-character-rotated.png" });
@@ -1173,7 +1185,14 @@ test("home information survives rotation and closes across both layouts", async 
     return ready;
   })).toBe(true);
   await tapPoint(page, 591, 397);
-  await expect.poll(() => phase(page)).toBe("karma");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      phase: Reflect.get(scene, "phase"),
+      journeyPending: Reflect.get(scene, "journeyPending") === true,
+      journeyError: Reflect.get(scene, "journeyError") === true,
+    };
+  })).toEqual({ phase: "karma", journeyPending: false, journeyError: false });
 });
 
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
