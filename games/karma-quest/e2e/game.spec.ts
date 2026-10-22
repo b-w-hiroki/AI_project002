@@ -82,8 +82,50 @@ for (const failure of ["getter", "read", "write"] as const) {
         Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
       });
       await expect.poll(() => phase(page)).toBe("report");
+      const reportFrame = await page.evaluate(() => window.__qaGame.loop.frame);
+      await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(reportFrame + 1);
       await tapPoint(page, 225, 291);
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const rows = Reflect.get(scene, "highlightRows") as { selected: boolean }[];
+        const findLabel = (nodes: Phaser.GameObjects.GameObject[], visible = true): Phaser.GameObjects.Text | undefined => {
+          for (const node of nodes) {
+            const nodeVisible = visible && Reflect.get(node, "visible") !== false;
+            if (!nodeVisible) continue;
+            if (node.name === "report-submit-label") return node as Phaser.GameObjects.Text;
+            if (node.type === "Container") {
+              const found = findLabel((node as Phaser.GameObjects.Container).list, nodeVisible);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+        const label = findLabel(scene.children.list);
+        const zone = label?.parentContainer?.list.find(node => node.type === "Zone");
+        return {
+          phase: Reflect.get(scene, "phase"),
+          selected: rows.filter(row => row.selected).length,
+          submitEnabled: zone?.input?.enabled === true,
+          submitting: Reflect.get(scene, "reportSubmitting") === true,
+        };
+      })).toEqual({ phase: "report", selected: 1, submitEnabled: true, submitting: false });
+      await page.evaluate(() => {
+        const events: { kind: string; target: string; frame: number }[] = [];
+        Reflect.set(window, "__submitInputEvents", events);
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        for (const kind of ["gameobjectdown", "gameobjectup"]) {
+          scene.input.on(kind, (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
+            events.push({ kind, target: target.name || target.type, frame: window.__qaGame.loop.frame });
+          });
+        }
+      });
       await tapPoint(page, 225, 680);
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const events = Reflect.get(window, "__submitInputEvents") as { kind: string; target: string }[];
+        return { phase: Reflect.get(scene, "phase"), submitting: Reflect.get(scene, "reportSubmitting"),
+          accepted: events.some(event => event.kind === "gameobjectup" && event.target.startsWith("cta:")) };
+      })).toEqual({ phase: "transition", submitting: true, accepted: true });
       await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(year + 1);
       await expect.poll(() => phase(page)).toBe("karma");
     }
@@ -480,6 +522,13 @@ test("portrait navigation remains at least 14 physical pixels at 375px", async (
 
 async function tapPoint(page: Page, x: number, y: number) {
   const canvas = page.locator("canvas");
+  const box = (await canvas.boundingBox())!;
+  const size = await canvas.evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+  await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
+}
+
+async function tapPointAtomic(page: Page, x: number, y: number) {
+  const canvas = page.locator("canvas");
   const size = await canvas.evaluate(node => {
     const box = node.getBoundingClientRect();
     return { x: box.x, y: box.y, width: box.width, height: box.height,
@@ -524,6 +573,39 @@ test("notch insets and changing browser height preserve choices and touch coordi
 });
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
+
+async function expectNaturalBattleReport(page: Page, label: string): Promise<void> {
+  const snapshot = () => page.evaluate(() => {
+    const game = window.__qaGame;
+    const scene = game.scene.getScene("GameScene");
+    const clock = scene.time;
+    return {
+      phase: Reflect.get(scene, "phase"),
+      frame: game.loop.frame,
+      sceneTime: clock.now,
+      scenePaused: clock.paused,
+      sceneTimeScale: clock.timeScale,
+      sceneActive: scene.sys.isActive(),
+      scenePausedByManager: scene.sys.isPaused(),
+      currentBattleResult: Reflect.get(scene, "currentBattleResult") !== null,
+      activeTimers: (Reflect.get(clock, "_activeList") as unknown[] | undefined)?.length ?? null,
+      pendingTimers: (Reflect.get(clock, "_pendingInsertion") as unknown[] | undefined)?.length ?? null,
+      visible: document.visibilityState,
+      focused: document.hasFocus(),
+      wallTime: performance.now(),
+    };
+  });
+  const before = await snapshot();
+  try {
+    await expect.poll(() => phase(page)).toBe("report");
+  } catch (error) {
+    try {
+      await mkdir("e2e/screenshots", { recursive: true });
+      await writeFile(`e2e/screenshots/battle-report-${label}.json`, JSON.stringify({ before, after: await snapshot() }, null, 2));
+    } catch { /* Preserve the original transition assertion. */ }
+    throw error;
+  }
+}
 
 async function checkFrame(page: Page, name: string) {
   await expect.poll(async () => {
@@ -1137,6 +1219,22 @@ function visibleHomePanel(page: Page): Promise<string[]> {
 test("home information survives rotation and closes across both layouts", async ({ page }) => {
   const rotate = (viewport: { width: number; height: number }) => rotateHome(page, viewport);
   const visiblePanel = () => visibleHomePanel(page);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let ready = false;
+    const visit = (nodes: Phaser.GameObjects.GameObject[], visible = true) => {
+      for (const node of nodes) {
+        const nodeVisible = visible && Reflect.get(node, "visible") !== false;
+        if (!nodeVisible) continue;
+        if (node.name === "home-rail:0" && node.type === "Zone" && node.input?.enabled) ready = true;
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, nodeVisible);
+      }
+    };
+    visit(scene.children.list);
+    return { phase: Reflect.get(scene, "phase"), ready };
+  })).toEqual({ phase: "title", ready: true });
+  const homeFrame = await page.evaluate(() => window.__qaGame.loop.frame);
+  await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(homeFrame + 1);
   await tapPoint(page, 47, 253);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-portrait.png" });
@@ -1199,7 +1297,7 @@ test("character information survives rotation and journey starts after closing",
     }
   });
   const beforeTap = await page.evaluate(() => ({ frame: window.__qaGame.loop.frame, time: performance.now() }));
-  await tapPoint(page, 591, 397);
+  await tapPointAtomic(page, 591, 397);
   try {
     await expect.poll(() => page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -2158,7 +2256,7 @@ test("best year survives an interrupted journey and a new start", async ({ page 
   if (await phase(page) === "encounter") await tapPoint(page, 225, 460);
   await expect.poll(() => phase(page)).toBe("battle");
   await tapPoint(page, 225, 560);
-  await expect.poll(() => phase(page)).toBe("report");
+  await expectNaturalBattleReport(page, "best-year");
   await tapPoint(page, 225, 291);
   await tapPoint(page, 225, 680);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -2194,7 +2292,7 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
     if (await phase(page) === "encounter") await tapPoint(page, wide ? 591 : 225, wide ? 322 : 460);
     await expect.poll(() => phase(page)).toBe("battle");
     await tapPoint(page, wide ? 591 : 225, wide ? 396 : 560);
-    await expect.poll(() => phase(page)).toBe("report");
+    await expectNaturalBattleReport(page, `twelve-year-${year}`);
     await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
     await tapPoint(page, wide ? 609 : 225, wide ? 405 : 680);
   }
