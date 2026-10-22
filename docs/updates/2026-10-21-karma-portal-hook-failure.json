@@ -1,0 +1,25 @@
+{
+  "summary": "Portal通知例外でホーム生成・勝利後の報告を止めない",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "updated",
+        "reason": "初期化後のSDK通知失敗時も進行を続け、以後の通知を止める挙動を記録"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "notifyGame境界で同期例外を吸収してSDK参照を解除し言語を維持"
+      }
+    }
+  },
+  "validation": [
+    "修正前にSDK通知5種の例外伝播を単体5件の失敗で再現",
+    "修正後は単体139件・lint/typecheck/build成功",
+    "Chromium/WebKit各2件成功: 起動通知失敗と勝利通知失敗でも旅開始・勝利・報告へ進行",
+    "UI配置・文言・素材の変更なし"
+  ],
+  "limitations": [
+    "実際のPortal Preview・物理端末は未確認。SDKは例外注入による検証",
+    "PR #392/#393とは独立したmain基点の修正"
+  ]
+}

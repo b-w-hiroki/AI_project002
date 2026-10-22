@@ -3,6 +3,20 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 beforeEach(() => { vi.resetModules(); vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it.each(["gameplayStart", "gameplayStop", "happytime", "loadingStart", "loadingStop"] as const)("isolates a failing %s hook and disables further notifications", async hook => {
+  const fail = vi.fn(() => { throw new Error("Portal unavailable"); });
+  vi.stubGlobal("window", { CrazyGames: { SDK: {
+    init: async () => {}, user: { systemInfo: { locale: "ja" } }, game: { [hook]: fail },
+  } } });
+  const { initCrazyGames, cg } = await import("../src/platform/crazygames");
+  expect(await initCrazyGames()).toBe(true);
+  expect(() => cg[hook]()).not.toThrow();
+  expect(() => cg[hook]()).not.toThrow();
+  expect(fail).toHaveBeenCalledOnce();
+  const { getPortalLocale } = await import("../../shared/locale");
+  expect(getPortalLocale()).toBe("ja");
+});
+
 it("continues without SDK when initialization stalls, ignoring its late completion", async () => {
   let release!: () => void;
   const start = vi.fn();
