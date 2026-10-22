@@ -15,6 +15,21 @@ function fixture(fail: string) {
   return { map, store };
 }
 describe("durable raid claim", () => {
+  it.each(["", " ", "\n", "0x10", "1e2", "+80", "080", "80.0", "-0"])("preserves a journal with malformed total %j", total => {
+    const { map, store } = fixture("none");
+    map.set(CLAIM_KEY, JSON.stringify({ raid: JSON.stringify(newRaid(2, 1)), total }));
+    const before = [...map];
+    const claim = createClaimStorage(() => store);
+    expect(() => claim.storage.getItem(TOTAL)).toThrow();
+    expect(() => claim.storage.setItem(TOTAL, "20")).toThrow();
+    expect(() => claim.claimReward()).toThrow();
+    expect([...map]).toEqual(before);
+  });
+  it.each(["0", "580", String(Number.MAX_SAFE_INTEGER)])("reads a canonical journal total %s", total => {
+    const { map, store } = fixture("none");
+    map.set(CLAIM_KEY, JSON.stringify({ raid: JSON.stringify(newRaid(2, 1)), total }));
+    expect(createClaimStorage(() => store).storage.getItem(TOTAL)).toBe(total);
+  });
   it("does not change either value if the commit fails", () => {
     const { map, store } = fixture(CLAIM_KEY);
     expect(() => createClaimStorage(() => store).claimReward()).toThrow();

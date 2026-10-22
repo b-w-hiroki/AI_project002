@@ -76,16 +76,24 @@ export function createProgressStorage(getStore: () => Pick<Storage, "getItem" | 
     unavailable.add(BEST_STAGE_KEY);
     unavailable.add(TOTAL_EVAL_KEY);
   }
-  return { loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, useSessionOnly, hasUnavailableProgress: () => unavailable.size > 0 };
+  return {
+    loadBestStage, saveBestStage, loadTotalEvaluation, addTotalEvaluation, useSessionOnly,
+    hasUnavailableProgress: () => unavailable.size > 0,
+    isSessionOnly: (counter: "best" | "total") => unavailable.has(counter === "best" ? BEST_STAGE_KEY : TOTAL_EVAL_KEY),
+  };
 }
 
 const progress = createProgressStorage();
 export const { loadBestStage, loadTotalEvaluation, hasUnavailableProgress } = progress;
 export async function saveBestStage(stage: number): Promise<void> {
+  if (progress.isSessionOnly("best")) { progress.saveBestStage(stage); return; }
   try { await withSaveLock(() => progress.saveBestStage(stage)); }
   catch { progress.useSessionOnly(); progress.saveBestStage(stage); }
 }
 export async function addTotalEvaluation(amount: number): Promise<number> {
+  // Once this counter is memory-only, no shared storage can be touched. Avoid
+  // repeating a lock timeout on every report; other healthy counters still lock.
+  if (progress.isSessionOnly("total")) return progress.addTotalEvaluation(amount);
   // The action itself absorbs storage failures. A lock failure instead opts the
   // tab into session-only progress, never an unprotected persistent write.
   try { return await withSaveLock(() => progress.addTotalEvaluation(amount)); }

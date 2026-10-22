@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
 import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 import { KARMA_REQUESTS } from "../src/logic/karma";
@@ -81,8 +82,50 @@ for (const failure of ["getter", "read", "write"] as const) {
         Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
       });
       await expect.poll(() => phase(page)).toBe("report");
+      const reportFrame = await page.evaluate(() => window.__qaGame.loop.frame);
+      await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(reportFrame + 1);
       await tapPoint(page, 225, 291);
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const rows = Reflect.get(scene, "highlightRows") as { selected: boolean }[];
+        const findLabel = (nodes: Phaser.GameObjects.GameObject[], visible = true): Phaser.GameObjects.Text | undefined => {
+          for (const node of nodes) {
+            const nodeVisible = visible && Reflect.get(node, "visible") !== false;
+            if (!nodeVisible) continue;
+            if (node.name === "report-submit-label") return node as Phaser.GameObjects.Text;
+            if (node.type === "Container") {
+              const found = findLabel((node as Phaser.GameObjects.Container).list, nodeVisible);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+        const label = findLabel(scene.children.list);
+        const zone = label?.parentContainer?.list.find(node => node.type === "Zone");
+        return {
+          phase: Reflect.get(scene, "phase"),
+          selected: rows.filter(row => row.selected).length,
+          submitEnabled: zone?.input?.enabled === true,
+          submitting: Reflect.get(scene, "reportSubmitting") === true,
+        };
+      })).toEqual({ phase: "report", selected: 1, submitEnabled: true, submitting: false });
+      await page.evaluate(() => {
+        const events: { kind: string; target: string; frame: number }[] = [];
+        Reflect.set(window, "__submitInputEvents", events);
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        for (const kind of ["gameobjectdown", "gameobjectup"]) {
+          scene.input.on(kind, (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
+            events.push({ kind, target: target.name || target.type, frame: window.__qaGame.loop.frame });
+          });
+        }
+      });
       await tapPoint(page, 225, 680);
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        const events = Reflect.get(window, "__submitInputEvents") as { kind: string; target: string }[];
+        return { phase: Reflect.get(scene, "phase"), submitting: Reflect.get(scene, "reportSubmitting"),
+          accepted: events.some(event => event.kind === "gameobjectup" && event.target.startsWith("cta:")) };
+      })).toEqual({ phase: "transition", submitting: true, accepted: true });
       await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(year + 1);
       await expect.poll(() => phase(page)).toBe("karma");
     }
@@ -484,6 +527,16 @@ async function tapPoint(page: Page, x: number, y: number) {
   await page.touchscreen.tap(box.x + x * box.width / size.width, box.y + y * box.height / size.height);
 }
 
+async function tapPointAtomic(page: Page, x: number, y: number) {
+  const canvas = page.locator("canvas");
+  const size = await canvas.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return { x: box.x, y: box.y, width: box.width, height: box.height,
+      canvasWidth: (node as HTMLCanvasElement).width, canvasHeight: (node as HTMLCanvasElement).height };
+  });
+  await page.touchscreen.tap(size.x + x * size.width / size.canvasWidth, size.y + y * size.height / size.canvasHeight);
+}
+
 test("notch insets and changing browser height preserve choices and touch coordinates", async ({ page }) => {
   // Chromium env() emulation: this verifies layout, not physical Safari behavior.
   const cdp = await page.context().newCDPSession(page);
@@ -520,6 +573,39 @@ test("notch insets and changing browser height preserve choices and touch coordi
 });
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
+
+async function expectNaturalBattleReport(page: Page, label: string): Promise<void> {
+  const snapshot = () => page.evaluate(() => {
+    const game = window.__qaGame;
+    const scene = game.scene.getScene("GameScene");
+    const clock = scene.time;
+    return {
+      phase: Reflect.get(scene, "phase"),
+      frame: game.loop.frame,
+      sceneTime: clock.now,
+      scenePaused: clock.paused,
+      sceneTimeScale: clock.timeScale,
+      sceneActive: scene.sys.isActive(),
+      scenePausedByManager: scene.sys.isPaused(),
+      currentBattleResult: Reflect.get(scene, "currentBattleResult") !== null,
+      activeTimers: (Reflect.get(clock, "_activeList") as unknown[] | undefined)?.length ?? null,
+      pendingTimers: (Reflect.get(clock, "_pendingInsertion") as unknown[] | undefined)?.length ?? null,
+      visible: document.visibilityState,
+      focused: document.hasFocus(),
+      wallTime: performance.now(),
+    };
+  });
+  const before = await snapshot();
+  try {
+    await expect.poll(() => phase(page)).toBe("report");
+  } catch (error) {
+    try {
+      await mkdir("e2e/screenshots", { recursive: true });
+      await writeFile(`e2e/screenshots/battle-report-${label}.json`, JSON.stringify({ before, after: await snapshot() }, null, 2));
+    } catch { /* Preserve the original transition assertion. */ }
+    throw error;
+  }
+}
 
 async function checkFrame(page: Page, name: string) {
   await expect.poll(async () => {
@@ -1100,20 +1186,21 @@ test("home navigation opens and closes information without starting a journey be
   await expect.poll(() => phase(page)).toBe("karma");
 });
 
-test("home information survives rotation and closes across both layouts", async ({ page }) => {
-  const rotate = async (viewport: { width: number; height: number }) => {
-    await page.setViewportSize(viewport);
-    await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(viewport.width > viewport.height ? 800 : 450);
-    await page.evaluate(() => new Promise<void>(resolve => {
-      const scale = window.__qaGame.scale;
-      let timer: ReturnType<typeof setTimeout>;
-      const settled = () => { scale.off("resize", changed); resolve(); };
-      const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
-      scale.on("resize", changed);
-      changed();
-    }));
-  };
-  const visiblePanel = () => page.evaluate(() => {
+async function rotateHome(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(viewport.width > viewport.height ? 800 : 450);
+  await page.evaluate(() => new Promise<void>(resolve => {
+    const scale = window.__qaGame.scale;
+    let timer: ReturnType<typeof setTimeout>;
+    const settled = () => { scale.off("resize", changed); resolve(); };
+    const changed = () => { clearTimeout(timer); timer = setTimeout(settled, 250); };
+    scale.on("resize", changed);
+    changed();
+  }));
+}
+
+function visibleHomePanel(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const values: string[] = [];
     for (const root of scene.children.list) {
@@ -1127,6 +1214,27 @@ test("home information survives rotation and closes across both layouts", async 
     }
     return values;
   });
+}
+
+test("home information survives rotation and closes across both layouts", async ({ page }) => {
+  const rotate = (viewport: { width: number; height: number }) => rotateHome(page, viewport);
+  const visiblePanel = () => visibleHomePanel(page);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    let ready = false;
+    const visit = (nodes: Phaser.GameObjects.GameObject[], visible = true) => {
+      for (const node of nodes) {
+        const nodeVisible = visible && Reflect.get(node, "visible") !== false;
+        if (!nodeVisible) continue;
+        if (node.name === "home-rail:0" && node.type === "Zone" && node.input?.enabled) ready = true;
+        if (node.type === "Container") visit((node as Phaser.GameObjects.Container).list, nodeVisible);
+      }
+    };
+    visit(scene.children.list);
+    return { phase: Reflect.get(scene, "phase"), ready };
+  })).toEqual({ phase: "title", ready: true });
+  const homeFrame = await page.evaluate(() => window.__qaGame.loop.frame);
+  await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(homeFrame + 1);
   await tapPoint(page, 47, 253);
   await expect.poll(visiblePanel).toContain("冒険の案内");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-rotation-portrait.png" });
@@ -1151,6 +1259,12 @@ test("home information survives rotation and closes across both layouts", async 
   await rotate({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(450);
   await expect.poll(visiblePanel).toEqual([]);
+});
+
+test("character information survives rotation and journey starts after closing", async ({ page }) => {
+  const rotate = (viewport: { width: number; height: number }) => rotateHome(page, viewport);
+  const visiblePanel = () => visibleHomePanel(page);
+  await rotate({ width: 320, height: 568 });
   await tapPoint(page, 225, 758);
   await expect.poll(visiblePanel).toContain("カイトの能力");
   await page.locator("canvas").screenshot({ path: "../../docs/review/karma-modal-character-rotated.png" });
@@ -1172,8 +1286,53 @@ test("home information survives rotation and closes across both layouts", async 
     visit(scene.children.list);
     return ready;
   })).toBe(true);
-  await tapPoint(page, 591, 397);
-  await expect.poll(() => phase(page)).toBe("karma");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const events: { kind: string; target: string; frame: number }[] = [];
+    Reflect.set(window, "__journeyInputEvents", events);
+    for (const kind of ["gameobjectdown", "gameobjectup"]) {
+      scene.input.on(kind, (_pointer: Phaser.Input.Pointer, target: Phaser.GameObjects.GameObject) => {
+        events.push({ kind, target: target.name || target.type, frame: window.__qaGame.loop.frame });
+      });
+    }
+  });
+  const beforeTap = await page.evaluate(() => ({ frame: window.__qaGame.loop.frame, time: performance.now() }));
+  await tapPointAtomic(page, 591, 397);
+  try {
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return {
+        phase: Reflect.get(scene, "phase"),
+        journeyPending: Reflect.get(scene, "journeyPending") === true,
+        journeyError: Reflect.get(scene, "journeyError") === true,
+      };
+    })).toEqual({ phase: "karma", journeyPending: false, journeyError: false });
+  } catch (error) {
+    // The CI screenshot artifact also preserves input acceptance and loading state.
+    try {
+      const state = await page.evaluate(() => {
+        const game = window.__qaGame;
+        const scene = game.scene.getScene("GameScene");
+        const canvas = game.canvas;
+        const box = canvas.getBoundingClientRect();
+        return {
+          phase: Reflect.get(scene, "phase"),
+          journeyPending: Reflect.get(scene, "journeyPending") === true,
+          journeyError: Reflect.get(scene, "journeyError") === true,
+          active: scene.sys.isActive(),
+          paused: scene.sys.isPaused(),
+          frame: game.loop.frame,
+          time: performance.now(),
+          inputEvents: Reflect.get(window, "__journeyInputEvents"),
+          canvas: { x: box.x, y: box.y, width: box.width, height: box.height,
+            backingWidth: canvas.width, backingHeight: canvas.height },
+        };
+      });
+      await mkdir("e2e/screenshots", { recursive: true });
+      await writeFile("e2e/screenshots/home-rotation-failure.json", JSON.stringify({ beforeTap, after: state }, null, 2));
+    } catch { /* Keep the original assertion failure if diagnostic collection fails. */ }
+    throw error;
+  }
 });
 
 test("hero league opens from home in portrait and landscape", async ({ page }) => {
@@ -2097,7 +2256,7 @@ test("best year survives an interrupted journey and a new start", async ({ page 
   if (await phase(page) === "encounter") await tapPoint(page, 225, 460);
   await expect.poll(() => phase(page)).toBe("battle");
   await tapPoint(page, 225, 560);
-  await expect.poll(() => phase(page)).toBe("report");
+  await expectNaturalBattleReport(page, "best-year");
   await tapPoint(page, 225, 291);
   await tapPoint(page, 225, 680);
   await expect.poll(() => phase(page)).toBe("karma");
@@ -2133,7 +2292,7 @@ test("a normal twelve-year journey finishes using touch in both orientations", a
     if (await phase(page) === "encounter") await tapPoint(page, wide ? 591 : 225, wide ? 322 : 460);
     await expect.poll(() => phase(page)).toBe("battle");
     await tapPoint(page, wide ? 591 : 225, wide ? 396 : 560);
-    await expect.poll(() => phase(page)).toBe("report");
+    await expectNaturalBattleReport(page, `twelve-year-${year}`);
     await tapPoint(page, wide ? 215 : 225, wide ? 150 : 291);
     await tapPoint(page, wide ? 609 : 225, wide ? 405 : 680);
   }
@@ -2931,6 +3090,34 @@ test("save lock timeout keeps report visible and avoids duplicate submission", {
   expect(progress.records).toBe(1);
 });
 
+test("session-only progress bypasses subsequent lock waits", { tag: "@webkit-regression" }, async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const path = "/src/logic/progress.ts";
+    const progress = await import(path);
+    let release!: () => void;
+    let acquired!: () => void;
+    const ready = new Promise<void>(resolve => { acquired = resolve; });
+    const held = navigator.locks.request("karma_quest_progress_v1", () => new Promise<void>(resolve => {
+      release = resolve;
+      acquired();
+    }));
+    await ready;
+    try {
+      await progress.addTotalEvaluation(80); // First timeout switches to memory.
+      const completed = await Promise.race([
+        Promise.all([progress.addTotalEvaluation(20), progress.saveBestStage(4)]).then(() => true),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(false), 500)),
+      ]);
+      return {
+        completed, best: progress.loadBestStage(), total: progress.loadTotalEvaluation(),
+        queued: (await navigator.locks.query()).pending?.length,
+        saved: localStorage.getItem("karma_quest_total_eval_v1"),
+      };
+    } finally { release(); await held; }
+  });
+  expect(result).toEqual({ completed: true, best: 4, total: 100, queued: 0, saved: null });
+});
+
 test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit-regression" }, async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("karma_quest_solo_raid_v1", '{"level":1,"hp":0,"maxHp":900,"defeats":0}');
@@ -2948,4 +3135,87 @@ test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit
   expect(await page.evaluate(() => localStorage.getItem("karma_quest_total_eval_v1"))).toBeNull();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").hp)).toBe(0);
   expect(await page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "raidPanel"))).toBe(false);
+});
+
+
+test("malformed claim total preserves saves and allows a session journey", { tag: "@webkit-regression" }, async ({ page }) => {
+  const saved = await page.evaluate(() => {
+    const journal = JSON.stringify({ raid: JSON.stringify({ level: 2, hp: 1250, maxHp: 1250, defeats: 1 }), total: "" });
+    localStorage.setItem("karma_quest_raid_claim_v1", journal);
+    localStorage.setItem("karma_quest_total_eval_v1", "500");
+    return journal;
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  const information = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeInformation")?.title);
+  await expect.poll(information).toBe("進行は今回のみ保持");
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 135, 758);
+  await expect.poll(information).toBe("保存できません");
+  const result = await page.evaluate(async () => {
+    const path = "/src/logic/progress.ts";
+    const progress = await import(path);
+    await progress.addTotalEvaluation(20);
+    return {
+      journal: localStorage.getItem("karma_quest_raid_claim_v1"),
+      total: localStorage.getItem("karma_quest_total_eval_v1"),
+      session: progress.loadTotalEvaluation(),
+    };
+  });
+  expect(result).toEqual({ journal: saved, total: "500", session: 20 });
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+});
+
+for (const hook of ["gameplayStart", "happytime"] as const) {
+  test(`portal ${hook} exception does not stop the journey`, { tag: "@webkit-regression" }, async ({ page }) => {
+    await page.addInitScript(failingHook => {
+      Reflect.set(window, "__portalFailures", 0);
+      const fail = () => {
+        Reflect.set(window, "__portalFailures", Number(Reflect.get(window, "__portalFailures")) + 1);
+        throw new Error("Portal notification unavailable");
+      };
+      Reflect.set(window, "CrazyGames", { SDK: {
+        init: async () => {}, user: { systemInfo: { locale: "ja" } },
+        game: { gameplayStart: () => {}, happytime: () => {}, [failingHook]: fail },
+      } });
+    }, hook);
+    await page.reload();
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    await tapPoint(page, 225, 682);
+    await expect.poll(() => phase(page)).toBe("karma");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(window, "__originalRandom", Math.random);
+      Math.random = () => 0; // Deterministic victory exercises happytime.
+      Reflect.get(scene, "showBattlePhase").call(scene);
+      scene.time.timeScale = 5;
+    });
+    await expect.poll(() => phase(page), { timeout: 10000 }).toBe("report");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult")?.win)).toBe(true);
+    expect(await page.evaluate(() => Reflect.get(window, "__portalFailures"))).toBe(1);
+    await page.evaluate(() => {
+      Math.random = Reflect.get(window, "__originalRandom");
+      window.__qaGame.scene.getScene("GameScene").time.timeScale = 1;
+    });
+  });
+}
+
+test("journey retries after the loader throws during image registration", { tag: "@webkit-regression" }, async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const original = scene.load.image;
+    scene.load.image = function (...args) {
+      scene.load.image = original;
+      throw new Error(`Image registration failed: ${String(args[0])}`);
+    };
+  });
+  await tapPoint(page, 225, 682);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("読込失敗・依頼を押して再試行");
+  expect(await phase(page)).toBe("title");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyPending"))).toBe(false);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
 });

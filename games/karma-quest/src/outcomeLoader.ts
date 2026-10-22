@@ -9,24 +9,32 @@ export function loadOutcome(scene: Phaser.Scene, key: string): Promise<boolean> 
   if (!jobs) { jobs = new Map(); pending.set(scene, jobs); }
   const existing = jobs.get(key);
   if (existing) return existing;
-  const job = new Promise<boolean>(resolve => {
-    const event = `filecomplete-image-${key}`;
-    const finish = (success: boolean) => {
-      scene.load.off(event, complete);
-      scene.load.off("loaderror", error);
-      scene.events.off("shutdown", shutdown);
-      jobs!.delete(key);
-      resolve(success);
-    };
-    const complete = () => finish(true);
-    const error = (file: Phaser.Loader.File) => { if (file.key === key) finish(false); };
-    const shutdown = () => finish(false);
-    scene.load.once(event, complete);
-    scene.load.on("loaderror", error);
-    scene.events.once("shutdown", shutdown);
+  let resolve!: (success: boolean) => void;
+  const job = new Promise<boolean>(done => { resolve = done; });
+  // Register before starting: loader events can fire synchronously.
+  jobs.set(key, job);
+  const event = `filecomplete-image-${key}`;
+  let settled = false;
+  const finish = (success: boolean) => {
+    if (settled) return;
+    settled = true;
+    scene.load.off(event, complete);
+    scene.load.off("loaderror", error);
+    scene.events.off("shutdown", shutdown);
+    jobs.delete(key);
+    resolve(success);
+  };
+  const complete = () => finish(true);
+  const error = (file: Phaser.Loader.File) => { if (file.key === key) finish(false); };
+  const shutdown = () => finish(false);
+  scene.load.once(event, complete);
+  scene.load.on("loaderror", error);
+  scene.events.once("shutdown", shutdown);
+  try {
     scene.load.image(key, `images/delivery/${key}.webp`, { responseType: "blob", timeout: 15000 });
     if (!scene.load.isLoading()) scene.load.start();
-  });
-  jobs.set(key, job);
+  } catch {
+    finish(false);
+  }
   return job;
 }
