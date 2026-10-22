@@ -29,7 +29,14 @@ async function touchGamePoint(page: Page, x: number, y: number): Promise<void> {
   await page.touchscreen.tap(point.x, point.y);
 }
 
-async function enterBattleForVisualQa(page: Page): Promise<void> {
+async function enterBattleForVisualQa(page: Page, isolatePickups = false): Promise<void> {
+  if (isolatePickups) {
+    // Input tests use a stable battle fixture; pickup/overlay behavior has its own test.
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "spawnWavePickups", () => undefined);
+    });
+  }
   // visualqa=battle では GameScene の型選択を「連撃の型」に固定して自動通過する。
   // LoadoutScene の開始ボタンを押したあと、GameScene と player の生成完了まで待つ。
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -50,6 +57,19 @@ async function enterBattleForVisualQa(page: Page): Promise<void> {
     }
   }
   throw new Error("GameScene did not start after three loadout attempts");
+}
+
+async function expectPlayableBattle(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return {
+      status: Reflect.get(scene, "status"),
+      stageBuff: Reflect.get(scene, "stageBuffOverlayVisible"),
+      summon: Reflect.get(scene, "summonOverlayVisible"),
+      tips: Reflect.get(scene, "tipsVisible"),
+      physicsPaused: scene.physics.world.isPaused,
+    };
+  })).toEqual({ status: "playing", stageBuff: false, summon: false, tips: false, physicsPaused: false });
 }
 
 async function expectActionControlsClear(page: Page): Promise<void> {
@@ -259,7 +279,8 @@ test.describe("phone visual QA", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?visualqa=battle");
     await page.waitForFunction(() => !!window.__qaGame);
-    await enterBattleForVisualQa(page);
+    await enterBattleForVisualQa(page, true);
+    await expectPlayableBattle(page);
 
     const controls = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
@@ -838,7 +859,8 @@ test.describe("phone visual QA", () => {
     await page.goto("/?visualqa=battle");
     await page.locator("canvas").waitFor();
     await page.waitForFunction(() => !!window.__qaGame);
-    await enterBattleForVisualQa(page);
+    await enterBattleForVisualQa(page, true);
+    await expectPlayableBattle(page);
 
     await page.evaluate(() => {
       window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys();
@@ -872,7 +894,7 @@ test.describe("phone visual QA", () => {
     const guardPoint = await canvasPoint(page, 268, 756);
     const artifact = `e2e/screenshots/side-guard-${testInfo.project.name || "chromium"}-${testInfo.repeatEachIndex}`;
     try {
-      await sample("before-press");
+      expect((await sample("before-press")).stageBuffOverlayVisible).toBe(false);
       await page.mouse.move(guardPoint.x, guardPoint.y);
       await page.mouse.down();
       await expect.poll(async () => {
@@ -894,6 +916,49 @@ test.describe("phone visual QA", () => {
       await writeFile(path, JSON.stringify({ guardPoint, viewport: page.viewportSize(), samples }, null, 2));
       await testInfo.attach("guard-state", { path, contentType: "application/json" });
     }
+  });
+
+  test("stage-buff selection resumes guard input", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/?visualqa=battle");
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page, true);
+    await expectPlayableBattle(page);
+
+    // Open the real production chooser, then use the visible card to resume play.
+    await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "openStageBuffOverlay").call(
+      window.__qaGame.scene.getScene("GameScene"),
+    ));
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return { visible: Reflect.get(scene, "stageBuffOverlayVisible"), paused: scene.physics.world.isPaused };
+    })).toEqual({ visible: true, paused: true });
+
+    const guardPoint = await canvasPoint(page, 268, 756);
+    await page.mouse.move(guardPoint.x, guardPoint.y);
+    await page.mouse.down();
+    await expect.poll(() => page.evaluate(() =>
+      (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "guardKey") as Phaser.Input.Keyboard.Key).isDown
+    )).toBe(true);
+    const frame = await page.evaluate(() => window.__qaGame.loop.frame);
+    await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(frame + 2);
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "guarding"))).toBe(false);
+    await page.mouse.up();
+
+    await tapGamePoint(page, 250, 300);
+    await expectPlayableBattle(page);
+    await page.evaluate(() => window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys());
+    await page.mouse.move(guardPoint.x, guardPoint.y);
+    await page.mouse.down();
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return { keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown, guarding: Reflect.get(scene, "guarding") };
+    })).toEqual({ keyDown: true, guarding: true });
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return { keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown, guarding: Reflect.get(scene, "guarding") };
+    })).toEqual({ keyDown: false, guarding: false });
   });
 
   test("visual QA: game over hides touch controls", async ({ page }) => {
