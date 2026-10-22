@@ -34,6 +34,7 @@ platform/crazygames.tsのnotifyGameがSDK通知5種の同期例外を境界で�
 
 outcomeLoaderはPromiseをpendingへ登録してから画像登録・開始を実行する。同期イベントによる失敗もpendingを確実に削除する。画像登録・開始の例外はfalseへ変換し、成功・失敗・shutdown共通の一度だけの後始末でリスナーとpendingを解除する。同じ画像の進行中要求は引き続き共有する。
 
+
 ## 永続化境界
 
 [progress.ts](../../../games/karma-quest/src/logic/progress.ts): karma_quest_best_stage_v1、karma_quest_total_eval_v1（数値文字列）。
@@ -49,9 +50,9 @@ progress.tsはcreateProgressStorageのクロージャに値と利用不能キー
 
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
+claimStorage.pendingは評価文字列について安全な非負整数の検証に加え、String(Number(total))との一致を要求する。受取記録の書き手が出力しない空白・指数・16進・先頭ゼロなどを拒否し、旧キーへの反映や記録削除を行わない。既存の通常保存キーの読込規則は変更しない。
 保存APIはisSessionOnlyで対象カウンタの利用不能状態を確認し、すでにメモリ専用ならロック要求を省略する。hasUnavailableProgressによる一括判定は使わず、片方だけが失敗している場合の正常な保存は引き続きロックする。メモリ専用状態は再読み込みまで解除しないため、この分岐から永続書込へ戻ることはない。
 
-claimStorage.pendingは評価文字列について安全な非負整数の検証に加え、String(Number(total))との一致を要求する。受取記録の書き手が出力しない空白・指数・16進・先頭ゼロなどを拒否し、旧キーへの反映や記録削除を行わない。既存の通常保存キーの読込規則は変更しない。
 
 ## 描画・検証
 
