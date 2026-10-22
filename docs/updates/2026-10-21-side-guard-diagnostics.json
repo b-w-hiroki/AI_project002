@@ -1,0 +1,25 @@
+{
+  "summary": "剣戟の森の不安定なガード検査へ診断証跡を追加",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "製品コード・操作・表示・保存形式は変更せず、E2Eの診断情報のみ追加"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "状態系列と失敗時画像を既存CI成果物へ保存する検証設計を記録"
+      }
+    }
+  },
+  "validation": [
+    "WebKit正常検査3回連続成功、Chromium1回成功",
+    "操作停止フラグの一時注入で元CIと同じ期待値差分を意図的に発生させ、JSONにtipsVisible=true・フレーム進行・入力保持を確認。注入コードは復元済み",
+    "負例JSONはdocs/review/side-guard-injected-block-2026-10-21.json、通常例はside-guard-normal-2026-10-21.json",
+    "lint/typecheck成功"
+  ],
+  "limitations": [
+    "CI初回失敗の根本原因は未特定。注入で同じ症状を作れても同じ原因だったとは断定しない",
+    "実機・外部Portal未確認"
+  ]
+}

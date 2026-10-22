@@ -76,24 +76,38 @@ export function readBattleViewModel(scene: Runtime): BattleViewModel {
 
 /** Translates view gestures into the existing keyboard/command contract. */
 export class BattleInputAdapter {
+  private readonly presses = new WeakMap<Phaser.Input.Keyboard.Key, object>();
   constructor(private readonly scene: Runtime) {}
 
+  private pressKey(key: Phaser.Input.Keyboard.Key | undefined): void {
+    if (!key) return;
+    this.presses.set(key, {});
+    key.onDown(fakeKeyEvent(this.scene));
+  }
+
+  private releaseKey(key: Phaser.Input.Keyboard.Key | undefined): void {
+    if (!key) return;
+    const press = this.presses.get(key);
+    requestAnimationFrame(() => {
+      // A delayed release belongs to the old press, not a newer held gesture.
+      if (this.presses.get(key) === press) key.onUp(fakeKeyEvent(this.scene));
+    });
+  }
+
   press(direction: Direction): void {
-    this.scene.cursors?.[direction].onDown(fakeKeyEvent(this.scene));
+    this.pressKey(this.scene.cursors?.[direction]);
   }
 
   release(direction: Direction): void {
-    const key = this.scene.cursors?.[direction];
-    if (key) requestAnimationFrame(() => key.onUp(fakeKeyEvent(this.scene)));
+    this.releaseKey(this.scene.cursors?.[direction]);
   }
 
   pressAction(action: "attack" | "skill" | "guard"): void {
-    this.actionKey(action)?.onDown(fakeKeyEvent(this.scene));
+    this.pressKey(this.actionKey(action));
   }
 
   releaseAction(action: "attack" | "skill" | "guard"): void {
-    const key = this.actionKey(action);
-    if (key) requestAnimationFrame(() => key.onUp(fakeKeyEvent(this.scene)));
+    this.releaseKey(this.actionKey(action));
   }
 
   triggerOugi(): void {

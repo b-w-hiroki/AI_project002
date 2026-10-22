@@ -1,0 +1,27 @@
+{
+  "summary": "剣戟のドラッグ移動検査に入力・物理・停止条件の診断を追加",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "製品の操作・表示を変更せず、既存の移動量と停止速度の合格条件も維持する"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "ドラッグ時の状態系列と失敗画像をCI成果物に残す検証責務を追加した"
+      }
+    }
+  },
+  "validation": [
+    "変更前のローカルWebKitドラッグ検査5回成功。変更後の関連3件とWebKit全23件成功",
+    "物理停止を一時注入し、右入力true・x=180のまま移動量検査が失敗する負例を確認。JSONにphysicsPaused=trueと進むフレーム番号を記録。注入コードは除去済み",
+    "通常例と負例をdocs/review/side-drag-normal-2026-10-21.jsonとside-drag-injected-pause-2026-10-21.jsonへ保存",
+    "単体141件、lint、typecheck、build成功",
+    "Chromium全23件成功。縦画面の実スクリーンショットでゲーム描画を確認"
+  ],
+  "limitations": [
+    "CI run 39560218927 job 119089569879ではガード成功、ドラッグの移動量検査失敗。原因は未特定で、物理停止の負例を根本原因とは断定しない",
+    "ローカルWebKitの操作検査は通るが画像にゲーム描画がない。CIのWebKit画像は描画されており、ローカル画像を見た目の合格証拠にしない",
+    "実機・外部Portal未確認"
+  ]
+}
