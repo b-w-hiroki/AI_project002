@@ -98,6 +98,67 @@ test("short portrait separates opponent guidance and keeps primary actions touch
   await checkFrame(page, "short-portrait-title-flow");
 });
 
+test("compact portrait keeps the guided move reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await checkFrame(page, "compact-portrait-title-before");
+  const titleHitHeight = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "title-battle") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const battle = find(scene.children.list)!;
+    const hit = battle.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    return hit.input?.hitArea.height as number;
+  });
+  const titleCanvas = (await page.locator("canvas").boundingBox())!;
+  const titleLogicalHeight = await page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).height);
+  expect(titleHitHeight * titleCanvas.height / titleLogicalHeight).toBeGreaterThanOrEqual(44);
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  const readLayout = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
+    const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
+    const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    return {
+      ringVisible: ring.visible,
+      ringX: ring.x,
+      kickX: kick.x,
+      hitHeight: hit.input?.hitArea.height as number,
+      hitBottom: kick.y + hit.input!.hitArea.height / 2,
+      logicalHeight: window.__qaGame.canvas.height,
+    };
+  });
+  await expect.poll(async () => (await readLayout()).ringVisible).toBe(true);
+  const layout = await readLayout();
+  const canvas = (await page.locator("canvas").boundingBox())!;
+  expect(layout.ringVisible).toBe(true);
+  expect(layout.ringX).toBe(layout.kickX);
+  expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  await checkFrame(page, "compact-portrait-guided-move");
+  await tapVisibleText(page, "蹴");
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+});
+
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);

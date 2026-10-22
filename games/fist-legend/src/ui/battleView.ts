@@ -39,7 +39,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const lang = detectLang();
   const battleGroup = scene.add.container(0, 0);
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
-  const battleTell = text(scene, 225, 104, "", 17, "#ffe2a8");
+  const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
   battleGroup.add([battleStatus, battleTell, battleGauge, counterRing]);
@@ -50,7 +50,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
     { move: "ki", label: moveLabel(lang, "ki"), color: 0x315d91 },
   ];
   moveButtons.forEach(({ move, label, color }, index) => {
-    const b = button(scene, battleGroup, 92 + index * 133, 684, 112, 66, label, color, () => actions.move(move));
+    const b = button(scene, battleGroup, 92 + index * 133, 684, 112, 66, label, color, () => actions.move(move), false, 72);
     b.setName(`mobile-move-${move}`);
   });
   const ougi = button(scene, battleGroup, 225, 760, 360, 60, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi);

@@ -31,6 +31,7 @@ export function button(
   color: number,
   onTap: () => void,
   emphasis = false,
+  minHitHeight = 68,
 ): Phaser.GameObjects.Container {
   const isPrimary = emphasis || (color === 0xa9402d && width >= 300 && height >= 58);
   const shadow = scene.add.rectangle(3, 5, width, height, 0x120b09, 0.38).setStrokeStyle(1, 0x000000, 0.22);
@@ -49,10 +50,11 @@ export function button(
   const leftStud = scene.add.circle(-width / 2 + 10, 0, 2.5, 0xffd68c, 0.82);
   const rightStud = scene.add.circle(width / 2 - 10, 0, 2.5, 0xffd68c, 0.82);
   const labelText = text(scene, 0, 0, label, height >= 56 ? 24 : 22).setStroke("#351713", 3);
-  const hit = scene.add.zone(0, 0, width, Math.max(68, height)).setInteractive({ useHandCursor: true });
+  const hitHeight = Math.max(minHitHeight, height);
+  const hit = scene.add.zone(0, 0, width, hitHeight).setInteractive({ useHandCursor: true });
   const container = scene.add
     .container(x, y, [shadow, bg, rim, shine, heraldry, leftStud, rightStud, labelText, hit])
-    .setSize(width, Math.max(68, height));
+    .setSize(width, hitHeight);
   const release = () => {
     if (!isPrimary) container.setScale(1);
     bg.setFillStyle(color, 0.96);
