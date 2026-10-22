@@ -1065,3 +1065,54 @@ test("rapid re-press keeps the newest battle input held", async ({ page }) => {
   });
   expect(results).toEqual(["guard", "attack", "skill", "left", "right", "up", "down"].map(binding => ({ binding, held: true, released: true })));
 });
+
+test("action buttons retain the owning finger until it leaves", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?visualqa=battle");
+  await page.waitForFunction(() => !!window.__qaGame);
+  await enterBattleForVisualQa(page);
+  const results = await page.evaluate(async () => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const result = find((node as Phaser.GameObjects.Container).list, name);
+          if (result) return result;
+        }
+      }
+    };
+    const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    const results = [];
+    for (const binding of ["guard", "attack", "skill", "up"]) {
+      const root = find(scene.children.list, `side-action-${binding}`)!;
+      const face = root.list.find(node => !!node.input)!;
+      const key = binding === "up" ? Reflect.get(scene, "cursors").up : Reflect.get(scene, `${binding}Key`);
+      key.reset();
+      const owner = { id: 41 };
+      const other = { id: 42 };
+      face.emit("pointerdown", owner);
+      face.emit("pointerdown", other);
+      face.emit("pointerout", other);
+      face.emit("pointerup", other);
+      await frame();
+      const held = key.isDown;
+      const pressedScale = root.scaleX;
+      face.emit("pointerup", owner);
+      await frame();
+      const released = !key.isDown;
+      const scale = root.scaleX;
+      face.emit("pointerdown", owner);
+      window.dispatchEvent(new Event("blur"));
+      await frame();
+      const blurReleased = !key.isDown;
+      face.emit("pointerdown", other);
+      const reclaimed = key.isDown;
+      face.emit("pointerout", other);
+      await frame();
+      results.push({ binding, held, pressedScale, released, scale, blurReleased, reclaimed, outReleased: !key.isDown });
+    }
+    return results;
+  });
+  expect(results).toEqual(["guard", "attack", "skill", "up"].map(binding => ({ binding, held: true, pressedScale: 0.93, released: true, scale: 1, blurReleased: true, reclaimed: true, outReleased: true })));
+});
