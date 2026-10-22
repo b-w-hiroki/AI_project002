@@ -5,12 +5,14 @@ import { fighterById, type FighterId } from "../logic/team";
 import { detectLang, fighterName, moveLabel, moveTell, opponentName as localizedOpponentName, opponentType, tr } from "../logic/i18n";
 import { text, button } from "./controls";
 import { exchangeGuide } from "../logic/playGuide";
+import { teamTacticalRead } from "../logic/teamTactics";
 
 export type BattleView = {
   battleGroup: Phaser.GameObjects.Container;
   battleStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
+  counterRing: Phaser.GameObjects.Graphics;
 };
 export type BattleModel = {
   battle: Readonly<Pick<BattleState, "playerHp" | "enemyHp" | "playerGauge">>;
@@ -39,7 +41,8 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
   const battleTell = text(scene, 225, 104, "", 17, "#ffe2a8");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
-  battleGroup.add([battleStatus, battleTell, battleGauge]);
+  const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
+  battleGroup.add([battleStatus, battleTell, battleGauge, counterRing]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
     { move: "punch", label: moveLabel(lang, "punch"), color: 0xb8412f },
@@ -60,7 +63,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
 
-  return { battleGroup, battleStatus, battleTell, battleGauge };
+  return { battleGroup, battleStatus, battleTell, battleGauge, counterRing };
 }
 
 export function renderBattleView(ui: BattleView, model: BattleModel, viewport: { portrait: boolean; width: number; height: number }, chrome: Phaser.GameObjects.Graphics): void {
@@ -138,5 +141,18 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   ui.battleGauge.setText(gaugeRatio >= 1
     ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
     : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`);
+
+  const guidedMove = (model.beat ?? 0) < 3
+    ? teamTacticalRead(team, model.nextEnemyMove ?? "punch").counterMove : null;
+  const guidedButton = guidedMove
+    ? ui.battleGroup.getByName(`mobile-move-${guidedMove}`) as Phaser.GameObjects.Container | null : null;
+  ui.counterRing.clear().setVisible(Boolean(guidedButton));
+  if (guidedButton) {
+    const ringWidth = portrait ? 132 : 104;
+    const ringHeight = portrait ? 84 : 72;
+    ui.counterRing.setPosition(guidedButton.x, guidedButton.y)
+      .lineStyle(4, 0xffdd8a, 0.95)
+      .strokeRoundedRect(-ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight, 9);
+  }
 
 }

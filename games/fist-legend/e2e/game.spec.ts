@@ -181,8 +181,39 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
   await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics | null;
+    const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container | null;
+    return Boolean(ring?.visible && kick && ring.x === kick.x && ring.y === kick.y);
+  })).toBe(true);
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "beat", 3));
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Graphics | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-counter-ring") return node as Phaser.GameObjects.Graphics;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return find(scene.children.list)?.visible;
+  })).toBe(false);
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 75, enemyHp: 25 });
