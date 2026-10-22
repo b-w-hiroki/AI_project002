@@ -2977,3 +2977,86 @@ test("leaving a raid cancels an action waiting for another tab", { tag: "@webkit
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}").hp)).toBe(0);
   expect(await page.evaluate(() => !!Reflect.get(window.__qaGame.scene.getScene("GameScene"), "raidPanel"))).toBe(false);
 });
+
+
+test("malformed claim total preserves saves and allows a session journey", { tag: "@webkit-regression" }, async ({ page }) => {
+  const saved = await page.evaluate(() => {
+    const journal = JSON.stringify({ raid: JSON.stringify({ level: 2, hp: 1250, maxHp: 1250, defeats: 1 }), total: "" });
+    localStorage.setItem("karma_quest_raid_claim_v1", journal);
+    localStorage.setItem("karma_quest_total_eval_v1", "500");
+    return journal;
+  });
+  await page.reload();
+  await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+  const information = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "homeInformation")?.title);
+  await expect.poll(information).toBe("進行は今回のみ保持");
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 135, 758);
+  await expect.poll(information).toBe("保存できません");
+  const result = await page.evaluate(async () => {
+    const path = "/src/logic/progress.ts";
+    const progress = await import(path);
+    await progress.addTotalEvaluation(20);
+    return {
+      journal: localStorage.getItem("karma_quest_raid_claim_v1"),
+      total: localStorage.getItem("karma_quest_total_eval_v1"),
+      session: progress.loadTotalEvaluation(),
+    };
+  });
+  expect(result).toEqual({ journal: saved, total: "500", session: 20 });
+  await tapPoint(page, 225, 551);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+});
+
+for (const hook of ["gameplayStart", "happytime"] as const) {
+  test(`portal ${hook} exception does not stop the journey`, { tag: "@webkit-regression" }, async ({ page }) => {
+    await page.addInitScript(failingHook => {
+      Reflect.set(window, "__portalFailures", 0);
+      const fail = () => {
+        Reflect.set(window, "__portalFailures", Number(Reflect.get(window, "__portalFailures")) + 1);
+        throw new Error("Portal notification unavailable");
+      };
+      Reflect.set(window, "CrazyGames", { SDK: {
+        init: async () => {}, user: { systemInfo: { locale: "ja" } },
+        game: { gameplayStart: () => {}, happytime: () => {}, [failingHook]: fail },
+      } });
+    }, hook);
+    await page.reload();
+    await page.waitForFunction(() => window.__qaGame?.scene.getScene("GameScene").sys.isActive());
+    await tapPoint(page, 225, 682);
+    await expect.poll(() => phase(page)).toBe("karma");
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(window, "__originalRandom", Math.random);
+      Math.random = () => 0; // Deterministic victory exercises happytime.
+      Reflect.get(scene, "showBattlePhase").call(scene);
+      scene.time.timeScale = 5;
+    });
+    await expect.poll(() => phase(page), { timeout: 10000 }).toBe("report");
+    expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "currentBattleResult")?.win)).toBe(true);
+    expect(await page.evaluate(() => Reflect.get(window, "__portalFailures"))).toBe(1);
+    await page.evaluate(() => {
+      Math.random = Reflect.get(window, "__originalRandom");
+      window.__qaGame.scene.getScene("GameScene").time.timeScale = 1;
+    });
+  });
+}
+
+test("journey retries after the loader throws during image registration", { tag: "@webkit-regression" }, async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const original = scene.load.image;
+    scene.load.image = function (...args) {
+      scene.load.image = original;
+      throw new Error(`Image registration failed: ${String(args[0])}`);
+    };
+  });
+  await tapPoint(page, 225, 682);
+  await expect.poll(async () => (await loadingFeedback(page)).texts).toContain("読込失敗・依頼を押して再試行");
+  expect(await phase(page)).toBe("title");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "journeyPending"))).toBe(false);
+  await tapPoint(page, 225, 682);
+  await expect.poll(() => phase(page)).toBe("karma");
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
+});

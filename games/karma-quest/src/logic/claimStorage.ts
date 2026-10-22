@@ -18,7 +18,10 @@ export function createClaimStorage(getStore: () => Store = () => localStorage) {
     if (!data || typeof data !== "object") throw new Error("Invalid claim journal");
     const { raid, total } = data as Partial<Claim>;
     if (typeof raid !== "string" || typeof total !== "string"
-      || !Number.isSafeInteger(Number(total)) || Number(total) < 0) throw new Error("Invalid claim journal");
+      || !Number.isSafeInteger(Number(total)) || Number(total) < 0
+      // Journals are written as canonical decimal strings. Coercing empty or
+      // alternate numeric notation could silently replace a committed total.
+      || String(Number(total)) !== total) throw new Error("Invalid claim journal");
     const parsed = JSON.parse(raid);
     const normalized = loadRaid({ getItem: () => raid, setItem: () => undefined });
     if (JSON.stringify(parsed) !== JSON.stringify(normalized)) throw new Error("Invalid claim raid");
