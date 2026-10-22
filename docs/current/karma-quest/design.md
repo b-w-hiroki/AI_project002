@@ -45,6 +45,8 @@ progress.tsはcreateProgressStorageのクロージャに値と利用不能キー
 [soundPreference](../../../games/karma-quest/src/logic/soundPreference.ts) は既存キーkarma_quest_sound_v1の読み書き例外だけを吸収する。読み込み失敗はON、書き込みは成功可否を返す。GameSceneのsoundOnは保存とは独立して更新し、アイコン更新と切り替えを継続する。進行・レイドなど他キーの保存例外はこの責務に含めない。
 
 claimStorage.pendingは評価文字列について安全な非負整数の検証に加え、String(Number(total))との一致を要求する。受取記録の書き手が出力しない空白・指数・16進・先頭ゼロなどを拒否し、旧キーへの反映や記録削除を行わない。既存の通常保存キーの読込規則は変更しない。
+保存APIはisSessionOnlyで対象カウンタの利用不能状態を確認し、すでにメモリ専用ならロック要求を省略する。hasUnavailableProgressによる一括判定は使わず、片方だけが失敗している場合の正常な保存は引き続きロックする。メモリ専用状態は再読み込みまで解除しないため、この分岐から永続書込へ戻ることはない。
+
 
 ## 描画・検証
 
