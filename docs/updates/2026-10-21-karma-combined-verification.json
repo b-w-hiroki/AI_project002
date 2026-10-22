@@ -3,12 +3,12 @@
   "areas": {
     "karma-quest": {
       "spec": {
-        "status": "updated",
-        "reason": "4修正の現行動作説明をすべて保持して統合し、競合箇所を整理"
+        "status": "unchanged",
+        "reason": "4修正の現行動作説明は個別PR #392〜#395でmainに反映済み"
       },
       "design": {
-        "status": "updated",
-        "reason": "4修正の保存境界・通知境界・画像読み込み設計を同時に反映"
+        "status": "unchanged",
+        "reason": "保存境界・通知境界・画像読み込み設計は個別PR #392〜#395でmainに反映済み"
       }
     }
   },
