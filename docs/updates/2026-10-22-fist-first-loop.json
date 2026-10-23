@@ -1,0 +1,22 @@
+{
+  "summary": "覇拳伝のモード選択・初手案内・決着理由・ガチャの説明と縦持ち配置を整理",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "モードの役割、毎戦最初の3応酬の案内、実HPによる決着理由、ガチャの非収集仕様と縦配置を記録"},
+      "design": {"status": "updated", "reason": "playGuideの純粋ロジック、ResultModelのHP、既存ガチャノードの再配置と回転復元を記録"}
+    }
+  },
+  "validation": [
+    "typecheck・lint・build成功、単体62件成功",
+    "Chromium全20件成功後、ガチャ回転検査を追加して対象1件成功。WebKitは追加後の全20件成功",
+    "初手の蹴を実タップして応酬が進むこと、HP判定のWINと理由、再挑戦時の案内復帰をE2Eで確認",
+    "320x568・390x844・844x390のガチャ配置・回転後のタイトル復帰をE2Eで確認",
+    "games/fist-legend/e2e/screenshotsのportrait-title、portrait-battle、portrait-result-ko、landscape-result、portrait-gacha-scope、gacha-scope-320を目視確認。演出が落ち着いた4画面をdocs/review/fist-first-loop-2026-10-22へ保存して一覧画像も確認",
+    "最新origin/mainを取り込み、以前の未コミットだったView分離・人物比率・剣戟のpointer所有者修正を保全。studio-playbook READMEとPRODUCT-LOOPを閲覧"
+  ],
+  "limitations": [
+    "物理iOS/Androidと外部Portal未確認。人による初見プレイの理解度・楽しさは別途確認が必要",
+    "デスクトップの既存結果表示とprototype接続の整理は対象外。6作品全体の完成や公開済みを意味しない",
+    "過去の更新記録のGit権限制限は当時の記録。今回のコミット・push・文書検査結果はPRで確認する"
+  ]
+}

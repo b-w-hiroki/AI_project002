@@ -1,0 +1,21 @@
+{
+  "summary": "剣戟の画面ボタンが別の指の解放で解除される問題を修正",
+  "areas": {
+    "side-scroller": {
+      "spec": { "status": "updated", "reason": "ボタンの押下所有者、領域外離脱・フォーカス喪失時の解除を明記" },
+      "design": { "status": "updated", "reason": "pointer.idによる所有者管理とblur/gameout、破棄時のイベント解除を追加" }
+    }
+  },
+  "validation": [
+    "修正前Chromiumでガード・攻撃・技・ジャンプの4入力すべてが別pointerのup/outにより解除されることを再現",
+    "修正後ChromiumとWebKitの関連4試験成功。所有者保持・所有者解放・blur後の解放と再押下・pointerout解除を含む",
+    "単体141件、lint、typecheck、build、git diff --check成功",
+    "表示の配置・素材・寸法は変更なし。複数指イベントはPhaserの実ボタンへイベントを注入して検証しており、実機のマルチタッチ確認とは区別する"
+  ],
+  "limitations": [
+    "GitHub CLI設定ファイルの読み取り拒否により最新CIは確認できない",
+    ".git/index.lock作成が拒否され、コミット・push・コミット後の文書検査は未完了。既存PR #397には本変更が未反映",
+    "既知のCIドラッグ停止・Karmaの2件・ローカルWebKit描画問題は原因未特定のまま。本修正で解決したとは判断しない",
+    "実機・外部Portal未確認"
+  ]
+}

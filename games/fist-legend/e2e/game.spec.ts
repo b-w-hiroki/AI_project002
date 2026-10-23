@@ -98,6 +98,67 @@ test("short portrait separates opponent guidance and keeps primary actions touch
   await checkFrame(page, "short-portrait-title-flow");
 });
 
+test("compact portrait keeps the guided move reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await checkFrame(page, "compact-portrait-title-before");
+  const titleHitHeight = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "title-battle") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const battle = find(scene.children.list)!;
+    const hit = battle.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    return hit.input?.hitArea.height as number;
+  });
+  const titleCanvas = (await page.locator("canvas").boundingBox())!;
+  const titleLogicalHeight = await page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).height);
+  expect(titleHitHeight * titleCanvas.height / titleLogicalHeight).toBeGreaterThanOrEqual(44);
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  const readLayout = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
+    const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
+    const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    return {
+      ringVisible: ring.visible,
+      ringX: ring.x,
+      kickX: kick.x,
+      hitHeight: hit.input?.hitArea.height as number,
+      hitBottom: kick.y + hit.input!.hitArea.height / 2,
+      logicalHeight: window.__qaGame.canvas.height,
+    };
+  });
+  await expect.poll(async () => (await readLayout()).ringVisible).toBe(true);
+  const layout = await readLayout();
+  const canvas = (await page.locator("canvas").boundingBox())!;
+  expect(layout.ringVisible).toBe(true);
+  expect(layout.ringX).toBe(layout.kickX);
+  expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  await checkFrame(page, "compact-portrait-guided-move");
+  await tapVisibleText(page, "蹴");
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+});
+
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
   await page.goto("/?lang=en");
   await page.waitForFunction(() => !!window.__qaGame);
@@ -164,6 +225,90 @@ async function checkFrame(page: Page, name: string) {
   })).toBeLessThan(0.02);
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
 }
+
+async function visibleCopy(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const collect = (nodes: Phaser.GameObjects.GameObject[]): string[] => nodes.flatMap(node => {
+      if (!Reflect.get(node, "visible")) return [];
+      if (node.type === "Container") return collect((node as Phaser.GameObjects.Container).list);
+      return node.type === "Text" ? [(node as Phaser.GameObjects.Text).text] : [];
+    });
+    return collect(window.__qaGame.scene.getScene("GameScene").children.list);
+  });
+}
+
+test("first loop explains modes, coaches a counter, and reports an HP decision", async ({ page }) => {
+  await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics | null;
+    const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container | null;
+    return Boolean(ring?.visible && kick && ring.x === kick.x && ring.y === kick.y);
+  })).toBe(true);
+  await tapVisibleText(page, "蹴");
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "beat", 3));
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Graphics | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-counter-ring") return node as Phaser.GameObjects.Graphics;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return find(scene.children.list)?.visible;
+  })).toBe(false);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(() => visibleCopy(page)).toContain("時間切れ · 残りHP 75 対 25");
+  await expect.poll(() => visibleCopy(page)).toContain("WIN");
+  await checkFrame(page, "portrait-result-hp-decision");
+  await tapVisibleText(page, "もう一度");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
+});
+
+test("gacha discloses its illustrative scope before a draw", async ({ page }) => {
+  await tapVisibleText(page, "ガチャ");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("演出のみ・所持や能力には反映されません"))).toBe(true);
+  await checkFrame(page, "portrait-gacha-scope");
+  for (const viewport of [{ width: 320, height: 568 }, { width: 844, height: 390 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    const portrait = viewport.height > viewport.width;
+    await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(portrait ? 450 : 800);
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const group = Reflect.get(scene, "gachaGroup") as Phaser.GameObjects.Container;
+      const cost = (group.getByName("gacha-cost") as Phaser.GameObjects.Text).getBounds();
+      const draw = group.getByName("gacha-draw") as Phaser.GameObjects.Container;
+      const back = group.getByName("gacha-back") as Phaser.GameObjects.Container;
+      return cost.left >= 0 && cost.right <= window.__qaGame.canvas.width && draw.getBounds().bottom < back.getBounds().top;
+    })).toBe(true);
+    await checkFrame(page, `gacha-scope-${viewport.width}`);
+  }
+  await tapVisibleText(page, "タイトルへ戻る");
+  await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
+});
 
 async function resultCharactersAreClear(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -472,7 +617,7 @@ test("battle switch cycles through the selected team on touch controls", async (
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "activeFighterIndex"))).toBe(0);
 
-  const portraitSwitchPoint = await page.evaluate(() => {
+  const readPortraitSwitchPoint = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const findByName = (
       nodes: Phaser.GameObjects.GameObject[],
@@ -492,6 +637,8 @@ test("battle switch cycles through the selected team on touch controls", async (
     const bounds = button.getBounds();
     return { x: bounds.centerX, y: bounds.centerY };
   });
+  await expect.poll(readPortraitSwitchPoint).not.toBeNull();
+  const portraitSwitchPoint = await readPortraitSwitchPoint();
   expect(portraitSwitchPoint).not.toBeNull();
   await tapPoint(page, portraitSwitchPoint!.x, portraitSwitchPoint!.y);
   await expect.poll(() => page.evaluate(() => {

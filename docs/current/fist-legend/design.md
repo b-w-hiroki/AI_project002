@@ -15,6 +15,25 @@
 タイマー、交代、演出を跨いだ同一操作の二重適用を避ける。
 
 ## 永続化と描画
+ホームは [ui/titleView.ts](../../../games/fist-legend/src/ui/titleView.ts) が生成・描画を担当する。mobileLayoutはSceneとViewの接続役として、TitleModel（編成・相手・通貨・勝利数）とTitleActions（選択・編成変更・各モード開始）を渡す。Viewから保存APIやGameSceneを直接呼び出さない。
+
+タイトル専用の背景・イラスト・操作レイヤーを持ち、モデル・言語・画面寸法が変わった場合だけレイアウトと描画を更新する。title以外では専用レイヤーをすべて隠す。既存テクスチャfl-bg-arena/fl-hero-fighterを再利用し、背景はcover、主人公は高さ基準の均等スケールで配置する。テクスチャ欠損時は単色背景を残す。
+
+文字とボタンは [ui/controls.ts](../../../games/fist-legend/src/ui/controls.ts) に分離し、ホーム・戦闘・結果が同じ部品を利用する。44px相当を目安にする既存ヒット領域と押下演出を維持する。共通レスポンシブ基盤は引き続きgames/shared/mobileを使う。
+320×568の短い縦画面ではモード選択と通常技のヒット領域に72論理pxの最小高さを指定し、実表示で44px以上を確保する。相手選択など、縦方向の間隔が狭いボタンにはこの拡張を適用しない。
+
+結果画面は [ui/resultView.ts](../../../games/fist-legend/src/ui/resultView.ts) が生成・描画を担当する。ResultModelは勝敗・報酬・残高・編成・モード進行を受け取り、再戦／次戦とタイトル復帰はResultActions経由でSceneへ渡す。Viewは保存APIとGameSceneに依存しない。勝敗別の人物の濃淡、編成に応じた再挑戦の案内、3連戦・ストーリーのボタン文言を維持する。
+
+人物の均等スケールは [ui/art.ts](../../../games/fist-legend/src/ui/art.ts) で戦闘と結果から共用する。結果背景も縦横比を保つcover表示とし、画面比率に合わせた引き延ばしはしない。
+
+戦闘HUDと操作は [ui/battleView.ts](../../../games/fist-legend/src/ui/battleView.ts) が生成・描画を担当する。BattleModelは読み取り用HP・奥義ゲージ、相手、編成・出場者、予兆、残り時間、応酬数を受け取る。BattleActionsは通常技・奥義・交代を既存のSceneへ渡す。ViewはGameSceneや保存APIへ直接依存しない。時間・ゲージ・予兆が変わるため、戦闘は従来どおりフレームごとに更新する。
+
+mobileLayoutはホーム・戦闘・結果Viewを生成してScene状態と接続し、表示切替と共通レスポンシブ基盤への接続を担当する。実際の戦闘人物の配置はScene側のスプライトを扱うため接続側に残し、戦闘判定・攻撃演出をViewへ移さない。
+
+スマホ用の主要3画面はView分離済み。ガチャはSceneが生成と操作を保持し、[ui/gachaLayout.ts](../../../games/fist-legend/src/ui/gachaLayout.ts)が既存ノードの縦持ち配置と回転時の復元を担当する。人物画像は均等スケール、ボタンの縦持ちヒット領域は68論理pxへ拡張する。デスクトップ用既存画面、prototypeラップによる接続、他作品は移行対象外として残る。全作品のUI移行済みとは扱わない。
+
+[logic/playGuide.ts](../../../games/fist-legend/src/logic/playGuide.ts)が最初の3応酬の案内と決着理由を作る。相性はteamTacticalReadの既存対応を再利用し、戦闘ルールや保存を変更しない。ResultModelへ実際のplayerHp/enemyHpを渡し、HPが残る時間判定をK.O.と誤表示しない。ホームのモード説明と案内は日本語・英語に対応する。
+スマホ戦闘Viewは同じteamTacticalReadから有利な通常技を求め、最初の3応酬だけ該当ボタンの外周に静的な金色の枠を描く。4応酬目以降は枠を隠し、文章による三すくみ表示を残す。
 [progress](../../../games/fist-legend/src/logic/progress.ts): fist_legend_currency_v1 / fist_legend_win_count_v1 / fist_legend_team_v1 / fist_legend_story_progress_v1。
 [gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。

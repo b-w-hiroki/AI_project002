@@ -1,0 +1,15 @@
+{
+  "summary": "覇拳伝の最初の3応酬で有利な技ボタンを視覚的に示す",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "予兆に有利な技の案内へ技ボタンの金色の枠を追加した"},
+      "design": {"status": "updated", "reason": "BattleViewが既存teamTacticalReadを使い枠を描画し、4応酬目以降は非表示にする責務を記録した"}
+    }
+  },
+  "validation": [
+    "Windows上で覇拳伝のlint、typecheck、単体62件、build、Chromium E2E 20件、WebKit E2E 20件が成功",
+    "E2Eで初手の予兆と蹴ボタンの枠の一致、4応酬目の枠の消失を確認",
+    "games/fist-legend/e2e/screenshots/portrait-opponent-rush.pngとlandscape-battle-ready.pngを実画面として目視確認"
+  ],
+  "limitations": ["物理iOS Safari・Android Chrome、初見プレイヤー、外部Portalの確認は未実施"]
+}

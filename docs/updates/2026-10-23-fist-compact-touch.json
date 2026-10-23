@@ -1,0 +1,15 @@
+{
+  "summary": "覇拳伝の320×568画面で初回対戦と有利な技のタップ領域を確保する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "既存のスマホ主要操作と44px相当のタップ目安を満たす寸法調整で、遊び方や勝敗は変わらない"},
+      "design": {"status": "updated", "reason": "共通ボタンの可変最小ヒット高さと、モード・通常技だけに適用する理由を追加した"}
+    }
+  },
+  "validation": [
+    "Windows上で覇拳伝のlint、typecheck、単体62件、build、Chromium E2E 21件、WebKit E2E 21件が成功",
+    "320×568でタイトルからの実タップ、有利な技の実タップ、両ヒット領域44px以上をE2Eで確認",
+    "games/fist-legend/e2e/screenshots/compact-portrait-title-before.pngとcompact-portrait-guided-move.pngを目視確認。375×667と横画面のタイトル画像も確認"
+  ],
+  "limitations": ["物理iOS Safari・Android Chrome、初見プレイヤー、外部Portalの確認は未実施"]
+}

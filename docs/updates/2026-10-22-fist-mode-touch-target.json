@@ -1,0 +1,18 @@
+{
+  "summary": "覇拳伝の短い縦画面でモード選択ボタンの実表示高さを確保し、交代操作のWebKit検査を描画完了後に行う",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "既存のスマホ主要操作と44px相当のタップ目安を満たすための寸法修正で、操作や勝敗の仕様は変わらない"},
+      "design": {"status": "unchanged", "reason": "既存TitleViewのボタン寸法とE2Eの描画待機のみを調整し、View責務や保存形式は変わらない"}
+    }
+  },
+  "validation": [
+    "Windows上で覇拳伝のlint、typecheck、単体62件、build、Chromium E2E 20件、WebKit E2E 20件が成功",
+    "375×667の実スクリーンショット games/fist-legend/e2e/screenshots/short-portrait-title-flow.png を目視確認",
+    "ポーション工房のWebKit E2E 17件と、失敗した代表画面テストの3回繰返しがローカルで成功"
+  ],
+  "limitations": [
+    "GitHub ActionsのWebKit Smoke再実行は別途結果確認が必要",
+    "物理iOS Safari、Android Chrome、初見プレイヤー、外部Portalの確認は未実施"
+  ]
+}

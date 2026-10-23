@@ -464,16 +464,31 @@ class SideBattleView {
     const shine = this.scene.add.arc(0, -radius * 0.27, radius * 0.55, 205, 335, false, 0xffffff, 0.16);
     const buttonLabel = makeText(this.scene, label, radius >= 38 ? 20 : 18);
     const root = this.scene.add.container(x, y, [shadow, rim, face, shine, buttonLabel]);
-    const release = () => {
+    let owner: number | null = null;
+    const reset = () => {
+      if (owner === null) return;
+      owner = null;
       root.setScale(1);
       onUp?.();
     };
-    face.on("pointerdown", () => {
+    const release = (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === owner) reset();
+    };
+    face.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (owner !== null) return;
+      owner = pointer.id;
       root.setScale(0.93);
       onDown();
     });
     face.on("pointerup", release);
     face.on("pointerout", release);
+    window.addEventListener("blur", reset);
+    this.scene.input.on("gameout", reset);
+    root.once("destroy", () => {
+      reset();
+      window.removeEventListener("blur", reset);
+      this.scene.input.off("gameout", reset);
+    });
     this.controls.add(root);
     return { root, face, label: buttonLabel };
   }
