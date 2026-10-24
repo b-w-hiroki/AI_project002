@@ -120,7 +120,7 @@ export function renderTitleView(ui: TitleView, model: TitleModel, viewport: { po
     });
     if (portrait) {
       ui.title.setPosition(130, 96).setFontSize(38);
-      ui.subtitle.setPosition(130, 159).setFontSize(16).setWordWrapWidth(210);
+      ui.subtitle.setPosition(130, 159).setFontSize(lang === "ja" ? 23 : 16).setWordWrapWidth(210);
       ui.titleStatus.setPosition(130, 224).setFontSize(18);
       (ui.titleGroup.getByName("title-battle") as Phaser.GameObjects.Container | null)?.setPosition(82, 620 + extra * 0.58);
       (ui.titleGroup.getByName("title-series") as Phaser.GameObjects.Container | null)?.setPosition(225, 620 + extra * 0.58);

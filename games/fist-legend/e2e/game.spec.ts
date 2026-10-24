@@ -101,7 +101,45 @@ test("short portrait separates opponent guidance and keeps primary actions touch
 test("compact portrait keeps the guided move reachable", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(450);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "title-mode-guide") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const guide = find(scene.children.list);
+    return guide ? Number.parseInt(guide.style.fontSize, 10) : null;
+  })).toBe(23);
+  const intro = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const findText = (nodes: Phaser.GameObjects.GameObject[], match: (node: Phaser.GameObjects.Text) => boolean): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.type === "Text" && match(node as Phaser.GameObjects.Text)) return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = findText((node as Phaser.GameObjects.Container).list, match);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const guide = findText(scene.children.list, node => node.name === "title-mode-guide")!;
+    const status = guide.parentContainer.list[2] as Phaser.GameObjects.Text;
+    return {
+      guideBottom: guide.getBounds().bottom,
+      statusTop: status.getBounds().top,
+      guideFontSize: Number.parseInt(guide.style.fontSize, 10),
+    };
+  });
+  const introCanvas = (await page.locator("canvas").boundingBox())!;
   await checkFrame(page, "compact-portrait-title-before");
+  expect(intro.guideFontSize * introCanvas.width / 450).toBeGreaterThanOrEqual(14);
+  expect(intro.statusTop - intro.guideBottom).toBeGreaterThanOrEqual(8);
   const titleHitHeight = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
@@ -182,6 +220,25 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(labels).toContain("Story");
   expect(labels).toContain("Gacha");
   expect(labels).toContain("Ryuga");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "title-mode-guide") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const guide = find(scene.children.list);
+    if (!guide) return null;
+    const status = guide.parentContainer.list[2] as Phaser.GameObjects.Text;
+    return Number.parseInt(guide.style.fontSize, 10) === 16 ? status.getBounds().top - guide.getBounds().bottom : null;
+  })).toBeGreaterThanOrEqual(8);
+  await checkFrame(page, "compact-portrait-title-english");
 });
 
 

@@ -1,0 +1,18 @@
+{
+  "summary": "覇拳伝の短い縦画面でモード説明を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "初回に読む3つのモード説明の視認性と所持情報との非重複を明記"},
+      "design": {"status": "updated", "reason": "縦画面の文字サイズと320px幅での実表示・間隔の検査条件を記録"}
+    }
+  },
+  "validation": [
+    "lint・typecheck・build成功、単体テスト62件成功。Chromium・WebKit E2E各21件成功",
+    "320x568のChromium E2Eでモード説明の実表示14px以上と所持情報まで8論理px以上の間隔を確認",
+    "英語の320x568表示でも説明と所持情報が重ならないことをChromium・WebKit E2Eで確認",
+    "games/fist-legend/e2e/screenshots/compact-portrait-title-before.png、compact-portrait-title-english.png、portrait-title.png、landscape-title.pngを目視確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}
