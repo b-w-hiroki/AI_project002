@@ -7,9 +7,9 @@
     }
   },
   "validation": [
-    "lint・typecheck・build成功、単体テスト62件成功。Chromium・WebKit E2E各21件成功",
+    "lint・typecheck・build成功、単体テスト62件成功。英語位置修正後のローカルChromium・WebKit E2E各21件成功",
     "320x568のChromium E2Eでモード説明の実表示14px以上と所持情報まで8論理px以上の間隔を確認",
-    "英語の320x568表示でも説明と所持情報が重ならないことをChromium・WebKit E2Eで確認",
+    "初回CIのWebKitとpositive-controlでは英語の説明と所持情報の間隔が4論理pxとなり失敗。英語説明を6論理px上げた後、320x568表示で8論理px以上の間隔を再検証",
     "games/fist-legend/e2e/screenshots/compact-portrait-title-before.png、compact-portrait-title-english.png、portrait-title.png、landscape-title.pngを目視確認"
   ],
   "limitations": [
