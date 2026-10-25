@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の初見プレイと物理端末の残ゲートを実施できるQA記録用シートとして具体化した",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "QA手順と記録欄だけを追加し、現行の操作・表示・保存契約は変更していない"},
+      "design": {"status": "unchanged", "reason": "実装コード、状態、画面責務、検証用フックは変更していない"}
+    }
+  },
+  "validation": ["現行の覇拳伝仕様・設計と既存の全作品実機QA項目を照合した", "追加した相対リンクと文書ゲートを確認する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未実施", "この更新はゲーム実装を変更していないため新しいブラウザ動作結果を主張しない"]
+}
