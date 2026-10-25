@@ -178,9 +178,9 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     const bounds = label.getBounds();
     return { text: label.text, fontSize: Number.parseInt(label.style.fontSize, 10), top: bounds.top, right: bounds.right, bottom: bounds.bottom };
   });
-  await expect.poll(async () => (await readStatus()).text).toMatch(/^自分 \d+\/100 · 残\d+秒 · 相手 \d+\/100$/);
+  await expect.poll(async () => (await readStatus()).text).toMatch(/^自分HP \d+ · 残\d+秒 · 相手HP \d+$/);
   const status = await readStatus();
-  expect(status.text).toMatch(/^自分 \d+\/100 · 残\d+秒 · 相手 \d+\/100$/);
+  expect(status.text).toMatch(/^自分HP \d+ · 残\d+秒 · 相手HP \d+$/);
   await expect.poll(async () => {
     const box = await page.locator("canvas").boundingBox();
     return box ? status.fontSize * box.width / 450 : 0;
@@ -219,6 +219,7 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(layout.ringX).toBe(layout.kickX);
   expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-guided-move");
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
@@ -268,7 +269,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   await checkFrame(page, "compact-portrait-title-english");
   await tapVisibleText(page, "Battle");
   await expect.poll(() => phase(page)).toBe("battle");
-  await expect.poll(async () => (await visibleCopy(page)).some(value => /^YOU \d+\/100 · \d+s · CPU \d+\/100$/.test(value))).toBe(true);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => /^YOU HP \d+ · \d+s · CPU HP \d+$/.test(value))).toBe(true);
   const englishStatus = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {

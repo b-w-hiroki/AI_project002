@@ -139,8 +139,8 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     .setColor(portrait ? "#fff1d5" : `#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
     .setText(portrait
       ? tr(lang,
-        `自分 ${battle.playerHp}/${MAX_HP} · 残${remaining}秒 · 相手 ${battle.enemyHp}/${MAX_HP}`,
-        `YOU ${battle.playerHp}/${MAX_HP} · ${remaining}s · CPU ${battle.enemyHp}/${MAX_HP}`)
+        `自分HP ${battle.playerHp} · 残${remaining}秒 · 相手HP ${battle.enemyHp}`,
+        `YOU HP ${battle.playerHp} · ${remaining}s · CPU HP ${battle.enemyHp}`)
       : `${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1

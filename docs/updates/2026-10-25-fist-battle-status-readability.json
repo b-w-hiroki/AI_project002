@@ -9,6 +9,7 @@
   "validation": [
     "320x568の日本語・英語WebKit E2Eで戦闘HUDの表示とHPバー非重複を確認",
     "lint・typecheck・build、単体62件、Chromium/WebKit E2E各21件がローカルで成功",
+    "初回Linux WebKit CIで長いHP表記が2行に折り返されることを確認し、最大HPの重複表記を省いた短い表示へ修正。更新後のローカルWebKitで日本語・英語を再確認",
     "games/fist-legend/e2e/screenshots/compact-portrait-guided-move.png と compact-portrait-battle-english.png を実画面で確認"
   ],
   "limitations": [
