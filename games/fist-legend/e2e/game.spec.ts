@@ -368,8 +368,12 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
       value: bounds(value!),
       balance: bounds(balance!),
       plate: bounds(reward),
+      labelFontPx: Number.parseFloat(label!.style.fontSize) * window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width,
+      balanceFontPx: Number.parseFloat(balance!.style.fontSize) * window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width,
     };
   });
+  expect(englishReward.labelFontPx).toBeGreaterThanOrEqual(10);
+  expect(englishReward.balanceFontPx).toBeGreaterThanOrEqual(10);
   expect(englishReward.label.right).toBeLessThan(englishReward.balance.left);
   expect(englishReward.balance.bottom).toBeLessThan(englishReward.value.top);
   expect(englishReward.value.right).toBeLessThan(englishReward.plate.right - 8);

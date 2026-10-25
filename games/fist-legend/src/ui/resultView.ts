@@ -39,7 +39,7 @@ export type ResultModel = {
   currency: number;
 };
 export type ResultActions = { primary: () => void; title: () => void };
-function buildRewardMedallion(scene: Phaser.Scene): {
+function buildRewardMedallion(scene: Phaser.Scene, showSeparator: boolean): {
   container: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
   value: Phaser.GameObjects.Text;
@@ -50,7 +50,7 @@ function buildRewardMedallion(scene: Phaser.Scene): {
   plate.fillStyle(0x7b271d, 0.42).fillRoundedRect(-146, -30, 292, 18, 12);
   plate.lineStyle(2, 0xd8a84f, 0.92).strokeRoundedRect(-150, -34, 300, 68, 16);
   plate.lineStyle(1, 0xffe2a0, 0.34).strokeRoundedRect(-144, -28, 288, 56, 12);
-  plate.lineStyle(2, 0xd8a84f, 0.72).lineBetween(-86, -21, 122, -21);
+  if (showSeparator) plate.lineStyle(2, 0xd8a84f, 0.72).lineBetween(-86, -21, 122, -21);
 
   const gem = scene.add.graphics({ x: -112, y: 0 }).setName("mobile-result-reward-icon");
   gem.fillStyle(0x180d0a, 0.72).fillCircle(0, 3, 26);
@@ -98,7 +98,7 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
     .setName("mobile-result-finish");
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
   const resultReason = text(scene, 225, 245, "", 16, "#fff1d5").setName("mobile-result-reason");
-  const reward = buildRewardMedallion(scene);
+  const reward = buildRewardMedallion(scene, lang !== "en");
   const resultStats = text(scene, 225, 402, "", 15, "#fff1d5")
     .setStroke("#2a120d", 2)
     .setName("mobile-result-next");
@@ -175,10 +175,14 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
   ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 26 : 14).setText(finishReason(lang, model.battle));
   ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
   ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
-  ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));
+  ui.resultRewardLabel
+    .setPosition(-66, lang === "en" ? -16 : -10)
+    .setFontSize(lang === "en" ? 17 : 12)
+    .setText(tr(lang, "獲得報酬", "REWARD"));
   ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${model.lastReward ?? 0}`);
   ui.resultRewardBalance
     .setPosition(132, lang === "en" ? -16 : 11)
+    .setFontSize(lang === "en" ? 17 : 11)
     .setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
   const modeText = model.storyActive
     ? outcome === "playerWin" && (model.storyChapterIndex ?? 0) >= 2
