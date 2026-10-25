@@ -1,0 +1,17 @@
+{
+  "summary": "覇拳伝の短い縦画面で戦闘HPと残り時間を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "縦持ち戦闘HUDで自分と相手のHP、残り時間を読み取れる表示契約を追加"},
+      "design": {"status": "updated", "reason": "短い一行の23論理px表示と320px幅での実表示・余白・HPバー非重複を記録"}
+    }
+  },
+  "validation": [
+    "320x568の日本語・英語WebKit E2Eで戦闘HUDの表示とHPバー非重複を確認",
+    "lint・typecheck・build、単体62件、Chromium/WebKit E2E各21件がローカルで成功",
+    "games/fist-legend/e2e/screenshots/compact-portrait-guided-move.png と compact-portrait-battle-english.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

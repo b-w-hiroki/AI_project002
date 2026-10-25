@@ -136,9 +136,11 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       guideFontSize: Number.parseInt(guide.style.fontSize, 10),
     };
   });
-  const introCanvas = (await page.locator("canvas").boundingBox())!;
   await checkFrame(page, "compact-portrait-title-before");
-  expect(intro.guideFontSize * introCanvas.width / 450).toBeGreaterThanOrEqual(14);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? intro.guideFontSize * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
   expect(intro.statusTop - intro.guideBottom).toBeGreaterThanOrEqual(8);
   const titleHitHeight = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -161,6 +163,31 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(titleHitHeight * titleCanvas.height / titleLogicalHeight).toBeGreaterThanOrEqual(44);
   await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
+  const readStatus = () => page.evaluate(() => {
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-battle-status") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const label = find(window.__qaGame.scene.getScene("GameScene").children.list)!;
+    const bounds = label.getBounds();
+    return { text: label.text, fontSize: Number.parseInt(label.style.fontSize, 10), top: bounds.top, right: bounds.right, bottom: bounds.bottom };
+  });
+  await expect.poll(async () => (await readStatus()).text).toMatch(/^自分 \d+\/100 · 残\d+秒 · 相手 \d+\/100$/);
+  const status = await readStatus();
+  expect(status.text).toMatch(/^自分 \d+\/100 · 残\d+秒 · 相手 \d+\/100$/);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? status.fontSize * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
+  expect(status.top).toBeGreaterThanOrEqual(8);
+  expect(status.right).toBeLessThanOrEqual(442);
+  expect(status.bottom).toBeLessThanOrEqual(54);
   const readLayout = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
@@ -239,6 +266,27 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
     return Number.parseInt(guide.style.fontSize, 10) === 16 ? status.getBounds().top - guide.getBounds().bottom : null;
   })).toBeGreaterThanOrEqual(8);
   await checkFrame(page, "compact-portrait-title-english");
+  await tapVisibleText(page, "Battle");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => /^YOU \d+\/100 · \d+s · CPU \d+\/100$/.test(value))).toBe(true);
+  const englishStatus = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-battle-status") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const bounds = find(scene.children.list)!.getBounds();
+    return { right: bounds.right, bottom: bounds.bottom };
+  });
+  expect(englishStatus.right).toBeLessThanOrEqual(442);
+  expect(englishStatus.bottom).toBeLessThanOrEqual(54);
+  await checkFrame(page, "compact-portrait-battle-english");
 });
 
 

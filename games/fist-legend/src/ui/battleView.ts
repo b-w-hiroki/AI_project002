@@ -38,7 +38,7 @@ const OPPONENT_ACCENT: Readonly<Record<Opponent, { accent: number; glow: number 
 export function createBattleView(scene: Phaser.Scene, actions: BattleActions): BattleView {
   const lang = detectLang();
   const battleGroup = scene.add.container(0, 0);
-  const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
+  const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0).setName("mobile-battle-status");
   const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
@@ -135,8 +135,13 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   const leader = fighterById(team[activeIndex] ?? "ryuga");
   ui.battleStatus
     .setPosition(18, portrait ? 18 : 50)
-    .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
-    .setText(`${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+    .setFontSize(portrait ? 23 : 13)
+    .setColor(portrait ? "#fff1d5" : `#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
+    .setText(portrait
+      ? tr(lang,
+        `自分 ${battle.playerHp}/${MAX_HP} · 残${remaining}秒 · 相手 ${battle.enemyHp}/${MAX_HP}`,
+        `YOU ${battle.playerHp}/${MAX_HP} · ${remaining}s · CPU ${battle.enemyHp}/${MAX_HP}`)
+      : `${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1
     ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
