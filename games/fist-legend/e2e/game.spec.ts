@@ -192,14 +192,19 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       return null;
     };
     const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
+    const ougi = find(scene.children.list, "mobile-ougi-landscape") as Phaser.GameObjects.Container;
     const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
     const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const ougiHit = ougi.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
     return {
       ringVisible: ring.visible,
       ringX: ring.x,
       kickX: kick.x,
       hitHeight: hit.input?.hitArea.height as number,
       hitBottom: kick.y + hit.input!.hitArea.height / 2,
+      ougiX: ougi.x,
+      ougiTop: ougi.y - ougiHit.input!.hitArea.height / 2,
+      ougiHitHeight: ougiHit.input?.hitArea.height as number,
       logicalHeight: window.__qaGame.canvas.height,
     };
   });
@@ -210,10 +215,29 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(layout.ringX).toBe(layout.kickX);
   expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.ougiTop).toBeGreaterThan(layout.hitBottom);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-guided-move");
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  const enemyHpBeforeOugi = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as { enemyHp: number };
+    Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
+    return battle.enemyHp;
+  });
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 READY"))).toBe(true);
+  await page.waitForTimeout(500);
+  await checkFrame(page, "compact-portrait-ougi-ready");
+  await tapPoint(page, layout.ougiX, layout.ougiTop + layout.ougiHitHeight - 1);
+  await expect.poll(() => page.evaluate(() => {
+    const battle = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { playerGauge: number; enemyHp: number };
+    return { gauge: battle.playerGauge, enemyHp: battle.enemyHp };
+  })).toMatchObject({ gauge: 0, enemyHp: expect.any(Number) });
+  const enemyHpAfterOugi = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { enemyHp: number }).enemyHp);
+  expect(enemyHpAfterOugi).toBeLessThan(enemyHpBeforeOugi);
 });
 
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {

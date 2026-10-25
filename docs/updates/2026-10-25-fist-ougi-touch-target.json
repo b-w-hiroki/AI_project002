@@ -1,0 +1,16 @@
+{
+  "summary": "覇拳伝の短い縦画面で奥義のタッチ領域を確保する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "短い縦画面の通常技・奥義を44px相当以上のタッチ領域にする操作契約を明記"},
+      "design": {"status": "updated", "reason": "奥義Zoneの最小72論理pxと隣接操作の非重複、拡張した下端側のタッチ検査を記録"}
+    }
+  },
+  "validation": [
+    "320x568のChromium・WebKitで奥義の実タッチ高44px相当以上、蹴ボタンとの非重複、ゲージ満タン時の拡張した下端側のタッチによるHP減少・ゲージ消費を確認",
+    "games/fist-legend/e2e/screenshots/compact-portrait-ougi-ready.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

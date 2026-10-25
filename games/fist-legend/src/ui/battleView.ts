@@ -59,7 +59,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   });
   const ougi = button(scene, battleGroup, 225, 760, 360, 60, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi);
   ougi.setName("mobile-ougi");
-  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi);
+  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi, false, 72);
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
   const switchButton = button(scene, battleGroup, 225, 715, 76, 44, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter);
   switchButton.setName("mobile-switch").setVisible(false);
