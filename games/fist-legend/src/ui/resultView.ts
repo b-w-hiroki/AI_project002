@@ -168,11 +168,11 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
   }
   ui.resultFinish
-    .setPosition(width / 2, portrait ? 195 : 92)
+    .setPosition(width / 2, portrait ? 179 : 92)
     .setText(outcome === "playerWin" ? (model.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (model.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
     .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
     .setScale(portrait ? 1 : 0.72);
-  ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 16 : 14).setText(finishReason(lang, model.battle));
+  ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 26 : 14).setText(finishReason(lang, model.battle));
   ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
   ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
   ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));

@@ -471,6 +471,45 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
   await expect.poll(() => visibleCopy(page)).toContain("時間切れ · 残りHP 75 対 25");
   await expect.poll(() => visibleCopy(page)).toContain("WIN");
   await checkFrame(page, "portrait-result-hp-decision");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = window.__qaGame.canvas;
+    return { width: canvas.width, height: canvas.height, displayWidth: Math.round(canvas.getBoundingClientRect().width) };
+  })).toEqual({ width: 450, height: 900, displayWidth: 280 });
+  const decisionReason = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Text | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const reason = find(scene.children.list, "mobile-result-reason")!;
+    const finish = find(scene.children.list, "mobile-result-finish")!;
+    const heading = find(scene.children.list, "mobile-result-heading")!;
+    const bounds = reason.getBounds();
+    const canvas = window.__qaGame.canvas;
+    return {
+      fontPx: Number.parseFloat(reason.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+      bottom: bounds.bottom,
+      finishBottom: finish.getBounds().bottom,
+      headingTop: heading.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  await checkFrame(page, "compact-portrait-result-hp-reason");
+  expect(decisionReason.fontPx).toBeGreaterThanOrEqual(14);
+  expect(decisionReason.left).toBeGreaterThan(16);
+  expect(decisionReason.right).toBeLessThan(decisionReason.logicalWidth - 16);
+  expect(decisionReason.top).toBeGreaterThan(decisionReason.finishBottom);
+  expect(decisionReason.bottom).toBeLessThan(decisionReason.headingTop);
   await tapVisibleText(page, "もう一度");
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
