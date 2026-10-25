@@ -42,7 +42,7 @@ mobileLayoutはホーム・戦闘・結果Viewを生成してScene状態と接�
 [logic/playGuide.ts](../../../games/fist-legend/src/logic/playGuide.ts)が最初の3応酬の案内と決着理由を作る。相性はteamTacticalReadの既存対応を再利用し、戦闘ルールや保存を変更しない。ResultModelへ実際のplayerHp/enemyHpを渡し、HPが残る時間判定をK.O.と誤表示しない。ホームのモード説明と案内は日本語・英語に対応する。
 スマホ戦闘Viewは同じteamTacticalReadから有利な通常技を求め、最初の3応酬だけ該当ボタンの外周に静的な金色の枠を描く。4応酬目以降は枠を隠し、文章による三すくみ表示を残す。
 縦持ちの予兆・有利技の2行案内は23論理pxとし、320×568の最終Canvas縮小後も実表示14px相当以上を確保する。日本語・英語とも文字境界が案内枠内に収まることをE2Eで検査する。横持ちは20論理pxを維持する。
-4応酬目以降の三すくみ説明は左側が右側に有利と分かる「有利:」／「Beats:」を先頭に付ける。縦画面の案内枠を380論理px幅にし、日英の320×568 E2Eと実画面画像で文字の余白を確認する。[presentation.ts](../../../games/fist-legend/src/presentation.ts) の読み勝ち・読み負け演出は現在のカメラ寸法で描画し、縦画面の文字をHUDと案内枠の間に収める。勝ち・負けの画面境界を別々の実画面画像で検査する。
+4応酬目以降の三すくみ説明は左側が右側に有利と分かる「有利:」／「Beats:」を先頭に付ける。縦画面の案内枠と縁取りをともに380論理px幅にし、日英の320×568 E2Eと実画面画像で文字の余白を確認する。[presentation.ts](../../../games/fist-legend/src/presentation.ts) の読み勝ち・読み負け演出は現在のカメラ寸法で描画し、縦画面の文字をHUDと案内枠の間に収める。勝ち・負けの画面境界を別々の実画面画像で検査する。
 [progress](../../../games/fist-legend/src/logic/progress.ts): fist_legend_currency_v1 / fist_legend_win_count_v1 / fist_legend_team_v1 / fist_legend_story_progress_v1。
 [gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。

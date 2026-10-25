@@ -99,7 +99,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.lineStyle(1, 0xffd68a, 0.36).lineBetween(0, controlsTop, 450, controlsTop);
     chrome.lineStyle(1, 0x7b3f2b, 0.24).lineBetween(20, controlsTop - 22, 430, controlsTop - 22);
     chrome.fillStyle(0x100806, 0.86).fillRoundedRect(35, 365 + extra * 0.18, 380, 58, 14);
-    chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
+    chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(35, 365 + extra * 0.18, 380, 58, 14);
     ui.battleTell.setPosition(225, 394 + extra * 0.18).setFontSize(23);
     ui.battleGauge.setPosition(225, 90);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
