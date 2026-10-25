@@ -1386,6 +1386,63 @@ test("a series loss advises the opening rival for the restart", async ({ page })
   })).toEqual({ phase: "battle", opponent: "rush", index: 0 });
 });
 
+test("English series restart advice fits the compact result", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await waitForSceneReady(page);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "gaku"]);
+    Reflect.get(scene, "startSeries").call(scene);
+    let battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await waitForCompactResult(page);
+  const layout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const canvas = window.__qaGame.canvas;
+    const bounds = next.getBounds();
+    return {
+      text: next.text,
+      left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+      rewardBottom: reward.getBounds().bottom, primaryTop: primary.getBounds().top,
+      width: canvas.width,
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+    };
+  });
+  expect(layout.text).toContain("Restart from Rival 1");
+  expect(layout.text).toContain("Retry: Gaku → Kick (+18%)");
+  expect(layout.fontPx).toBeGreaterThanOrEqual(14);
+  expect(layout.left).toBeGreaterThan(16);
+  expect(layout.right).toBeLessThan(layout.width - 16);
+  expect(layout.top).toBeGreaterThan(layout.rewardBottom);
+  expect(layout.bottom).toBeLessThan(layout.primaryTop);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-series-restart-english");
+});
+
 test("rapid result taps advance only one rival", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.evaluate(() => {
