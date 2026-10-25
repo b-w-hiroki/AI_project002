@@ -264,6 +264,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(labels).toContain("Gacha");
   expect(labels).toContain("Ryuga");
   await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
@@ -294,6 +295,55 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   for (const label of englishStatus) expect(label.bottom).toBeLessThanOrEqual(54);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-battle-english");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): string => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return (node as Phaser.GameObjects.Text).text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return "";
+    };
+    return find(scene.children.list);
+  })).toContain("Team Change");
+  const englishNext = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const next = find(scene.children.list)!;
+    const bounds = next.getBounds();
+    const canvas = window.__qaGame.canvas;
+    return {
+      text: next.text,
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(englishNext.text).toContain("Team Change");
+  expect(englishNext.fontPx).toBeGreaterThanOrEqual(14);
+  expect(englishNext.left).toBeGreaterThan(16);
+  expect(englishNext.right).toBeLessThan(englishNext.logicalWidth - 16);
+  await checkFrame(page, "compact-portrait-result-english");
 });
 
 
@@ -641,6 +691,46 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
   await checkFrame(page, "short-portrait-result");
 
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
+  const compactNext = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const hero = find(scene.children.list, "mobile-result-hero") as Phaser.GameObjects.Image;
+    const enemy = find(scene.children.list, "mobile-result-enemy") as Phaser.GameObjects.Image;
+    const canvas = window.__qaGame.canvas;
+    const nextBounds = next.getBounds();
+    return {
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      next: { left: nextBounds.left, right: nextBounds.right, top: nextBounds.top, bottom: nextBounds.bottom },
+      rewardBottom: reward.getBounds().bottom,
+      primaryTop: primary.getBounds().top,
+      heroTop: hero.getBounds().top,
+      enemyTop: enemy.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(compactNext.fontPx).toBeGreaterThanOrEqual(14);
+  expect(compactNext.next.left).toBeGreaterThan(16);
+  expect(compactNext.next.right).toBeLessThan(compactNext.logicalWidth - 16);
+  expect(compactNext.next.top).toBeGreaterThan(compactNext.rewardBottom);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.primaryTop);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.heroTop);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.enemyTop);
+  await checkFrame(page, "compact-portrait-result-next");
+
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
@@ -887,6 +977,48 @@ test("rival tell connects the counter move to the selected team and result next 
   });
   expect(visibleResultText).toContain("編成変更");
   await checkFrame(page, "portrait-result-team-change-next");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
+  const compactAdvice = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const hero = find(scene.children.list, "mobile-result-hero") as Phaser.GameObjects.Image;
+    const enemy = find(scene.children.list, "mobile-result-enemy") as Phaser.GameObjects.Image;
+    const canvas = window.__qaGame.canvas;
+    const bounds = next.getBounds();
+    return {
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+      bottom: bounds.bottom,
+      rewardBottom: reward.getBounds().bottom,
+      primaryTop: primary.getBounds().top,
+      heroTop: hero.getBounds().top,
+      enemyTop: enemy.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(compactAdvice.fontPx).toBeGreaterThanOrEqual(14);
+  expect(compactAdvice.left).toBeGreaterThan(16);
+  expect(compactAdvice.right).toBeLessThan(compactAdvice.logicalWidth - 16);
+  expect(compactAdvice.top).toBeGreaterThan(compactAdvice.rewardBottom);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.primaryTop);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.heroTop);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.enemyTop);
+  await checkFrame(page, "compact-portrait-result-team-change-next");
 });
 
 

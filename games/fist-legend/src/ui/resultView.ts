@@ -99,7 +99,9 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
   const resultReason = text(scene, 225, 245, "", 16, "#fff1d5").setName("mobile-result-reason");
   const reward = buildRewardMedallion(scene);
-  const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc").setName("mobile-result-next");
+  const resultStats = text(scene, 225, 402, "", 15, "#fff1d5")
+    .setStroke("#2a120d", 2)
+    .setName("mobile-result-next");
   resultGroup.add([resultFinish, resultReason, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, actions.primary);
   const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title);
@@ -184,14 +186,11 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
   const retryRead = teamTacticalRead(model.selectedTeam ?? ["ryuga"], firstMove);
   const tacticalNext = retryRead.specialist
     ? `${tr(lang, "再挑戦", "Retry")}: ${fighterName(lang, retryRead.specialist)} → ${moveLabel(lang, retryRead.counterMove)} (+18%)`
-    : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)} ${tr(lang, "得意の拳士を追加", "specialist needed") }`;
+    : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)}${tr(lang, "が得意な拳士", " specialist")}`;
   const nextLine = outcome === "playerWin"
     ? modeText || tr(lang, "同じ相手へ再挑戦", "Retry the same rival")
     : `${modeText ? `${modeText}\n` : ""}${tacticalNext}`;
-  ui.resultStats
-    .setPosition(width / 2, portrait ? 338 : 202)
-    .setText(`${tr(lang, "豪拳石", "Fist Gems")} ${model.currency}\n${nextLine}`);
-  ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setText(nextLine);
+  ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setFontSize(portrait ? 23 : 15).setText(nextLine);
   const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
   if (retryLabel) {
     retryLabel.setText(
