@@ -845,6 +845,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleResultPrimary(): void {
+    if (this.phase !== "result") return;
     if (this.storyActive) {
       if (this.lastOutcome === "playerWin" && this.storyChapterIndex < STORY_CHAPTERS.length - 1) {
         this.storyChapterIndex += 1;

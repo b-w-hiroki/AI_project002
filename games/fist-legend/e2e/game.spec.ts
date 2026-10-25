@@ -1332,6 +1332,52 @@ test("three-battle series advances through all opponents and clears", async ({ p
   await checkFrame(page, "compact-portrait-three-battle-complete");
 });
 
+test("rapid result taps advance only one rival", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSeries").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-primary") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const button = find(scene.children.list)!;
+    const hit = button.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    hit.emit("pointerdown");
+    hit.emit("pointerdown");
+  });
+  const seriesState = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { phase: Reflect.get(scene, "phase"), opponent: Reflect.get(scene, "opponent"), seriesIndex: Reflect.get(scene, "seriesIndex") };
+  });
+  await expect.poll(seriesState).toEqual({ phase: "battle", opponent: "counter", seriesIndex: 1 });
+  await page.waitForTimeout(150);
+  expect(await seriesState()).toEqual({ phase: "battle", opponent: "counter", seriesIndex: 1 });
+  await expect.poll(async () => {
+    const copy = await visibleCopy(page);
+    return copy.some(value => value.includes("自分HP 100")) && copy.some(value => value.includes("気で有利を取ろう"));
+  }).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "rapid-result-next-rival");
+});
+
 test("story mode persists cleared chapters and resumes from the next opponent", async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("fist_legend_story_progress_v1", "0");
