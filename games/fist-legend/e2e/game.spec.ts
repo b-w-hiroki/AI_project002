@@ -310,7 +310,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-battle-english");
   await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "beat", 3));
-  await expect.poll(async () => (await readBattleTell(page)).text).toContain("Punch > Ki > Kick > Punch");
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("Beats: Punch>Ki>Kick>Punch");
   const englishRule = await readBattleTell(page);
   expect(englishRule.left).toBeGreaterThanOrEqual(55);
   expect(englishRule.right).toBeLessThanOrEqual(395);
@@ -545,7 +545,7 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
   })).toBe(false);
   await page.setViewportSize({ width: 320, height: 568 });
   await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
-  await expect.poll(async () => (await readBattleTell(page)).text).toContain("拳 > 気 > 蹴 > 拳");
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("有利: 拳>気>蹴>拳");
   const japaneseRule = await readBattleTell(page);
   expect(japaneseRule.left).toBeGreaterThanOrEqual(55);
   expect(japaneseRule.right).toBeLessThanOrEqual(395);
