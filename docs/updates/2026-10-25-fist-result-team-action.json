@@ -1,0 +1,17 @@
+{
+  "summary": "覇拳伝の結果で編成変更の案内と操作を一致させ、最終縮小後の文字を再検証する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "得意者不在の引き分け・敗北時に編成変更ボタンからホームへ戻る操作を明記"},
+      "design": {"status": "updated", "reason": "条件付きの補助ボタン表示、72論理pxの入力領域、最終縮小後の案内文字サイズを記録"}
+    }
+  },
+  "validation": [
+    "320×568でCanvasの再配置と文字描画完了を待って実表示14px相当以上、左右余白と周辺要素の非重複を検査",
+    "補助ボタンの実表示44px相当以上と主ボタンとの非重複、下端タップから編成選択へ戻る動作をChromium・WebKitで確認",
+    "games/fist-legend/e2e/screenshots/compact-portrait-result-team-change-next.png と compact-portrait-result-english.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

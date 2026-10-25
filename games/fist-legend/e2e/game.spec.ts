@@ -316,6 +316,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
     };
     return find(scene.children.list);
   })).toContain("Team Change");
+  await waitForCompactResult(page);
   const englishNext = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
@@ -340,6 +341,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
     };
   });
   expect(englishNext.text).toContain("Team Change");
+  await expect.poll(() => visibleCopy(page)).toContain("Change Team");
   expect(englishNext.fontPx).toBeGreaterThanOrEqual(14);
   expect(englishNext.left).toBeGreaterThan(16);
   expect(englishNext.right).toBeLessThan(englishNext.logicalWidth - 16);
@@ -531,6 +533,25 @@ async function resultCharactersAreClear(page: Page): Promise<boolean> {
   });
 }
 
+async function waitForCompactResult(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const next = find(scene.children.list);
+    return !!next && Number.parseFloat(next.style.fontSize) === 27 && next.text.length > 0
+      && window.__qaGame.canvas.getBoundingClientRect().width <= 300;
+  })).toBe(true);
+}
+
 test("touch starts battle and a move advances the beat after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
   await tapVisibleText(page, "対戦");
@@ -692,7 +713,7 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   await checkFrame(page, "short-portrait-result");
 
   await page.setViewportSize({ width: 320, height: 568 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
+  await waitForCompactResult(page);
   const compactNext = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
@@ -788,6 +809,7 @@ test("victory result shows a knockout finish", async ({ page }) => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
   })).toBe("K.O.");
+  await expect.poll(() => visibleCopy(page)).toContain("タイトルへ");
   await page.waitForTimeout(260);
   await checkFrame(page, "portrait-result-ko");
 });
@@ -978,7 +1000,7 @@ test("rival tell connects the counter move to the selected team and result next 
   expect(visibleResultText).toContain("編成変更");
   await checkFrame(page, "portrait-result-team-change-next");
   await page.setViewportSize({ width: 320, height: 568 });
-  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
+  await waitForCompactResult(page);
   const compactAdvice = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
@@ -1018,7 +1040,40 @@ test("rival tell connects the counter move to the selected team and result next 
   expect(compactAdvice.bottom).toBeLessThan(compactAdvice.primaryTop);
   expect(compactAdvice.bottom).toBeLessThan(compactAdvice.heroTop);
   expect(compactAdvice.bottom).toBeLessThan(compactAdvice.enemyTop);
+  await expect.poll(() => visibleCopy(page)).toContain("編成を変える");
   await checkFrame(page, "compact-portrait-result-team-change-next");
+  const teamAction = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const title = find(scene.children.list, "mobile-result-title")!;
+    const primary = find(scene.children.list, "mobile-result-primary")!;
+    const titleHit = title.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const primaryHit = primary.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const titleHeight = titleHit.input!.hitArea.height as number;
+    const primaryHeight = primaryHit.input!.hitArea.height as number;
+    const canvas = window.__qaGame.canvas;
+    return {
+      x: title.x,
+      bottomTap: title.y + titleHeight / 2 - 1,
+      physicalHeight: titleHeight * canvas.getBoundingClientRect().height / canvas.height,
+      titleTop: title.y - titleHeight / 2,
+      primaryBottom: primary.y + primaryHeight / 2,
+    };
+  });
+  expect(teamAction.physicalHeight).toBeGreaterThanOrEqual(44);
+  expect(teamAction.titleTop).toBeGreaterThanOrEqual(teamAction.primaryBottom);
+  await tapPoint(page, teamAction.x, teamAction.bottomTap);
+  await expect.poll(() => phase(page)).toBe("title");
+  await expect.poll(() => visibleCopy(page)).toContain("TEAM 2/3 · 竜牙 / 冥 · 先頭が出場");
 });
 
 

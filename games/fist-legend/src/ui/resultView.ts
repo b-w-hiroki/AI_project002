@@ -104,9 +104,10 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
     .setName("mobile-result-next");
   resultGroup.add([resultFinish, resultReason, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, actions.primary);
-  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title);
+  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title, false, 72);
 
   resultRetry.setName("mobile-result-primary");
+  resultTitle.setName("mobile-result-title");
 
 
   return {
@@ -190,7 +191,7 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
   const nextLine = outcome === "playerWin"
     ? modeText || tr(lang, "同じ相手へ再挑戦", "Retry the same rival")
     : `${modeText ? `${modeText}\n` : ""}${tacticalNext}`;
-  ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setFontSize(portrait ? 23 : 15).setText(nextLine);
+  ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setFontSize(portrait ? 27 : 15).setText(nextLine);
   const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
   if (retryLabel) {
     retryLabel.setText(
@@ -209,8 +210,12 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
           : tr(lang, "もう一度", "Play Again"),
     );
   }
+  const titleLabel = ui.resultTitle.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
+  titleLabel?.setText(outcome !== "playerWin" && !retryRead.specialist
+    ? tr(lang, "編成を変える", "Change Team")
+    : tr(lang, "タイトルへ", "Title"));
   ui.resultRetry.setPosition(width / 2, portrait ? height - 245 : 292).setScale(portrait ? 1 : 0.86);
-  ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 352).setScale(portrait ? 1 : 0.86);
+  ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 354).setScale(portrait ? 1 : 0.86);
   if (portrait && ui.resultHero && ui.resultEnemy) {
     const bandTop = ui.resultStats.getBounds().bottom + 8;
     const bandBottom = ui.resultRetry.getBounds().top - 8;
