@@ -43,7 +43,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0).setName("mobile-battle-status");
   const battleTimer = text(scene, 225, 18, "", 23, "#fff1d5").setOrigin(0.5, 0).setName("mobile-battle-timer");
   const battleEnemyStatus = text(scene, 432, 18, "", 23, "#fff1d5").setOrigin(1, 0).setName("mobile-battle-enemy-status");
-  const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8");
+  const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8").setName("mobile-battle-tell");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
   battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing]);
@@ -100,7 +100,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.lineStyle(1, 0x7b3f2b, 0.24).lineBetween(20, controlsTop - 22, 430, controlsTop - 22);
     chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
     chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
-    ui.battleTell.setPosition(225, 394 + extra * 0.18);
+    ui.battleTell.setPosition(225, 394 + extra * 0.18).setFontSize(23);
     ui.battleGauge.setPosition(225, 90);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)
@@ -118,7 +118,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(270, 101, 260, 58, 14);
     chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
     chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
-    ui.battleTell.setPosition(400, 124);
+    ui.battleTell.setPosition(400, 124).setFontSize(20);
     ui.battleGauge.setPosition(130, 404);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)?.setVisible(false);

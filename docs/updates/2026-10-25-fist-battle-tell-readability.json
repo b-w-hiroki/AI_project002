@@ -1,0 +1,17 @@
+{
+  "summary": "覇拳伝の短い縦画面で予兆と有利技の案内を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "短い縦画面でも予兆と有利技の2行案内を読める大きさにする表示契約を追加"},
+      "design": {"status": "updated", "reason": "縦持ち案内を23論理pxへ変更し、日英の実寸と案内枠内配置の検査を記録"}
+    }
+  },
+  "validation": [
+    "320×568の日本語・英語戦闘で予兆案内が実表示14px相当以上かつ案内枠内に収まることをChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-guided-move.png、compact-portrait-battle-english.png を実画面で確認",
+    "WebKit全件初回で攻撃演出の固定55ms座標読み取りが1件失敗。実際の移動を待つ検査へ修正後、Chromium該当件とWebKit全21件が成功"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

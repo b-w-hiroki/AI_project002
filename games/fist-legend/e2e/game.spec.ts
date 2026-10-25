@@ -218,6 +218,13 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.ougiTop).toBeGreaterThan(layout.hitBottom);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  const guidedTell = await readBattleTell(page);
+  expect(guidedTell.fontPx).toBeGreaterThanOrEqual(14);
+  expect(guidedTell.left).toBeGreaterThanOrEqual(55);
+  expect(guidedTell.right).toBeLessThanOrEqual(395);
+  expect(guidedTell.top).toBeGreaterThanOrEqual(guidedTell.panelTop);
+  expect(guidedTell.bottom).toBeLessThanOrEqual(guidedTell.panelBottom);
   await checkFrame(page, "compact-portrait-guided-move");
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
@@ -293,6 +300,13 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(englishStatus[1]!.right).toBeLessThan(englishStatus[2]!.left);
   expect(englishStatus[2]!.right).toBeLessThanOrEqual(442);
   for (const label of englishStatus) expect(label.bottom).toBeLessThanOrEqual(54);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  const englishTell = await readBattleTell(page);
+  expect(englishTell.fontPx).toBeGreaterThanOrEqual(14);
+  expect(englishTell.left).toBeGreaterThanOrEqual(55);
+  expect(englishTell.right).toBeLessThanOrEqual(395);
+  expect(englishTell.top).toBeGreaterThanOrEqual(englishTell.panelTop);
+  expect(englishTell.bottom).toBeLessThanOrEqual(englishTell.panelBottom);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-battle-english");
   await page.evaluate(() => {
@@ -443,6 +457,31 @@ async function readBattleStatus(page: Page) {
         left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
       };
     });
+  });
+}
+
+async function readBattleTell(page: Page) {
+  return page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-battle-tell") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const tell = find(scene.children.list)!;
+    const box = tell.getBounds();
+    const canvas = window.__qaGame.canvas;
+    const panelTop = 365 + (canvas.height - 800) * 0.18;
+    return {
+      fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+      panelTop, panelBottom: panelTop + 58,
+    };
   });
 }
 
@@ -656,7 +695,19 @@ test("live attack, hit, and guard visuals follow the resolved clash", async ({ p
       Reflect.get(scene, "onPlayerMove").call(scene, "punch");
       return positions;
     }, enemyMove);
-    await page.waitForTimeout(55);
+    if (enemyMove === "punch") {
+      await page.waitForTimeout(55);
+    } else {
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        return {
+          playerX: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).x,
+          enemyX: (Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image).x,
+        };
+      }).then(position => enemyMove === "ki"
+        ? position.playerX - baseline.playerX
+        : baseline.enemyX - position.enemyX), { intervals: [16, 32, 50], timeout: 1000 }).toBeGreaterThan(0);
+    }
     const state = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const root = scene.children.getByName("combat-state-fx") as Phaser.GameObjects.Container | null;
