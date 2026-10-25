@@ -223,6 +223,7 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
   expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.ougiTop).toBeGreaterThan(layout.hitBottom);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 0% · 編成 1/1 · 1応酬目"))).toBe(true);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
   const guidedTell = await readBattleTell(page);
@@ -241,7 +242,7 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
     return battle.enemyHp;
   });
-  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 READY"))).toBe(true);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了 · 編成 1/1"))).toBe(true);
   await expect.poll(async () => (await readLayout()).readyRingVisible).toBe(true);
   expect((await readLayout()).readyRingX).toBe(layout.ougiX);
   await page.setViewportSize({ width: 844, height: 390 });
@@ -255,7 +256,10 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     const current = await readLayout();
     return current.readyRingVisible && current.readyRingX === current.ougiX && current.readyRingY === current.ougiY && current.ougiX === layout.ougiX;
   }).toBe(true);
-  await page.waitForTimeout(500);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.shakeEffect.isRunning && !camera.flashEffect.isRunning;
+  })).toBe(true);
   await checkFrame(page, "compact-portrait-ougi-ready");
   await tapPoint(page, layout.ougiX, layout.ougiTop + layout.ougiHitHeight - 1);
   await expect.poll(() => page.evaluate(() => {

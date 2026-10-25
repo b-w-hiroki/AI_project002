@@ -103,7 +103,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.fillStyle(0x100806, 0.86).fillRoundedRect(35, 365 + extra * 0.18, 380, 58, 14);
     chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(35, 365 + extra * 0.18, 380, 58, 14);
     ui.battleTell.setPosition(225, 394 + extra * 0.18).setFontSize(23);
-    ui.battleGauge.setPosition(225, 90);
+    ui.battleGauge.setPosition(225, 82).setFontSize(16);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)
       ?.setPosition(225, controlsTop + 205).setScale(1).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
@@ -121,7 +121,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
     chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
     ui.battleTell.setPosition(400, 124).setFontSize(20);
-    ui.battleGauge.setPosition(130, 404);
+    ui.battleGauge.setPosition(130, 404).setFontSize(14);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)?.setVisible(false);
     (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)
@@ -150,8 +150,8 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   ui.battleEnemyStatus.setVisible(portrait).setText(tr(lang, `相手HP ${battle.enemyHp}`, `CPU HP ${battle.enemyHp}`));
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1
-    ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
-    : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`);
+    ? tr(lang, `奥義 準備完了 · 編成 ${activeIndex + 1}/${team.length}`, `SPECIAL READY · TEAM ${activeIndex + 1}/${team.length}`)
+    : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`));
 
   const guidedMove = (model.beat ?? 0) < 3
     ? teamTacticalRead(team, model.nextEnemyMove ?? "punch").counterMove : null;
