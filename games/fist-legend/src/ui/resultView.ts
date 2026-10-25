@@ -177,7 +177,9 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
   ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
   ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));
   ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${model.lastReward ?? 0}`);
-  ui.resultRewardBalance.setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
+  ui.resultRewardBalance
+    .setPosition(132, lang === "en" ? -16 : 11)
+    .setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
   const modeText = model.storyActive
     ? `${tr(lang, "物語", "Story")} ${Math.min(3, (model.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${model.storyProgress ?? 0}/3`
     : model.seriesActive

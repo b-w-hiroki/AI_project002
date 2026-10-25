@@ -345,6 +345,34 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(englishNext.fontPx).toBeGreaterThanOrEqual(14);
   expect(englishNext.left).toBeGreaterThan(16);
   expect(englishNext.right).toBeLessThan(englishNext.logicalWidth - 16);
+  const englishReward = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-reward") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const reward = find(scene.children.list)!;
+    const [label, value, balance] = reward.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    const bounds = (node: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle }) => {
+      const box = node.getBounds();
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    };
+    return {
+      label: bounds(label!),
+      value: bounds(value!),
+      balance: bounds(balance!),
+      plate: bounds(reward),
+    };
+  });
+  expect(englishReward.label.right).toBeLessThan(englishReward.balance.left);
+  expect(englishReward.balance.bottom).toBeLessThan(englishReward.value.top);
+  expect(englishReward.value.right).toBeLessThan(englishReward.plate.right - 8);
   await checkFrame(page, "compact-portrait-result-english");
 });
 
