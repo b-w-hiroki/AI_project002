@@ -1332,6 +1332,60 @@ test("three-battle series advances through all opponents and clears", async ({ p
   await checkFrame(page, "compact-portrait-three-battle-complete");
 });
 
+test("a series loss advises the opening rival for the restart", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "gaku"]);
+    Reflect.get(scene, "startSeries").call(scene);
+    let battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("再挑戦: 岳 → 蹴 (+18%)"))).toBe(true);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("1戦目から再挑戦"))).toBe(true);
+  const resultLayout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const legacy = ((Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text).text;
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    return { legacy, nextTop: next.getBounds().top, nextBottom: next.getBounds().bottom, rewardBottom: reward.getBounds().bottom, primaryTop: primary.getBounds().top };
+  });
+  expect(resultLayout.legacy).toContain("1戦目から · 再挑戦 · 岳 → 蹴 (+18%)");
+  expect(resultLayout.nextTop).toBeGreaterThan(resultLayout.rewardBottom);
+  expect(resultLayout.nextBottom).toBeLessThan(resultLayout.primaryTop);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-series-restart");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { phase: Reflect.get(scene, "phase"), opponent: Reflect.get(scene, "opponent"), index: Reflect.get(scene, "seriesIndex") };
+  })).toEqual({ phase: "battle", opponent: "rush", index: 0 });
+});
+
 test("rapid result taps advance only one rival", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.evaluate(() => {

@@ -1,5 +1,11 @@
 import { type MoveType } from "./battle";
 export type Opponent = "rush" | "counter" | "charge";
+export const SERIES_ORDER: readonly Opponent[] = ["rush", "counter", "charge"] as const;
+
+/** 3連戦の敗北・引き分けは最初から再挑戦する。結果の戦術案内も同じ相手を参照する。 */
+export function retryTargetOpponent(seriesActive: boolean, current: Opponent): Opponent {
+  return seriesActive ? SERIES_ORDER[0]! : current;
+}
 export const OPPONENTS: readonly {
   id: Opponent;
   name: string;

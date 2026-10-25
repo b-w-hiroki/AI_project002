@@ -1,6 +1,8 @@
 import {
   OPPONENTS,
+  SERIES_ORDER,
   plannedMove,
+  retryTargetOpponent,
   type Opponent,
 } from "../logic/opponent";
 import Phaser from "phaser";
@@ -85,7 +87,6 @@ const DRAW_REWARD = 20;
 const LOSE_REWARD = 10;
 const SERIES_CLEAR_BONUS = 150;
 const STORY_CLEAR_BONUS = 200;
-const SERIES_ORDER: readonly Opponent[] = ["rush", "counter", "charge"] as const;
 
 const MOVE_ORDER: MoveType[] = ["punch", "kick", "ki"];
 const RARITY_COLOR: Readonly<Record<string, number>> = {
@@ -1306,13 +1307,15 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
         ? `\n${tr(this.lang, "物語", "STORY")} COMPLETE · ${storyClear(this.lang, chapter.id, chapter.clearText)} · ${tr(this.lang, "ボーナス", "Bonus")} +${storyBonus}`
         : `\n${storyTitle(this.lang, chapter.id, chapter.title)} · ${outcome === "playerWin" ? storyClear(this.lang, chapter.id, chapter.clearText) : storyIntro(this.lang, chapter.id, chapter.intro)}`
       : "";
-    const retryRead = teamTacticalRead(this.selectedTeam, plannedMove(this.opponent, 0, null));
+    const retryOpponent = retryTargetOpponent(this.seriesActive, this.opponent);
+    const retryRead = teamTacticalRead(this.selectedTeam, plannedMove(retryOpponent, 0, null));
     const retrySpecialist = retryRead.specialist ? fighterName(this.lang, retryRead.specialist) : null;
+    const seriesRestart = this.seriesActive ? `${tr(this.lang, "1戦目から", "From Rival 1")} · ` : "";
     const nextDecision = outcome === "playerWin"
       ? this.resultPrimaryLabel()
       : retrySpecialist
-        ? `${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
-        : `${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
+        ? `${seriesRestart}${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
+        : `${seriesRestart}${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
     stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}\nNEXT: ${nextDecision}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
     const resultHero = this.resultGroup.getByName("resultHero") as Phaser.GameObjects.Image | null;

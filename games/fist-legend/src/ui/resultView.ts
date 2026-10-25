@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { BattleOutcome, BattleState } from "../logic/battle";
 import { finishReason } from "../logic/playGuide";
-import { plannedMove, type Opponent } from "../logic/opponent";
+import { plannedMove, retryTargetOpponent, type Opponent } from "../logic/opponent";
 import type { FighterId } from "../logic/team";
 import { teamTacticalRead } from "../logic/teamTactics";
 import { detectLang, fighterName, moveLabel, tr } from "../logic/i18n";
@@ -193,14 +193,15 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
         ? tr(lang, "3連戦クリア · 3勝", "Gauntlet Clear · 3 Wins")
         : `${tr(lang, "3連戦", "Gauntlet")} ${model.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (model.seriesIndex ?? 0) + 1)}/3`
       : "";
-  const firstMove = plannedMove(model.opponent ?? "rush", 0, null);
+  const firstMove = plannedMove(retryTargetOpponent(Boolean(model.seriesActive), model.opponent ?? "rush"), 0, null);
   const retryRead = teamTacticalRead(model.selectedTeam ?? ["ryuga"], firstMove);
   const tacticalNext = retryRead.specialist
     ? `${tr(lang, "再挑戦", "Retry")}: ${fighterName(lang, retryRead.specialist)} → ${moveLabel(lang, retryRead.counterMove)} (+18%)`
     : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)}${tr(lang, "が得意な拳士", " specialist")}`;
+  const restartLine = model.seriesActive ? tr(lang, "1戦目から再挑戦", "Restart from Rival 1") : modeText;
   const nextLine = outcome === "playerWin"
     ? modeText || tr(lang, "同じ相手へ再挑戦", "Retry the same rival")
-    : `${modeText ? `${modeText}\n` : ""}${tacticalNext}`;
+    : [restartLine, tacticalNext].filter(Boolean).join("\n");
   ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setFontSize(portrait ? 27 : 15).setText(nextLine);
   const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
   if (retryLabel) {
