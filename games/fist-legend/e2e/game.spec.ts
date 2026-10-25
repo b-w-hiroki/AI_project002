@@ -194,15 +194,20 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
     const ougi = find(scene.children.list, "mobile-ougi-landscape") as Phaser.GameObjects.Container;
     const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
+    const readyRing = find(scene.children.list, "mobile-ougi-ready-ring") as Phaser.GameObjects.Graphics;
     const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
     const ougiHit = ougi.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
     return {
       ringVisible: ring.visible,
+      readyRingVisible: readyRing.visible,
+      readyRingX: readyRing.x,
+      readyRingY: readyRing.y,
       ringX: ring.x,
       kickX: kick.x,
       hitHeight: hit.input?.hitArea.height as number,
       hitBottom: kick.y + hit.input!.hitArea.height / 2,
       ougiX: ougi.x,
+      ougiY: ougi.y,
       ougiTop: ougi.y - ougiHit.input!.hitArea.height / 2,
       ougiHitHeight: ougiHit.input?.hitArea.height as number,
       logicalHeight: window.__qaGame.canvas.height,
@@ -213,6 +218,7 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   const canvas = (await page.locator("canvas").boundingBox())!;
   expect(layout.ringVisible).toBe(true);
   expect(layout.ringX).toBe(layout.kickX);
+  expect(layout.readyRingVisible).toBe(false);
   expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
   expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
@@ -236,6 +242,19 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     return battle.enemyHp;
   });
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 READY"))).toBe(true);
+  await expect.poll(async () => (await readLayout()).readyRingVisible).toBe(true);
+  expect((await readLayout()).readyRingX).toBe(layout.ougiX);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => {
+    const current = await readLayout();
+    return current.readyRingVisible && current.readyRingX === current.ougiX && current.readyRingY === current.ougiY && current.ougiX === 735;
+  }).toBe(true);
+  await checkFrame(page, "landscape-ougi-ready");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => {
+    const current = await readLayout();
+    return current.readyRingVisible && current.readyRingX === current.ougiX && current.readyRingY === current.ougiY && current.ougiX === layout.ougiX;
+  }).toBe(true);
   await page.waitForTimeout(500);
   await checkFrame(page, "compact-portrait-ougi-ready");
   await tapPoint(page, layout.ougiX, layout.ougiTop + layout.ougiHitHeight - 1);
@@ -243,6 +262,7 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
     const battle = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { playerGauge: number; enemyHp: number };
     return { gauge: battle.playerGauge, enemyHp: battle.enemyHp };
   })).toMatchObject({ gauge: 0, enemyHp: expect.any(Number) });
+  await expect.poll(async () => (await readLayout()).readyRingVisible).toBe(false);
   const enemyHpAfterOugi = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { enemyHp: number }).enemyHp);
   expect(enemyHpAfterOugi).toBeLessThan(enemyHpBeforeOugi);
 });

@@ -15,6 +15,7 @@ export type BattleView = {
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
   counterRing: Phaser.GameObjects.Graphics;
+  ougiReadyRing: Phaser.GameObjects.Graphics;
 };
 export type BattleModel = {
   battle: Readonly<Pick<BattleState, "playerHp" | "enemyHp" | "playerGauge">>;
@@ -46,7 +47,8 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8").setName("mobile-battle-tell");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
-  battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing]);
+  const ougiReadyRing = scene.add.graphics().setName("mobile-ougi-ready-ring").setVisible(false);
+  battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing, ougiReadyRing]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
     { move: "punch", label: moveLabel(lang, "punch"), color: 0xb8412f },
@@ -67,7 +69,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
 
-  return { battleGroup, battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing };
+  return { battleGroup, battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing, ougiReadyRing };
 }
 
 export function renderBattleView(ui: BattleView, model: BattleModel, viewport: { portrait: boolean; width: number; height: number }, chrome: Phaser.GameObjects.Graphics): void {
@@ -162,6 +164,14 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     ui.counterRing.setPosition(guidedButton.x, guidedButton.y)
       .lineStyle(4, 0xffdd8a, 0.95)
       .strokeRoundedRect(-ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight, 9);
+  }
+
+  const readyButton = ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null;
+  ui.ougiReadyRing.clear().setVisible(gaugeRatio >= 1 && Boolean(readyButton));
+  if (gaugeRatio >= 1 && readyButton) {
+    ui.ougiReadyRing.setPosition(readyButton.x, readyButton.y)
+      .lineStyle(4, 0xffe186, 0.98)
+      .strokeRoundedRect(-64, -34, 128, 68, 9);
   }
 
 }
