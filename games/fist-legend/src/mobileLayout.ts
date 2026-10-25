@@ -223,6 +223,7 @@ function refresh(scene: Runtime): void {
     renderBattleView(ui.battleView, {
       battle: scene.battle, opponent: scene.opponent, selectedTeam: scene.selectedTeam,
       activeFighterIndex: scene.activeFighterIndex, nextEnemyMove: scene.nextEnemyMove,
+      accepting: scene.accepting === true,
       beat: scene.beat, timeRemainingSec: scene.timeRemainingSec,
     }, { portrait, width, height }, ui.chrome);
     return;

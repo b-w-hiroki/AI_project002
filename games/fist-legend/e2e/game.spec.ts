@@ -1378,6 +1378,37 @@ test("rapid result taps advance only one rival", async ({ page }) => {
   await checkFrame(page, "rapid-result-next-rival");
 });
 
+test("special ready cue appears only when the move can be accepted", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
+    Reflect.set(scene, "accepting", false);
+  });
+  const state = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Graphics | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-ougi-ready-ring") return node as Phaser.GameObjects.Graphics;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return { accepting: Reflect.get(scene, "accepting"), ring: find(scene.children.list)?.visible ?? false };
+  });
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了"))).toBe(true);
+  expect(await state()).toEqual({ accepting: false, ring: false });
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-ougi-waiting");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "accepting", true));
+  await expect.poll(state).toEqual({ accepting: true, ring: true });
+});
+
 test("story mode persists cleared chapters and resumes from the next opponent", async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem("fist_legend_story_progress_v1", "0");

@@ -25,6 +25,7 @@ export type BattleModel = {
   nextEnemyMove?: MoveType;
   beat?: number;
   timeRemainingSec?: number;
+  accepting: boolean;
 };
 export type BattleActions = {
   move: (move: MoveType) => void;
@@ -167,8 +168,9 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   }
 
   const readyButton = ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null;
-  ui.ougiReadyRing.clear().setVisible(gaugeRatio >= 1 && Boolean(readyButton));
-  if (gaugeRatio >= 1 && readyButton) {
+  const ougiActionable = gaugeRatio >= 1 && model.accepting;
+  ui.ougiReadyRing.clear().setVisible(ougiActionable && Boolean(readyButton));
+  if (ougiActionable && readyButton) {
     ui.ougiReadyRing.setPosition(readyButton.x, readyButton.y)
       .lineStyle(4, 0xffe186, 0.98)
       .strokeRoundedRect(-64, -34, 128, 68, 9);
