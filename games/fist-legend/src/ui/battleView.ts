@@ -10,6 +10,8 @@ import { teamTacticalRead } from "../logic/teamTactics";
 export type BattleView = {
   battleGroup: Phaser.GameObjects.Container;
   battleStatus: Phaser.GameObjects.Text;
+  battleTimer: Phaser.GameObjects.Text;
+  battleEnemyStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
   counterRing: Phaser.GameObjects.Graphics;
@@ -39,10 +41,12 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const lang = detectLang();
   const battleGroup = scene.add.container(0, 0);
   const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0).setName("mobile-battle-status");
+  const battleTimer = text(scene, 225, 18, "", 23, "#fff1d5").setOrigin(0.5, 0).setName("mobile-battle-timer");
+  const battleEnemyStatus = text(scene, 432, 18, "", 23, "#fff1d5").setOrigin(1, 0).setName("mobile-battle-enemy-status");
   const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
-  battleGroup.add([battleStatus, battleTell, battleGauge, counterRing]);
+  battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
     { move: "punch", label: moveLabel(lang, "punch"), color: 0xb8412f },
@@ -63,7 +67,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
 
-  return { battleGroup, battleStatus, battleTell, battleGauge, counterRing };
+  return { battleGroup, battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing };
 }
 
 export function renderBattleView(ui: BattleView, model: BattleModel, viewport: { portrait: boolean; width: number; height: number }, chrome: Phaser.GameObjects.Graphics): void {
@@ -138,10 +142,10 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     .setFontSize(portrait ? 23 : 13)
     .setColor(portrait ? "#fff1d5" : `#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
     .setText(portrait
-      ? tr(lang,
-        `自分HP ${battle.playerHp} · 残${remaining}秒 · 相手HP ${battle.enemyHp}`,
-        `YOU HP ${battle.playerHp} · ${remaining}s · CPU HP ${battle.enemyHp}`)
+      ? tr(lang, `自分HP ${battle.playerHp}`, `YOU HP ${battle.playerHp}`)
       : `${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+  ui.battleTimer.setVisible(portrait).setText(tr(lang, `残${remaining}秒`, `${remaining}s`));
+  ui.battleEnemyStatus.setVisible(portrait).setText(tr(lang, `相手HP ${battle.enemyHp}`, `CPU HP ${battle.enemyHp}`));
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1
     ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
