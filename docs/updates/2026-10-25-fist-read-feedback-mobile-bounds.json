@@ -1,0 +1,17 @@
+{
+  "summary": "覇拳伝の読み勝ち・読み負け演出を短い縦画面内に収める",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "スマホ縦画面の読み勝ち・読み負け文字と4応酬目以降の案内の表示契約を追加"},
+      "design": {"status": "updated", "reason": "演出をカメラ寸法に合わせる責務と日英の案内・勝敗演出の境界検査を記録"}
+    }
+  },
+  "validation": [
+    "320×568の日本語・英語で4応酬目以降の三すくみ説明が案内枠内に収まることをChromium・WebKitで検査",
+    "320×568の読み勝ち・読み負けの文字と補足がHUDと案内枠の間に収まることをChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-rule-japanese.png、compact-portrait-rule-english.png、compact-portrait-read-win.png、compact-portrait-read-loss.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

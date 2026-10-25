@@ -309,6 +309,14 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(englishTell.bottom).toBeLessThanOrEqual(englishTell.panelBottom);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-battle-english");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "beat", 3));
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("Punch > Ki > Kick > Punch");
+  const englishRule = await readBattleTell(page);
+  expect(englishRule.left).toBeGreaterThanOrEqual(55);
+  expect(englishRule.right).toBeLessThanOrEqual(395);
+  expect(englishRule.top).toBeGreaterThanOrEqual(englishRule.panelTop);
+  expect(englishRule.bottom).toBeLessThanOrEqual(englishRule.panelBottom);
+  await checkFrame(page, "compact-portrait-rule-english");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
@@ -478,6 +486,7 @@ async function readBattleTell(page: Page) {
     const canvas = window.__qaGame.canvas;
     const panelTop = 365 + (canvas.height - 800) * 0.18;
     return {
+      text: tell.text,
       fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
       left: box.left, right: box.right, top: box.top, bottom: box.bottom,
       panelTop, panelBottom: panelTop + 58,
@@ -534,6 +543,15 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
     };
     return find(scene.children.list)?.visible;
   })).toBe(false);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("拳 > 気 > 蹴 > 拳");
+  const japaneseRule = await readBattleTell(page);
+  expect(japaneseRule.left).toBeGreaterThanOrEqual(55);
+  expect(japaneseRule.right).toBeLessThanOrEqual(395);
+  expect(japaneseRule.top).toBeGreaterThanOrEqual(japaneseRule.panelTop);
+  expect(japaneseRule.bottom).toBeLessThanOrEqual(japaneseRule.panelBottom);
+  await checkFrame(page, "compact-portrait-rule-japanese");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 75, enemyHp: 25 });
@@ -733,6 +751,52 @@ test("live attack, hit, and guard visuals follow the resolved clash", async ({ p
 
   const tie = await resolve("punch");
   expect(tie.state).toMatchObject({ attack: false, hit: false, guard: true });
+});
+
+test("read feedback fits the compact portrait stage", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    scene.tweens.pauseAll();
+    Reflect.get(scene, "showClash").call(scene, "advantage", "kick", "punch");
+  });
+  const readFeedback = async (name: string) => page.evaluate(name => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const label = scene.children.getByName(name) as Phaser.GameObjects.Text | null;
+    if (!label) return null;
+    const box = label.getBounds();
+    return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: window.__qaGame.canvas.width };
+  }, name);
+  const win = await readFeedback("presentation-read-win");
+  const winDetail = await readFeedback("presentation-read-win-detail");
+  expect(win).not.toBeNull();
+  expect(winDetail).not.toBeNull();
+  for (const label of [win!, winDetail!]) {
+    expect(label.left).toBeGreaterThanOrEqual(16);
+    expect(label.right).toBeLessThanOrEqual(label.width - 16);
+    expect(label.top).toBeGreaterThan(98);
+    expect(label.bottom).toBeLessThan(365);
+  }
+  await checkFrame(page, "compact-portrait-read-win");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await waitForSceneReady(page);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    scene.tweens.pauseAll();
+    Reflect.get(scene, "showClash").call(scene, "disadvantage", "punch", "kick");
+  });
+  const loss = await readFeedback("presentation-read-loss");
+  expect(loss).not.toBeNull();
+  expect(loss!.left).toBeGreaterThanOrEqual(16);
+  expect(loss!.right).toBeLessThanOrEqual(loss!.width - 16);
+  expect(loss!.top).toBeGreaterThan(98);
+  expect(loss!.bottom).toBeLessThan(365);
+  await checkFrame(page, "compact-portrait-read-loss");
 });
 
 test("reduced motion keeps the state cue without fighter or camera motion", async ({ page }) => {

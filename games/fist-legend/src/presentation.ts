@@ -169,15 +169,19 @@ function refreshBattleHud(scene: FistRuntime): void {
 function showReadWin(scene: Phaser.Scene): void {
   const lang = detectLang();
   const reduce = reducedMotion();
+  const { width, height } = scene.cameras.main;
+  const portrait = height > width;
   const flash = scene.add.graphics().setDepth(2000).setAlpha(0.9);
   flash.fillStyle(0xffd36a, 0.16);
-  flash.fillRect(0, 0, 800, 600);
+  flash.fillRect(0, 0, width, height);
   const slash = scene.add.graphics().setDepth(2001);
-  slash.lineStyle(9, 0xfff2c2, 0.95).lineBetween(185, 420, 620, 120);
-  slash.lineStyle(3, 0xd99c2b, 0.95).lineBetween(205, 438, 640, 138);
+  const slashStart = portrait ? { x: width * 0.2, y: height * 0.38 } : { x: 185, y: 420 };
+  const slashEnd = portrait ? { x: width * 0.8, y: height * 0.24 } : { x: 620, y: 120 };
+  slash.lineStyle(9, 0xfff2c2, 0.95).lineBetween(slashStart.x, slashStart.y, slashEnd.x, slashEnd.y);
+  slash.lineStyle(3, 0xd99c2b, 0.95).lineBetween(slashStart.x + 12, slashStart.y + 12, slashEnd.x + 12, slashEnd.y + 12);
   const label = scene.add
-    .text(400, 154, tr(lang, "読み勝ち！", "READ WIN!"), {
-      fontSize: "44px",
+    .text(width / 2, portrait ? height * 0.18 : 154, tr(lang, "読み勝ち！", "READ WIN!"), {
+      fontSize: portrait ? "36px" : "44px",
       fontStyle: "900",
       color: "#fff4ce",
       stroke: "#5e3515",
@@ -185,17 +189,19 @@ function showReadWin(scene: Phaser.Scene): void {
     })
     .setOrigin(0.5)
     .setDepth(2002)
-    .setScale(0.78);
+    .setScale(0.78)
+    .setName("presentation-read-win");
   const sub = scene.add
-    .text(400, 202, tr(lang, "相手の癖を捉えた  ·  奥義ゲージ上昇", "Pattern read  ·  Special gauge up"), {
-      fontSize: "17px",
+    .text(width / 2, portrait ? height * 0.23 : 202, tr(lang, "相手の癖を捉えた  ·  奥義ゲージ上昇", "Pattern read  ·  Special gauge up"), {
+      fontSize: portrait ? "16px" : "17px",
       fontStyle: "700",
       color: "#ffd36a",
       stroke: "#26150a",
       strokeThickness: 5,
     })
     .setOrigin(0.5)
-    .setDepth(2002);
+    .setDepth(2002)
+    .setName("presentation-read-win-detail");
 
   if (!reduce) {
     scene.cameras.main.shake(85, 0.004);
@@ -219,18 +225,21 @@ function showReadWin(scene: Phaser.Scene): void {
 function showReadLoss(scene: Phaser.Scene): void {
   const lang = detectLang();
   const reduce = reducedMotion();
+  const { width, height } = scene.cameras.main;
+  const portrait = height > width;
   const warning = scene.add.graphics().setDepth(1999).setAlpha(0.85);
-  warning.lineStyle(8, 0xb63a32, 0.72).strokeRect(6, 6, 788, 588);
+  warning.lineStyle(8, 0xb63a32, 0.72).strokeRect(6, 6, width - 12, height - 12);
   const label = scene.add
-    .text(400, 150, tr(lang, "読まれた…", "READ BY RIVAL..."), {
-      fontSize: "28px",
+    .text(width / 2, portrait ? height * 0.18 : 150, tr(lang, "読まれた…", "READ BY RIVAL..."), {
+      fontSize: portrait ? "26px" : "28px",
       fontStyle: "800",
       color: "#ffb8aa",
       stroke: "#32110e",
       strokeThickness: 6,
     })
     .setOrigin(0.5)
-    .setDepth(2000);
+    .setDepth(2000)
+    .setName("presentation-read-loss");
   if (!reduce) scene.cameras.main.shake(110, 0.006);
   scene.tweens.add({ targets: [warning, label], alpha: 0, duration: reduce ? 120 : 300, delay: reduce ? 100 : 140, onComplete: () => {
     warning.destroy();
