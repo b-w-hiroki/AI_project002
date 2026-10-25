@@ -1182,6 +1182,11 @@ test("three-battle series advances through all opponents and clears", async ({ p
   expect(complete.stats).toContain("3連戦 COMPLETE");
   expect(complete.stats).toContain("クリアボーナス +150");
   await checkFrame(page, "portrait-three-battle-complete");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  await expect.poll(() => visibleCopy(page)).toContain("3連戦クリア · 3勝");
+  await expect.poll(() => visibleCopy(page)).toContain("もう一度3連戦");
+  await checkFrame(page, "compact-portrait-three-battle-complete");
 });
 
 test("story mode persists cleared chapters and resumes from the next opponent", async ({ page }) => {
@@ -1247,6 +1252,11 @@ test("story mode persists cleared chapters and resumes from the next opponent", 
   expect(complete.stats).toContain("物語 COMPLETE");
   expect(complete.stats).toContain("ボーナス +200");
   await checkFrame(page, "portrait-story-complete");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  await expect.poll(() => visibleCopy(page)).toContain("物語クリア · 全3章");
+  await expect.poll(() => visibleCopy(page)).toContain("物語を再演");
+  await checkFrame(page, "compact-portrait-story-complete");
 });
 
 

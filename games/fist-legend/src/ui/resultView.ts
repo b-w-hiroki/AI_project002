@@ -181,9 +181,13 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     .setPosition(132, lang === "en" ? -16 : 11)
     .setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
   const modeText = model.storyActive
-    ? `${tr(lang, "物語", "Story")} ${Math.min(3, (model.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${model.storyProgress ?? 0}/3`
+    ? outcome === "playerWin" && (model.storyChapterIndex ?? 0) >= 2
+      ? tr(lang, "物語クリア · 全3章", "Story Clear · All 3 Chapters")
+      : `${tr(lang, "物語", "Story")} ${Math.min(3, (model.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${model.storyProgress ?? 0}/3`
     : model.seriesActive
-      ? `${tr(lang, "3連戦", "Gauntlet")} ${model.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (model.seriesIndex ?? 0) + 1)}/3`
+      ? outcome === "playerWin" && (model.seriesIndex ?? 0) >= 2 && (model.seriesWins ?? 0) >= 3
+        ? tr(lang, "3連戦クリア · 3勝", "Gauntlet Clear · 3 Wins")
+        : `${tr(lang, "3連戦", "Gauntlet")} ${model.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (model.seriesIndex ?? 0) + 1)}/3`
       : "";
   const firstMove = plannedMove(model.opponent ?? "rush", 0, null);
   const retryRead = teamTacticalRead(model.selectedTeam ?? ["ryuga"], firstMove);
