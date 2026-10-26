@@ -24,6 +24,9 @@ test.beforeEach(async ({ page }) => {
   await expect.poll(() => phase(page), {
     message: "GameScene should finish creating before tests call scene methods",
   }).toBe("title");
+  await expect.poll(() => sceneReady(page), {
+    message: "GameScene should finish building its views before tests continue",
+  }).toBe(true);
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
@@ -153,8 +156,16 @@ test("portrait keeps six large ordered controls and guards rapid taps", async ({
 test("browser back recreates a playable scene", async ({ page }) => {
   await page.goto("/?visit=second");
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => phase(page), {
+    message: "The second visit should finish loading before browser navigation",
+  }).toBe("title");
+  await expect.poll(() => sceneReady(page)).toBe(true);
   await page.goBack();
   await page.waitForFunction(() => !!window.__qaGame);
+  await expect.poll(() => phase(page), {
+    message: "The restored visit should finish loading before gameplay",
+  }).toBe("title");
+  await expect.poll(() => sceneReady(page)).toBe(true);
   await expect(page.locator("canvas")).toBeVisible();
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -325,6 +336,13 @@ async function tapPointTwiceRapidly(page: Page, x: number, y: number) {
 }
 
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
+
+const sceneReady = (page: Page) => page.evaluate(() => {
+  const scene = window.__qaGame.scene.getScene("GameScene");
+  return scene.sys.isActive()
+    && Boolean(Reflect.get(scene, "titleGroup")?.active)
+    && Boolean(Reflect.get(scene, "turboText")?.active);
+});
 
 async function namedBounds(page: Page, name: string) {
   return page.evaluate((targetName) => {
