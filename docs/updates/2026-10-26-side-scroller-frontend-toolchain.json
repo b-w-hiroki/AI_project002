@@ -1,20 +1,23 @@
 {
-  "summary": "Update the Side Scroller frontend lint and build toolchain",
+  "summary": "Update the Side Scroller frontend toolchain and keep game-over overlays from intercepting restart input",
   "areas": {
     "side-scroller": {
       "spec": {
         "status": "unchanged",
-        "reason": "This dependency-only update does not change movement, combat, controls, persistence, or release behavior."
+        "reason": "The toolchain update and game-over guard preserve movement, combat, controls, persistence, and release behavior while ensuring restart input remains available after defeat."
       },
       "design": {
         "status": "unchanged",
-        "reason": "No visual assets, layout, copy, or interaction design are changed by the toolchain update."
+        "reason": "No visual assets, layout, copy, or intended interaction design change; pickup choice overlays are now explicitly hidden once the run is over."
       }
     }
   },
   "validation": [
     "Installed the exact lockfile with npm ci, then passed lint, typecheck, all 141 unit tests, and the production build on Windows.",
-    "The pull request must also pass its unchanged Chromium and WebKit browser workflows after it is updated onto the final integration base."
+    "AI_project002 main aef33cf reproduced a WebKit race where a stage-buff pickup overlay appeared over the game-over action and the natural restart tap did not resume play.",
+    "The regression keeps the natural touch assertion and adds explicit checks that summon and stage-buff overlays are hidden at game over.",
+    "The natural WebKit restart-tap regression passed 10 consecutive runs with one worker; the full Chromium and WebKit suites each passed all 25 tests locally.",
+    "The pull request must also pass its unchanged full Chromium and WebKit workflows after it is updated onto the final integration base."
   ],
   "limitations": [
     "Physical-device and external portal checks are not applicable to this dependency-only change and were not repeated.",
