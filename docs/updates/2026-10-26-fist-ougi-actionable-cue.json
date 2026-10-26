@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の奥義強調を実際に入力可能な時だけ表示する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "ゲージ満タンでも入力待ち時間中は奥義ボタンの強調を出さない表示契約を追加した"},
+      "design": {"status": "updated", "reason": "Sceneの入力受付状態をBattleViewへ渡して枠の表示条件に含めた"}
+    }
+  },
+  "validation": ["修正前のChromium E2Eで入力不可の間にも奥義枠が出る失敗を再現した", "修正後のChromium・WebKit E2Eで入力受付状態に応じた枠の表示を確認する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

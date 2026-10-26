@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の最小タブレット結果で再挑戦とタイトル復帰を押しやすくした",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "600×600の結果ボタンに実表示44px以上のタッチ領域と14px以上の文字条件を追加した"},
+      "design": {"status": "updated", "reason": "旧結果の主・副ボタンの高さ、文字サイズ、Y位置と実タップ検査を記録した"}
+    }
+  },
+  "validation": ["修正前のChromium E2Eで主ボタンのタッチ領域が実表示34.92pxに縮む失敗を再現した", "修正後のlint・typecheck・単体62件・build、ChromiumとWebKitのE2E各28件に成功した", "600×600で両ボタンの領域44px・文字14px以上、非重複、下端側の実タップを確認し、games/fist-legend/e2e/screenshots/small-tablet-result-time-win.png の実画面を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

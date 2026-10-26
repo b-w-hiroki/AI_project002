@@ -7,7 +7,7 @@ export function exchangeGuide(lang: Lang, enemyMove: MoveType, beat: number): st
     const counter = moveLabel(lang, teamTacticalRead(["ryuga"], enemyMove).counterMove);
     return tr(lang, `${counter}で有利を取ろう`, `Counter with ${counter}`);
   }
-  return `${moveLabel(lang, "punch")} > ${moveLabel(lang, "ki")} > ${moveLabel(lang, "kick")} > ${moveLabel(lang, "punch")}`;
+  return tr(lang, "有利: 拳>気>蹴>拳", "Beats: Punch>Ki>Kick>Punch");
 }
 
 export function finishReason(lang: Lang, battle: Pick<BattleState, "playerHp" | "enemyHp">): string {

@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の奥義ゲージ行を日本語化し小画面での読みやすさを改善した",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "奥義の割合・編成・応酬数・準備完了の表示言語を明記した"},
+      "design": {"status": "updated", "reason": "縦横のゲージ文字サイズと表示内容の責務を明記した"}
+    }
+  },
+  "validation": ["lint・typecheck・単体・buildを実行する", "Chromium・WebKit E2Eと日本語・英語の戦闘画像でゲージ行を確認する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}
