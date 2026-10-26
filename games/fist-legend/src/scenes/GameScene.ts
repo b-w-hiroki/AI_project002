@@ -1,6 +1,8 @@
 import {
   OPPONENTS,
+  SERIES_ORDER,
   plannedMove,
+  retryTargetOpponent,
   type Opponent,
 } from "../logic/opponent";
 import Phaser from "phaser";
@@ -48,6 +50,7 @@ import {
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
+import { finishReason } from "../logic/playGuide";
 import { teamTacticalRead } from "../logic/teamTactics";
 import {
   detectLang,
@@ -85,7 +88,6 @@ const DRAW_REWARD = 20;
 const LOSE_REWARD = 10;
 const SERIES_CLEAR_BONUS = 150;
 const STORY_CLEAR_BONUS = 200;
-const SERIES_ORDER: readonly Opponent[] = ["rush", "counter", "charge"] as const;
 
 const MOVE_ORDER: MoveType[] = ["punch", "kick", "ki"];
 const RARITY_COLOR: Readonly<Record<string, number>> = {
@@ -188,6 +190,7 @@ export class GameScene extends Phaser.Scene {
   private opponentBadge!: Phaser.GameObjects.Text;
   private resultAccent!: Phaser.GameObjects.Graphics;
   private resultFinish!: Phaser.GameObjects.Text;
+  private resultReason!: Phaser.GameObjects.Text;
   private gachaCharImage: Phaser.GameObjects.Image | null = null;
   private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
@@ -636,6 +639,8 @@ export class GameScene extends Phaser.Scene {
     const bg = this.buildArenaBackground();
     // 上部（HP/タイマー）と下部（ボタン列）に半透明の帯を敷き、背景の上でも文字を読みやすくする
     const topShade = this.shade(0, 0, 800, 60, bg ? 0.4 : 0);
+    const guideShade = this.shade(130, 64, 540, 64, bg ? 0.72 : 0)
+      .setName("compact-tablet-guide-shade");
     const bottomShade = this.shade(0, 388, 800, 212, bg ? 0.5 : 0);
 
     const playerHpBg = this.add.graphics();
@@ -708,7 +713,7 @@ export class GameScene extends Phaser.Scene {
       240,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "punch"),
       () => this.onPlayerMove("punch"),
       {
@@ -721,7 +726,7 @@ export class GameScene extends Phaser.Scene {
       400,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "kick"),
       () => this.onPlayerMove("kick"),
       {
@@ -734,7 +739,7 @@ export class GameScene extends Phaser.Scene {
       560,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "ki"),
       () => this.onPlayerMove("ki"),
       {
@@ -746,13 +751,13 @@ export class GameScene extends Phaser.Scene {
     this.ougiBtn = makeButton(
       this,
       400,
-      545,
+      550,
       220,
-      44,
+      62,
       tr(this.lang, "奥義発動！", "SPECIAL!"),
       () => this.onPlayerOugi(),
       {
-        fontSize: "16px",
+        fontSize: "20px",
         fillColor: 0x7a5210,
       },
     );
@@ -761,13 +766,13 @@ export class GameScene extends Phaser.Scene {
     this.switchBtn = makeButton(
       this,
       660,
-      545,
+      550,
       120,
-      44,
+      62,
       tr(this.lang, "交代", "SWITCH"),
       () => this.switchFighter(),
       {
-        fontSize: "15px",
+        fontSize: "20px",
         fillColor: 0x4c4d78,
       },
     );
@@ -775,6 +780,7 @@ export class GameScene extends Phaser.Scene {
 
     const legacyHud = this.add.container(0, 0, [
       topShade,
+      guideShade,
       bottomShade,
       playerHpBg,
       this.playerHpFill,
@@ -845,6 +851,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleResultPrimary(): void {
+    if (this.phase !== "result") return;
     if (this.storyActive) {
       if (this.lastOutcome === "playerWin" && this.storyChapterIndex < STORY_CHAPTERS.length - 1) {
         this.storyChapterIndex += 1;
@@ -1305,13 +1312,15 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
         ? `\n${tr(this.lang, "物語", "STORY")} COMPLETE · ${storyClear(this.lang, chapter.id, chapter.clearText)} · ${tr(this.lang, "ボーナス", "Bonus")} +${storyBonus}`
         : `\n${storyTitle(this.lang, chapter.id, chapter.title)} · ${outcome === "playerWin" ? storyClear(this.lang, chapter.id, chapter.clearText) : storyIntro(this.lang, chapter.id, chapter.intro)}`
       : "";
-    const retryRead = teamTacticalRead(this.selectedTeam, plannedMove(this.opponent, 0, null));
+    const retryOpponent = retryTargetOpponent(this.seriesActive, this.opponent);
+    const retryRead = teamTacticalRead(this.selectedTeam, plannedMove(retryOpponent, 0, null));
     const retrySpecialist = retryRead.specialist ? fighterName(this.lang, retryRead.specialist) : null;
+    const seriesRestart = this.seriesActive ? `${tr(this.lang, "1戦目から", "From Rival 1")} · ` : "";
     const nextDecision = outcome === "playerWin"
       ? this.resultPrimaryLabel()
       : retrySpecialist
-        ? `${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
-        : `${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
+        ? `${seriesRestart}${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
+        : `${seriesRestart}${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
     stats.setText(`${tr(this.lang, "獲得", "Earned")}: ${tr(this.lang, "豪拳石", "Fist Gems")} +${reward + seriesBonus + storyBonus} (${tr(this.lang, "所持", "Balance")}: ${balance})${seriesLine}${storyLine}\nNEXT: ${nextDecision}`);
     this.resultPrimaryBtn.setLabel(this.resultPrimaryLabel());
     const resultHero = this.resultGroup.getByName("resultHero") as Phaser.GameObjects.Image | null;
@@ -1331,14 +1340,13 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     }
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
-    this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
-    this.resultAccent.lineStyle(1, 0xffffff, 0.26).lineBetween(305, 198, 495, 198);
     this.resultFinish
-      .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
+      .setText(outcome === "playerWin" ? (this.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (this.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
       .setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#c8d2e8" : "#e3d4ff")
       .setAlpha(0)
       .setScale(1.7)
       .setAngle(outcome === "playerWin" ? -5 : 0);
+    this.resultReason.setText(finishReason(this.lang, this.battle));
     this.tweens.add({
       targets: this.resultFinish,
       alpha: 1,
@@ -1388,7 +1396,7 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
-      .text(400, 150, "", {
+      .text(400, 136, "", {
         fontSize: "58px",
         color: "#ffe3a1",
         fontStyle: "900",
@@ -1398,6 +1406,11 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       })
       .setOrigin(0.5)
       .setAlpha(0);
+
+    this.resultReason = this.add
+      .text(400, 190, "", { ...TYPE.body, fontSize: "20px", color: THEME.textPrimary })
+      .setOrigin(0.5)
+      .setName("result-reason");
 
     const heading = this.add
       .text(400, 220, "", { ...TYPE.h1, color: THEME.textPrimary })
@@ -1411,36 +1424,37 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     this.resultPrimaryBtn = makeButton(
       this,
       400,
-      360,
+      355,
       260,
-      48,
+      64,
       tr(this.lang, "もう一度あそぶ", "Play Again"),
       () => this.handleResultPrimary(),
       {
-        fontSize: "15px",
+        fontSize: "20px",
       },
     );
     const titleBtn = makeButton(
       this,
       400,
-      420,
+      430,
       200,
-      44,
+      62,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
-        fontSize: "14px",
+        fontSize: "20px",
       },
     );
 
     this.resultGroup.add([
       ...(bg ? [bg] : []),
       tint,
-      panel,
       ...(resultHero ? [resultHero] : []),
       ...(resultEnemy ? [resultEnemy] : []),
+      panel,
       this.resultAccent,
       this.resultFinish,
+      this.resultReason,
       heading,
       stats,
       this.resultPrimaryBtn.container,
