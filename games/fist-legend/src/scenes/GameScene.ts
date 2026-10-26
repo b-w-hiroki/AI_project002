@@ -50,6 +50,7 @@ import {
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
+import { finishReason } from "../logic/playGuide";
 import { teamTacticalRead } from "../logic/teamTactics";
 import {
   detectLang,
@@ -189,6 +190,7 @@ export class GameScene extends Phaser.Scene {
   private opponentBadge!: Phaser.GameObjects.Text;
   private resultAccent!: Phaser.GameObjects.Graphics;
   private resultFinish!: Phaser.GameObjects.Text;
+  private resultReason!: Phaser.GameObjects.Text;
   private gachaCharImage: Phaser.GameObjects.Image | null = null;
   private gachaCharPlaceholder!: Phaser.GameObjects.Text;
 
@@ -1335,14 +1337,13 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     }
     this.resultAccent.clear();
     this.resultAccent.fillStyle(resultColor, 0.12).fillEllipse(400, 236, 330, 100);
-    this.resultAccent.lineStyle(3, resultColor, 0.72).lineBetween(270, 190, 530, 190);
-    this.resultAccent.lineStyle(1, 0xffffff, 0.26).lineBetween(305, 198, 495, 198);
     this.resultFinish
-      .setText(outcome === "playerWin" ? "K.O." : outcome === "enemyWin" ? "DOWN" : "DRAW")
+      .setText(outcome === "playerWin" ? (this.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (this.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
       .setColor(outcome === "playerWin" ? "#ffe3a1" : outcome === "enemyWin" ? "#c8d2e8" : "#e3d4ff")
       .setAlpha(0)
       .setScale(1.7)
       .setAngle(outcome === "playerWin" ? -5 : 0);
+    this.resultReason.setText(finishReason(this.lang, this.battle));
     this.tweens.add({
       targets: this.resultFinish,
       alpha: 1,
@@ -1403,6 +1404,11 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       .setOrigin(0.5)
       .setAlpha(0);
 
+    this.resultReason = this.add
+      .text(400, 190, "", { ...TYPE.body, fontSize: "14px", color: THEME.textPrimary })
+      .setOrigin(0.5)
+      .setName("result-reason");
+
     const heading = this.add
       .text(400, 220, "", { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5)
@@ -1440,11 +1446,12 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     this.resultGroup.add([
       ...(bg ? [bg] : []),
       tint,
-      panel,
       ...(resultHero ? [resultHero] : []),
       ...(resultEnemy ? [resultEnemy] : []),
+      panel,
       this.resultAccent,
       this.resultFinish,
+      this.resultReason,
       heading,
       stats,
       this.resultPrimaryBtn.container,

@@ -1024,6 +1024,49 @@ test("victory result shows a knockout finish", async ({ page }) => {
   await checkFrame(page, "portrait-result-ko");
 });
 
+test("tablet result distinguishes time decisions from knockouts", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  const result = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const legacy = Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container;
+    return {
+      legacyVisible: legacy.visible,
+      finish: (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text,
+      reason: (legacy.getByName("result-reason") as Phaser.GameObjects.Text).text,
+      stats: (legacy.getByName("stats") as Phaser.GameObjects.Text).text,
+    };
+  });
+  await expect.poll(result).toMatchObject({ legacyVisible: true, finish: "WIN" });
+  expect((await result()).reason).toBe("時間切れ · 残りHP 75 対 25");
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "tablet-result-time-win");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 25, enemyHp: 75 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(result).toMatchObject({ legacyVisible: true, finish: "LOSE", reason: "時間切れ · 残りHP 25 対 75" });
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "tablet-result-time-lose");
+});
+
 test("three-fighter team persists and leader appears in battle", async ({ page }) => {
   const result = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");

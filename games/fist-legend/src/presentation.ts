@@ -267,7 +267,7 @@ function showResultSummary(scene: FistRuntime): void {
   const line = scene.add
     .text(
       400,
-      320,
+      480,
       `${tr(lang, "読み勝ち", "READ WINS")} ${stats.wins}  ·  MAX STREAK ${stats.maxStreak}  ·  ${tr(lang, "奥義", "SPECIAL")} ${stats.ougiUsed ? tr(lang, "発動", "USED") : tr(lang, "未発動", "NOT USED")}`,
       {
         fontFamily: '"Segoe UI", "Hiragino Sans", sans-serif',
