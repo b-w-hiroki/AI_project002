@@ -1,0 +1,23 @@
+{
+  "summary": "Update the Karma Quest frontend lint and build toolchain",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "This dependency-only update does not change journeys, reports, controls, persistence, or release behavior."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "No visual assets, layout, copy, or interaction design are changed by the toolchain update."
+      }
+    }
+  },
+  "validation": [
+    "Installed the exact lockfile with npm ci, then passed lint, typecheck, all 157 unit tests, and the production build on Windows.",
+    "npm audit reported zero known vulnerabilities for the exact lockfile.",
+    "The pull request must also pass its unchanged Chromium and WebKit browser workflows after it is updated onto the final integration base."
+  ],
+  "limitations": [
+    "Physical-device and external portal checks are not applicable to this dependency-only change and were not repeated."
+  ]
+}
