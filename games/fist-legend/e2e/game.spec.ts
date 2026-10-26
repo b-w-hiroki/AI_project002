@@ -136,9 +136,11 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       guideFontSize: Number.parseInt(guide.style.fontSize, 10),
     };
   });
-  const introCanvas = (await page.locator("canvas").boundingBox())!;
   await checkFrame(page, "compact-portrait-title-before");
-  expect(intro.guideFontSize * introCanvas.width / 450).toBeGreaterThanOrEqual(14);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? intro.guideFontSize * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
   expect(intro.statusTop - intro.guideBottom).toBeGreaterThanOrEqual(8);
   const titleHitHeight = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -161,6 +163,22 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(titleHitHeight * titleCanvas.height / titleLogicalHeight).toBeGreaterThanOrEqual(44);
   await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleStatus(page)).map(label => label.text)).toEqual([
+    expect.stringMatching(/^自分HP \d+$/), expect.stringMatching(/^残\d+秒$/), expect.stringMatching(/^相手HP \d+$/),
+  ]);
+  const status = await readBattleStatus(page);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? Math.min(...status.map(label => label.fontSize)) * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
+  expect(status[0]!.left).toBeGreaterThanOrEqual(8);
+  expect(status[2]!.right).toBeLessThanOrEqual(442);
+  for (const label of status) {
+    expect(label.top).toBeGreaterThanOrEqual(8);
+    expect(label.bottom).toBeLessThanOrEqual(54);
+  }
+  expect(status[0]!.right).toBeLessThan(status[1]!.left);
+  expect(status[1]!.right).toBeLessThan(status[2]!.left);
   const readLayout = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
@@ -174,14 +192,19 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       return null;
     };
     const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
+    const ougi = find(scene.children.list, "mobile-ougi-landscape") as Phaser.GameObjects.Container;
     const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
     const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const ougiHit = ougi.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
     return {
       ringVisible: ring.visible,
       ringX: ring.x,
       kickX: kick.x,
       hitHeight: hit.input?.hitArea.height as number,
       hitBottom: kick.y + hit.input!.hitArea.height / 2,
+      ougiX: ougi.x,
+      ougiTop: ougi.y - ougiHit.input!.hitArea.height / 2,
+      ougiHitHeight: ougiHit.input?.hitArea.height as number,
       logicalHeight: window.__qaGame.canvas.height,
     };
   });
@@ -192,9 +215,29 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(layout.ringX).toBe(layout.kickX);
   expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.ougiTop).toBeGreaterThan(layout.hitBottom);
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await checkFrame(page, "compact-portrait-guided-move");
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  const enemyHpBeforeOugi = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as { enemyHp: number };
+    Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
+    return battle.enemyHp;
+  });
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 READY"))).toBe(true);
+  await page.waitForTimeout(500);
+  await checkFrame(page, "compact-portrait-ougi-ready");
+  await tapPoint(page, layout.ougiX, layout.ougiTop + layout.ougiHitHeight - 1);
+  await expect.poll(() => page.evaluate(() => {
+    const battle = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { playerGauge: number; enemyHp: number };
+    return { gauge: battle.playerGauge, enemyHp: battle.enemyHp };
+  })).toMatchObject({ gauge: 0, enemyHp: expect.any(Number) });
+  const enemyHpAfterOugi = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { enemyHp: number }).enemyHp);
+  expect(enemyHpAfterOugi).toBeLessThan(enemyHpBeforeOugi);
 });
 
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
@@ -239,6 +282,18 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
     return Number.parseInt(guide.style.fontSize, 10) === 16 ? status.getBounds().top - guide.getBounds().bottom : null;
   })).toBeGreaterThanOrEqual(8);
   await checkFrame(page, "compact-portrait-title-english");
+  await tapVisibleText(page, "Battle");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleStatus(page)).map(label => label.text)).toEqual([
+    expect.stringMatching(/^YOU HP \d+$/), expect.stringMatching(/^\d+s$/), expect.stringMatching(/^CPU HP \d+$/),
+  ]);
+  const englishStatus = await readBattleStatus(page);
+  expect(englishStatus[0]!.right).toBeLessThan(englishStatus[1]!.left);
+  expect(englishStatus[1]!.right).toBeLessThan(englishStatus[2]!.left);
+  expect(englishStatus[2]!.right).toBeLessThanOrEqual(442);
+  for (const label of englishStatus) expect(label.bottom).toBeLessThanOrEqual(54);
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+  await checkFrame(page, "compact-portrait-battle-english");
 });
 
 
@@ -281,6 +336,30 @@ async function checkFrame(page: Page, name: string) {
     return Math.abs(box.width / box.height - canvas.width / canvas.height);
   })).toBeLessThan(0.02);
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
+}
+
+async function readBattleStatus(page: Page) {
+  return page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return ["mobile-battle-status", "mobile-battle-timer", "mobile-battle-enemy-status"].map(name => {
+      const label = find(scene.children.list, name)!;
+      const bounds = label.getBounds();
+      return {
+        text: label.text, fontSize: Number.parseInt(label.style.fontSize, 10),
+        left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+      };
+    });
+  });
 }
 
 async function visibleCopy(page: Page): Promise<string[]> {
