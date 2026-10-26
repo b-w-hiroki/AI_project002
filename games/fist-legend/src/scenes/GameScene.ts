@@ -1421,25 +1421,25 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
     this.resultPrimaryBtn = makeButton(
       this,
       400,
-      360,
+      355,
       260,
-      48,
+      64,
       tr(this.lang, "もう一度あそぶ", "Play Again"),
       () => this.handleResultPrimary(),
       {
-        fontSize: "15px",
+        fontSize: "20px",
       },
     );
     const titleBtn = makeButton(
       this,
       400,
-      420,
+      430,
       200,
-      44,
+      62,
       tr(this.lang, "タイトルへ戻る", "Back to Title"),
       () => this.showTitle(),
       {
-        fontSize: "14px",
+        fontSize: "20px",
       },
     );
 

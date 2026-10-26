@@ -1088,6 +1088,11 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
     const reason = group.getByName("result-reason") as Phaser.GameObjects.Text;
     const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
     const heading = group.getByName("heading") as Phaser.GameObjects.Text;
+    const primary = (Reflect.get(scene, "resultPrimaryBtn") as { container: Phaser.GameObjects.Container }).container;
+    const title = group.list.find(node => node.type === "Container" &&
+      (node as Phaser.GameObjects.Container).list.some(child => child.type === "Text" && (child as Phaser.GameObjects.Text).text === "タイトルへ戻る")) as Phaser.GameObjects.Container;
+    const summary = scene.children.getByName("presentation-result-summary") as Phaser.GameObjects.Text;
+    const buttonText = (button: Phaser.GameObjects.Container) => button.list.find(child => child.type === "Text") as Phaser.GameObjects.Text;
     const canvas = window.__qaGame.canvas;
     const scale = canvas.getBoundingClientRect().width / canvas.width;
     return {
@@ -1097,18 +1102,43 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
       reasonBottom: reason.getBounds().bottom,
       finishBottom: finish.getBounds().bottom,
       headingTop: heading.getBounds().top,
+      primaryHitPx: (primary.input?.hitArea.height as number) * scale,
+      titleHitPx: (title.input?.hitArea.height as number) * scale,
+      primaryTextPx: Number.parseFloat(buttonText(primary).style.fontSize) * scale,
+      titleTextPx: Number.parseFloat(buttonText(title).style.fontSize) * scale,
+      primaryBottom: primary.getBounds().bottom,
+      titleTop: title.getBounds().top,
+      titleBottom: title.getBounds().bottom,
+      summaryTop: summary.getBounds().top,
     };
   });
   expect(layout.visible).toBe(true);
   expect(layout.fontPx).toBeGreaterThanOrEqual(14);
   expect(layout.reasonTop).toBeGreaterThan(layout.finishBottom);
   expect(layout.reasonBottom).toBeLessThan(layout.headingTop);
+  expect(layout.primaryHitPx).toBeGreaterThanOrEqual(44);
+  expect(layout.titleHitPx).toBeGreaterThanOrEqual(44);
+  expect(layout.primaryTextPx).toBeGreaterThanOrEqual(14);
+  expect(layout.titleTextPx).toBeGreaterThanOrEqual(14);
+  expect(layout.primaryBottom).toBeLessThan(layout.titleTop);
+  expect(layout.titleBottom).toBeLessThan(layout.summaryTop);
   await expect.poll(() => page.evaluate(() => {
     const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
     return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
   })).toBe(true);
   await page.waitForTimeout(200);
   await checkFrame(page, "small-tablet-result-time-win");
+  await tapPoint(page, 400, 385);
+  await expect.poll(() => phase(page)).toBe("battle");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await tapPoint(page, 400, 459);
+  await expect.poll(() => phase(page)).toBe("title");
 });
 
 test("three-fighter team persists and leader appears in battle", async ({ page }) => {
