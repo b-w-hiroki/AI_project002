@@ -1179,6 +1179,60 @@ test("the smallest tablet keeps every battle action touchable", async ({ page })
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
 });
 
+test("compact tablet connects the rival tell to the counter move", async ({ page }) => {
+  const readGuide = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const tell = Reflect.get(scene, "tell") as Phaser.GameObjects.Text;
+    const bounds = tell.getBounds();
+    const canvas = window.__qaGame.canvas;
+    return {
+      text: tell.text,
+      fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+    };
+  });
+  const start = async () => {
+    await page.setViewportSize({ width: 600, height: 600 });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "startSingleBattle").call(scene);
+    });
+    await expect.poll(() => phase(page)).toBe("battle");
+  };
+  const verify = async (counter: string, wideCopy: string, rule: string, frame: string) => {
+    await expect.poll(async () => (await readGuide()).text).toContain(counter);
+    const opening = await readGuide();
+    expect(opening.fontPx).toBeGreaterThanOrEqual(14);
+    expect(opening.left).toBeGreaterThanOrEqual(130);
+    expect(opening.right).toBeLessThanOrEqual(670);
+    expect(opening.top).toBeGreaterThanOrEqual(64);
+    expect(opening.bottom).toBeLessThanOrEqual(128);
+    await page.setViewportSize({ width: 800, height: 600 });
+    await expect.poll(async () => (await readGuide()).text).toContain(wideCopy);
+    await page.setViewportSize({ width: 600, height: 600 });
+    await expect.poll(async () => (await readGuide()).text).toContain(counter);
+    await expect.poll(() => page.evaluate(() => {
+      const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+      return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+    })).toBe(true);
+    await page.waitForTimeout(200);
+    await checkFrame(page, frame);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "beat", 3);
+      Reflect.get(scene, "refreshTell").call(scene);
+    });
+    await expect.poll(async () => (await readGuide()).text).toContain(rule);
+  };
+
+  await start();
+  await verify("蹴で有利を取ろう", "編成の得意", "有利: 拳>気>蹴>拳", "small-tablet-guide-japanese");
+  await page.goto("/?lang=en");
+  await waitForSceneReady(page);
+  await start();
+  await verify("Counter with Kick", "TEAM EDGE", "Beats: Punch>Ki>Kick>Punch", "small-tablet-guide-english");
+});
+
 test("three-fighter team persists and leader appears in battle", async ({ page }) => {
   const result = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");

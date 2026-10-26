@@ -50,7 +50,7 @@ import {
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
-import { finishReason } from "../logic/playGuide";
+import { exchangeGuide, finishReason } from "../logic/playGuide";
 import { teamTacticalRead } from "../logic/teamTactics";
 import {
   detectLang,
@@ -1143,16 +1143,7 @@ export class GameScene extends Phaser.Scene {
 
   private refreshTell(): void {
     this.refreshOpponentVisual();
-    const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
-    const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
-    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
-    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
-    if (!this.isApprovedMockViewport()) {
-      this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
-    }
+    this.updateLegacyTellCopy();
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
@@ -1163,6 +1154,23 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
         yoyo: true,
       });
     }
+  }
+
+  private updateLegacyTellCopy(compactTablet = this.scale.parentSize.width < 800
+    && this.scale.parentSize.width >= 600 && this.scale.parentSize.height >= 600): void {
+    const lead = `${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}`;
+    this.tell.setFontSize(compactTablet ? 21 : 19);
+    if (compactTablet) {
+      this.tell.setText(`${lead}\n${exchangeGuide(this.lang, this.nextEnemyMove, this.beat)}`);
+      return;
+    }
+    if (this.isApprovedMockViewport()) {
+      this.tell.setText(`${lead}\n${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
+      return;
+    }
+    const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
+    const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
+    this.tell.setText(`${lead}\n${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
   }
 
   private flashHit(sprite: FighterSprite, damage: number): void {

@@ -43,6 +43,7 @@ type Runtime = Phaser.Scene & {
   storyActive?: boolean;
   storyChapterIndex?: number;
   storyProgress?: number;
+  updateLegacyTellCopy?: (compactTablet: boolean) => void;
   seriesIndex?: number;
   seriesWins?: number;
   showTitle?: () => void;
@@ -141,6 +142,7 @@ function applySurface(scene: Runtime, width: number, height: number): void {
 function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   const ui = buildUi(scene);
   ui.phone = !layout.isTablet;
+  scene.updateLegacyTellCopy?.(!ui.phone && layout.width < 800);
   ui.root.setVisible(ui.phone);
   hideLegacyOrientationWarning(scene);
   scene.titleGroup?.setVisible(!ui.phone && scene.phase === "title");
