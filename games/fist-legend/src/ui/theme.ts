@@ -83,6 +83,7 @@ export interface ButtonOptions {
   textColor?: string;
   fontSize?: string;
   fontStyle?: string;
+  touchHeight?: number;
 }
 
 export interface ThemedButton {
@@ -140,8 +141,11 @@ export function makeButton(
 
   const container = scene.add.container(x, y, [g, text]).setSize(w, h);
   let enabled = true;
+  const inputArea = options.touchHeight && options.touchHeight > h
+    ? { hitArea: new Phaser.Geom.Rectangle(0, 0, w, options.touchHeight), hitAreaCallback: Phaser.Geom.Rectangle.Contains, useHandCursor: true }
+    : { useHandCursor: true };
 
-  container.setInteractive({ useHandCursor: true });
+  container.setInteractive(inputArea);
   container.on("pointerover", () => enabled && draw(hover, 1, true));
   container.on("pointerout", () => enabled && draw(fill));
   container.on("pointerdown", () => {
@@ -160,7 +164,7 @@ export function makeButton(
       draw(want ? fill : disabledColor, want ? 1 : 0.8);
       text.setAlpha(want ? 1 : 0.45);
       container.disableInteractive();
-      if (want) container.setInteractive({ useHandCursor: true });
+      if (want) container.setInteractive(inputArea);
     },
   };
 }

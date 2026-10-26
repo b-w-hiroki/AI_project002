@@ -70,3 +70,48 @@ test("haja mode activates once, exposes the selected identity, and expires", asy
 
   await page.screenshot({ path: "e2e/screenshots/portrait-haja-used.png" });
 });
+
+test("compact tablet Haja choices have readable touch targets", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    return (root.list.find(node => node.type === "Container") as Phaser.GameObjects.Container).x;
+  })).toBe(330);
+  const choices = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const canvas = window.__qaGame.canvas;
+    const scale = canvas.getBoundingClientRect().width / canvas.width;
+    return root.list.filter(node => node.type === "Container").map(node => {
+      const button = node as Phaser.GameObjects.Container;
+      const label = button.list.find(child => child.type === "Text") as Phaser.GameObjects.Text;
+      return {
+        label: label.text,
+        x: button.x,
+        y: button.y,
+        hitPx: (button.input!.hitArea.height as number) * scale,
+        fontPx: Number.parseFloat(label.style.fontSize) * scale,
+      };
+    });
+  });
+  expect(choices.map(choice => choice.label)).toEqual(["剛", "柔", "瞬"]);
+  for (const choice of choices) {
+    expect(choice.hitPx, choice.label).toBeGreaterThanOrEqual(44);
+    expect(choice.fontPx, choice.label).toBeGreaterThanOrEqual(14);
+  }
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.screenshot({ path: "e2e/screenshots/small-tablet-haja-touch.png" });
+  const canvas = (await page.locator("canvas").boundingBox())!;
+  const logical = await page.locator("canvas").evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height }));
+  await page.touchscreen.tap(canvas.x + choices[0]!.x * canvas.width / logical.width,
+    canvas.y + (choices[0]!.y + 38) * canvas.height / logical.height);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "hajaMode"))).toBe("go");
+});
