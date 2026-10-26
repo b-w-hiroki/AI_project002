@@ -508,12 +508,12 @@ async function readBattleTell(page: Page) {
     const tell = find(scene.children.list)!;
     const box = tell.getBounds();
     const canvas = window.__qaGame.canvas;
-    const panelTop = 365 + (canvas.height - 800) * 0.18;
+    const panelTop = 350 + (canvas.height - 800) * 0.18;
     return {
       text: tell.text,
       fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
       left: box.left, right: box.right, top: box.top, bottom: box.bottom,
-      panelTop, panelBottom: panelTop + 58,
+      panelTop, panelBottom: panelTop + 95,
     };
   });
 }
@@ -1139,6 +1139,44 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
   await expect.poll(() => phase(page)).toBe("result");
   await tapPoint(page, 400, 459);
   await expect.poll(() => phase(page)).toBe("title");
+});
+
+test("the smallest tablet keeps every battle action touchable", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  const actions = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const hud = (Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container)
+      .getByName("legacy-battle-hud") as Phaser.GameObjects.Container;
+    const canvas = window.__qaGame.canvas;
+    const scale = canvas.getBoundingClientRect().width / canvas.width;
+    return hud.list.filter(node => node.type === "Container" && node.input && node.y >= 480)
+      .map(node => {
+        const button = node as Phaser.GameObjects.Container;
+        const label = button.list.find(child => child.type === "Text") as Phaser.GameObjects.Text;
+        return {
+          label: label.text,
+          hitPx: (button.input!.hitArea.height as number) * scale,
+          fontPx: Number.parseFloat(label.style.fontSize) * scale,
+          top: button.y - (button.input!.hitArea.height as number) / 2,
+          bottom: button.y + (button.input!.hitArea.height as number) / 2,
+        };
+      });
+  });
+  expect(actions).toHaveLength(5);
+  for (const action of actions) {
+    expect(action.hitPx, action.label).toBeGreaterThanOrEqual(44);
+    expect(action.fontPx, action.label).toBeGreaterThanOrEqual(14);
+  }
+  expect(Math.max(...actions.slice(0, 3).map(action => action.bottom)))
+    .toBeLessThan(Math.min(...actions.slice(3).map(action => action.top)));
+  await checkFrame(page, "small-tablet-battle-actions");
+  await tapPoint(page, 240, 480);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
 });
 
 test("three-fighter team persists and leader appears in battle", async ({ page }) => {

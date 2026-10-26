@@ -107,7 +107,8 @@ function refreshBattleHud(scene: FistRuntime): void {
   const approvedMockViewport = scene.scale.parentSize.width === 800 && scene.scale.parentSize.height === 600;
   // The approved 800x600 mock already has one complete HUD in GameScene, so a second
   // versus HUD must not cover it. Preserve the existing behavior at every other size.
-  const active = !approvedMockViewport && (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
+  const active = !approvedMockViewport && scene.scale.parentSize.width >= 800
+    && (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
   hud.root.setVisible(active);
   if (!active || !scene.battle) return;
 

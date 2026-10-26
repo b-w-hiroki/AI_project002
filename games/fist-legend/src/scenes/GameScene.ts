@@ -639,6 +639,8 @@ export class GameScene extends Phaser.Scene {
     const bg = this.buildArenaBackground();
     // 上部（HP/タイマー）と下部（ボタン列）に半透明の帯を敷き、背景の上でも文字を読みやすくする
     const topShade = this.shade(0, 0, 800, 60, bg ? 0.4 : 0);
+    const guideShade = this.shade(130, 64, 540, 64, bg ? 0.72 : 0)
+      .setName("compact-tablet-guide-shade");
     const bottomShade = this.shade(0, 388, 800, 212, bg ? 0.5 : 0);
 
     const playerHpBg = this.add.graphics();
@@ -711,7 +713,7 @@ export class GameScene extends Phaser.Scene {
       240,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "punch"),
       () => this.onPlayerMove("punch"),
       {
@@ -724,7 +726,7 @@ export class GameScene extends Phaser.Scene {
       400,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "kick"),
       () => this.onPlayerMove("kick"),
       {
@@ -737,7 +739,7 @@ export class GameScene extends Phaser.Scene {
       560,
       buttonY,
       100,
-      56,
+      62,
       moveLabel(this.lang, "ki"),
       () => this.onPlayerMove("ki"),
       {
@@ -749,13 +751,13 @@ export class GameScene extends Phaser.Scene {
     this.ougiBtn = makeButton(
       this,
       400,
-      545,
+      550,
       220,
-      44,
+      62,
       tr(this.lang, "奥義発動！", "SPECIAL!"),
       () => this.onPlayerOugi(),
       {
-        fontSize: "16px",
+        fontSize: "20px",
         fillColor: 0x7a5210,
       },
     );
@@ -764,13 +766,13 @@ export class GameScene extends Phaser.Scene {
     this.switchBtn = makeButton(
       this,
       660,
-      545,
+      550,
       120,
-      44,
+      62,
       tr(this.lang, "交代", "SWITCH"),
       () => this.switchFighter(),
       {
-        fontSize: "15px",
+        fontSize: "20px",
         fillColor: 0x4c4d78,
       },
     );
@@ -778,6 +780,7 @@ export class GameScene extends Phaser.Scene {
 
     const legacyHud = this.add.container(0, 0, [
       topShade,
+      guideShade,
       bottomShade,
       playerHpBg,
       this.playerHpFill,

@@ -47,9 +47,11 @@ mobileLayoutはホーム・戦闘・結果Viewを生成してScene状態と接�
 スマホ戦闘Viewは同じteamTacticalReadから有利な通常技を求め、最初の3応酬だけ該当ボタンの外周に静的な金色の枠を描く。4応酬目以降は枠を隠し、文章による三すくみ表示を残す。
 縦持ちの予兆・有利技の2行案内は23論理pxとし、320×568の最終Canvas縮小後も実表示14px相当以上を確保する。日本語・英語とも文字境界が案内枠内に収まることをE2Eで検査する。横持ちは20論理pxを維持する。
 4応酬目以降の三すくみ説明は左側が右側に有利と分かる「有利:」／「Beats:」を先頭に付ける。縦画面の案内枠と縁取りをともに380論理px幅にし、日英の320×568 E2Eと実画面画像で文字の余白を確認する。[presentation.ts](../../../games/fist-legend/src/presentation.ts) の読み勝ち・読み負け演出は現在のカメラ寸法で描画し、縦画面の文字をHUDと案内枠の間に収める。勝ち・負けの画面境界を別々の実画面画像で検査する。
+縦画面の案内枠を高さ95論理px、文字の折り返し幅を340論理pxにし、Linux WebKitの英語文字幅でも左右55論理px以上の余白を確保する。結果見出しを5論理px下げ、英語の次の行動を20論理px下げて理由・報酬との間隔を確保する。
 [progress](../../../games/fist-legend/src/logic/progress.ts): fist_legend_currency_v1 / fist_legend_win_count_v1 / fist_legend_team_v1 / fist_legend_story_progress_v1。
 [gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。
+600×600のタブレット戦闘では旧Canvasの通常技を高さ62論理px、奥義・交代を高さ62論理pxかつ文字20論理pxにする。上下列は間隔を残す。横幅800px未満ではconceptArt・visualPolish・presentationの重複する装飾HUDを表示せず、旧HUDの予兆案内の背面に半透明の面を置く。WebKit E2Eで実表示44px以上の入力領域、14px以上の文字、列の非重複、拳の実タップを検査する。
 
 ## 検証と参照
 [tests](../../../games/fist-legend/tests)、[E2E](../../../games/fist-legend/e2e/game.spec.ts)、[覇者E2E](../../../games/fist-legend/e2e/haja.spec.ts)。

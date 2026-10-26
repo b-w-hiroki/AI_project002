@@ -146,6 +146,9 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
   scene.titleGroup?.setVisible(!ui.phone && scene.phase === "title");
   scene.resultGroup?.setVisible(!ui.phone && scene.phase === "result");
   (scene.battleGroup?.getByName("legacy-battle-hud") as Phaser.GameObjects.Container | null)?.setVisible(!ui.phone);
+  ((scene.battleGroup?.getByName("legacy-battle-hud") as Phaser.GameObjects.Container | null)
+    ?.getByName("compact-tablet-guide-shade") as Phaser.GameObjects.Graphics | null)
+    ?.setVisible(!ui.phone && layout.width < 800);
   if (!ui.phone) {
     if (scene.gachaGroup) layoutGacha(scene.gachaGroup, false, 600);
     applySurface(scene, 800, 600); return;
