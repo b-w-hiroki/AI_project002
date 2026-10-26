@@ -1393,7 +1393,7 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
-      .text(400, 150, "", {
+      .text(400, 136, "", {
         fontSize: "58px",
         color: "#ffe3a1",
         fontStyle: "900",
@@ -1405,7 +1405,7 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
       .setAlpha(0);
 
     this.resultReason = this.add
-      .text(400, 190, "", { ...TYPE.body, fontSize: "14px", color: THEME.textPrimary })
+      .text(400, 190, "", { ...TYPE.body, fontSize: "20px", color: THEME.textPrimary })
       .setOrigin(0.5)
       .setName("result-reason");
 
