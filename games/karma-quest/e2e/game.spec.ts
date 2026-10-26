@@ -2984,9 +2984,22 @@ test("two tabs serialize raid claims, evaluations, and best years", { tag: "@web
       }));
     });
     await page.waitForFunction(() => !!Reflect.get(window, "__releaseSaveLock"));
+    // Release inside the browser as soon as both writes queue. A runner-side
+    // poll can pause long enough for the production 2s lock timeout to expire.
+    const releaseWhenQueued = page.evaluate(async () => {
+      const deadline = Date.now() + 10_000;
+      while (Date.now() < deadline) {
+        const pending = (await navigator.locks.query()).pending?.length ?? 0;
+        if (pending === 2) {
+          Reflect.get(window, "__releaseSaveLock")();
+          return pending;
+        }
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      throw new Error("Both progress writes did not queue before lock release");
+    });
     await Promise.all([tapPoint(page, 225, 510), tapPoint(other, 225, 510)]);
-    await expect.poll(() => page.evaluate(async () => (await navigator.locks.query()).pending?.length)).toBe(2);
-    await page.evaluate(() => Reflect.get(window, "__releaseSaveLock")());
+    expect(await releaseWhenQueued).toBe(2);
     const saved = () => page.evaluate(() => ({
       total: Number(localStorage.getItem("karma_quest_total_eval_v1")),
       raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
