@@ -7,9 +7,9 @@
     },
     "fist-legend": {
       "spec": {"status": "updated", "reason": "600×600戦闘の操作領域・文字・予兆案内と短い縦画面の非重複条件を追加した"},
-      "design": {"status": "updated", "reason": "旧戦闘ボタン寸法、狭いタブレットでの装飾HUD非表示、英語の案内枠と結果位置の調整を記録した"}
+      "design": {"status": "updated", "reason": "旧戦闘ボタン寸法、狭いタブレットでの装飾HUD非表示、英語の案内枠と結果・報酬位置の調整を記録した"}
     }
   },
-  "validation": ["600×600のWebKit E2Eで5つの操作領域・文字・列間隔と拳の実タップを確認した", "Linux WebKit Smokeの失敗ログで英語案内の幅、結果理由と見出し、英語再挑戦案内と報酬の重なりを特定した", "該当3件のローカルWebKit E2Eに成功した", "games/fist-legend/e2e/screenshots/small-tablet-battle-actions.png と英語の案内画像を確認した"],
+  "validation": ["600×600のWebKit E2Eで5つの操作領域・文字・列間隔と拳の実タップを確認した", "Linux WebKit Smokeの失敗ログで英語案内の幅、結果理由と見出し、英語再挑戦案内と報酬の重なりを特定した", "修正後のLinux WebKitで28件が通過し、英語報酬の所持数と獲得額が1px重なる残り1件を特定した", "所持数の位置を4論理px上げ、該当テストをローカルWebKitで再検証した", "games/fist-legend/e2e/screenshots/small-tablet-battle-actions.png と英語の案内・結果画像を確認した"],
   "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
 }

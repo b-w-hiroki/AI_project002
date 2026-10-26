@@ -181,7 +181,7 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     .setText(tr(lang, "獲得報酬", "REWARD"));
   ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${model.lastReward ?? 0}`);
   ui.resultRewardBalance
-    .setPosition(132, lang === "en" ? -16 : 11)
+    .setPosition(132, lang === "en" ? -20 : 11)
     .setFontSize(lang === "en" ? 17 : 11)
     .setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
   const modeText = model.storyActive
