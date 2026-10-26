@@ -12,6 +12,7 @@
 ## 戦闘補正
 [haja](../../../games/fist-legend/src/logic/haja.ts) は通常戦闘の解決後に差分を補正する。三すくみの本体を置き換えない。
 剛は与ダメージ+40%、柔は被ダメージ50%軽減、瞬は奥義加速と硬直短縮。持続は5000ms。
+覇者モード選択肢はmakeButtonのtouchHeightで見た目の高さ32論理pxと独立した64論理pxの入力領域を持つ。600〜799pxのタブレットでは短い「剛・柔・瞬」を20論理pxで表示し、その他の幅では既存の14論理pxを維持する。600×600のWebKit E2Eで実表示44px以上の入力領域、14px以上の文字、見た目の下端外側のタップ受理を検査する。
 タイマー、交代、演出を跨いだ同一操作の二重適用を避ける。
 
 ## 永続化と描画
@@ -52,6 +53,8 @@ mobileLayoutはホーム・戦闘・結果Viewを生成してScene状態と接�
 [gacha](../../../games/fist-legend/src/logic/gacha.ts) は排出率と抽選の純粋ロジック。GameSceneのrollGachaが通貨を消費して結果を表示する。gacha.ts自体に保存処理はない。
 WebKitはCanvas fallback、その他はAUTO。回転後の描画消失と操作座標を両方検査する。
 600×600のタブレット戦闘では旧Canvasの通常技を高さ62論理px、奥義・交代を高さ62論理pxかつ文字20論理pxにする。上下列は間隔を残す。横幅800px未満ではconceptArt・visualPolish・presentationの重複する装飾HUDを表示せず、旧HUDの予兆案内の背面に半透明の面を置く。WebKit E2Eで実表示44px以上の入力領域、14px以上の文字、列の非重複、拳の実タップを検査する。
+旧HUDの案内文はGameScene.updateLegacyTellCopyで更新し、600〜799pxのタブレットでは21論理pxの文字でexchangeGuideから最初の3応酬の有利技と4応酬目以降の三すくみを表示する。mobileLayoutの幅切替時にも文面を更新する。800px以上の既存案内と承認モックの文面は維持し、600×600の日英E2Eで案内面内の文字境界と幅切替後の更新を検査する。
+同じ条件の最初の3応酬では旧HUDのlegacyCounterRingをteamTacticalReadが示す技ボタンの外周に表示する。予兆・画面幅・応酬の変更で表示位置と可視性を更新し、4応酬目以降は消す。WebKit E2Eで日英の初期位置、予兆変更、幅切替、案内終了を検査する。
 
 ## 検証と参照
 [tests](../../../games/fist-legend/tests)、[E2E](../../../games/fist-legend/e2e/game.spec.ts)、[覇者E2E](../../../games/fist-legend/e2e/haja.spec.ts)。

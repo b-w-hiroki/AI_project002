@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の小型タブレットで覇者モード選択を読みやすく押しやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "600×600で覇者モード選択肢の実表示タップ領域と文字の条件を追加した"},
+      "design": {"status": "updated", "reason": "makeButtonの入力領域拡張、文字寸法とWebKit検証を記録した"}
+    }
+  },
+  "validation": ["修正前のWebKit E2Eで覇者モード選択肢の実表示タップ高さ約26pxによる失敗を再現した", "lint・typecheck・unit 62件・build、Chromium E2E 31件、WebKit E2E 31件、documentation unit 18件を確認した", "600×600のWebKit E2Eで3選択肢の入力領域・文字と下端寄りタップの受理を確認した", "games/fist-legend/e2e/screenshots/small-tablet-haja-touch.png の実画面を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

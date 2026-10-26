@@ -28,6 +28,7 @@ type Ui = {
   hint: Phaser.GameObjects.Text;
   buttons: ReturnType<typeof makeButton>[];
   enabled: boolean | null;
+  compactText: boolean | null;
 };
 
 const MODES: HajaMode[] = ["go", "ju", "shun"];
@@ -59,11 +60,11 @@ function build(scene: Runtime): Ui {
   const buttons = MODES.map(mode => {
     const info = HAJA_MODE_INFO[mode];
     return makeButton(scene, 0, 0, 68, 32, info.shortLabel, () => activate(scene, mode), {
-      fontSize: "14px", fillColor: info.accent, borderColor: info.glow,
+      fontSize: "14px", fillColor: info.accent, borderColor: info.glow, touchHeight: 64,
     });
   });
-  const root = scene.add.container(0, 0, [aura, status, hint, ...buttons.map(button => button.container)]).setDepth(3400).setVisible(false);
-  const ui = { root, aura, status, hint, buttons, enabled: null };
+  const root = scene.add.container(0, 0, [aura, status, hint, ...buttons.map(button => button.container)]).setName("haja-mode-controls").setDepth(3400).setVisible(false);
+  const ui = { root, aura, status, hint, buttons, enabled: null, compactText: null };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -73,6 +74,7 @@ function refresh(scene: Runtime): void {
   const ui = build(scene);
   const layout = getResponsiveLayout(scene);
   const phone = !!layout && !layout.isTablet;
+  const compactTablet = !phone && scene.scale.parentSize.width >= 600 && scene.scale.parentSize.width < 800 && scene.scale.parentSize.height >= 600;
   const approvedMockViewport = scene.scale.parentSize.width === 800 && scene.scale.parentSize.height === 600;
   // Haja remains playable, but its optional selector must not replace the approved
   // desktop mock's three-technique plus special control hierarchy.
@@ -87,6 +89,14 @@ function refresh(scene: Runtime): void {
   const statusY = phone && portrait ? 570 : phone ? 300 : 350;
   const hintY = phone && portrait ? 588 : phone ? 317 : 368;
   const scale = phone && !portrait ? 0.92 : phone ? 1.08 : 1;
+
+  if (ui.compactText !== compactTablet) {
+    ui.buttons.forEach(button => {
+      const label = button.container.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
+      label.setFontSize(compactTablet ? 20 : 14);
+    });
+    ui.compactText = compactTablet;
+  }
 
   ui.status.setPosition(width / 2, statusY);
   ui.hint.setPosition(width / 2, hintY);

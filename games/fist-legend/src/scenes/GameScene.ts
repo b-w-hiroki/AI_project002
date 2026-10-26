@@ -50,7 +50,7 @@ import {
   type FighterId,
 } from "../logic/team";
 import { STORY_CHAPTERS, storyChapterAt, storyStartIndex } from "../logic/story";
-import { finishReason } from "../logic/playGuide";
+import { exchangeGuide, finishReason } from "../logic/playGuide";
 import { teamTacticalRead } from "../logic/teamTactics";
 import {
   detectLang,
@@ -178,6 +178,7 @@ export class GameScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text;
   private enemyHpFill!: Phaser.GameObjects.Graphics;
   private ougiFill!: Phaser.GameObjects.Graphics;
+  private legacyCounterRing!: Phaser.GameObjects.Graphics;
   private ougiBtn!: ReturnType<typeof makeButton>;
   private switchBtn!: ReturnType<typeof makeButton>;
   private timerText!: Phaser.GameObjects.Text;
@@ -777,6 +778,7 @@ export class GameScene extends Phaser.Scene {
       },
     );
     this.switchBtn.setEnabled(false);
+    this.legacyCounterRing = this.add.graphics().setName("legacy-counter-ring").setVisible(false);
 
     const legacyHud = this.add.container(0, 0, [
       topShade,
@@ -796,6 +798,7 @@ export class GameScene extends Phaser.Scene {
       punchBtn.container,
       kickBtn.container,
       kiBtn.container,
+      this.legacyCounterRing,
       this.ougiBtn.container,
       this.switchBtn.container,
     ]).setName("legacy-battle-hud");
@@ -1143,16 +1146,7 @@ export class GameScene extends Phaser.Scene {
 
   private refreshTell(): void {
     this.refreshOpponentVisual();
-    const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
-    const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
-    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
-    this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
-    if (!this.isApprovedMockViewport()) {
-      this.tell.setText(`${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}
-${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
-    }
+    this.updateLegacyTellCopy();
     this.tweens.killTweensOf(this.enemySprite);
     this.enemySprite.setX(620);
     if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
@@ -1163,6 +1157,31 @@ ${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist
         yoyo: true,
       });
     }
+  }
+
+  private updateLegacyTellCopy(compactTablet = this.scale.parentSize.width < 800
+    && this.scale.parentSize.width >= 600 && this.scale.parentSize.height >= 600): void {
+    const lead = `${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}`;
+    this.tell.setFontSize(compactTablet ? 21 : 19);
+    this.legacyCounterRing.clear().setVisible(compactTablet && this.phase === "battle" && this.beat < 3);
+    if (compactTablet) {
+      if (this.legacyCounterRing.visible) {
+        const move = teamTacticalRead(this.selectedTeam, this.nextEnemyMove).counterMove;
+        const x = { punch: 240, kick: 400, ki: 560 }[move];
+        this.legacyCounterRing.setPosition(x, 480)
+          .lineStyle(4, 0xffdd8a, 0.95)
+          .strokeRoundedRect(-58, -38, 116, 76, 9);
+      }
+      this.tell.setText(`${lead}\n${exchangeGuide(this.lang, this.nextEnemyMove, this.beat)}`);
+      return;
+    }
+    if (this.isApprovedMockViewport()) {
+      this.tell.setText(`${lead}\n${moveLabel(this.lang, "punch")} > ${moveLabel(this.lang, "ki")} > ${moveLabel(this.lang, "kick")} > ${moveLabel(this.lang, "punch")}`);
+      return;
+    }
+    const read = teamTacticalRead(this.selectedTeam, this.nextEnemyMove);
+    const specialist = read.specialist ? fighterName(this.lang, read.specialist) : tr(this.lang, "得意手なし", "no specialist");
+    this.tell.setText(`${lead}\n${tr(this.lang, "編成の得意", "TEAM EDGE")}: ${specialist}${read.specialist ? " +18%" : ""}`);
   }
 
   private flashHit(sprite: FighterSprite, damage: number): void {

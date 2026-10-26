@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の小型タブレットで予兆と有利技をつなげて案内する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "600×600戦闘で最初の3応酬の有利技と4応酬目以降の三すくみを示す条件を追加した"},
+      "design": {"status": "updated", "reason": "旧HUD案内の文面生成、文字寸法と画面幅切替時の更新を記録した"}
+    }
+  },
+  "validation": ["修正前のWebKit E2Eで小型タブレットの案内に有利技がない失敗を再現した", "lint・typecheck・unit 62件・build、Chromium E2E 30件、WebKit E2E 30件、documentation unit 18件を確認した", "日本語・英語の600×600案内と800pxへの切替・戻しをWebKit E2Eで確認した", "games/fist-legend/e2e/screenshots/small-tablet-guide-japanese.png と small-tablet-guide-english.png を実画面で確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}
