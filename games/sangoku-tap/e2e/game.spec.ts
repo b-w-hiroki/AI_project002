@@ -17,10 +17,16 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForFunction(() => !!window.__qaGame);
+  await page.waitForFunction(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const requiredViews = ["titleGroup", "questGroup", "gachaGroup", "breedingGroup", "rosterGroup"];
+    return scene.sys.isActive() && requiredViews.every(name => Boolean(Reflect.get(scene, name)));
+  });
 });
 test.afterEach(async ({ page }) => { expect(errors.get(page)).toEqual([]); });
 
 test("approved home hero is visible and legacy home remains available", async ({ page }) => {
+  await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").children.list.some(child => child.name === "mock-home-view"));
   const state = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const loadedKeys = [
@@ -77,6 +83,7 @@ test("approved home hero is visible and legacy home remains available", async ({
   await page.evaluate(() => Reflect.deleteProperty(window, "__qaGame"));
   await page.goto("/?legacyHome=1");
   await page.waitForFunction(() => !!window.__qaGame);
+  await page.waitForFunction(() => window.__qaGame.scene.getScene("GameScene").sys.isActive());
   const legacyState = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return {
