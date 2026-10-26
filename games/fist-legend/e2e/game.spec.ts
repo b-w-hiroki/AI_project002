@@ -1088,6 +1088,7 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
     const reason = group.getByName("result-reason") as Phaser.GameObjects.Text;
     const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
     const heading = group.getByName("heading") as Phaser.GameObjects.Text;
+    const stats = group.getByName("stats") as Phaser.GameObjects.Text;
     const primary = (Reflect.get(scene, "resultPrimaryBtn") as { container: Phaser.GameObjects.Container }).container;
     const title = group.list.find(node => node.type === "Container" &&
       (node as Phaser.GameObjects.Container).list.some(child => child.type === "Text" && (child as Phaser.GameObjects.Text).text === "タイトルへ戻る")) as Phaser.GameObjects.Container;
@@ -1102,6 +1103,7 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
       reasonBottom: reason.getBounds().bottom,
       finishBottom: finish.getBounds().bottom,
       headingTop: heading.getBounds().top,
+      nextText: stats.text,
       primaryHitPx: (primary.input?.hitArea.height as number) * scale,
       titleHitPx: (title.input?.hitArea.height as number) * scale,
       primaryTextPx: Number.parseFloat(buttonText(primary).style.fontSize) * scale,
@@ -1116,6 +1118,8 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
   expect(layout.fontPx).toBeGreaterThanOrEqual(14);
   expect(layout.reasonTop).toBeGreaterThan(layout.finishBottom);
   expect(layout.reasonBottom).toBeLessThan(layout.headingTop);
+  expect(layout.nextText).toContain("NEXT: 予兆を見て有利技を選ぼう");
+  expect(layout.nextText).not.toContain("もう一度あそぶ");
   expect(layout.primaryHitPx).toBeGreaterThanOrEqual(44);
   expect(layout.titleHitPx).toBeGreaterThanOrEqual(44);
   expect(layout.primaryTextPx).toBeGreaterThanOrEqual(14);
@@ -1139,6 +1143,28 @@ test("the smallest tablet result keeps the time reason readable", async ({ page 
   await expect.poll(() => phase(page)).toBe("result");
   await tapPoint(page, 400, 459);
   await expect.poll(() => phase(page)).toBe("title");
+});
+
+test("compact tablet English win points from the tell to the counter", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await waitForSceneReady(page);
+  await page.setViewportSize({ width: 600, height: 600 });
+  const result = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+    const stats = (Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text;
+    return stats.text;
+  });
+  expect(result).toContain("NEXT: Read the tell, choose the counter");
+  expect(result).not.toContain("Play Again");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await checkFrame(page, "small-tablet-result-time-win-english");
 });
 
 test("the smallest tablet keeps every battle action touchable", async ({ page }) => {

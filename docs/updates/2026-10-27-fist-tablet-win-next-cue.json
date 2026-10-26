@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝のタブレット結果画面で勝利後のNEXTを次の読み合いの案内に変える",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "勝利時のNEXT行をボタン文言の反復から予兆と有利技の案内に変更した"},
+      "design": {"status": "updated", "reason": "GameSceneの旧結果表示と600×600の日英WebKit検証を記録した"}
+    }
+  },
+  "validation": ["lint・typecheck・単体62件・build、Chromium E2E 32件、WebKit E2E 32件、documentation unit 18件を確認した", "600×600のChromium・WebKit E2Eで日本語・英語の勝利時NEXT文言を確認した", "games/fist-legend/e2e/screenshots/small-tablet-result-time-win.png と small-tablet-result-time-win-english.png の実画面を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

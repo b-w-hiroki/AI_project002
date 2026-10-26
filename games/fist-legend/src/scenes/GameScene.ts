@@ -1336,7 +1336,7 @@ export class GameScene extends Phaser.Scene {
     const retrySpecialist = retryRead.specialist ? fighterName(this.lang, retryRead.specialist) : null;
     const seriesRestart = this.seriesActive ? `${tr(this.lang, "1戦目から", "From Rival 1")} · ` : "";
     const nextDecision = outcome === "playerWin"
-      ? this.resultPrimaryLabel()
+      ? tr(this.lang, "予兆を見て有利技を選ぼう", "Read the tell, choose the counter")
       : retrySpecialist
         ? `${seriesRestart}${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
         : `${seriesRestart}${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
