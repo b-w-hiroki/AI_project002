@@ -180,6 +180,7 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     .setFontSize(lang === "en" ? 17 : 12)
     .setText(tr(lang, "獲得報酬", "REWARD"));
   ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${model.lastReward ?? 0}`);
+  ui.resultRewardValue.setX(lang === "en" ? -80 : -66);
   ui.resultRewardBalance
     .setPosition(132, lang === "en" ? -20 : 11)
     .setFontSize(lang === "en" ? 17 : 11)

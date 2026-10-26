@@ -10,6 +10,6 @@
       "design": {"status": "updated", "reason": "旧戦闘ボタン寸法、狭いタブレットでの装飾HUD非表示、英語の案内枠と結果・報酬位置の調整を記録した"}
     }
   },
-  "validation": ["600×600のWebKit E2Eで5つの操作領域・文字・列間隔と拳の実タップを確認した", "Linux WebKit Smokeの失敗ログで英語案内の幅、結果理由と見出し、英語再挑戦案内と報酬の重なりを特定した", "修正後のLinux WebKitで28件が通過し、英語報酬の所持数と獲得額が1px重なる残り1件を特定した", "所持数の位置を4論理px上げ、該当テストをローカルWebKitで再検証した", "games/fist-legend/e2e/screenshots/small-tablet-battle-actions.png と英語の案内・結果画像を確認した"],
+  "validation": ["600×600のWebKit E2Eで5つの操作領域・文字・列間隔と拳の実タップを確認した", "Linux WebKit Smokeの失敗ログで英語案内の幅、結果理由と見出し、英語再挑戦案内と報酬の重なりを特定した", "修正後のLinux WebKitで28件が通過し、英語報酬の所持数と獲得額が1px重なる残り1件を特定した", "次のLinux WebKitでも28件が通過し、英語報酬額の枠右端へのはみ出し1件を特定した", "報酬文字サイズを維持して所持数を4論理px上げ、獲得額を14論理px左へ寄せた", "games/fist-legend/e2e/screenshots/small-tablet-battle-actions.png と英語の案内・結果画像を確認した"],
   "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
 }
