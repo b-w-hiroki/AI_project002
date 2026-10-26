@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の小型タブレットで有利技ボタンを案内と対応付ける",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "最初の3応酬だけ有利技ボタンに枠を示す条件を追加した"},
+      "design": {"status": "updated", "reason": "旧HUDの枠表示、予兆・幅・応酬変更時の更新とWebKit検証を記録した"}
+    }
+  },
+  "validation": ["修正前のWebKit E2Eで有利技ボタンの枠が存在しない失敗を再現した", "lint・typecheck・unit 62件・build、Chromium E2E 30件、WebKit E2E 30件、documentation unit 18件を確認した", "600×600の日英WebKit E2Eで枠の初期位置、予兆と幅の変更、4応酬目の非表示を確認した", "games/fist-legend/e2e/screenshots/small-tablet-guide-japanese.png と small-tablet-guide-english.png の実画面で枠を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

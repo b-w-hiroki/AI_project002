@@ -1183,10 +1183,12 @@ test("compact tablet connects the rival tell to the counter move", async ({ page
   const readGuide = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const tell = Reflect.get(scene, "tell") as Phaser.GameObjects.Text;
+    const ring = Reflect.get(scene, "legacyCounterRing") as Phaser.GameObjects.Graphics | undefined;
     const bounds = tell.getBounds();
     const canvas = window.__qaGame.canvas;
     return {
       text: tell.text,
+      ring: ring ? { visible: ring.visible, x: ring.x, y: ring.y } : null,
       fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
       left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
     };
@@ -1202,6 +1204,7 @@ test("compact tablet connects the rival tell to the counter move", async ({ page
   const verify = async (counter: string, wideCopy: string, rule: string, frame: string) => {
     await expect.poll(async () => (await readGuide()).text).toContain(counter);
     const opening = await readGuide();
+    expect(opening.ring).toEqual({ visible: true, x: 400, y: 480 });
     expect(opening.fontPx).toBeGreaterThanOrEqual(14);
     expect(opening.left).toBeGreaterThanOrEqual(130);
     expect(opening.right).toBeLessThanOrEqual(670);
@@ -1209,8 +1212,10 @@ test("compact tablet connects the rival tell to the counter move", async ({ page
     expect(opening.bottom).toBeLessThanOrEqual(128);
     await page.setViewportSize({ width: 800, height: 600 });
     await expect.poll(async () => (await readGuide()).text).toContain(wideCopy);
+    expect((await readGuide()).ring?.visible).toBe(false);
     await page.setViewportSize({ width: 600, height: 600 });
     await expect.poll(async () => (await readGuide()).text).toContain(counter);
+    expect((await readGuide()).ring).toEqual({ visible: true, x: 400, y: 480 });
     await expect.poll(() => page.evaluate(() => {
       const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
       return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
@@ -1219,10 +1224,17 @@ test("compact tablet connects the rival tell to the counter move", async ({ page
     await checkFrame(page, frame);
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "nextEnemyMove", "kick");
+      Reflect.get(scene, "refreshTell").call(scene);
+    });
+    await expect.poll(async () => (await readGuide()).ring).toEqual({ visible: true, x: 560, y: 480 });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.set(scene, "beat", 3);
       Reflect.get(scene, "refreshTell").call(scene);
     });
     await expect.poll(async () => (await readGuide()).text).toContain(rule);
+    expect((await readGuide()).ring?.visible).toBe(false);
   };
 
   await start();

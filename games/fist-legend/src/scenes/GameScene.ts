@@ -178,6 +178,7 @@ export class GameScene extends Phaser.Scene {
   private playerLabel!: Phaser.GameObjects.Text;
   private enemyHpFill!: Phaser.GameObjects.Graphics;
   private ougiFill!: Phaser.GameObjects.Graphics;
+  private legacyCounterRing!: Phaser.GameObjects.Graphics;
   private ougiBtn!: ReturnType<typeof makeButton>;
   private switchBtn!: ReturnType<typeof makeButton>;
   private timerText!: Phaser.GameObjects.Text;
@@ -777,6 +778,7 @@ export class GameScene extends Phaser.Scene {
       },
     );
     this.switchBtn.setEnabled(false);
+    this.legacyCounterRing = this.add.graphics().setName("legacy-counter-ring").setVisible(false);
 
     const legacyHud = this.add.container(0, 0, [
       topShade,
@@ -796,6 +798,7 @@ export class GameScene extends Phaser.Scene {
       punchBtn.container,
       kickBtn.container,
       kiBtn.container,
+      this.legacyCounterRing,
       this.ougiBtn.container,
       this.switchBtn.container,
     ]).setName("legacy-battle-hud");
@@ -1160,7 +1163,15 @@ export class GameScene extends Phaser.Scene {
     && this.scale.parentSize.width >= 600 && this.scale.parentSize.height >= 600): void {
     const lead = `${opponentName(this.lang, this.opponent)}  /  ${moveTell(this.lang, this.nextEnemyMove)}`;
     this.tell.setFontSize(compactTablet ? 21 : 19);
+    this.legacyCounterRing.clear().setVisible(compactTablet && this.phase === "battle" && this.beat < 3);
     if (compactTablet) {
+      if (this.legacyCounterRing.visible) {
+        const move = teamTacticalRead(this.selectedTeam, this.nextEnemyMove).counterMove;
+        const x = { punch: 240, kick: 400, ki: 560 }[move];
+        this.legacyCounterRing.setPosition(x, 480)
+          .lineStyle(4, 0xffdd8a, 0.95)
+          .strokeRoundedRect(-58, -38, 116, 76, 9);
+      }
       this.tell.setText(`${lead}\n${exchangeGuide(this.lang, this.nextEnemyMove, this.beat)}`);
       return;
     }
