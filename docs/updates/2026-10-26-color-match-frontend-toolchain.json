@@ -1,0 +1,23 @@
+{
+  "summary": "Update the Color Match frontend lint and build toolchain",
+  "areas": {
+    "color-match": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "This dependency-only update does not change matching rules, controls, persistence, or release behavior."
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "No visual assets, layout, copy, or interaction design are changed by the toolchain update."
+      }
+    }
+  },
+  "validation": [
+    "Installed the exact lockfile with npm ci, then passed lint with three pre-existing unused-symbol warnings and no errors, typecheck, all 33 unit tests, and the production build on Windows.",
+    "The pull request must also pass its unchanged Chromium and WebKit browser workflows after it is updated onto the final integration base."
+  ],
+  "limitations": [
+    "Physical-device and external portal checks are not applicable to this dependency-only change and were not repeated.",
+    "npm audit still reports the pre-existing transitive development dependency brace-expansion 5.0.9 advisory; this pull request neither introduces nor resolves it, and no forceful audit rewrite was applied."
+  ]
+}
