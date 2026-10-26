@@ -3005,6 +3005,13 @@ test("two tabs serialize raid claims, evaluations, and best years", { tag: "@web
       raid: JSON.parse(localStorage.getItem("karma_quest_solo_raid_v1") ?? "{}"),
     }));
     await expect.poll(saved).toEqual({ total: 580, raid: { level: 2, hp: 1250, maxHp: 1250, defeats: 1 } });
+    // The storage values become visible before the async claim callback returns.
+    // Wait for that transaction to release the shared lock so the next four
+    // writes measure their own serialization instead of racing its final work.
+    await expect.poll(() => page.evaluate(async () => {
+      const locks = await navigator.locks.query();
+      return { held: locks.held?.length ?? 0, pending: locks.pending?.length ?? 0 };
+    })).toEqual({ held: 0, pending: 0 });
     const update = (target: Page, amount: number, year: number) => target.evaluate(async ({ amount, year }) => {
       const path = "/src/logic/progress.ts";
       const progress = await import(path);
