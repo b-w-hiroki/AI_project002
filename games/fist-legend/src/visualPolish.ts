@@ -71,7 +71,8 @@ function refresh(scene: Runtime): void {
   const lang = detectLang();
   const ui = build(scene);
   const layout = getResponsiveLayout(scene);
-  const active = (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
+  const active = scene.scale.parentSize.width >= 800
+    && (!layout || layout.isTablet) && scene.phase === "battle" && !!scene.battle;
   ui.root.setVisible(active);
   if (!active || !scene.battle) return;
 

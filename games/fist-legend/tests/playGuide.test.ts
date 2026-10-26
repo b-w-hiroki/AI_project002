@@ -6,8 +6,9 @@ describe("first battle guidance", () => {
     expect(exchangeGuide("ja", "punch", 0)).toBe("蹴で有利を取ろう");
     expect(exchangeGuide("ja", "kick", 1)).toBe("気で有利を取ろう");
     expect(exchangeGuide("ja", "ki", 2)).toBe("拳で有利を取ろう");
-    expect(exchangeGuide("ja", "ki", 3)).toBe("拳 > 気 > 蹴 > 拳");
+    expect(exchangeGuide("ja", "ki", 3)).toBe("有利: 拳>気>蹴>拳");
     expect(exchangeGuide("en", "punch", 0)).toContain("Counter with");
+    expect(exchangeGuide("en", "punch", 3)).toBe("Beats: Punch>Ki>Kick>Punch");
   });
   it("distinguishes knockout, simultaneous knockout, and HP decisions", () => {
     expect(finishReason("ja", { playerHp: 75, enemyHp: 0 })).toBe("相手のHPを0にした");

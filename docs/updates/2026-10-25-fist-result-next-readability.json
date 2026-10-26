@@ -1,0 +1,16 @@
+{
+  "summary": "覇拳伝の短い縦画面で結果後の次行動案内を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "結果画面の次行動案内を短い縦画面でも読める大きさに保つ表示契約を追加"},
+      "design": {"status": "updated", "reason": "縦持ちの案内文字サイズと320×568での文字境界・周辺要素との非重複検査を記録"}
+    }
+  },
+  "validation": [
+    "Canvas再配置後の320×568で日本語の引き分け・敗北は案内の実表示14px相当以上と左右余白、報酬・人物・再挑戦ボタンとの非重複、英語の敗北は文字の実寸と左右境界をChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-result-next.png、compact-portrait-result-team-change-next.png、compact-portrait-result-english.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "summary": "覇拳伝の英語結果画面で報酬額と所持数の重なりを解消する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "英語結果画面の報酬額と所持数を読み分けられる表示契約を追加"},
+      "design": {"status": "updated", "reason": "英語報酬枠の所持数を上段右へ配置し、320×568の文字境界検査を記録"}
+    }
+  },
+  "validation": [
+    "320×568の英語敗北結果で報酬ラベル・所持数・報酬額の非重複と枠内配置をChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-result-english.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}
