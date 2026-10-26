@@ -979,13 +979,24 @@ test.describe("phone visual QA", () => {
       const controls = Reflect.get(scene, "virtualControls") as Phaser.GameObjects.Container | undefined;
       const mock = scene.children.getByName("side-mock-battle-view") as Phaser.GameObjects.Container | null;
       const retry = scene.children.getByName("side-retry-action") as Phaser.GameObjects.Container | null;
+      const summonOverlay = Reflect.get(scene, "summonOverlay") as Phaser.GameObjects.Container | undefined;
+      const stageBuffOverlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container | undefined;
       return {
         legacyControls: controls?.visible ?? false,
         mockVisible: mock?.visible ?? false,
         retryVisible: retry?.visible ?? false,
         retryHeight: retry?.height ?? 0,
+        summonOverlayVisible: summonOverlay?.visible ?? false,
+        stageBuffOverlayVisible: stageBuffOverlay?.visible ?? false,
       };
-    })).toEqual({ legacyControls: false, mockVisible: false, retryVisible: true, retryHeight: 58 });
+    })).toEqual({
+      legacyControls: false,
+      mockVisible: false,
+      retryVisible: true,
+      retryHeight: 58,
+      summonOverlayVisible: false,
+      stageBuffOverlayVisible: false,
+    });
     const box = (await page.locator("canvas").boundingBox())!;
     expect(58 * box.height / 450).toBeGreaterThanOrEqual(44);
     await page.locator("canvas").screenshot({
