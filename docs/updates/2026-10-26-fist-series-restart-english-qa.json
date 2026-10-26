@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の3連戦再挑戦案内が英語の短い縦画面でも読めることを回帰検査に追加した",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "既存の英語表示契約をE2Eで検証しただけで、利用者向けの操作や文言は変えていない"},
+      "design": {"status": "unchanged", "reason": "英語版の文字境界とタップボタンの位置を検査しただけで、画面責務や実装は変更していない"}
+    }
+  },
+  "validation": ["320×568の英語結果で文字が14px相当以上、左右と報酬・主ボタンの内側に収まることをChromiumとWebKitで確認した", "games/fist-legend/e2e/screenshots/compact-portrait-series-restart-english.png の実画面を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

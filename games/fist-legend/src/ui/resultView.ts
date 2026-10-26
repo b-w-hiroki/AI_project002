@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import type { BattleOutcome, BattleState } from "../logic/battle";
 import { finishReason } from "../logic/playGuide";
-import { plannedMove, type Opponent } from "../logic/opponent";
+import { plannedMove, retryTargetOpponent, type Opponent } from "../logic/opponent";
 import type { FighterId } from "../logic/team";
 import { teamTacticalRead } from "../logic/teamTactics";
 import { detectLang, fighterName, moveLabel, tr } from "../logic/i18n";
@@ -39,7 +39,7 @@ export type ResultModel = {
   currency: number;
 };
 export type ResultActions = { primary: () => void; title: () => void };
-function buildRewardMedallion(scene: Phaser.Scene): {
+function buildRewardMedallion(scene: Phaser.Scene, showSeparator: boolean): {
   container: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
   value: Phaser.GameObjects.Text;
@@ -50,7 +50,7 @@ function buildRewardMedallion(scene: Phaser.Scene): {
   plate.fillStyle(0x7b271d, 0.42).fillRoundedRect(-146, -30, 292, 18, 12);
   plate.lineStyle(2, 0xd8a84f, 0.92).strokeRoundedRect(-150, -34, 300, 68, 16);
   plate.lineStyle(1, 0xffe2a0, 0.34).strokeRoundedRect(-144, -28, 288, 56, 12);
-  plate.lineStyle(2, 0xd8a84f, 0.72).lineBetween(-86, -21, 122, -21);
+  if (showSeparator) plate.lineStyle(2, 0xd8a84f, 0.72).lineBetween(-86, -21, 122, -21);
 
   const gem = scene.add.graphics({ x: -112, y: 0 }).setName("mobile-result-reward-icon");
   gem.fillStyle(0x180d0a, 0.72).fillCircle(0, 3, 26);
@@ -98,13 +98,16 @@ export function createResultView(scene: Phaser.Scene, actions: ResultActions): R
     .setName("mobile-result-finish");
   const resultHeading = text(scene, 225, 285, "", 42, "#ffe3a8").setName("mobile-result-heading");
   const resultReason = text(scene, 225, 245, "", 16, "#fff1d5").setName("mobile-result-reason");
-  const reward = buildRewardMedallion(scene);
-  const resultStats = text(scene, 225, 402, "", 15, "#e5d0bc").setName("mobile-result-next");
+  const reward = buildRewardMedallion(scene, lang !== "en");
+  const resultStats = text(scene, 225, 402, "", 15, "#fff1d5")
+    .setStroke("#2a120d", 2)
+    .setName("mobile-result-next");
   resultGroup.add([resultFinish, resultReason, resultHeading, reward.container, resultStats]);
   const resultRetry = button(scene, resultGroup, 225, 430, 330, 58, tr(lang, "もう一度", "Play Again"), 0xa9402d, actions.primary);
-  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title);
+  const resultTitle = button(scene, resultGroup, 225, 500, 330, 48, tr(lang, "タイトルへ", "Title"), 0x334c70, actions.title, false, 72);
 
   resultRetry.setName("mobile-result-primary");
+  resultTitle.setName("mobile-result-title");
 
 
   return {
@@ -165,33 +168,42 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
   }
   ui.resultFinish
-    .setPosition(width / 2, portrait ? 195 : 92)
+    .setPosition(width / 2, portrait ? 179 : 92)
     .setText(outcome === "playerWin" ? (model.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (model.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
     .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
     .setScale(portrait ? 1 : 0.72);
-  ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 16 : 14).setText(finishReason(lang, model.battle));
-  ui.resultHeading.setPosition(width / 2, portrait ? 285 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
+  ui.resultReason.setPosition(width / 2, portrait ? 245 : 48).setFontSize(portrait ? 26 : 14).setText(finishReason(lang, model.battle));
+  ui.resultHeading.setPosition(width / 2, portrait ? 290 : 150).setText(outcome === "playerWin" ? tr(lang, "勝利", "Victory") : outcome === "enemyWin" ? tr(lang, "敗北", "Defeat") : tr(lang, "引き分け", "Draw"));
   ui.resultReward.setPosition(width / 2, portrait ? 355 + extra * 0.16 : 212).setScale(portrait ? 1 : 0.82);
-  ui.resultRewardLabel.setText(tr(lang, "獲得報酬", "REWARD"));
+  ui.resultRewardLabel
+    .setPosition(-66, lang === "en" ? -16 : -10)
+    .setFontSize(lang === "en" ? 17 : 12)
+    .setText(tr(lang, "獲得報酬", "REWARD"));
   ui.resultRewardValue.setText(`${tr(lang, "豪拳石", "Fist Gems")} +${model.lastReward ?? 0}`);
-  ui.resultRewardBalance.setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
+  ui.resultRewardValue.setX(lang === "en" ? -80 : -66);
+  ui.resultRewardBalance
+    .setPosition(132, lang === "en" ? -20 : 11)
+    .setFontSize(lang === "en" ? 17 : 11)
+    .setText(`${tr(lang, "所持", "Held")} ${model.lastBalance ?? model.currency}`);
   const modeText = model.storyActive
-    ? `${tr(lang, "物語", "Story")} ${Math.min(3, (model.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${model.storyProgress ?? 0}/3`
+    ? outcome === "playerWin" && (model.storyChapterIndex ?? 0) >= 2
+      ? tr(lang, "物語クリア · 全3章", "Story Clear · All 3 Chapters")
+      : `${tr(lang, "物語", "Story")} ${Math.min(3, (model.storyChapterIndex ?? 0) + 1)}/3 · ${tr(lang, "進行", "Progress")} ${model.storyProgress ?? 0}/3`
     : model.seriesActive
-      ? `${tr(lang, "3連戦", "Gauntlet")} ${model.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (model.seriesIndex ?? 0) + 1)}/3`
+      ? outcome === "playerWin" && (model.seriesIndex ?? 0) >= 2 && (model.seriesWins ?? 0) >= 3
+        ? tr(lang, "3連戦クリア · 3勝", "Gauntlet Clear · 3 Wins")
+        : `${tr(lang, "3連戦", "Gauntlet")} ${model.seriesWins ?? 0}/3 ${tr(lang, "勝", "wins")} · ${Math.min(3, (model.seriesIndex ?? 0) + 1)}/3`
       : "";
-  const firstMove = plannedMove(model.opponent ?? "rush", 0, null);
+  const firstMove = plannedMove(retryTargetOpponent(Boolean(model.seriesActive), model.opponent ?? "rush"), 0, null);
   const retryRead = teamTacticalRead(model.selectedTeam ?? ["ryuga"], firstMove);
   const tacticalNext = retryRead.specialist
     ? `${tr(lang, "再挑戦", "Retry")}: ${fighterName(lang, retryRead.specialist)} → ${moveLabel(lang, retryRead.counterMove)} (+18%)`
-    : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)} ${tr(lang, "得意の拳士を追加", "specialist needed") }`;
+    : `${tr(lang, "編成変更", "Team Change")}: ${moveLabel(lang, retryRead.counterMove)}${tr(lang, "が得意な拳士", " specialist")}`;
+  const restartLine = model.seriesActive ? tr(lang, "1戦目から再挑戦", "Restart from Rival 1") : modeText;
   const nextLine = outcome === "playerWin"
     ? modeText || tr(lang, "同じ相手へ再挑戦", "Retry the same rival")
-    : `${modeText ? `${modeText}\n` : ""}${tacticalNext}`;
-  ui.resultStats
-    .setPosition(width / 2, portrait ? 338 : 202)
-    .setText(`${tr(lang, "豪拳石", "Fist Gems")} ${model.currency}\n${nextLine}`);
-  ui.resultStats.setPosition(width / 2, portrait ? 414 + extra * 0.20 : 253).setText(nextLine);
+    : [restartLine, tacticalNext].filter(Boolean).join("\n");
+  ui.resultStats.setPosition(width / 2, portrait ? (lang === "en" ? 434 : 414) + extra * 0.20 : 253).setFontSize(portrait ? 27 : 15).setText(nextLine);
   const retryLabel = ui.resultRetry.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
   if (retryLabel) {
     retryLabel.setText(
@@ -210,8 +222,12 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
           : tr(lang, "もう一度", "Play Again"),
     );
   }
+  const titleLabel = ui.resultTitle.list.find(node => node.type === "Text") as Phaser.GameObjects.Text | undefined;
+  titleLabel?.setText(outcome !== "playerWin" && !retryRead.specialist
+    ? tr(lang, "編成を変える", "Change Team")
+    : tr(lang, "タイトルへ", "Title"));
   ui.resultRetry.setPosition(width / 2, portrait ? height - 245 : 292).setScale(portrait ? 1 : 0.86);
-  ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 352).setScale(portrait ? 1 : 0.86);
+  ui.resultTitle.setPosition(width / 2, portrait ? height - 175 : 354).setScale(portrait ? 1 : 0.86);
   if (portrait && ui.resultHero && ui.resultEnemy) {
     const bandTop = ui.resultStats.getBounds().bottom + 8;
     const bandBottom = ui.resultRetry.getBounds().top - 8;

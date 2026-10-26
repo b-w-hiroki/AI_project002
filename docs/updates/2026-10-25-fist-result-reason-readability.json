@@ -1,0 +1,16 @@
+{
+  "summary": "覇拳伝の短い縦画面で決着理由と時間切れのHP比較を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "短い縦画面でも決着理由を読みやすくし、上下の見出しと重ねない表示契約を追加"},
+      "design": {"status": "updated", "reason": "縦持ちの決着理由の文字サイズと勝敗見出しの位置、320×568での文字境界検査を記録"}
+    }
+  },
+  "validation": [
+    "320×568で時間切れのHP比較を実表示14px相当以上に保ち、左右余白と上下の見出しとの非重複をChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-result-hp-reason.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}

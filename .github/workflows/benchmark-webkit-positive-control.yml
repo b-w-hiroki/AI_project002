@@ -52,5 +52,6 @@ jobs:
           path: |
             games/${{ matrix.game }}/e2e/screenshots/
             ${{ runner.temp }}/benchmark-positive-control.json
+            ${{ runner.temp }}/benchmark-webkit-report.json
           if-no-files-found: warn
           retention-days: 14

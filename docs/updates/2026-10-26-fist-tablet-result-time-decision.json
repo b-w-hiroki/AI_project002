@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝のタブレット・デスクトップ結果で時間切れをK.O.と誤表示せず、HP比較を読めるようにした",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "スマホ以外の結果でも時間切れ勝敗と実HPの理由を表示する契約を追加した"},
+      "design": {"status": "updated", "reason": "旧結果表示の理由Text、人物とパネルの描画順、戦績帯の配置を記録した"}
+    }
+  },
+  "validation": ["修正前のChromium E2EでHPが残る時間切れ勝利をK.O.と表示する失敗を再現した", "修正後のlint・typecheck・単体62件・build、ChromiumとWebKitのE2E各27件に成功した", "1024×768の時間切れ勝利・敗北をgames/fist-legend/e2e/screenshots/tablet-result-time-win.pngとtablet-result-time-lose.pngで確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

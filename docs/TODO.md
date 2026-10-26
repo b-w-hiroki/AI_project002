@@ -9,6 +9,8 @@
 - [x] 単体62件、Chromium/WebKit各20件、実スクショを確認
 - [ ] 初見プレイヤーの理解度・楽しさ、物理iOS/Android・外部Portalを確認してリリース判定
 
+初見試行とiOS Safari／Android Chromeの実施手順・未実施欄は [覇拳伝の実機QA記録用シート](review/fist-first-play-device-qa-2026-10-26.md) に用意。実測結果と外部Portal Previewが揃うまで上の項目は未完了。
+
 ## 2026-10-22 覇拳伝のUI構成整理
 
 - [x] ホームと結果を表示モデル・操作コールバック・Viewに分離
