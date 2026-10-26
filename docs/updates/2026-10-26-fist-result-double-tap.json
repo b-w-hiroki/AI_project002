@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の結果ボタン連続タップによる3連戦の相手飛ばしを防いだ",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "結果の連続タップでも次戦・次章へ一度だけ進む操作契約を追加した"},
+      "design": {"status": "updated", "reason": "結果画面の状態を確認してから主ボタン入力を処理するガードを明記した"}
+    }
+  },
+  "validation": ["修正前にChromium E2Eで連続タップが2戦目を飛ばす失敗を再現した", "修正後にChromium・WebKit E2Eとlint・typecheck・単体・buildを実行する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

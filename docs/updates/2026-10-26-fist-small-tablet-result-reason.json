@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の最小タブレット画面で時間切れの理由を読める大きさにした",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "600×600のタブレット結果で決着理由を14px相当以上に保つ表示契約を追加した"},
+      "design": {"status": "updated", "reason": "旧結果表示の理由文を20論理pxへ拡大し勝敗表示のY位置を調整した"}
+    }
+  },
+  "validation": ["修正前のChromium E2Eで600×600の理由文が実表示10.185pxに縮む失敗を再現した", "修正後のlint・typecheck・単体62件・build、ChromiumとWebKitのE2E各28件に成功した", "600×600の理由文が実表示14px以上で上下と重ならないことをE2Eで確認し、games/fist-legend/e2e/screenshots/small-tablet-result-time-win.png の実画面を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

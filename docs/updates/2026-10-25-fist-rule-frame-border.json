@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の縦画面にある三すくみ案内枠と縁取りの幅を揃えた",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "三すくみの文言と案内枠内に収める利用者向け仕様は変わらない"},
+      "design": {"status": "updated", "reason": "背景と縁取りを同じ380論理pxの矩形に揃える描画契約を明記した"}
+    }
+  },
+  "validation": ["320×568の日本語・英語バトル画像で案内枠と縁取りを目視確認する", "lint・typecheck・単体・build・ChromiumとWebKitのE2Eを実行する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

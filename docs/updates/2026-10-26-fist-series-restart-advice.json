@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の3連戦敗北時の戦術案内を、再挑戦で実際に戦う1人目へ合わせた",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "3連戦の敗北・引き分け結果で1戦目から再挑戦することと案内の基準を明記した"},
+      "design": {"status": "updated", "reason": "再挑戦先の共通関数と旧結果・スマホ結果への適用を記録した"}
+    }
+  },
+  "validation": ["修正前のChromium E2Eで2戦目敗北時に誤った編成変更案内を再現した", "修正後のlint・typecheck・単体62件・build、ChromiumとWebKitのE2E各25件に成功した", "320×568のWebKit画像 games/fist-legend/e2e/screenshots/compact-portrait-series-restart.png を演出終了後に確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

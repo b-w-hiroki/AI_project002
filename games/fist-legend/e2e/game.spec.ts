@@ -136,9 +136,11 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       guideFontSize: Number.parseInt(guide.style.fontSize, 10),
     };
   });
-  const introCanvas = (await page.locator("canvas").boundingBox())!;
   await checkFrame(page, "compact-portrait-title-before");
-  expect(intro.guideFontSize * introCanvas.width / 450).toBeGreaterThanOrEqual(14);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? intro.guideFontSize * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
   expect(intro.statusTop - intro.guideBottom).toBeGreaterThanOrEqual(8);
   const titleHitHeight = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
@@ -161,6 +163,22 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   expect(titleHitHeight * titleCanvas.height / titleLogicalHeight).toBeGreaterThanOrEqual(44);
   await tapVisibleText(page, "対戦");
   await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleStatus(page)).map(label => label.text)).toEqual([
+    expect.stringMatching(/^自分HP \d+$/), expect.stringMatching(/^残\d+秒$/), expect.stringMatching(/^相手HP \d+$/),
+  ]);
+  const status = await readBattleStatus(page);
+  await expect.poll(async () => {
+    const box = await page.locator("canvas").boundingBox();
+    return box ? Math.min(...status.map(label => label.fontSize)) * box.width / 450 : 0;
+  }).toBeGreaterThanOrEqual(14);
+  expect(status[0]!.left).toBeGreaterThanOrEqual(8);
+  expect(status[2]!.right).toBeLessThanOrEqual(442);
+  for (const label of status) {
+    expect(label.top).toBeGreaterThanOrEqual(8);
+    expect(label.bottom).toBeLessThanOrEqual(54);
+  }
+  expect(status[0]!.right).toBeLessThan(status[1]!.left);
+  expect(status[1]!.right).toBeLessThan(status[2]!.left);
   const readLayout = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | null => {
@@ -174,14 +192,24 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
       return null;
     };
     const kick = find(scene.children.list, "mobile-move-kick") as Phaser.GameObjects.Container;
+    const ougi = find(scene.children.list, "mobile-ougi-landscape") as Phaser.GameObjects.Container;
     const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
+    const readyRing = find(scene.children.list, "mobile-ougi-ready-ring") as Phaser.GameObjects.Graphics;
     const hit = kick.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const ougiHit = ougi.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
     return {
       ringVisible: ring.visible,
+      readyRingVisible: readyRing.visible,
+      readyRingX: readyRing.x,
+      readyRingY: readyRing.y,
       ringX: ring.x,
       kickX: kick.x,
       hitHeight: hit.input?.hitArea.height as number,
       hitBottom: kick.y + hit.input!.hitArea.height / 2,
+      ougiX: ougi.x,
+      ougiY: ougi.y,
+      ougiTop: ougi.y - ougiHit.input!.hitArea.height / 2,
+      ougiHitHeight: ougiHit.input?.hitArea.height as number,
       logicalHeight: window.__qaGame.canvas.height,
     };
   });
@@ -190,11 +218,57 @@ test("compact portrait keeps the guided move reachable", async ({ page }) => {
   const canvas = (await page.locator("canvas").boundingBox())!;
   expect(layout.ringVisible).toBe(true);
   expect(layout.ringX).toBe(layout.kickX);
+  expect(layout.readyRingVisible).toBe(false);
   expect(layout.hitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
   expect(layout.hitBottom).toBeLessThan(layout.logicalHeight - 16);
+  expect(layout.ougiHitHeight * canvas.height / layout.logicalHeight).toBeGreaterThanOrEqual(44);
+  expect(layout.ougiTop).toBeGreaterThan(layout.hitBottom);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 0% · 編成 1/1 · 1応酬目"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  const guidedTell = await readBattleTell(page);
+  expect(guidedTell.fontPx).toBeGreaterThanOrEqual(14);
+  expect(guidedTell.left).toBeGreaterThanOrEqual(55);
+  expect(guidedTell.right).toBeLessThanOrEqual(395);
+  expect(guidedTell.top).toBeGreaterThanOrEqual(guidedTell.panelTop);
+  expect(guidedTell.bottom).toBeLessThanOrEqual(guidedTell.panelBottom);
   await checkFrame(page, "compact-portrait-guided-move");
   await tapVisibleText(page, "蹴");
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  const enemyHpBeforeOugi = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as { enemyHp: number };
+    Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
+    return battle.enemyHp;
+  });
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了 · 編成 1/1"))).toBe(true);
+  await expect.poll(async () => (await readLayout()).readyRingVisible).toBe(true);
+  expect((await readLayout()).readyRingX).toBe(layout.ougiX);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect.poll(async () => {
+    const current = await readLayout();
+    return current.readyRingVisible && current.readyRingX === current.ougiX && current.readyRingY === current.ougiY && current.ougiX === 735;
+  }).toBe(true);
+  await checkFrame(page, "landscape-ougi-ready");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(async () => {
+    const current = await readLayout();
+    return current.readyRingVisible && current.readyRingX === current.ougiX && current.readyRingY === current.ougiY && current.ougiX === layout.ougiX;
+  }).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.shakeEffect.isRunning && !camera.flashEffect.isRunning;
+  })).toBe(true);
+  await checkFrame(page, "compact-portrait-ougi-ready");
+  await tapPoint(page, layout.ougiX, layout.ougiTop + layout.ougiHitHeight - 1);
+  await expect.poll(() => page.evaluate(() => {
+    const battle = Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { playerGauge: number; enemyHp: number };
+    return { gauge: battle.playerGauge, enemyHp: battle.enemyHp };
+  })).toMatchObject({ gauge: 0, enemyHp: expect.any(Number) });
+  await expect.poll(async () => (await readLayout()).readyRingVisible).toBe(false);
+  const enemyHpAfterOugi = await page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "battle") as { enemyHp: number }).enemyHp);
+  expect(enemyHpAfterOugi).toBeLessThan(enemyHpBeforeOugi);
 });
 
 test("English fallback localizes title, roster, and mobile controls", async ({ page }) => {
@@ -221,6 +295,7 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
   expect(labels).toContain("Gacha");
   expect(labels).toContain("Ryuga");
   await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBeLessThan(301);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
@@ -239,6 +314,116 @@ test("English fallback localizes title, roster, and mobile controls", async ({ p
     return Number.parseInt(guide.style.fontSize, 10) === 16 ? status.getBounds().top - guide.getBounds().bottom : null;
   })).toBeGreaterThanOrEqual(8);
   await checkFrame(page, "compact-portrait-title-english");
+  await tapVisibleText(page, "Battle");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleStatus(page)).map(label => label.text)).toEqual([
+    expect.stringMatching(/^YOU HP \d+$/), expect.stringMatching(/^\d+s$/), expect.stringMatching(/^CPU HP \d+$/),
+  ]);
+  const englishStatus = await readBattleStatus(page);
+  expect(englishStatus[0]!.right).toBeLessThan(englishStatus[1]!.left);
+  expect(englishStatus[1]!.right).toBeLessThan(englishStatus[2]!.left);
+  expect(englishStatus[2]!.right).toBeLessThanOrEqual(442);
+  for (const label of englishStatus) expect(label.bottom).toBeLessThanOrEqual(54);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  const englishTell = await readBattleTell(page);
+  expect(englishTell.fontPx).toBeGreaterThanOrEqual(14);
+  expect(englishTell.left).toBeGreaterThanOrEqual(55);
+  expect(englishTell.right).toBeLessThanOrEqual(395);
+  expect(englishTell.top).toBeGreaterThanOrEqual(englishTell.panelTop);
+  expect(englishTell.bottom).toBeLessThanOrEqual(englishTell.panelBottom);
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+  await checkFrame(page, "compact-portrait-battle-english");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "beat", 3));
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("Beats: Punch>Ki>Kick>Punch");
+  const englishRule = await readBattleTell(page);
+  expect(englishRule.left).toBeGreaterThanOrEqual(55);
+  expect(englishRule.right).toBeLessThanOrEqual(395);
+  expect(englishRule.top).toBeGreaterThanOrEqual(englishRule.panelTop);
+  expect(englishRule.bottom).toBeLessThanOrEqual(englishRule.panelBottom);
+  await checkFrame(page, "compact-portrait-rule-english");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): string => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return (node as Phaser.GameObjects.Text).text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return "";
+    };
+    return find(scene.children.list);
+  })).toContain("Team Change");
+  await waitForCompactResult(page);
+  const englishNext = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const next = find(scene.children.list)!;
+    const bounds = next.getBounds();
+    const canvas = window.__qaGame.canvas;
+    return {
+      text: next.text,
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(englishNext.text).toContain("Team Change");
+  await expect.poll(() => visibleCopy(page)).toContain("Change Team");
+  expect(englishNext.fontPx).toBeGreaterThanOrEqual(14);
+  expect(englishNext.left).toBeGreaterThan(16);
+  expect(englishNext.right).toBeLessThan(englishNext.logicalWidth - 16);
+  const englishReward = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-reward") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const reward = find(scene.children.list)!;
+    const [label, value, balance] = reward.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    const bounds = (node: Phaser.GameObjects.GameObject & { getBounds: () => Phaser.Geom.Rectangle }) => {
+      const box = node.getBounds();
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    };
+    return {
+      label: bounds(label!),
+      value: bounds(value!),
+      balance: bounds(balance!),
+      plate: bounds(reward),
+      labelFontPx: Number.parseFloat(label!.style.fontSize) * window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width,
+      balanceFontPx: Number.parseFloat(balance!.style.fontSize) * window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width,
+    };
+  });
+  expect(englishReward.labelFontPx).toBeGreaterThanOrEqual(10);
+  expect(englishReward.balanceFontPx).toBeGreaterThanOrEqual(10);
+  expect(englishReward.label.right).toBeLessThan(englishReward.balance.left);
+  expect(englishReward.balance.bottom).toBeLessThan(englishReward.value.top);
+  expect(englishReward.value.right).toBeLessThan(englishReward.plate.right - 8);
+  await checkFrame(page, "compact-portrait-result-english");
 });
 
 
@@ -281,6 +466,56 @@ async function checkFrame(page: Page, name: string) {
     return Math.abs(box.width / box.height - canvas.width / canvas.height);
   })).toBeLessThan(0.02);
   await page.screenshot({ path: "e2e/screenshots/" + name + ".png" });
+}
+
+async function readBattleStatus(page: Page) {
+  return page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return ["mobile-battle-status", "mobile-battle-timer", "mobile-battle-enemy-status"].map(name => {
+      const label = find(scene.children.list, name)!;
+      const bounds = label.getBounds();
+      return {
+        text: label.text, fontSize: Number.parseInt(label.style.fontSize, 10),
+        left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+      };
+    });
+  });
+}
+
+async function readBattleTell(page: Page) {
+  return page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-battle-tell") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const tell = find(scene.children.list)!;
+    const box = tell.getBounds();
+    const canvas = window.__qaGame.canvas;
+    const panelTop = 350 + (canvas.height - 800) * 0.18;
+    return {
+      text: tell.text,
+      fontPx: Number.parseFloat(tell.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: box.left, right: box.right, top: box.top, bottom: box.bottom,
+      panelTop, panelBottom: panelTop + 95,
+    };
+  });
 }
 
 async function visibleCopy(page: Page): Promise<string[]> {
@@ -332,6 +567,15 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
     };
     return find(scene.children.list)?.visible;
   })).toBe(false);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("有利: 拳>気>蹴>拳");
+  const japaneseRule = await readBattleTell(page);
+  expect(japaneseRule.left).toBeGreaterThanOrEqual(55);
+  expect(japaneseRule.right).toBeLessThanOrEqual(395);
+  expect(japaneseRule.top).toBeGreaterThanOrEqual(japaneseRule.panelTop);
+  expect(japaneseRule.bottom).toBeLessThanOrEqual(japaneseRule.panelBottom);
+  await checkFrame(page, "compact-portrait-rule-japanese");
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 75, enemyHp: 25 });
@@ -340,6 +584,45 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
   await expect.poll(() => visibleCopy(page)).toContain("時間切れ · 残りHP 75 対 25");
   await expect.poll(() => visibleCopy(page)).toContain("WIN");
   await checkFrame(page, "portrait-result-hp-decision");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = window.__qaGame.canvas;
+    return { width: canvas.width, height: canvas.height, displayWidth: Math.round(canvas.getBoundingClientRect().width) };
+  })).toEqual({ width: 450, height: 900, displayWidth: 280 });
+  const decisionReason = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Text | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const reason = find(scene.children.list, "mobile-result-reason")!;
+    const finish = find(scene.children.list, "mobile-result-finish")!;
+    const heading = find(scene.children.list, "mobile-result-heading")!;
+    const bounds = reason.getBounds();
+    const canvas = window.__qaGame.canvas;
+    return {
+      fontPx: Number.parseFloat(reason.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+      bottom: bounds.bottom,
+      finishBottom: finish.getBounds().bottom,
+      headingTop: heading.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  await checkFrame(page, "compact-portrait-result-hp-reason");
+  expect(decisionReason.fontPx).toBeGreaterThanOrEqual(14);
+  expect(decisionReason.left).toBeGreaterThan(16);
+  expect(decisionReason.right).toBeLessThan(decisionReason.logicalWidth - 16);
+  expect(decisionReason.top).toBeGreaterThan(decisionReason.finishBottom);
+  expect(decisionReason.bottom).toBeLessThan(decisionReason.headingTop);
   await tapVisibleText(page, "もう一度");
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
@@ -402,6 +685,25 @@ async function resultCharactersAreClear(page: Page): Promise<boolean> {
   });
 }
 
+async function waitForCompactResult(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-next") return node as Phaser.GameObjects.Text;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const next = find(scene.children.list);
+    return !!next && Number.parseFloat(next.style.fontSize) === 27 && next.text.length > 0
+      && window.__qaGame.canvas.getBoundingClientRect().width <= 300;
+  })).toBe(true);
+}
+
 test("touch starts battle and a move advances the beat after rotation", async ({ page }) => {
   await checkFrame(page, "portrait-title");
   await tapVisibleText(page, "対戦");
@@ -435,7 +737,19 @@ test("live attack, hit, and guard visuals follow the resolved clash", async ({ p
       Reflect.get(scene, "onPlayerMove").call(scene, "punch");
       return positions;
     }, enemyMove);
-    await page.waitForTimeout(55);
+    if (enemyMove === "punch") {
+      await page.waitForTimeout(55);
+    } else {
+      await expect.poll(() => page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        return {
+          playerX: (Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image).x,
+          enemyX: (Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image).x,
+        };
+      }).then(position => enemyMove === "ki"
+        ? position.playerX - baseline.playerX
+        : baseline.enemyX - position.enemyX), { intervals: [16, 32, 50], timeout: 1000 }).toBeGreaterThan(0);
+    }
     const state = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const root = scene.children.getByName("combat-state-fx") as Phaser.GameObjects.Container | null;
@@ -461,6 +775,52 @@ test("live attack, hit, and guard visuals follow the resolved clash", async ({ p
 
   const tie = await resolve("punch");
   expect(tie.state).toMatchObject({ attack: false, hit: false, guard: true });
+});
+
+test("read feedback fits the compact portrait stage", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    scene.tweens.pauseAll();
+    Reflect.get(scene, "showClash").call(scene, "advantage", "kick", "punch");
+  });
+  const readFeedback = async (name: string) => page.evaluate(name => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const label = scene.children.getByName(name) as Phaser.GameObjects.Text | null;
+    if (!label) return null;
+    const box = label.getBounds();
+    return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: window.__qaGame.canvas.width };
+  }, name);
+  const win = await readFeedback("presentation-read-win");
+  const winDetail = await readFeedback("presentation-read-win-detail");
+  expect(win).not.toBeNull();
+  expect(winDetail).not.toBeNull();
+  for (const label of [win!, winDetail!]) {
+    expect(label.left).toBeGreaterThanOrEqual(16);
+    expect(label.right).toBeLessThanOrEqual(label.width - 16);
+    expect(label.top).toBeGreaterThan(98);
+    expect(label.bottom).toBeLessThan(365);
+  }
+  await checkFrame(page, "compact-portrait-read-win");
+  await page.reload();
+  await page.waitForFunction(() => !!window.__qaGame);
+  await waitForSceneReady(page);
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startBattle").call(scene);
+    scene.tweens.pauseAll();
+    Reflect.get(scene, "showClash").call(scene, "disadvantage", "punch", "kick");
+  });
+  const loss = await readFeedback("presentation-read-loss");
+  expect(loss).not.toBeNull();
+  expect(loss!.left).toBeGreaterThanOrEqual(16);
+  expect(loss!.right).toBeLessThanOrEqual(loss!.width - 16);
+  expect(loss!.top).toBeGreaterThan(98);
+  expect(loss!.bottom).toBeLessThan(365);
+  await checkFrame(page, "compact-portrait-read-loss");
 });
 
 test("reduced motion keeps the state cue without fighter or camera motion", async ({ page }) => {
@@ -562,6 +922,46 @@ test("gacha and result screens are included in visual QA", async ({ page }) => {
   await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
   await checkFrame(page, "short-portrait-result");
 
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  const compactNext = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const hero = find(scene.children.list, "mobile-result-hero") as Phaser.GameObjects.Image;
+    const enemy = find(scene.children.list, "mobile-result-enemy") as Phaser.GameObjects.Image;
+    const canvas = window.__qaGame.canvas;
+    const nextBounds = next.getBounds();
+    return {
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      next: { left: nextBounds.left, right: nextBounds.right, top: nextBounds.top, bottom: nextBounds.bottom },
+      rewardBottom: reward.getBounds().bottom,
+      primaryTop: primary.getBounds().top,
+      heroTop: hero.getBounds().top,
+      enemyTop: enemy.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(compactNext.fontPx).toBeGreaterThanOrEqual(14);
+  expect(compactNext.next.left).toBeGreaterThan(16);
+  expect(compactNext.next.right).toBeLessThan(compactNext.logicalWidth - 16);
+  expect(compactNext.next.top).toBeGreaterThan(compactNext.rewardBottom);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.primaryTop);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.heroTop);
+  expect(compactNext.next.bottom).toBeLessThan(compactNext.enemyTop);
+  await checkFrame(page, "compact-portrait-result-next");
+
   await page.setViewportSize({ width: 844, height: 390 });
   await expect.poll(() => page.locator("canvas").evaluate(node => (node as HTMLCanvasElement).width)).toBe(800);
   await expect.poll(() => resultCharactersAreClear(page)).toBe(true);
@@ -619,8 +1019,164 @@ test("victory result shows a knockout finish", async ({ page }) => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text;
   })).toBe("K.O.");
+  await expect.poll(() => visibleCopy(page)).toContain("タイトルへ");
   await page.waitForTimeout(260);
   await checkFrame(page, "portrait-result-ko");
+});
+
+test("tablet result distinguishes time decisions from knockouts", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  const result = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const legacy = Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container;
+    return {
+      legacyVisible: legacy.visible,
+      finish: (Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text).text,
+      reason: (legacy.getByName("result-reason") as Phaser.GameObjects.Text).text,
+      stats: (legacy.getByName("stats") as Phaser.GameObjects.Text).text,
+    };
+  });
+  await expect.poll(result).toMatchObject({ legacyVisible: true, finish: "WIN" });
+  expect((await result()).reason).toBe("時間切れ · 残りHP 75 対 25");
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "tablet-result-time-win");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 25, enemyHp: 75 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(result).toMatchObject({ legacyVisible: true, finish: "LOSE", reason: "時間切れ · 残りHP 25 対 75" });
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "tablet-result-time-lose");
+});
+
+test("the smallest tablet result keeps the time reason readable", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 75, enemyHp: 25 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
+    return !scene.tweens.isTweening(finish) && finish.alpha >= 0.95
+      && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  const layout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const group = Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container;
+    const reason = group.getByName("result-reason") as Phaser.GameObjects.Text;
+    const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
+    const heading = group.getByName("heading") as Phaser.GameObjects.Text;
+    const primary = (Reflect.get(scene, "resultPrimaryBtn") as { container: Phaser.GameObjects.Container }).container;
+    const title = group.list.find(node => node.type === "Container" &&
+      (node as Phaser.GameObjects.Container).list.some(child => child.type === "Text" && (child as Phaser.GameObjects.Text).text === "タイトルへ戻る")) as Phaser.GameObjects.Container;
+    const summary = scene.children.getByName("presentation-result-summary") as Phaser.GameObjects.Text;
+    const buttonText = (button: Phaser.GameObjects.Container) => button.list.find(child => child.type === "Text") as Phaser.GameObjects.Text;
+    const canvas = window.__qaGame.canvas;
+    const scale = canvas.getBoundingClientRect().width / canvas.width;
+    return {
+      visible: group.visible,
+      fontPx: Number.parseFloat(reason.style.fontSize) * scale,
+      reasonTop: reason.getBounds().top,
+      reasonBottom: reason.getBounds().bottom,
+      finishBottom: finish.getBounds().bottom,
+      headingTop: heading.getBounds().top,
+      primaryHitPx: (primary.input?.hitArea.height as number) * scale,
+      titleHitPx: (title.input?.hitArea.height as number) * scale,
+      primaryTextPx: Number.parseFloat(buttonText(primary).style.fontSize) * scale,
+      titleTextPx: Number.parseFloat(buttonText(title).style.fontSize) * scale,
+      primaryBottom: primary.getBounds().bottom,
+      titleTop: title.getBounds().top,
+      titleBottom: title.getBounds().bottom,
+      summaryTop: summary.getBounds().top,
+    };
+  });
+  expect(layout.visible).toBe(true);
+  expect(layout.fontPx).toBeGreaterThanOrEqual(14);
+  expect(layout.reasonTop).toBeGreaterThan(layout.finishBottom);
+  expect(layout.reasonBottom).toBeLessThan(layout.headingTop);
+  expect(layout.primaryHitPx).toBeGreaterThanOrEqual(44);
+  expect(layout.titleHitPx).toBeGreaterThanOrEqual(44);
+  expect(layout.primaryTextPx).toBeGreaterThanOrEqual(14);
+  expect(layout.titleTextPx).toBeGreaterThanOrEqual(14);
+  expect(layout.primaryBottom).toBeLessThan(layout.titleTop);
+  expect(layout.titleBottom).toBeLessThan(layout.summaryTop);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "small-tablet-result-time-win");
+  await tapPoint(page, 400, 385);
+  await expect.poll(() => phase(page)).toBe("battle");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await tapPoint(page, 400, 459);
+  await expect.poll(() => phase(page)).toBe("title");
+});
+
+test("the smallest tablet keeps every battle action touchable", async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+  });
+  await expect.poll(() => phase(page)).toBe("battle");
+  const actions = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const hud = (Reflect.get(scene, "battleGroup") as Phaser.GameObjects.Container)
+      .getByName("legacy-battle-hud") as Phaser.GameObjects.Container;
+    const canvas = window.__qaGame.canvas;
+    const scale = canvas.getBoundingClientRect().width / canvas.width;
+    return hud.list.filter(node => node.type === "Container" && node.input && node.y >= 480)
+      .map(node => {
+        const button = node as Phaser.GameObjects.Container;
+        const label = button.list.find(child => child.type === "Text") as Phaser.GameObjects.Text;
+        return {
+          label: label.text,
+          hitPx: (button.input!.hitArea.height as number) * scale,
+          fontPx: Number.parseFloat(label.style.fontSize) * scale,
+          top: button.y - (button.input!.hitArea.height as number) / 2,
+          bottom: button.y + (button.input!.hitArea.height as number) / 2,
+        };
+      });
+  });
+  expect(actions).toHaveLength(5);
+  for (const action of actions) {
+    expect(action.hitPx, action.label).toBeGreaterThanOrEqual(44);
+    expect(action.fontPx, action.label).toBeGreaterThanOrEqual(14);
+  }
+  expect(Math.max(...actions.slice(0, 3).map(action => action.bottom)))
+    .toBeLessThan(Math.min(...actions.slice(3).map(action => action.top)));
+  await checkFrame(page, "small-tablet-battle-actions");
+  await tapPoint(page, 240, 480);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
 });
 
 test("three-fighter team persists and leader appears in battle", async ({ page }) => {
@@ -808,6 +1364,81 @@ test("rival tell connects the counter move to the selected team and result next 
   });
   expect(visibleResultText).toContain("編成変更");
   await checkFrame(page, "portrait-result-team-change-next");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  const compactAdvice = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const hero = find(scene.children.list, "mobile-result-hero") as Phaser.GameObjects.Image;
+    const enemy = find(scene.children.list, "mobile-result-enemy") as Phaser.GameObjects.Image;
+    const canvas = window.__qaGame.canvas;
+    const bounds = next.getBounds();
+    return {
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+      left: bounds.left,
+      right: bounds.right,
+      top: bounds.top,
+      bottom: bounds.bottom,
+      rewardBottom: reward.getBounds().bottom,
+      primaryTop: primary.getBounds().top,
+      heroTop: hero.getBounds().top,
+      enemyTop: enemy.getBounds().top,
+      logicalWidth: canvas.width,
+    };
+  });
+  expect(compactAdvice.fontPx).toBeGreaterThanOrEqual(14);
+  expect(compactAdvice.left).toBeGreaterThan(16);
+  expect(compactAdvice.right).toBeLessThan(compactAdvice.logicalWidth - 16);
+  expect(compactAdvice.top).toBeGreaterThan(compactAdvice.rewardBottom);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.primaryTop);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.heroTop);
+  expect(compactAdvice.bottom).toBeLessThan(compactAdvice.enemyTop);
+  await expect.poll(() => visibleCopy(page)).toContain("編成を変える");
+  await checkFrame(page, "compact-portrait-result-team-change-next");
+  const teamAction = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const title = find(scene.children.list, "mobile-result-title")!;
+    const primary = find(scene.children.list, "mobile-result-primary")!;
+    const titleHit = title.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const primaryHit = primary.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const titleHeight = titleHit.input!.hitArea.height as number;
+    const primaryHeight = primaryHit.input!.hitArea.height as number;
+    const canvas = window.__qaGame.canvas;
+    return {
+      x: title.x,
+      bottomTap: title.y + titleHeight / 2 - 1,
+      physicalHeight: titleHeight * canvas.getBoundingClientRect().height / canvas.height,
+      titleTop: title.y - titleHeight / 2,
+      primaryBottom: primary.y + primaryHeight / 2,
+    };
+  });
+  expect(teamAction.physicalHeight).toBeGreaterThanOrEqual(44);
+  expect(teamAction.titleTop).toBeGreaterThanOrEqual(teamAction.primaryBottom);
+  await tapPoint(page, teamAction.x, teamAction.bottomTap);
+  await expect.poll(() => phase(page)).toBe("title");
+  await expect.poll(() => visibleCopy(page)).toContain("TEAM 2/3 · 竜牙 / 冥 · 先頭が出場");
 });
 
 
@@ -849,6 +1480,199 @@ test("three-battle series advances through all opponents and clears", async ({ p
   expect(complete.stats).toContain("3連戦 COMPLETE");
   expect(complete.stats).toContain("クリアボーナス +150");
   await checkFrame(page, "portrait-three-battle-complete");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  await expect.poll(() => visibleCopy(page)).toContain("3連戦クリア · 3勝");
+  await expect.poll(() => visibleCopy(page)).toContain("もう一度3連戦");
+  await checkFrame(page, "compact-portrait-three-battle-complete");
+});
+
+test("a series loss advises the opening rival for the restart", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "gaku"]);
+    Reflect.get(scene, "startSeries").call(scene);
+    let battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("再挑戦: 岳 → 蹴 (+18%)"))).toBe(true);
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("1戦目から再挑戦"))).toBe(true);
+  const resultLayout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const legacy = ((Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text).text;
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    return { legacy, nextTop: next.getBounds().top, nextBottom: next.getBounds().bottom, rewardBottom: reward.getBounds().bottom, primaryTop: primary.getBounds().top };
+  });
+  expect(resultLayout.legacy).toContain("1戦目から · 再挑戦 · 岳 → 蹴 (+18%)");
+  expect(resultLayout.nextTop).toBeGreaterThan(resultLayout.rewardBottom);
+  expect(resultLayout.nextBottom).toBeLessThan(resultLayout.primaryTop);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-series-restart");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+  });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { phase: Reflect.get(scene, "phase"), opponent: Reflect.get(scene, "opponent"), index: Reflect.get(scene, "seriesIndex") };
+  })).toEqual({ phase: "battle", opponent: "rush", index: 0 });
+});
+
+test("English series restart advice fits the compact result", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await waitForSceneReady(page);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "gaku"]);
+    Reflect.get(scene, "startSeries").call(scene);
+    let battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+    Reflect.get(scene, "handleResultPrimary").call(scene);
+    battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await waitForCompactResult(page);
+  const layout = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list, name);
+          if (nested) return nested;
+        }
+      }
+      return undefined;
+    };
+    const next = find(scene.children.list, "mobile-result-next") as Phaser.GameObjects.Text;
+    const reward = find(scene.children.list, "mobile-result-reward") as Phaser.GameObjects.Container;
+    const primary = find(scene.children.list, "mobile-result-primary") as Phaser.GameObjects.Container;
+    const canvas = window.__qaGame.canvas;
+    const bounds = next.getBounds();
+    return {
+      text: next.text,
+      left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+      rewardBottom: reward.getBounds().bottom, primaryTop: primary.getBounds().top,
+      width: canvas.width,
+      fontPx: Number.parseFloat(next.style.fontSize) * canvas.getBoundingClientRect().width / canvas.width,
+    };
+  });
+  expect(layout.text).toContain("Restart from Rival 1");
+  expect(layout.text).toContain("Retry: Gaku → Kick (+18%)");
+  expect(layout.fontPx).toBeGreaterThanOrEqual(14);
+  expect(layout.left).toBeGreaterThan(16);
+  expect(layout.right).toBeLessThan(layout.width - 16);
+  expect(layout.top).toBeGreaterThan(layout.rewardBottom);
+  expect(layout.bottom).toBeLessThan(layout.primaryTop);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-series-restart-english");
+});
+
+test("rapid result taps advance only one rival", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSeries").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, enemyHp: 0 });
+    Reflect.get(scene, "finishBattle").call(scene, false);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Container | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-result-primary") return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const button = find(scene.children.list)!;
+    const hit = button.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    hit.emit("pointerdown");
+    hit.emit("pointerdown");
+  });
+  const seriesState = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return { phase: Reflect.get(scene, "phase"), opponent: Reflect.get(scene, "opponent"), seriesIndex: Reflect.get(scene, "seriesIndex") };
+  });
+  await expect.poll(seriesState).toEqual({ phase: "battle", opponent: "counter", seriesIndex: 1 });
+  await page.waitForTimeout(150);
+  expect(await seriesState()).toEqual({ phase: "battle", opponent: "counter", seriesIndex: 1 });
+  await expect.poll(async () => {
+    const copy = await visibleCopy(page);
+    return copy.some(value => value.includes("自分HP 100")) && copy.some(value => value.includes("気で有利を取ろう"));
+  }).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.waitForTimeout(200);
+  await checkFrame(page, "rapid-result-next-rival");
+});
+
+test("special ready cue appears only when the move can be accepted", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "startSingleBattle").call(scene);
+    const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
+    Reflect.set(scene, "battle", { ...battle, playerGauge: 100 });
+    Reflect.set(scene, "accepting", false);
+  });
+  const state = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Graphics | null => {
+      for (const node of nodes) {
+        if (node.name === "mobile-ougi-ready-ring") return node as Phaser.GameObjects.Graphics;
+        if (node.type === "Container") {
+          const nested = find((node as Phaser.GameObjects.Container).list);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    return { accepting: Reflect.get(scene, "accepting"), ring: find(scene.children.list)?.visible ?? false };
+  });
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了"))).toBe(true);
+  expect(await state()).toEqual({ accepting: false, ring: false });
+  await page.waitForTimeout(200);
+  await checkFrame(page, "compact-portrait-ougi-waiting");
+  await page.evaluate(() => Reflect.set(window.__qaGame.scene.getScene("GameScene"), "accepting", true));
+  await expect.poll(state).toEqual({ accepting: true, ring: true });
 });
 
 test("story mode persists cleared chapters and resumes from the next opponent", async ({ page }) => {
@@ -914,6 +1738,11 @@ test("story mode persists cleared chapters and resumes from the next opponent", 
   expect(complete.stats).toContain("物語 COMPLETE");
   expect(complete.stats).toContain("ボーナス +200");
   await checkFrame(page, "portrait-story-complete");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await waitForCompactResult(page);
+  await expect.poll(() => visibleCopy(page)).toContain("物語クリア · 全3章");
+  await expect.poll(() => visibleCopy(page)).toContain("物語を再演");
+  await checkFrame(page, "compact-portrait-story-complete");
 });
 
 

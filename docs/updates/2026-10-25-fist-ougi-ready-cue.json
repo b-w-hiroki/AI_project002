@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝で奥義ゲージ満タン時に押すボタンを直接強調する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "奥義が使える時と使用後のボタン表示を明記した"},
+      "design": {"status": "updated", "reason": "奥義ボタンに追従する静的な枠と表示条件を明記した"}
+    }
+  },
+  "validation": ["lint・typecheck・単体・buildを実行する", "Chromium・WebKitのE2Eで準備完了時の枠表示と使用後の消去を検査し、320×568と844×390の実画面画像を確認する"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

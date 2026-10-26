@@ -1269,7 +1269,7 @@ export class GameScene extends Phaser.Scene {
 
   /** 召喚媒体/防具/アイテム/ステージバフのピックアップを取得した時の処理 */
   private onPickupCollected(pickup: Pickup): void {
-    if (pickup.collected) return;
+    if (this.status !== "playing" || pickup.collected) return;
     pickup.collected = true;
     pickup.sprite.disableBody(true, true);
 
@@ -2117,6 +2117,11 @@ export class GameScene extends Phaser.Scene {
       this.bestWave = Math.max(this.bestWave, this.wave);
       this.statusText.setText("GAME OVER");
       this.restartText.setText(`${tr(this.lang, "到達", "Reached")}: Wave ${this.wave}  ${tr(this.lang, "ベスト", "Best")}: Wave ${this.bestWave}`);
+      this.summonOverlayVisible = false;
+      this.summonOverlay?.setVisible(false);
+      this.stageBuffOverlayVisible = false;
+      this.stageBuffOverlay?.setVisible(false);
+      this.physics.resume();
       this.virtualControls?.setVisible(false);
       this.statusPanel.setVisible(true);
       this.restartPrompt.setVisible(true);

@@ -10,9 +10,12 @@ import { teamTacticalRead } from "../logic/teamTactics";
 export type BattleView = {
   battleGroup: Phaser.GameObjects.Container;
   battleStatus: Phaser.GameObjects.Text;
+  battleTimer: Phaser.GameObjects.Text;
+  battleEnemyStatus: Phaser.GameObjects.Text;
   battleTell: Phaser.GameObjects.Text;
   battleGauge: Phaser.GameObjects.Text;
   counterRing: Phaser.GameObjects.Graphics;
+  ougiReadyRing: Phaser.GameObjects.Graphics;
 };
 export type BattleModel = {
   battle: Readonly<Pick<BattleState, "playerHp" | "enemyHp" | "playerGauge">>;
@@ -22,6 +25,7 @@ export type BattleModel = {
   nextEnemyMove?: MoveType;
   beat?: number;
   timeRemainingSec?: number;
+  accepting: boolean;
 };
 export type BattleActions = {
   move: (move: MoveType) => void;
@@ -38,11 +42,14 @@ const OPPONENT_ACCENT: Readonly<Record<Opponent, { accent: number; glow: number 
 export function createBattleView(scene: Phaser.Scene, actions: BattleActions): BattleView {
   const lang = detectLang();
   const battleGroup = scene.add.container(0, 0);
-  const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0);
-  const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8");
+  const battleStatus = text(scene, 18, 18, "", 13, "#fff1d5").setOrigin(0, 0).setName("mobile-battle-status");
+  const battleTimer = text(scene, 225, 18, "", 23, "#fff1d5").setOrigin(0.5, 0).setName("mobile-battle-timer");
+  const battleEnemyStatus = text(scene, 432, 18, "", 23, "#fff1d5").setOrigin(1, 0).setName("mobile-battle-enemy-status");
+  const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8").setName("mobile-battle-tell");
   const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
-  battleGroup.add([battleStatus, battleTell, battleGauge, counterRing]);
+  const ougiReadyRing = scene.add.graphics().setName("mobile-ougi-ready-ring").setVisible(false);
+  battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing, ougiReadyRing]);
 
   const moveButtons: Array<{ move: MoveType; label: string; color: number }> = [
     { move: "punch", label: moveLabel(lang, "punch"), color: 0xb8412f },
@@ -55,7 +62,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   });
   const ougi = button(scene, battleGroup, 225, 760, 360, 60, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi);
   ougi.setName("mobile-ougi");
-  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi);
+  const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi, false, 72);
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
   const switchButton = button(scene, battleGroup, 225, 715, 76, 44, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter);
   switchButton.setName("mobile-switch").setVisible(false);
@@ -63,7 +70,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
 
 
-  return { battleGroup, battleStatus, battleTell, battleGauge, counterRing };
+  return { battleGroup, battleStatus, battleTimer, battleEnemyStatus, battleTell, battleGauge, counterRing, ougiReadyRing };
 }
 
 export function renderBattleView(ui: BattleView, model: BattleModel, viewport: { portrait: boolean; width: number; height: number }, chrome: Phaser.GameObjects.Graphics): void {
@@ -94,10 +101,10 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.lineStyle(1, 0xffd68a, 0.28).lineBetween(0, 600, 450, 600);
     chrome.lineStyle(1, 0xffd68a, 0.36).lineBetween(0, controlsTop, 450, controlsTop);
     chrome.lineStyle(1, 0x7b3f2b, 0.24).lineBetween(20, controlsTop - 22, 430, controlsTop - 22);
-    chrome.fillStyle(0x100806, 0.86).fillRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
-    chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(55, 365 + extra * 0.18, 340, 58, 14);
-    ui.battleTell.setPosition(225, 394 + extra * 0.18);
-    ui.battleGauge.setPosition(225, 90);
+    chrome.fillStyle(0x100806, 0.86).fillRoundedRect(35, 350 + extra * 0.18, 380, 95, 14);
+    chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(35, 350 + extra * 0.18, 380, 95, 14);
+    ui.battleTell.setPosition(225, 397 + extra * 0.18).setFontSize(23).setWordWrapWidth(340, true);
+    ui.battleGauge.setPosition(225, 82).setFontSize(16);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)
       ?.setPosition(225, controlsTop + 205).setScale(1).setVisible(canSwitch).setAlpha(canSwitch ? 1 : 0.4);
@@ -114,8 +121,8 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.lineStyle(1, 0xffcf82, 0.45).strokeRoundedRect(270, 101, 260, 58, 14);
     chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
     chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
-    ui.battleTell.setPosition(400, 124);
-    ui.battleGauge.setPosition(130, 404);
+    ui.battleTell.setPosition(400, 124).setFontSize(20);
+    ui.battleGauge.setPosition(130, 404).setFontSize(14);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)?.setVisible(false);
     (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)
@@ -135,12 +142,17 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   const leader = fighterById(team[activeIndex] ?? "ryuga");
   ui.battleStatus
     .setPosition(18, portrait ? 18 : 50)
-    .setColor(`#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
-    .setText(`${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+    .setFontSize(portrait ? 23 : 13)
+    .setColor(portrait ? "#fff1d5" : `#${opponentVisual.glow.toString(16).padStart(6, "0")}`)
+    .setText(portrait
+      ? tr(lang, `自分HP ${battle.playerHp}`, `YOU HP ${battle.playerHp}`)
+      : `${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}] ${battle.playerHp}/${MAX_HP}   TIME ${remaining}   ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName} ${battle.enemyHp}/${MAX_HP}`);
+  ui.battleTimer.setVisible(portrait).setText(tr(lang, `残${remaining}秒`, `${remaining}s`));
+  ui.battleEnemyStatus.setVisible(portrait).setText(tr(lang, `相手HP ${battle.enemyHp}`, `CPU HP ${battle.enemyHp}`));
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
   ui.battleGauge.setText(gaugeRatio >= 1
-    ? `${tr(lang, "奥義", "SPECIAL")} READY · TEAM ${activeIndex + 1}/${team.length}`
-    : `${tr(lang, "奥義", "SPECIAL")} ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`);
+    ? tr(lang, `奥義 準備完了 · 編成 ${activeIndex + 1}/${team.length}`, `SPECIAL READY · TEAM ${activeIndex + 1}/${team.length}`)
+    : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`));
 
   const guidedMove = (model.beat ?? 0) < 3
     ? teamTacticalRead(team, model.nextEnemyMove ?? "punch").counterMove : null;
@@ -153,6 +165,15 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     ui.counterRing.setPosition(guidedButton.x, guidedButton.y)
       .lineStyle(4, 0xffdd8a, 0.95)
       .strokeRoundedRect(-ringWidth / 2, -ringHeight / 2, ringWidth, ringHeight, 9);
+  }
+
+  const readyButton = ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null;
+  const ougiActionable = gaugeRatio >= 1 && model.accepting;
+  ui.ougiReadyRing.clear().setVisible(ougiActionable && Boolean(readyButton));
+  if (ougiActionable && readyButton) {
+    ui.ougiReadyRing.setPosition(readyButton.x, readyButton.y)
+      .lineStyle(4, 0xffe186, 0.98)
+      .strokeRoundedRect(-64, -34, 128, 68, 9);
   }
 
 }

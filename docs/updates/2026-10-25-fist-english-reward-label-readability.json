@@ -1,0 +1,16 @@
+{
+  "summary": "覇拳伝の英語結果画面で報酬ラベルと所持数を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "短い縦画面で英語の報酬ラベルと所持数を読める大きさにする表示契約を追加"},
+      "design": {"status": "updated", "reason": "英語の上段文字サイズと装飾線、320×568での文字サイズ・非重複検査を記録"}
+    }
+  },
+  "validation": [
+    "320×568の英語敗北結果でラベルと所持数が実表示10px相当以上かつ報酬額と重ならないことをChromium・WebKitで検査",
+    "games/fist-legend/e2e/screenshots/compact-portrait-result-english.png を実画面で確認"
+  ],
+  "limitations": [
+    "物理iOS Safari・Android Chrome、外部Portal、人による初見プレイの理解度と楽しさは未確認"
+  ]
+}
