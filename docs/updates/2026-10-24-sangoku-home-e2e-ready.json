@@ -1,0 +1,19 @@
+{
+  "summary": "三国ポチポチのホームE2EでScene生成完了を待つ",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {"status": "unchanged", "reason": "ゲームの操作・表示・保存の仕様は変更せず、テストがホーム生成後に検査を始める"},
+      "design": {"status": "unchanged", "reason": "Sceneやホームの実装責務は変更せず、E2Eの起動待ち条件だけを追加する"}
+    }
+  },
+  "validation": [
+    "main c3de96b のBrowser E2EでホームE2EがScene未生成時のgetData参照により失敗したログを確認",
+    "main 054c32f のBrowser E2Eで管理画面group生成前にshowGachaを呼んだ失敗を確認し、共通開始条件で必要groupの生成完了を待つ",
+    "lint・typecheck・build成功、単体テスト69件成功。ホームE2EをChromiumで3回連続成功",
+    "Chromium・WebKitの全E2E各14件成功。ホームの実スクリーンショットを目視確認し、テスト生成の画像差分はコミット対象から除外",
+    "ゲームの生成完了後もホームの画像・状態を従来どおり検査する"
+  ],
+  "limitations": [
+    "実機確認は未実施。CIでの再検証結果を別途確認する"
+  ]
+}
