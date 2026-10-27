@@ -211,6 +211,8 @@ test("English Haja controls stay usable on a short phone", async ({ page }) => {
     const [status, hint] = root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
     return { width: scene.scale.gameSize.width, x: buttons[0]!.x, status: status!.text, hint: hint!.text, labels: buttons.map(button => (button.list.find(node => node.type === "Text") as Phaser.GameObjects.Text).text) };
   })).toEqual({ width: 450, x: 110, status: "HAJA · 1 USE / 5s", hint: "ATK Up · DEF Guard · SPD Fast", labels: ["ATK", "DEF", "SPD"] });
+  // A portrait-to-portrait resize can briefly retain the previous canvas height.
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
   const readGeometry = () => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
@@ -313,6 +315,7 @@ test("Japanese Haja guidance fits on a short phone", async ({ page }) => {
       left: hint!.getBounds().left, right: hint!.getBounds().right, gap: b.y + (area.y - b.displayOriginY) * b.scaleY - hint!.getBounds().bottom,
       separated: status!.getBounds().bottom < hint!.getBounds().top };
   })).toMatchObject({ width: 450, hint: "剛=威力  柔=軽減  瞬=速攻", fontPx: expect.any(Number), separated: true });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
   const bounds = await page.evaluate(() => {
     const root = window.__qaGame.scene.getScene("GameScene").children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
     const hint = (root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[])[1]!;
