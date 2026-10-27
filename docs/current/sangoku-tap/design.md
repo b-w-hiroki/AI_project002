@@ -18,6 +18,7 @@ campaign.ts: sangoku_campaign_v1。有効なactive遠征のstep、HP、戦利品
 
 ## 描画と検証
 WebKitはCanvas fallback、その他はAUTO。縦のホームと横の遠征で同じ保存・編成を使う。
+武将一覧の見出しと説明はGameScene.buildRosterScreenでY=86/139に配置し、両方を従来より4論理px上げる。所持装備行はY=190を維持し、Linux WebKitで説明との間隔が3pxになった回帰を解消する。管理画面E2Eは見出し・説明・所持装備・最初の武将行の間隔と操作行の高さを検査する。
 [tests](../../../games/sangoku-tap/tests) と [E2E](../../../games/sangoku-tap/e2e/game.spec.ts) を参照。
 [キャンペーン設計](../../design/sangoku-campaign.md)・[演出設計](../../design/sangoku-staging.md) は詳細な背景資料として残す。
 
