@@ -539,15 +539,15 @@ export class GameScene extends Phaser.Scene {
     const leader = fighterById(activeId);
     this.playerLabel?.setText(
       this.phase === "battle"
-        ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
-        : `PLAYER · ${leader.name}`,
+        ? `PLAYER · ${fighterName(this.lang, activeId)} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+        : `PLAYER · ${fighterName(this.lang, activeId)}`,
     );
     this.playerLabel?.setText(tr(this.lang, "プレイヤー", "PLAYER"));
     if (!this.isApprovedMockViewport()) {
       this.playerLabel?.setText(
         this.phase === "battle"
-          ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
-          : `PLAYER · ${leader.name}`,
+          ? `PLAYER · ${fighterName(this.lang, activeId)} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+          : `PLAYER · ${fighterName(this.lang, activeId)}`,
       );
     }
     if (this.playerSprite instanceof Phaser.GameObjects.Image) {
