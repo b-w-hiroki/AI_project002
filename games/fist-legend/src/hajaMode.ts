@@ -31,7 +31,7 @@ type Ui = {
   hint: Phaser.GameObjects.Text;
   buttons: ReturnType<typeof makeButton>[];
   enabled: boolean | null;
-  textLayout: "phonePortrait" | "compactTablet" | "default" | null;
+  textLayout: "phonePortrait" | "phoneLandscape" | "compactTablet" | "default" | null;
   plateOffset: number | null;
 };
 
@@ -98,27 +98,31 @@ function refresh(scene: Runtime): void {
   const width = scene.scale.gameSize.width;
   const xs = phone && portrait ? [110, 225, 340] : [330, 400, 470];
   const phonePortrait = phone && portrait;
+  const phoneLandscape = phone && !portrait;
   // Follow the portrait move controls as the canvas grows, leaving their hit areas separate.
   const phoneOffset = phonePortrait ? Math.max(0, scene.scale.gameSize.height - 910) : 0;
-  const y = phonePortrait ? 583 + phoneOffset : phone ? 337 : 388;
-  const statusY = phonePortrait ? 503 + phoneOffset : phone ? 300 : compactTablet ? 305 : 350;
-  const hintY = phonePortrait ? 535 + phoneOffset : phone ? 317 : compactTablet ? 335 : 368;
+  const y = phonePortrait ? 583 + phoneOffset : phoneLandscape ? 324 : 388;
+  const statusY = phonePortrait ? 503 + phoneOffset : phoneLandscape ? 250 : compactTablet ? 305 : 350;
+  const hintY = phonePortrait ? 535 + phoneOffset : phoneLandscape ? 281 : compactTablet ? 335 : 368;
   const scale = phone && !portrait ? 0.92 : phone ? 1.08 : 1;
 
-  const textLayout = phonePortrait ? "phonePortrait" : compactTablet ? "compactTablet" : "default";
+  const textLayout = phonePortrait ? "phonePortrait" : phoneLandscape ? "phoneLandscape" : compactTablet ? "compactTablet" : "default";
   if (ui.textLayout !== textLayout || ui.plateOffset !== phoneOffset) {
-    ui.status.setFontSize(phonePortrait ? 23 : compactTablet ? 20 : 14);
-    ui.hint.setFontSize(phonePortrait ? 23 : compactTablet ? 20 : 10);
+    ui.status.setFontSize(phonePortrait ? 23 : phoneLandscape ? 21 : compactTablet ? 20 : 14);
+    ui.hint.setFontSize(phonePortrait ? 23 : phoneLandscape ? 21 : compactTablet ? 20 : 10);
     ui.guidancePlate.clear();
     if (phonePortrait) {
       ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(10, 487 + phoneOffset, 430, 66, 8);
+    } else if (phoneLandscape) {
+      const plateWidth = lang === "en" ? 420 : 360;
+      ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(400 - plateWidth / 2, 233, plateWidth, 66, 8);
     } else if (compactTablet) {
       const plateWidth = lang === "en" ? 420 : 360;
       ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(400 - plateWidth / 2, 289, plateWidth, 66, 8);
     }
     ui.buttons.forEach(button => {
       const label = button.container.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
-      label.setFontSize(phonePortrait ? 22 : compactTablet ? 20 : 14);
+      label.setFontSize(phonePortrait ? 22 : phoneLandscape ? 23 : compactTablet ? 20 : 14);
       const hitArea = button.container.input?.hitArea as Phaser.Geom.Rectangle | undefined;
       if (hitArea) hitArea.height = phonePortrait ? 72 : 64;
     });
@@ -148,7 +152,7 @@ function refresh(scene: Runtime): void {
     ui.hint.setText(tr(lang, "次ラウンドで再使用可能", "Ready next round"));
   } else {
     ui.status.setText(tr(lang, "覇者モード 1回 / 5秒", "HAJA · 1 USE / 5s")).setColor("#ffe9b0");
-    ui.hint.setText(tr(lang, "剛=威力  柔=軽減  瞬=速攻", phonePortrait ? "ATK Up · DEF Guard · SPD Fast" : "ATK Power · DEF Guard · SPD Fast"));
+    ui.hint.setText(tr(lang, "剛=威力  柔=軽減  瞬=速攻", phone ? "ATK Up · DEF Guard · SPD Fast" : "ATK Power · DEF Guard · SPD Fast"));
   }
 
   ui.aura.clear();

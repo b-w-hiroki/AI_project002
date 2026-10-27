@@ -272,7 +272,7 @@ test("English Haja controls stay usable on a short phone", async ({ page }) => {
     const b = root.list.find(node => node.type === "Container") as Phaser.GameObjects.Container;
     const status = root.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
     return { x: b.x, height: (b.input!.hitArea as Phaser.Geom.Rectangle).height, font: Number.parseFloat(status.style.fontSize) };
-  })).toEqual({ x: 330, height: 64, font: 14 });
+  })).toEqual({ x: 330, height: 64, font: 21 });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
   await expect.poll(() => page.evaluate(() => {
@@ -330,4 +330,98 @@ test("Japanese Haja guidance fits on a short phone", async ({ page }) => {
   expect(bounds.gap).toBeGreaterThan(0);
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await page.screenshot({ path: "e2e/screenshots/short-phone-haja-japanese.png" });
+});
+
+test("landscape Haja guidance stays readable and does not steal a move tap", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await waitForSceneReady(page);
+  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
+  await page.setViewportSize({ width: 568, height: 320 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height, cssWidth: Math.round(node.getBoundingClientRect().width) })))
+    .toEqual({ width: 800, height: 450, cssWidth: 550 });
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const [status, hint] = root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    const buttons = root.list.filter(node => node.type === "Container") as Phaser.GameObjects.Container[];
+    const b = buttons[1]!;
+    const label = b.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
+    const area = b.input!.hitArea as Phaser.Geom.Rectangle;
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") { const found = find((node as Phaser.GameObjects.Container).list, name); if (found) return found; }
+      }
+      return undefined;
+    };
+    const move = find(scene.children.list, "mobile-move-punch") as Phaser.GameObjects.Container;
+    const moveHit = move.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+    return { statusPx: Number.parseFloat(status!.style.fontSize) * scale, hintPx: Number.parseFloat(hint!.style.fontSize) * scale,
+      labelPx: Number.parseFloat(label.style.fontSize) * b.scaleY * scale, hintWidth: hint!.getBounds().width,
+      statusBottom: status!.getBounds().bottom, hintTop: hint!.getBounds().top, hintBottom: hint!.getBounds().bottom,
+      hajaTop: b.y + (area.y - b.displayOriginY) * b.scaleY,
+      hajaBottom: b.y + (area.y + area.height - b.displayOriginY) * b.scaleY,
+      moveTop: move.y - moveHit.height * move.scaleY / 2,
+      labels: buttons.map(button => (button.list.find(node => node.type === "Text") as Phaser.GameObjects.Text).text) };
+  });
+  await expect.poll(async () => ({ labels: (await read()).labels, statusPx: (await read()).statusPx })).toEqual({ labels: ["ATK", "DEF", "SPD"], statusPx: 14.4375 });
+  const initial = await read();
+  expect(initial.hajaBottom).toBeLessThan(initial.moveTop);
+  expect(initial.statusPx).toBeGreaterThanOrEqual(14);
+  expect(initial.hintPx).toBeGreaterThanOrEqual(14);
+  expect(initial.labelPx).toBeGreaterThanOrEqual(14);
+  expect(initial.statusBottom).toBeLessThan(initial.hintTop);
+  expect(initial.hintBottom).toBeLessThan(initial.hajaTop);
+  expect(initial.hintWidth).toBeLessThanOrEqual(410);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "e2e/screenshots/short-landscape-haja-english.png" });
+  const canvas = (await page.locator("canvas").boundingBox())!;
+  const tap = (x: number, y: number) => page.touchscreen.tap(canvas.x + x * canvas.width / 800, canvas.y + y * canvas.height / 450);
+  await tap(410, initial.moveTop + 2);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "hajaUsed"))).toBe(false);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  await tap(400, initial.hajaBottom - 2);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "hajaMode"))).toBe("ju");
+});
+
+test("Japanese landscape Haja guidance remains readable and separated", async ({ page }) => {
+  await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
+  await page.setViewportSize({ width: 568, height: 320 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(550);
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const [status, hint] = root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    const buttons = root.list.filter(node => node.type === "Container") as Phaser.GameObjects.Container[];
+    const button = buttons[1]!;
+    const label = button.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
+    const hit = button.input!.hitArea as Phaser.Geom.Rectangle;
+    const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+    return { statusFont: Number.parseFloat(status!.style.fontSize), statusPx: Number.parseFloat(status!.style.fontSize) * scale,
+      hintPx: Number.parseFloat(hint!.style.fontSize) * scale, labelPx: Number.parseFloat(label.style.fontSize) * button.scaleY * scale,
+      statusBottom: status!.getBounds().bottom, hintTop: hint!.getBounds().top, hintBottom: hint!.getBounds().bottom,
+      hintWidth: hint!.getBounds().width, buttonTop: button.y + (hit.y - button.displayOriginY) * button.scaleY,
+      labels: buttons.map(item => (item.list.find(node => node.type === "Text") as Phaser.GameObjects.Text).text) };
+  });
+  await expect.poll(async () => (await read()).statusFont).toBe(21);
+  const state = await read();
+  expect(state.labels).toEqual(["剛", "柔", "瞬"]);
+  expect(state.statusPx).toBeGreaterThanOrEqual(14);
+  expect(state.hintPx).toBeGreaterThanOrEqual(14);
+  expect(state.labelPx).toBeGreaterThanOrEqual(14);
+  expect(state.statusBottom).toBeLessThan(state.hintTop);
+  expect(state.hintBottom).toBeLessThan(state.buttonTop);
+  expect(state.hintWidth).toBeLessThanOrEqual(350);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: "e2e/screenshots/short-landscape-haja-japanese.png" });
 });
