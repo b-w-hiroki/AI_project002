@@ -1149,22 +1149,44 @@ test("compact tablet English win points from the tell to the counter", async ({ 
   await page.goto("/?lang=en");
   await waitForSceneReady(page);
   await page.setViewportSize({ width: 600, height: 600 });
-  const result = await page.evaluate(() => {
+  await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     Reflect.get(scene, "startSingleBattle").call(scene);
     const battle = Reflect.get(scene, "battle") as Record<string, unknown>;
     Reflect.set(scene, "battle", { ...battle, playerHp: 75, enemyHp: 25 });
     Reflect.get(scene, "finishBattle").call(scene, true);
-    const stats = (Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text;
-    return stats.text;
   });
-  expect(result).toContain("NEXT: Read the tell, choose the counter");
-  expect(result).not.toContain("Play Again");
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
+    return !scene.tweens.isTweening(finish) && finish.alpha >= 0.95;
+  })).toBe(true);
+  const result = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const stats = (Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("stats") as Phaser.GameObjects.Text;
+    const finish = Reflect.get(scene, "resultFinish") as Phaser.GameObjects.Text;
+    const reason = (Reflect.get(scene, "resultGroup") as Phaser.GameObjects.Container).getByName("result-reason") as Phaser.GameObjects.Text;
+    const primary = (Reflect.get(scene, "resultPrimaryBtn") as { container: Phaser.GameObjects.Container }).container;
+    const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+    return { text: stats.text, fontPx: Number.parseFloat(stats.style.fontSize) * scale,
+      reasonTop: reason.getBounds().top, finishBottom: finish.getBounds().bottom,
+      nextBottom: stats.getBounds().bottom, primaryTop: primary.getBounds().top,
+      left: stats.getBounds().left, right: stats.getBounds().right };
+  });
+  expect(result.text).toContain("NEXT: Read the tell, choose the counter");
+  expect(result.text).not.toContain("Play Again");
+  expect(result.fontPx).toBeGreaterThanOrEqual(14);
+  expect(result.reasonTop).toBeGreaterThan(result.finishBottom);
+  expect(result.nextBottom).toBeLessThan(result.primaryTop);
+  expect(result.left).toBeGreaterThanOrEqual(0);
+  expect(result.right).toBeLessThanOrEqual(800);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
   })).toBe(true);
   await checkFrame(page, "small-tablet-result-time-win-english");
+  await tapPoint(page, 400, 385);
+  await expect.poll(() => phase(page)).toBe("battle");
 });
 
 test("the smallest tablet keeps every battle action touchable", async ({ page }) => {

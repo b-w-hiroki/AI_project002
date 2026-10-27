@@ -1415,7 +1415,7 @@ export class GameScene extends Phaser.Scene {
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
-      .text(400, 136, "", {
+      .text(400, 130, "", {
         fontSize: "58px",
         color: "#ffe3a1",
         fontStyle: "900",

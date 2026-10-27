@@ -1,0 +1,39 @@
+{
+  "summary": "PR #412の600×600日英表示と操作を独立検証し、フォント差の結果表示境界重複を修正",
+  "areas": {
+    "fist-legend": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "既存の非重複・可読性契約を満たす位置補正で、ゲームルールと案内文は変更しない"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "勝敗文字Y=130と英語の実表示サイズ・境界・再戦入力検査を記録"
+      }
+    },
+    "sangoku-tap": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "武将一覧の既存間隔契約を600×600の日英へ拡張検証するのみで表示やルールは変更しない"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "600×600日英の間隔・収まり・復帰入力検査と縮小表示の未解決懸念を記録"
+      }
+    }
+  },
+  "validation": [
+    "旧head 06bef831dac534834099320175a4e196d5c92ad8の4ワークフロー成功をGitHubで再照合",
+    "同headのWebKit artifact 12698394378 / 12698662998を取得し実画面を確認",
+    "ローカルChromiumで旧Y=136のfinishBottom=180.60997、reasonTop=178.5を2回再現",
+    "Y=130へ変更後、関連3 E2Eが成功。600×600武将一覧の日英2 E2Eも成功",
+    "覇拳伝Chromium全32件中31件成功、320×568の理由文境界が0.5論理px重複した1件を検出。縦持ち勝敗文字も6論理px上げた後、失敗1件と関連3件が全成功",
+    "三国ポチポチChromium全16件成功（追加した600×600日英2件を含む）",
+    "両作lint・typecheck・単体62/69件・build成功"
+  ],
+  "limitations": [
+    "物理iOS Safari、Android Chrome、人による初見プレイ、外部Portal Previewは未確認",
+    "600×600の武将一覧はローカルChromiumで説明約11.64px・武将行約40.09px。既存モックの一覧全体縮小による品質懸念として残す。ドラフト維持",
+    "新headの全E2E・CI結果は独立QA記録を参照"
+  ]
+}
