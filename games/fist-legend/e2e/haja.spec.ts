@@ -104,6 +104,27 @@ test("compact tablet Haja choices have readable touch targets", async ({ page })
     expect(choice.hitPx, choice.label).toBeGreaterThanOrEqual(44);
     expect(choice.fontPx, choice.label).toBeGreaterThanOrEqual(14);
   }
+  const guidance = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const [status, hint] = root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+    return {
+      statusPx: Number.parseFloat(status!.style.fontSize) * scale,
+      hintPx: Number.parseFloat(hint!.style.fontSize) * scale,
+      statusBottom: status!.getBounds().bottom,
+      hintTop: hint!.getBounds().top,
+      hintBottom: hint!.getBounds().bottom,
+      hitTop: (() => {
+        const button = root.list.find(node => node.type === "Container") as Phaser.GameObjects.Container;
+        return button.y - (button.input!.hitArea.height as number) / 2;
+      })(),
+    };
+  });
+  expect(guidance.statusPx).toBeGreaterThanOrEqual(14);
+  expect(guidance.hintPx).toBeGreaterThanOrEqual(14);
+  expect(guidance.statusBottom).toBeLessThan(guidance.hintTop);
+  expect(guidance.hintBottom).toBeLessThan(guidance.hitTop);
   await expect.poll(() => page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
     return !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
@@ -114,4 +135,11 @@ test("compact tablet Haja choices have readable touch targets", async ({ page })
   await page.touchscreen.tap(canvas.x + choices[0]!.x * canvas.width / logical.width,
     canvas.y + (choices[0]!.y + 38) * canvas.height / logical.height);
   await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "hajaMode"))).toBe("go");
+  await expect.poll(() => page.evaluate(() => {
+    const root = window.__qaGame.scene.getScene("GameScene").children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const [status, hint] = root.list.filter(node => node.type === "Text") as Phaser.GameObjects.Text[];
+    return { status: status!.text, hint: hint!.text, separated: status!.getBounds().bottom < hint!.getBounds().top };
+  })).toMatchObject({ status: expect.stringContaining("覇者・剛"), hint: "与ダメージ+40%", separated: true });
+  await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+  await page.screenshot({ path: "e2e/screenshots/small-tablet-haja-active.png" });
 });

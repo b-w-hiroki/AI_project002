@@ -721,6 +721,29 @@ test("touch starts battle and a move advances the beat after rotation", async ({
   await checkFrame(page, "landscape-battle");
 });
 
+test("battle fighters return to tablet positions after a phone resize", async ({ page }) => {
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(() => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "playerSprite") as Phaser.GameObjects.Image).y)).toBeGreaterThan(400);
+  await page.setViewportSize({ width: 600, height: 600 });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const player = Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image;
+    const enemy = Reflect.get(scene, "enemySprite") as Phaser.GameObjects.Image;
+    return { width: scene.scale.gameSize.width, height: scene.scale.gameSize.height, playerY: player.y, enemyY: enemy.y, playerHeight: player.displayHeight, enemyHeight: enemy.displayHeight };
+  })).toEqual({ width: 800, height: 600, playerY: 286, enemyY: 286, playerHeight: 320, enemyHeight: 320 });
+  await checkFrame(page, "phone-to-tablet-battle");
+  await tapPoint(page, 250, 470);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const player = Reflect.get(scene, "playerSprite") as Phaser.GameObjects.Image;
+    return { width: scene.scale.gameSize.width, x: player.x, height: player.displayHeight };
+  })).toEqual({ width: 450, x: 225, height: 200 });
+  expect(await phase(page)).toBe("battle");
+});
+
 test("live attack, hit, and guard visuals follow the resolved clash", async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 600 });
   await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startBattle").call(window.__qaGame.scene.getScene("GameScene")));

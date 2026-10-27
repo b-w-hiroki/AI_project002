@@ -515,6 +515,18 @@ export class GameScene extends Phaser.Scene {
       : { width: FIGHTER_W, height: FIGHTER_H, y: FIGHTER_Y };
   }
 
+  private restoreLegacyFighters(): void {
+    const bounds = this.fighterBounds();
+    for (const [fighter, x] of [[this.playerSprite, 180], [this.enemySprite, 620]] as const) {
+      this.tweens.killTweensOf(fighter);
+      if (fighter instanceof Phaser.GameObjects.Image) {
+        fighter.setPosition(x, bounds.y).setDisplaySize(bounds.width, bounds.height);
+      } else {
+        fighter.setPosition(x, 300).setScale(1);
+      }
+    }
+  }
+
   private refreshTeamSelection(): void {
     this.teamSummary?.setText(`${tr(this.lang, "編成", "TEAM")} ${this.selectedTeam.length}/3 · ${this.selectedTeam.map(id => fighterName(this.lang, id)).join(" / ")} · ${tr(this.lang, "先頭が出場", "leader starts")}`);
     this.teamButtons.forEach((button, index) => {

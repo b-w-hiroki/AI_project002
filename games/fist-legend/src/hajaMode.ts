@@ -24,6 +24,7 @@ type Runtime = Phaser.Scene & {
 type Ui = {
   root: Phaser.GameObjects.Container;
   aura: Phaser.GameObjects.Graphics;
+  guidancePlate: Phaser.GameObjects.Graphics;
   status: Phaser.GameObjects.Text;
   hint: Phaser.GameObjects.Text;
   buttons: ReturnType<typeof makeButton>[];
@@ -55,6 +56,7 @@ function build(scene: Runtime): Ui {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
   const aura = scene.add.graphics();
+  const guidancePlate = scene.add.graphics();
   const status = scene.add.text(400, 350, "", { fontSize: "14px", fontStyle: "800", color: "#ffe9b0", stroke: "#1d100b", strokeThickness: 4 }).setOrigin(0.5);
   const hint = scene.add.text(400, 368, "", { fontSize: "10px", fontStyle: "800", color: "#d9c7aa", stroke: "#1d100b", strokeThickness: 3 }).setOrigin(0.5);
   const buttons = MODES.map(mode => {
@@ -63,8 +65,8 @@ function build(scene: Runtime): Ui {
       fontSize: "14px", fillColor: info.accent, borderColor: info.glow, touchHeight: 64,
     });
   });
-  const root = scene.add.container(0, 0, [aura, status, hint, ...buttons.map(button => button.container)]).setName("haja-mode-controls").setDepth(3400).setVisible(false);
-  const ui = { root, aura, status, hint, buttons, enabled: null, compactText: null };
+  const root = scene.add.container(0, 0, [aura, guidancePlate, status, hint, ...buttons.map(button => button.container)]).setName("haja-mode-controls").setDepth(3400).setVisible(false);
+  const ui = { root, aura, guidancePlate, status, hint, buttons, enabled: null, compactText: null };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -86,11 +88,15 @@ function refresh(scene: Runtime): void {
   const width = scene.scale.gameSize.width;
   const xs = phone && portrait ? [110, 225, 340] : [330, 400, 470];
   const y = phone && portrait ? 610 : phone ? 337 : 388;
-  const statusY = phone && portrait ? 570 : phone ? 300 : 350;
-  const hintY = phone && portrait ? 588 : phone ? 317 : 368;
+  const statusY = phone && portrait ? 570 : phone ? 300 : compactTablet ? 305 : 350;
+  const hintY = phone && portrait ? 588 : phone ? 317 : compactTablet ? 335 : 368;
   const scale = phone && !portrait ? 0.92 : phone ? 1.08 : 1;
 
   if (ui.compactText !== compactTablet) {
+    ui.status.setFontSize(compactTablet ? 20 : 14);
+    ui.hint.setFontSize(compactTablet ? 20 : 10);
+    ui.guidancePlate.clear();
+    if (compactTablet) ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(220, 289, 360, 66, 8);
     ui.buttons.forEach(button => {
       const label = button.container.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
       label.setFontSize(compactTablet ? 20 : 14);
