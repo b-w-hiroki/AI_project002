@@ -425,3 +425,48 @@ test("Japanese landscape Haja guidance remains readable and separated", async ({
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await page.screenshot({ path: "e2e/screenshots/short-landscape-haja-japanese.png" });
 });
+
+for (const lang of ["ja", "en"] as const) {
+  test(`short landscape battle HUD shows readable HP and time (${lang})`, async ({ page }) => {
+    await page.goto(`/?lang=${lang}`);
+    await waitForSceneReady(page);
+    await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
+    await page.setViewportSize({ width: 568, height: 320 });
+    await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(550);
+    const read = () => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Text | undefined => {
+        for (const node of nodes) {
+          if (node.name === name) return node as Phaser.GameObjects.Text;
+          if (node.type === "Container") { const nested = find((node as Phaser.GameObjects.Container).list, name); if (nested) return nested; }
+        }
+        return undefined;
+      };
+      const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+      return ["mobile-battle-status", "mobile-battle-timer", "mobile-battle-enemy-status", "mobile-battle-detail"].map(name => {
+        const label = find(scene.children.list, name)!;
+        const box = label.getBounds();
+        return { text: label.text, visible: label.visible, px: Number.parseFloat(label.style.fontSize) * scale,
+          left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+      });
+    });
+    await expect.poll(async () => (await read())[0]!.px).toBe(14.4375);
+    const [player, timer, enemy, detail] = await read();
+    for (const label of [player!, timer!, enemy!]) {
+      expect(label.visible).toBe(true);
+      expect(label.px).toBeGreaterThanOrEqual(14);
+      expect(label.top).toBeGreaterThanOrEqual(44);
+      expect(label.bottom).toBeLessThanOrEqual(78);
+    }
+    expect(player!.left).toBeGreaterThanOrEqual(8);
+    expect(player!.right).toBeLessThan(timer!.left);
+    expect(timer!.right).toBeLessThan(enemy!.left);
+    expect(enemy!.right).toBeLessThanOrEqual(792);
+    expect(detail!.visible).toBe(true);
+    expect(detail!.bottom).toBeLessThan(player!.top);
+    expect(player!.text).toContain("100");
+    expect(enemy!.text).toContain("100");
+    await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+    await page.screenshot({ path: `e2e/screenshots/short-landscape-hud-${lang}.png` });
+  });
+}
