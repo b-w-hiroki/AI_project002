@@ -48,7 +48,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   const battleEnemyStatus = text(scene, 432, 18, "", 23, "#fff1d5").setOrigin(1, 0).setName("mobile-battle-enemy-status");
   const battleDetail = text(scene, 400, 24, "", 13, "#fff1d5").setName("mobile-battle-detail");
   const battleTell = text(scene, 225, 104, "", 20, "#ffe2a8").setName("mobile-battle-tell");
-  const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0");
+  const battleGauge = text(scene, 225, 151, "", 12, "#fff0a0").setName("mobile-battle-gauge");
   const counterRing = scene.add.graphics().setName("mobile-counter-ring").setVisible(false);
   const ougiReadyRing = scene.add.graphics().setName("mobile-ougi-ready-ring").setVisible(false);
   battleGroup.add([battleStatus, battleTimer, battleEnemyStatus, battleDetail, battleTell, battleGauge, counterRing, ougiReadyRing]);
@@ -125,7 +125,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     chrome.fillStyle(0x100806, 0.9).fillRoundedRect(18, 372, 330, 60, 14);
     chrome.lineStyle(1, 0xffcf82, 0.4).strokeRoundedRect(18, 372, 330, 60, 14);
     ui.battleTell.setPosition(400, 124).setFontSize(20);
-    ui.battleGauge.setPosition(130, 404).setFontSize(14);
+    ui.battleGauge.setPosition(130, 402).setFontSize(21);
     const canSwitch = (model.selectedTeam?.length ?? 1) > 1;
     (ui.battleGroup.getByName("mobile-switch") as Phaser.GameObjects.Container | null)?.setVisible(false);
     (ui.battleGroup.getByName("mobile-switch-landscape") as Phaser.GameObjects.Container | null)
@@ -152,9 +152,13 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   ui.battleEnemyStatus.setPosition(portrait ? 432 : width - 18, portrait ? 18 : 50).setFontSize(portrait ? 23 : 21).setVisible(true).setText(tr(lang, `相手HP ${battle.enemyHp}`, `CPU HP ${battle.enemyHp}`));
   ui.battleDetail.setVisible(!portrait).setText(`${fighterName(lang, leader.id)} [${activeIndex + 1}/${team.length}]  ·  ${opponentType(lang, model.opponent ?? "rush")} · ${opponentName}`);
   ui.battleTell.setText(`${moveTell(lang, model.nextEnemyMove ?? "punch")}\n${exchangeGuide(lang, model.nextEnemyMove ?? "punch", model.beat ?? 0)}`);
-  ui.battleGauge.setText(gaugeRatio >= 1
-    ? tr(lang, `奥義 準備完了 · 編成 ${activeIndex + 1}/${team.length}`, `SPECIAL READY · TEAM ${activeIndex + 1}/${team.length}`)
-    : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`));
+  ui.battleGauge.setText(portrait
+    ? (gaugeRatio >= 1
+      ? tr(lang, `奥義 準備完了 · 編成 ${activeIndex + 1}/${team.length}`, `SPECIAL READY · TEAM ${activeIndex + 1}/${team.length}`)
+      : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · EXCHANGE ${(model.beat ?? 0) + 1}`))
+    : (gaugeRatio >= 1
+      ? tr(lang, "奥義 準備完了", "SPECIAL READY")
+      : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}%\n${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}%\nEXCHANGE ${(model.beat ?? 0) + 1}`)));
 
   const guidedMove = (model.beat ?? 0) < 3
     ? teamTacticalRead(team, model.nextEnemyMove ?? "punch").counterMove : null;

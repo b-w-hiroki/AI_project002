@@ -443,7 +443,7 @@ for (const lang of ["ja", "en"] as const) {
         return undefined;
       };
       const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
-      return ["mobile-battle-status", "mobile-battle-timer", "mobile-battle-enemy-status", "mobile-battle-detail"].map(name => {
+      return ["mobile-battle-status", "mobile-battle-timer", "mobile-battle-enemy-status", "mobile-battle-detail", "mobile-battle-gauge"].map(name => {
         const label = find(scene.children.list, name)!;
         const box = label.getBounds();
         return { text: label.text, visible: label.visible, px: Number.parseFloat(label.style.fontSize) * scale,
@@ -451,7 +451,7 @@ for (const lang of ["ja", "en"] as const) {
       });
     });
     await expect.poll(async () => (await read())[0]!.px).toBe(14.4375);
-    const [player, timer, enemy, detail] = await read();
+    const [player, timer, enemy, detail, gauge] = await read();
     for (const label of [player!, timer!, enemy!]) {
       expect(label.visible).toBe(true);
       expect(label.px).toBeGreaterThanOrEqual(14);
@@ -466,7 +466,23 @@ for (const lang of ["ja", "en"] as const) {
     expect(detail!.bottom).toBeLessThan(player!.top);
     expect(player!.text).toContain("100");
     expect(enemy!.text).toContain("100");
+    expect(gauge!.px).toBeGreaterThanOrEqual(14);
+    expect(gauge!.left).toBeGreaterThanOrEqual(18);
+    expect(gauge!.right).toBeLessThan(256);
+    expect(gauge!.top).toBeGreaterThanOrEqual(372);
+    expect(gauge!.bottom).toBeLessThanOrEqual(432);
+    expect(gauge!.text).toContain(lang === "ja" ? "1応酬目" : "EXCHANGE 1");
     await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
-    await page.screenshot({ path: `e2e/screenshots/short-landscape-hud-${lang}.png` });
+    await page.screenshot({ path: `e2e/screenshots/short-landscape-gauge-${lang}.png` });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "selectedTeam", ["ryuga", "renka"]);
+      Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerGauge: 100 });
+    });
+    await expect.poll(async () => (await read())[4]!.text).toBe(lang === "ja" ? "奥義 準備完了" : "SPECIAL READY");
+    const ready = (await read())[4]!;
+    expect(ready.left).toBeGreaterThanOrEqual(18);
+    expect(ready.right).toBeLessThan(256);
+    expect(ready.px).toBeGreaterThanOrEqual(14);
   });
 }
