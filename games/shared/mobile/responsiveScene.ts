@@ -47,6 +47,8 @@ export type ResponsiveSceneLike = {
 
 export type SurfaceSize = { width: number; height: number };
 export type ResponsiveGameOptions = LayoutOptions & {
+  /** Set false when a game owns its canvas sizing through a scene layout. */
+  manageSurface?: boolean;
   surface?: {
     portrait: SurfaceSize;
     landscape: SurfaceSize;
@@ -129,7 +131,7 @@ export function installResponsiveGame(
     currentLayout = layout;
     game.registry.set(MOBILE_LAYOUT_REGISTRY_KEY, layout);
     applyViewportCss(layout, document);
-    applySurface(game, layout, options);
+    if (options.manageSurface !== false) applySurface(game, layout, options);
 
     if (signature !== currentSignature) {
       currentSignature = signature;

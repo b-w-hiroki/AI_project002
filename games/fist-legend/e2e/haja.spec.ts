@@ -36,6 +36,29 @@ test.afterEach(async ({ page }) => {
   expect(errors.get(page)).toEqual([]);
 });
 
+test("portrait resize keeps the game surface under one layout owner", async ({ page }) => {
+  await page.evaluate(() => {
+    const canvas = window.__qaGame.canvas;
+    const original = canvas.style.setProperty.bind(canvas.style);
+    const widths: number[] = [];
+    Reflect.set(window, "__qaWidths", widths);
+    canvas.style.setProperty = (name, value, priority) => {
+      if (name === "width" && value) widths.push(Number.parseFloat(value));
+      original(name, value, priority);
+    };
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => new Promise<void>(resolve => {
+    let frames = 0;
+    const next = () => { if (++frames === 20) resolve(); else requestAnimationFrame(next); };
+    requestAnimationFrame(next);
+  }));
+  const widths = await page.evaluate(() => Reflect.get(window, "__qaWidths") as number[]);
+  expect(widths).toContain(280);
+  expect(widths).not.toContain(243);
+});
+
 test("haja mode activates once, exposes the selected identity, and expires", async ({ page }) => {
   const state = await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("GameScene");
