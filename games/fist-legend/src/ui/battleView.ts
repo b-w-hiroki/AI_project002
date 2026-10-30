@@ -115,6 +115,8 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     (["punch", "kick", "ki"] as const).forEach((move, index) => {
       const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
       b?.setPosition(movePositions[index]!.x, movePositions[index]!.y).setScale(1).setVisible(true);
+      const hit = b?.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone | undefined;
+      hit?.setSize(hit.width, 72, true);
     });
     (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
     (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(330, controlsTop + 145).setScale(1).setVisible(true);
@@ -134,6 +136,8 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
     (["punch", "kick", "ki"] as const).forEach((move, index) => {
       const b = ui.battleGroup.getByName(`mobile-move-${move}`) as Phaser.GameObjects.Container | null;
       b?.setPosition(moveXs[index]!, 402).setScale(0.82).setVisible(true);
+      const hit = b?.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone | undefined;
+      hit?.setSize(hit.width, 80, true);
     });
     (ui.battleGroup.getByName("mobile-ougi") as Phaser.GameObjects.Container | null)?.setVisible(false);
     (ui.battleGroup.getByName("mobile-ougi-landscape") as Phaser.GameObjects.Container | null)?.setPosition(735, 402).setScale(1).setVisible(true);

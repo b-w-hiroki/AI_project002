@@ -318,8 +318,9 @@ test("English Haja controls stay usable on a short phone", async ({ page }) => {
     return { width: scene.scale.gameSize.width, status: status!.text, hintFont: Number.parseFloat(hint!.style.fontSize),
       separated: tell.getBounds().bottom < status!.getBounds().top,
       heroVisible: status!.getBounds().top > player.y,
-      inputSeparated: b.y + (area.y + area.height - b.displayOriginY) * b.scaleY < move.y - moveHit.height / 2 };
-  })).toEqual({ width: 450, status: "HAJA · 1 USE / 5s", hintFont: 23, separated: true, heroVisible: true, inputSeparated: true });
+      inputSeparated: b.y + (area.y + area.height - b.displayOriginY) * b.scaleY < move.y - moveHit.height / 2,
+      moveHitHeight: (moveHit.input!.hitArea as Phaser.Geom.Rectangle).height };
+  })).toEqual({ width: 450, status: "HAJA · 1 USE / 5s", hintFont: 23, separated: true, heroVisible: true, inputSeparated: true, moveHitHeight: 72 });
   await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
   await page.screenshot({ path: "e2e/screenshots/phone-haja-english.png" });
 });
@@ -379,18 +380,27 @@ test("landscape Haja guidance stays readable and does not steal a move tap", asy
     };
     const move = find(scene.children.list, "mobile-move-punch") as Phaser.GameObjects.Container;
     const moveHit = move.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const moveArea = moveHit.input!.hitArea as Phaser.Geom.Rectangle;
     const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
     return { statusPx: Number.parseFloat(status!.style.fontSize) * scale, hintPx: Number.parseFloat(hint!.style.fontSize) * scale,
       labelPx: Number.parseFloat(label.style.fontSize) * b.scaleY * scale, hintWidth: hint!.getBounds().width,
       statusBottom: status!.getBounds().bottom, hintTop: hint!.getBounds().top, hintBottom: hint!.getBounds().bottom,
       hajaTop: b.y + (area.y - b.displayOriginY) * b.scaleY,
       hajaBottom: b.y + (area.y + area.height - b.displayOriginY) * b.scaleY,
-      moveTop: move.y - moveHit.height * move.scaleY / 2,
+      moveTop: move.y + (moveArea.y - moveHit.displayOriginY) * move.scaleY,
+      moveHeightPx: moveArea.height * move.scaleY * scale,
+      allMoveHeights: ["mobile-move-punch", "mobile-move-kick", "mobile-move-ki"].map(name => {
+        const control = find(scene.children.list, name) as Phaser.GameObjects.Container;
+        const zone = control.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+        return (zone.input!.hitArea as Phaser.Geom.Rectangle).height * control.scaleY * scale;
+      }),
       labels: buttons.map(button => (button.list.find(node => node.type === "Text") as Phaser.GameObjects.Text).text) };
   });
   await expect.poll(async () => ({ labels: (await read()).labels, statusPx: (await read()).statusPx })).toEqual({ labels: ["ATK", "DEF", "SPD"], statusPx: 14.4375 });
   const initial = await read();
   expect(initial.hajaBottom).toBeLessThan(initial.moveTop);
+  expect(initial.moveHeightPx).toBeGreaterThanOrEqual(44);
+  for (const height of initial.allMoveHeights) expect(height).toBeGreaterThanOrEqual(44);
   expect(initial.statusPx).toBeGreaterThanOrEqual(14);
   expect(initial.hintPx).toBeGreaterThanOrEqual(14);
   expect(initial.labelPx).toBeGreaterThanOrEqual(14);
