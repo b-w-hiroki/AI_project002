@@ -101,7 +101,7 @@ function refresh(scene: Runtime): void {
   const phoneLandscape = phone && !portrait;
   // Follow the portrait move controls as the canvas grows, leaving their hit areas separate.
   const phoneOffset = phonePortrait ? Math.max(0, scene.scale.gameSize.height - 910) : 0;
-  const y = phonePortrait ? 583 + phoneOffset : phoneLandscape ? 324 : 388;
+  const y = phonePortrait ? 583 + phoneOffset : phoneLandscape ? 316 : 388;
   const statusY = phonePortrait ? 503 + phoneOffset : phoneLandscape ? 250 : compactTablet ? 305 : 350;
   const hintY = phonePortrait ? 535 + phoneOffset : phoneLandscape ? 281 : compactTablet ? 335 : 368;
   const scale = phone && !portrait ? 0.92 : phone ? 1.08 : 1;
@@ -124,7 +124,11 @@ function refresh(scene: Runtime): void {
       const label = button.container.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
       label.setFontSize(phonePortrait ? 22 : phoneLandscape ? 23 : compactTablet ? 20 : 14);
       const hitArea = button.container.input?.hitArea as Phaser.Geom.Rectangle | undefined;
-      if (hitArea) hitArea.height = phonePortrait ? 72 : 64;
+      if (hitArea) {
+        hitArea.height = phone ? 72 : 64;
+        hitArea.width = phoneLandscape ? 70 : 68;
+        hitArea.x = phoneLandscape ? -1 : 0;
+      }
     });
     ui.textLayout = textLayout;
     ui.plateOffset = phoneOffset;

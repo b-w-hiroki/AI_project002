@@ -295,7 +295,7 @@ test("English Haja controls stay usable on a short phone", async ({ page }) => {
     const b = root.list.find(node => node.type === "Container") as Phaser.GameObjects.Container;
     const status = root.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
     return { x: b.x, height: (b.input!.hitArea as Phaser.Geom.Rectangle).height, font: Number.parseFloat(status.style.fontSize) };
-  })).toEqual({ x: 330, height: 64, font: 21 });
+  })).toEqual({ x: 330, height: 72, font: 21 });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
   await expect.poll(() => page.evaluate(() => {
@@ -389,6 +389,12 @@ test("landscape Haja guidance stays readable and does not steal a move tap", asy
       hajaBottom: b.y + (area.y + area.height - b.displayOriginY) * b.scaleY,
       moveTop: move.y + (moveArea.y - moveHit.displayOriginY) * move.scaleY,
       moveHeightPx: moveArea.height * move.scaleY * scale,
+      hajaSizes: buttons.map(button => {
+        const hit = button.input!.hitArea as Phaser.Geom.Rectangle;
+        return { width: hit.width * button.scaleX * scale, height: hit.height * button.scaleY * scale,
+          left: button.x + (hit.x - button.displayOriginX) * button.scaleX,
+          right: button.x + (hit.x + hit.width - button.displayOriginX) * button.scaleX };
+      }),
       allMoveHeights: ["mobile-move-punch", "mobile-move-kick", "mobile-move-ki"].map(name => {
         const control = find(scene.children.list, name) as Phaser.GameObjects.Container;
         const zone = control.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
@@ -401,6 +407,12 @@ test("landscape Haja guidance stays readable and does not steal a move tap", asy
   expect(initial.hajaBottom).toBeLessThan(initial.moveTop);
   expect(initial.moveHeightPx).toBeGreaterThanOrEqual(44);
   for (const height of initial.allMoveHeights) expect(height).toBeGreaterThanOrEqual(44);
+  for (const size of initial.hajaSizes) {
+    expect(size.width).toBeGreaterThanOrEqual(44);
+    expect(size.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(initial.hajaSizes[0]!.right).toBeLessThan(initial.hajaSizes[1]!.left);
+  expect(initial.hajaSizes[1]!.right).toBeLessThan(initial.hajaSizes[2]!.left);
   expect(initial.statusPx).toBeGreaterThanOrEqual(14);
   expect(initial.hintPx).toBeGreaterThanOrEqual(14);
   expect(initial.labelPx).toBeGreaterThanOrEqual(14);
