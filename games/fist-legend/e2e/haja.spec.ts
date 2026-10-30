@@ -471,6 +471,56 @@ test("Japanese landscape Haja guidance remains readable and separated", async ({
   await page.screenshot({ path: "e2e/screenshots/short-landscape-haja-japanese.png" });
 });
 
+test("short landscape switch has a reachable touch target separate from Haja", async ({ page }) => {
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "selectedTeam", ["ryuga", "renka"]);
+    Reflect.get(scene, "startSingleBattle").call(scene);
+  });
+  await page.setViewportSize({ width: 568, height: 320 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(550);
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node;
+        if (node.type === "Container") { const found = find((node as Phaser.GameObjects.Container).list, name); if (found) return found; }
+      }
+      return undefined;
+    };
+    const button = find(scene.children.list, "mobile-switch-landscape") as Phaser.GameObjects.Container;
+    const zone = button.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const hit = zone.input!.hitArea as Phaser.Geom.Rectangle;
+    const root = scene.children.getByName("haja-mode-controls") as Phaser.GameObjects.Container;
+    const haja = root.list.find(node => node.type === "Container") as Phaser.GameObjects.Container;
+    const hajaHit = haja.input!.hitArea as Phaser.Geom.Rectangle;
+    const punch = find(scene.children.list, "mobile-move-punch") as Phaser.GameObjects.Container;
+    const punchZone = punch.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+    const punchHit = punchZone.input!.hitArea as Phaser.Geom.Rectangle;
+    const scale = window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width;
+    return { visible: button.visible, width: hit.width * button.scaleX * scale, height: hit.height * button.scaleY * scale,
+      switchTop: button.y + (hit.y - zone.displayOriginY) * button.scaleY,
+      switchRight: button.x + (hit.x + hit.width - zone.displayOriginX) * button.scaleX,
+      punchLeft: punch.x + (punchHit.x - punchZone.displayOriginX) * punch.scaleX,
+      hajaBottom: haja.y + (hajaHit.y + hajaHit.height - haja.displayOriginY) * haja.scaleY };
+  });
+  await expect.poll(async () => (await read()).visible).toBe(true);
+  const state = await read();
+  expect(state.width).toBeGreaterThanOrEqual(44);
+  expect(state.height).toBeGreaterThanOrEqual(44);
+  expect(state.hajaBottom).toBeLessThan(state.switchTop);
+  expect(state.switchRight).toBeLessThan(state.punchLeft);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.screenshot({ path: "e2e/screenshots/short-landscape-switch.png" });
+  const canvas = (await page.locator("canvas").boundingBox())!;
+  await page.touchscreen.tap(canvas.x + 300 * canvas.width / 800, canvas.y + (state.switchTop + 2) * canvas.height / 450);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "activeFighterIndex"))).toBe(1);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "hajaUsed"))).toBe(false);
+});
+
 for (const lang of ["ja", "en"] as const) {
   test(`short landscape battle HUD shows readable HP and time (${lang})`, async ({ page }) => {
     await page.goto(`/?lang=${lang}`);

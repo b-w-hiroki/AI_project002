@@ -70,6 +70,8 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   switchButton.setName("mobile-switch").setVisible(false);
   const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter);
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
+  const landscapeSwitchHit = landscapeSwitch.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+  landscapeSwitchHit.setSize(landscapeSwitchHit.width, 75, true);
 
 
   return { battleGroup, battleStatus, battleTimer, battleEnemyStatus, battleDetail, battleTell, battleGauge, counterRing, ougiReadyRing };
