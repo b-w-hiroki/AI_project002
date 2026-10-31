@@ -550,6 +550,20 @@ test("first battle reaches special and retry through player actions", async ({ p
     const counter = counterFor(tell);
     if (round < 3) expect(tell).toContain(`${counter}で有利を取ろう`);
     else expect(tell).toContain("有利: 拳>気>蹴>拳");
+    const moveName = ({ "拳": "punch", "蹴": "kick", "気": "ki" } as const)[counter as "拳" | "蹴" | "気"];
+    await expect.poll(() => page.evaluate(({ moveName, guided }) => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.GameObject | undefined => {
+        for (const node of nodes) {
+          if (node.name === name) return node;
+          if (node.type === "Container") { const nested = find((node as Phaser.GameObjects.Container).list, name); if (nested) return nested; }
+        }
+        return undefined;
+      };
+      const ring = find(scene.children.list, "mobile-counter-ring") as Phaser.GameObjects.Graphics;
+      const button = find(scene.children.list, `mobile-move-${moveName}`) as Phaser.GameObjects.Container;
+      return guided ? ring.visible && ring.x === button.x && ring.y === button.y : !ring.visible;
+    }, { moveName, guided: round < 3 })).toBe(true);
     await tapVisibleText(page, counter);
     await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBe(round + 1);
   }
