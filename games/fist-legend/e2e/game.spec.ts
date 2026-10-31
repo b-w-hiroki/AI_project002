@@ -529,6 +529,50 @@ async function visibleCopy(page: Page): Promise<string[]> {
   });
 }
 
+test("first battle reaches special and retry through player actions", async ({ page }) => {
+  test.setTimeout(45000);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  const counterFor = (tell: string): string => {
+    if (tell.includes("拳を引いている")) return "蹴";
+    if (tell.includes("脚へ重心を移した")) return "気";
+    if (tell.includes("掌に気が集まる")) return "拳";
+    throw new Error(`Unknown opponent tell: ${tell}`);
+  };
+  for (let round = 0; round < 4; round++) {
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+    })).toBe(true);
+    const tell = (await readBattleTell(page)).text;
+    await tapVisibleText(page, counterFor(tell));
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBe(round + 1);
+  }
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+  await expect.poll(() => page.evaluate(() => {
+    const camera = window.__qaGame.scene.getScene("GameScene").cameras.main;
+    return !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning;
+  })).toBe(true);
+  await checkFrame(page, "first-play-special-ready");
+  await tapVisibleText(page, "奥義");
+  await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 0%")) || await phase(page) === "result").toBe(true);
+  for (let attempt = 0; attempt < 3 && await phase(page) === "battle"; attempt++) {
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "accepting"))).toBe(true);
+    await tapVisibleText(page, counterFor((await readBattleTell(page)).text));
+    await page.waitForTimeout(500);
+  }
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => visibleCopy(page)).toContain("相手のHPを0にした");
+  await expect.poll(() => visibleCopy(page)).toContain("勝利");
+  await checkFrame(page, "first-play-result");
+  await tapVisibleText(page, "もう一度");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("蹴で有利を取ろう");
+});
+
 test("first loop explains modes, coaches a counter, and reports an HP decision", async ({ page }) => {
   await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
   await tapVisibleText(page, "対戦");

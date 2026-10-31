@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の初回対戦から奥義・結果・再挑戦までを操作で通す検査を追加する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "既存の戦闘と結果の振る舞いを入力操作で検証し、ゲーム仕様は変更しない"},
+      "design": {"status": "unchanged", "reason": "既存の予兆・奥義・勝敗・再挑戦の実装は変更せずE2Eの検査範囲を追加する"}
+    }
+  },
+  "validation": ["短い縦画面で予兆の文面を読み、有利な技を選び続けて奥義を放ち、勝利理由と再挑戦までをタッチ操作で確認した", "WebKitで通し操作を3回繰り返し、lint・typecheck・単体62件・buildとChromium・WebKit各43件が成功した", "奥義準備と勝利結果のブラウザ画像を確認した"],
+  "limitations": ["自動操作は初見の人による理解度や楽しさの評価に代わらない", "物理iOS Safari・Android Chromeと外部Portal Previewは未確認"]
+}
