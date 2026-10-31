@@ -573,6 +573,36 @@ test("first battle reaches special and retry through player actions", async ({ p
   await expect.poll(async () => (await readBattleTell(page)).text).toContain("蹴で有利を取ろう");
 });
 
+test("a first battle loss explains the result and allows retry", async ({ page }) => {
+  test.setTimeout(45000);
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  for (let attempt = 0; attempt < 12; attempt++) {
+    await expect.poll(() => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const phase = Reflect.get(scene, "phase");
+      const camera = scene.cameras.main;
+      return phase === "result" || (phase === "battle" && Reflect.get(scene, "accepting") === true && !camera.flashEffect.isRunning && !camera.shakeEffect.isRunning);
+    })).toBe(true);
+    if (await phase(page) === "result") break;
+    const tell = (await readBattleTell(page)).text;
+    const move = tell.includes("拳を引いている") ? "気" : tell.includes("脚へ重心を移した") ? "拳" : tell.includes("掌に気が集まる") ? "蹴" : null;
+    expect(move, `Unknown opponent tell: ${tell}`).not.toBeNull();
+    const previousBeat = await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"));
+    await tapVisibleText(page, move!);
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBeGreaterThan(previousBeat);
+  }
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => visibleCopy(page)).toContain("自分のHPが0になった");
+  await expect.poll(() => visibleCopy(page)).toContain("敗北");
+  await checkFrame(page, "first-play-defeat");
+  await tapVisibleText(page, "もう一度");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("蹴で有利を取ろう");
+});
+
 test("first loop explains modes, coaches a counter, and reports an HP decision", async ({ page }) => {
   await expect.poll(() => visibleCopy(page)).toContain("対戦で練習\n3連戦で腕試し\n物語で章を進める");
   await tapVisibleText(page, "対戦");
