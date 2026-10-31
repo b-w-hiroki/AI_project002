@@ -1,0 +1,11 @@
+{
+  "summary": "Keep stage-buff cards readable and selectable on portrait phones and after rotation",
+  "areas": {
+    "side-scroller": {
+      "spec": { "status": "updated", "reason": "The stage-buff choice must remain fully visible and actionable in portrait and after rotation." },
+      "design": { "status": "updated", "reason": "The chooser now lays out cards by logical viewport size and uses current screen coordinates for selection after resize." }
+    }
+  },
+  "validation": ["Side-scroller typecheck, lint, unit tests and build", "Playwright portrait selection and portrait-to-landscape rotation with real card taps and screenshots"],
+  "limitations": ["Karma Quest battle-to-report timing remains an independent unresolved issue."]
+}

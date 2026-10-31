@@ -918,7 +918,7 @@ test.describe("phone visual QA", () => {
     }
   });
 
-  test("stage-buff selection resumes guard input", async ({ page }) => {
+  test("stage-buff selection resumes guard input", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/?visualqa=battle");
     await page.waitForFunction(() => !!window.__qaGame);
@@ -933,6 +933,19 @@ test.describe("phone visual QA", () => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       return { visible: Reflect.get(scene, "stageBuffOverlayVisible"), paused: scene.physics.world.isPaused };
     })).toEqual({ visible: true, paused: true });
+    const cards = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const overlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container;
+      return overlay.list.filter((item): item is Phaser.GameObjects.Rectangle =>
+        item.name.startsWith("stage-buff-card-"),
+      ).map(card => ({ x: card.x, y: card.y, left: card.x - card.width / 2, right: card.x + card.width / 2 }));
+    });
+    expect(cards).toHaveLength(3);
+    for (const card of cards) {
+      expect(card.left).toBeGreaterThanOrEqual(0);
+      expect(card.right).toBeLessThanOrEqual(450);
+    }
+    await testInfo.attach("stage-buff-portrait", { body: await page.screenshot(), contentType: "image/png" });
 
     const guardPoint = await canvasPoint(page, 268, 756);
     await page.mouse.move(guardPoint.x, guardPoint.y);
@@ -945,7 +958,7 @@ test.describe("phone visual QA", () => {
     expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "guarding"))).toBe(false);
     await page.mouse.up();
 
-    await tapGamePoint(page, 250, 300);
+    await tapGamePoint(page, cards[0].x, cards[0].y);
     await expectPlayableBattle(page);
     await page.evaluate(() => window.__qaGame.scene.getScene("GameScene").input.keyboard?.resetKeys());
     await page.mouse.move(guardPoint.x, guardPoint.y);
@@ -959,6 +972,42 @@ test.describe("phone visual QA", () => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       return { keyDown: (Reflect.get(scene, "guardKey") as Phaser.Input.Keyboard.Key).isDown, guarding: Reflect.get(scene, "guarding") };
     })).toEqual({ keyDown: false, guarding: false });
+  });
+
+  test("stage-buff chooser stays selectable after rotation", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/?visualqa=battle");
+    await page.waitForFunction(() => !!window.__qaGame);
+    await enterBattleForVisualQa(page, true);
+    await expectPlayableBattle(page);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "openStageBuffOverlay").call(scene);
+    });
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(() => page.evaluate(() => window.__qaGame.scale.gameSize.width)).toBe(800);
+    await expect.poll(() => page.locator("canvas").evaluate(canvas => (canvas as HTMLCanvasElement).width)).toBe(800);
+    const firstFrame = await page.evaluate(() => window.__qaGame.loop.frame);
+    await expect.poll(() => page.evaluate(() => window.__qaGame.loop.frame)).toBeGreaterThan(firstFrame + 2);
+    const state = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const overlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container;
+      const cards = overlay.list.filter((item): item is Phaser.GameObjects.Rectangle =>
+        item.name.startsWith("stage-buff-card-"),
+      );
+      return { visible: Reflect.get(scene, "stageBuffOverlayVisible"), paused: scene.physics.world.isPaused,
+        cards: cards.map(card => ({ x: card.x, y: card.y, left: card.x - card.width / 2, right: card.x + card.width / 2 })) };
+    });
+    expect(state.visible).toBe(true);
+    expect(state.paused).toBe(true);
+    expect(state.cards).toHaveLength(3);
+    for (const card of state.cards) {
+      expect(card.left).toBeGreaterThanOrEqual(0);
+      expect(card.right).toBeLessThanOrEqual(800);
+    }
+    await testInfo.attach("stage-buff-landscape", { body: await page.screenshot(), contentType: "image/png" });
+    await tapGamePoint(page, state.cards[1].x, state.cards[1].y);
+    await expectPlayableBattle(page);
   });
 
   test("visual QA: game over hides touch controls", async ({ page }) => {

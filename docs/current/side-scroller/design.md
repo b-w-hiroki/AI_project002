@@ -10,6 +10,7 @@
 旧経路だけを編集して通常画面を修正したと判定しない。
 
 ## ロジックと状態
+ステージバフの選択面は現在のゲーム画面寸法で組み直す。縦向きはカードを縦に3枚並べ、横向きは従来どおり横に3枚並べる。背景の入力遮断領域はカードと重ねず、回転後のカード選択は現在の画面座標で判定する。日本語説明文はカード幅で明示的に改行する。
 [combat](../../../games/side-scroller/src/logic/combat.ts) は戦闘・武器、[waves](../../../games/side-scroller/src/logic/waves.ts) はウェーブ、[style](../../../games/side-scroller/src/logic/style.ts) は連撃・居合とボスの予兆／突進／隙、[commandInput](../../../games/side-scroller/src/logic/commandInput.ts) はコマンドを担当。
 [loadout](../../../games/side-scroller/src/logic/loadout.ts) のWeaponTemplate→WeaponInstanceを戦闘用WeaponDefへ変換する。
 武器切替の実行と物理への適用はScene側。描画だけで武器能力を変更しない。

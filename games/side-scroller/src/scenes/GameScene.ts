@@ -414,6 +414,32 @@ export class GameScene extends Phaser.Scene {
     this.buildTipsOverlay();
     this.buildSummonOverlay();
     this.buildStageBuffOverlay();
+    const relayoutStageBuff = () => {
+      if (!this.stageBuffOverlayVisible) return;
+      this.buildStageBuffOverlay();
+      this.updateStageBuffOverlayText();
+      this.stageBuffOverlay?.setVisible(true);
+    };
+    this.scale.on("resize", relayoutStageBuff);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off("resize", relayoutStageBuff));
+    // Phaser can retain the old hit transform for container children after a canvas resize.
+    // Use the current screen-space pointer for the chooser while it is visible.
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (!this.stageBuffOverlayVisible) return;
+      const portrait = this.scale.gameSize.width < 600;
+      const centerX = this.scale.gameSize.width / 2;
+      const centerY = this.scale.gameSize.height / 2;
+      const cardWidth = portrait ? this.scale.gameSize.width - 70 : 130;
+      const cardHeight = portrait ? 72 : 110;
+      for (let i = 0; i < 3; i++) {
+        const x = portrait ? centerX : centerX - 150 + i * 150;
+        const y = portrait ? centerY - 78 + i * 86 : centerY;
+        if (Math.abs(pointer.x - x) <= cardWidth / 2 && Math.abs(pointer.y - y) <= cardHeight / 2) {
+          this.selectStageBuff(i);
+          break;
+        }
+      }
+    });
 
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.fadeIn(200);
@@ -1324,9 +1350,27 @@ export class GameScene extends Phaser.Scene {
 
   /** ヴァンサバ風の一時停止＋選択UI。ステージバフ（アウトゲーム設定とは独立したプール）から1つ選ぶ */
   private buildStageBuffOverlay(): void {
+    this.stageBuffOverlay?.destroy();
+    this.stageBuffOverlayTexts = [];
+    const width = this.scale.gameSize.width;
+    const height = this.scale.gameSize.height;
+    const portrait = width < 600;
+    const centerX = width / 2;
+    const centerY = height / 2;
     const overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(120).setVisible(false);
-    const bg = this.add.rectangle(400, 300, 800, 600, 0x3a5a78, 0.55).setInteractive();
-    const panel = drawPanel(this, 400, 300, 560, 280, {
+    const panelWidth = portrait ? width - 30 : 560;
+    const panelHeight = portrait ? 370 : 280;
+    const bg = this.add.rectangle(centerX, centerY, width, height, 0x3a5a78, 0.55);
+    // The backdrop catches taps outside the chooser, while cards retain the hit area inside it.
+    const sideWidth = (width - panelWidth) / 2;
+    const sideHeight = (height - panelHeight) / 2;
+    const blockers = [
+      this.add.rectangle(centerX, sideHeight / 2, width, sideHeight, 0, 0),
+      this.add.rectangle(centerX, height - sideHeight / 2, width, sideHeight, 0, 0),
+      this.add.rectangle(sideWidth / 2, centerY, sideWidth, panelHeight, 0, 0),
+      this.add.rectangle(width - sideWidth / 2, centerY, sideWidth, panelHeight, 0, 0),
+    ].map(blocker => blocker.setInteractive());
+    const panel = drawPanel(this, centerX, centerY, panelWidth, panelHeight, {
       radius: 18,
       fillColor: 0xffffff,
       fillAlpha: 0.98,
@@ -1335,14 +1379,16 @@ export class GameScene extends Phaser.Scene {
       shadow: false,
     });
     const title = this.add
-      .text(400, 190, tr(this.lang, "✨ ステージバフ — 1つ選択", "✨ STAGE BUFF — Choose One"), { fontSize: "18px", color: "#2d3a52", fontStyle: "700" })
+      .text(centerX, centerY - (portrait ? 155 : 110), tr(this.lang, "✨ ステージバフ — 1つ選択", "✨ STAGE BUFF — Choose One"), { fontSize: portrait ? "16px" : "18px", color: "#2d3a52", fontStyle: "700" })
       .setOrigin(0.5);
-    overlay.add([bg, panel, title]);
+    overlay.add([bg, ...blockers, panel, title]);
 
     for (let i = 0; i < 3; i++) {
-      const x = 250 + i * 150;
-      const y = 300;
-      const cardPanel = drawPanel(this, x, y, 130, 110, {
+      const x = portrait ? centerX : centerX - 150 + i * 150;
+      const y = portrait ? centerY - 78 + i * 86 : centerY;
+      const cardWidth = portrait ? width - 70 : 130;
+      const cardHeight = portrait ? 72 : 110;
+      const cardPanel = drawPanel(this, x, y, cardWidth, cardHeight, {
         radius: 12,
         fillColor: 0xeaf5ff,
         borderColor: 0x9ecbef,
@@ -1350,17 +1396,18 @@ export class GameScene extends Phaser.Scene {
         shadow: false,
       });
       const box = this.add
-        .rectangle(x, y, 130, 110, 0xffffff, 0)
+        .rectangle(x, y, cardWidth, cardHeight, 0xffffff, 0)
+        .setName(`stage-buff-card-${i}`)
         .setInteractive({ useHandCursor: true })
         .on("pointerover", () =>
-          cardPanel.lineStyle(2, 0xc98a12, 0.9).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(2, 0xc98a12, 0.9).strokeRoundedRect(x - cardWidth / 2, y - cardHeight / 2, cardWidth, cardHeight, 12),
         )
         .on("pointerout", () =>
-          cardPanel.lineStyle(1, 0x9ecbef, 0.8).strokeRoundedRect(x - 65, y - 55, 130, 110, 12),
+          cardPanel.lineStyle(1, 0x9ecbef, 0.8).strokeRoundedRect(x - cardWidth / 2, y - cardHeight / 2, cardWidth, cardHeight, 12),
         )
         .on("pointerdown", () => this.selectStageBuff(i));
       const text = this.add
-        .text(x, y, "", { fontSize: "12px", color: "#3a4a5a", align: "center", wordWrap: { width: 116 } })
+        .text(x, y, "", { fontSize: "14px", color: "#3a4a5a", align: "center", wordWrap: { width: cardWidth - 14 } })
         .setOrigin(0.5);
       overlay.add([cardPanel, box, text]);
       this.stageBuffOverlayTexts.push(text);
@@ -1370,14 +1417,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private openStageBuffOverlay(): void {
+    this.buildStageBuffOverlay();
     this.currentStageBuffOptions = rollStageBuffOptions(3);
-    this.currentStageBuffOptions.forEach((option, i) => {
-      const localized = stageBuffText(this.lang, option.kind, option.label, option.desc);
-      this.stageBuffOverlayTexts[i]?.setText(`${localized.label}\n${localized.desc}`);
-    });
+    this.updateStageBuffOverlayText();
     this.stageBuffOverlayVisible = true;
     this.physics.pause();
     this.stageBuffOverlay?.setVisible(true);
+  }
+
+  private updateStageBuffOverlayText(): void {
+    this.currentStageBuffOptions.forEach((option, i) => {
+      const localized = stageBuffText(this.lang, option.kind, option.label, option.desc);
+      const maxChars = this.scale.gameSize.width < 600 ? 24 : 9;
+      const desc = this.lang === "ja"
+        ? Array.from(localized.desc).reduce<string[]>((lines, character) => {
+          if (!lines.length || Array.from(lines[lines.length - 1] ?? "").length >= maxChars) lines.push("");
+          lines[lines.length - 1] = (lines[lines.length - 1] ?? "") + character;
+          return lines;
+        }, []).join("\n")
+        : localized.desc;
+      this.stageBuffOverlayTexts[i]?.setText(`${localized.label}\n${desc}`);
+    });
   }
 
   private closeStageBuffOverlay(): void {
@@ -1387,6 +1447,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private selectStageBuff(index: number): void {
+    if (!this.stageBuffOverlayVisible) return;
     const option = this.currentStageBuffOptions[index];
     if (!option) return;
     const time = this.time.now;
