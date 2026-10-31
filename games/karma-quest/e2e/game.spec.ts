@@ -588,8 +588,14 @@ async function expectNaturalBattleReport(page: Page, label: string): Promise<voi
       sceneActive: scene.sys.isActive(),
       scenePausedByManager: scene.sys.isPaused(),
       currentBattleResult: Reflect.get(scene, "currentBattleResult") !== null,
-      activeTimers: (Reflect.get(clock, "_activeList") as unknown[] | undefined)?.length ?? null,
+      activeTimers: (Reflect.get(clock, "_active") as Phaser.Time.TimerEvent[] | undefined)?.map(timer => ({
+        delay: timer.delay, elapsed: timer.elapsed, paused: timer.paused, timeScale: timer.timeScale,
+      })) ?? null,
       pendingTimers: (Reflect.get(clock, "_pendingInsertion") as unknown[] | undefined)?.length ?? null,
+      frameDelta: game.loop.delta,
+      rawFrameDelta: game.loop.rawDelta,
+      actualFps: game.loop.actualFps,
+      frameCooldown: Reflect.get(game.loop, "_coolDown"),
       visible: document.visibilityState,
       focused: document.hasFocus(),
       wallTime: performance.now(),
@@ -3015,10 +3021,12 @@ test("two tabs serialize raid claims, evaluations, and best years", { tag: "@web
     const update = (target: Page, amount: number, year: number) => target.evaluate(async ({ amount, year }) => {
       const path = "/src/logic/progress.ts";
       const progress = await import(path);
-      await Promise.all([progress.addTotalEvaluation(amount), progress.saveBestStage(year)]);
+      const start = performance.now();
+      const [total] = await Promise.all([progress.addTotalEvaluation(amount), progress.saveBestStage(year)]);
+      return { amount, year, total, elapsedMs: Math.round(performance.now() - start), sessionOnly: progress.hasUnavailableProgress() };
     }, { amount, year });
-    await Promise.all([update(page, 10, 6), update(other, 20, 4)]);
-    expect((await saved()).total).toBe(610);
+    const updates = await Promise.all([update(page, 10, 6), update(other, 20, 4)]);
+    expect((await saved()).total, `Concurrent update results: ${JSON.stringify(updates)}`).toBe(610);
     expect(await page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("6");
   } finally { await other.close(); }
 });

@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い横画面で交代のタッチ領域を広げる",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "横画面の交代領域の大きさと他操作との分離条件を追加した"},
+      "design": {"status": "updated", "reason": "交代の入力Zoneの寸法と境界タップの検査を記録した"}
+    }
+  },
+  "validation": ["修正前の568×320 WebKitで交代の入力高さが40.205pxと測定された", "修正後は交代の幅・高さと隣接操作の分離を検査し、上端寄りのタップで交代して覇者モードが発動しないことを確認した", "lint・typecheck・単体62件・buildとChromium・WebKit各42件が成功した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

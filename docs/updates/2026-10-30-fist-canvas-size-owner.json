@@ -1,0 +1,15 @@
+{
+  "summary": "覇拳伝の画面切替でCanvasのサイズ設定が競合する問題を修正する",
+  "areas": {
+    "platform": {
+      "spec": {"status": "unchanged", "reason": "共通基盤の既定の表示動作と各作品の操作仕様は変更しない"},
+      "design": {"status": "updated", "reason": "作品側でCanvasサイズを管理する場合の共通基盤の設定を記録した"}
+    },
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "画面切替中も既存の表示と操作条件を維持する修正で、ゲーム仕様の追加はない"},
+      "design": {"status": "updated", "reason": "共通基盤と作品固有のCanvas寸法管理の分担と再現テストを記録した"}
+    }
+  },
+  "validation": ["修正前のWebKitで320×568切替時にCanvas幅280pxと243pxが交互に設定されることを再現した", "修正後のWebKitでサイズ設定の競合と既存の短い縦画面操作を各5回検査した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

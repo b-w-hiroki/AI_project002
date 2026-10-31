@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の覇者モードを英語化し、小さい縦スマホで説明と選択肢を読める大きさにする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "英語の選択肢・効果と短い縦スマホでの表示・入力条件を追加した"},
+      "design": {"status": "updated", "reason": "言語別の文言、縦スマホの寸法と画面高に応じた配置、入力領域の切替を記録した"}
+    }
+  },
+  "validation": ["修正前のWebKit E2Eで英語画面の覇者モードが日本語のままと再現した", "lint・typecheck・単体62件・build、ChromiumとWebKitのE2E各36件に成功した", "320×568と390×844、600×600の日英WebKit画面で表示・位置を確認し、短い縦画面では通常技と覇者モードの入力境界を実タップした", "覇者モードの既存画像テストは戦闘状態の描画とフラッシュ終了を待ってから撮影するようにし、対象テストをChromium・WebKitで再実行した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

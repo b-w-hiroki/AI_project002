@@ -262,6 +262,40 @@ test("management screens keep readable visual hierarchy", async ({ page }) => {
   await checkFrame(page, "short-portrait-roster");
 });
 
+for (const lang of ["ja", "en"]) {
+  test(`compact tablet roster ${lang} preserves text spacing and return input`, async ({ page }) => {
+    await page.setViewportSize({ width: 600, height: 600 });
+    await page.goto(`/?lang=${lang}`);
+    await page.waitForFunction(() => {
+      const scene = window.__qaGame?.scene.getScene("GameScene");
+      return !!scene && !!Reflect.get(scene, "rosterGroup");
+    });
+    const layout = await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.get(scene, "showRoster").call(scene);
+      const root = Reflect.get(scene, "rosterGroup") as Phaser.GameObjects.Container;
+      const heading = (root.getByName("rosterHeading") as Phaser.GameObjects.Text).getBounds();
+      const hint = (root.getByName("rosterHint") as Phaser.GameObjects.Text).getBounds();
+      const inventory = (root.getByName("rosterInventory") as Phaser.GameObjects.Text).getBounds();
+      const row = root.list.find(node => node.name.startsWith("rosterRow:")) as Phaser.GameObjects.Container;
+      const back = root.getByName("rosterBackButton") as Phaser.GameObjects.Container;
+      return { headingGap: hint.top - heading.bottom, hintGap: inventory.top - hint.bottom,
+        rowGap: row.getBounds().top - inventory.bottom, left: hint.left, right: hint.right,
+        backX: back.x, backY: back.y };
+    });
+    expect(layout.headingGap).toBeGreaterThanOrEqual(2);
+    expect(layout.hintGap).toBeGreaterThanOrEqual(4);
+    expect(layout.rowGap).toBeGreaterThanOrEqual(4);
+    expect(layout.left).toBeGreaterThanOrEqual(0);
+    expect(layout.right).toBeLessThanOrEqual(450);
+    await checkFrame(page, `compact-tablet-roster-${lang}`);
+    const canvas = await page.locator("canvas").boundingBox();
+    await page.touchscreen.tap(canvas!.x + layout.backX * canvas!.width / 450,
+      canvas!.y + layout.backY * canvas!.height / 800);
+    await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"))).toBe("title");
+  });
+}
+
 test("expedition result is visually reviewable after a clear", async ({ page }) => {
   await tapPoint(page, 225, 635);
   await expect.poll(() => expeditionView(page)).toBe("camp");
