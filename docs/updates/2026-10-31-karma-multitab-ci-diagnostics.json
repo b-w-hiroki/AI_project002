@@ -6,6 +6,6 @@
       "design": {"status": "unchanged", "reason": "ロックや保存処理を変更せず、テストから処理結果と待機時間を記録する"}
     }
   },
-  "validation": ["CIでは２タブの累計評価が610ではなく590となりWebKit 52件中１件が失敗した", "WindowsのWebKitで対象テストを診断追加前後に各５回、Chromiumで診断追加後に３回実行し、すべて成功した", "Karma Questのlint・typecheck・単体157件・buildが成功した"],
+  "validation": ["CIでは２タブの累計評価が610ではなく590となりWebKit 52件中１件が失敗したが、同じheadの失敗ジョブ再実行は成功した", "WindowsのWebKitで対象テストを診断追加前後に各５回、Chromiumで診断追加後に３回実行し、すべて成功した", "Karma Questのlint・typecheck・単体157件・buildが成功した"],
   "limitations": ["CI失敗時の待機時間とページ内保持への切替は取得されておらず原因未確定", "物理端末や外部Portalは確認していない"]
 }
