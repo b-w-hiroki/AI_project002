@@ -529,6 +529,64 @@ async function visibleCopy(page: Page): Promise<string[]> {
   });
 }
 
+for (const lang of ["ja", "en"] as const) {
+  test(`short portrait special gauge is readable and fits (${lang})`, async ({ page }) => {
+    await page.goto(`/?lang=${lang}`);
+    await waitForSceneReady(page);
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "startSingleBattle").call(window.__qaGame.scene.getScene("GameScene")));
+    await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+    const read = () => page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      const find = (nodes: Phaser.GameObjects.GameObject[]): Phaser.GameObjects.Text | undefined => {
+        for (const node of nodes) {
+          if (node.name === "mobile-battle-gauge") return node as Phaser.GameObjects.Text;
+          if (node.type === "Container") { const result = find((node as Phaser.GameObjects.Container).list); if (result) return result; }
+        }
+        return undefined;
+      };
+      const gauge = find(scene.children.list)!;
+      const bounds = gauge.getBounds();
+      return { text: gauge.text, fontPx: Number.parseFloat(gauge.style.fontSize) * window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width,
+        left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
+    });
+    await expect.poll(async () => (await read()).text).toContain(lang === "ja" ? "奥義 0%" : "SPECIAL 0%");
+    const gauge = await read();
+    expect(gauge.fontPx).toBeGreaterThanOrEqual(14);
+    expect(gauge.left).toBeGreaterThanOrEqual(10);
+    expect(gauge.right).toBeLessThanOrEqual(440);
+    expect(gauge.top).toBeGreaterThanOrEqual(66);
+    expect(gauge.bottom).toBeLessThanOrEqual(98);
+    expect(gauge.text).toContain(lang === "ja" ? "編成 1/1 · 1応酬目" : "TEAM 1/1 · TURN 1");
+    await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
+    await page.screenshot({ path: `e2e/screenshots/short-portrait-gauge-${lang}.png` });
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "selectedTeam", ["ryuga", "renka", "gaku"]);
+      Reflect.set(scene, "activeFighterIndex", 2);
+      Reflect.set(scene, "beat", 9);
+    });
+    await expect.poll(async () => (await read()).text).toContain(lang === "ja" ? "編成 3/3 · 10応酬目" : "TEAM 3/3 · TURN 10");
+    const later = await read();
+    expect(later.left).toBeGreaterThanOrEqual(10);
+    expect(later.right).toBeLessThanOrEqual(440);
+    expect(later.top).toBeGreaterThanOrEqual(66);
+    expect(later.bottom).toBeLessThanOrEqual(98);
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerGauge: 100 });
+    });
+    await expect.poll(async () => (await read()).text).toContain(lang === "ja" ? "奥義 準備完了" : "SPECIAL READY");
+    const ready = await read();
+    expect(ready.fontPx).toBeGreaterThanOrEqual(14);
+    expect(ready.left).toBeGreaterThanOrEqual(10);
+    expect(ready.right).toBeLessThanOrEqual(440);
+    expect(ready.top).toBeGreaterThanOrEqual(66);
+    expect(ready.bottom).toBeLessThanOrEqual(98);
+    await page.screenshot({ path: `e2e/screenshots/short-portrait-gauge-ready-${lang}.png` });
+  });
+}
+
 test("first battle reaches special and retry through player actions", async ({ page }) => {
   test.setTimeout(45000);
   await page.setViewportSize({ width: 320, height: 568 });
