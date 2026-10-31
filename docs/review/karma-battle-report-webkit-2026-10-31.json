@@ -1,0 +1,68 @@
+{
+  "before": {
+    "phase": "battle",
+    "frame": 28,
+    "sceneTime": 5717,
+    "scenePaused": false,
+    "sceneTimeScale": 1,
+    "sceneActive": true,
+    "scenePausedByManager": false,
+    "currentBattleResult": false,
+    "activeTimers": [
+      {
+        "delay": 760,
+        "elapsed": 281.1333333333333,
+        "paused": false,
+        "timeScale": 1
+      },
+      {
+        "delay": 280,
+        "elapsed": 214.79999999999998,
+        "paused": false,
+        "timeScale": 1
+      },
+      {
+        "delay": 1800,
+        "elapsed": 83,
+        "paused": false,
+        "timeScale": 1
+      },
+      {
+        "delay": 280,
+        "elapsed": 83,
+        "paused": false,
+        "timeScale": 1
+      }
+    ],
+    "pendingTimers": 0,
+    "frameDelta": 16.6,
+    "actualFps": 28.890625,
+    "visible": "visible",
+    "focused": true,
+    "wallTime": 5780
+  },
+  "after": {
+    "phase": "battle",
+    "frame": 130,
+    "sceneTime": 9848,
+    "scenePaused": false,
+    "sceneTimeScale": 1,
+    "sceneActive": true,
+    "scenePausedByManager": false,
+    "currentBattleResult": true,
+    "activeTimers": [
+      {
+        "delay": 1800,
+        "elapsed": 1800,
+        "paused": false,
+        "timeScale": 1
+      }
+    ],
+    "pendingTimers": 1,
+    "frameDelta": 21.1,
+    "actualFps": 23.62554931640625,
+    "visible": "visible",
+    "focused": true,
+    "wallTime": 9882
+  }
+}
