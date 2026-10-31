@@ -66,7 +66,7 @@ export function createBattleView(scene: Phaser.Scene, actions: BattleActions): B
   ougi.setName("mobile-ougi");
   const landscapeOugi = button(scene, battleGroup, 735, 402, 110, 52, tr(lang, "奥義", "SPECIAL"), 0x9b7119, actions.ougi, false, 72);
   landscapeOugi.setName("mobile-ougi-landscape").setVisible(false);
-  const switchButton = button(scene, battleGroup, 225, 715, 76, 44, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter);
+  const switchButton = button(scene, battleGroup, 225, 715, 76, 44, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter, false, 72);
   switchButton.setName("mobile-switch").setVisible(false);
   const landscapeSwitch = button(scene, battleGroup, 300, 402, 88, 46, tr(lang, "交代", "SWITCH"), 0x505385, actions.switchFighter);
   landscapeSwitch.setName("mobile-switch-landscape").setVisible(false);
@@ -161,7 +161,7 @@ export function renderBattleView(ui: BattleView, model: BattleModel, viewport: {
   ui.battleGauge.setText(portrait
     ? (gaugeRatio >= 1
       ? tr(lang, `奥義 準備完了 · 編成 ${activeIndex + 1}/${team.length}`, `SPECIAL READY · TEAM ${activeIndex + 1}/${team.length}`)
-      : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% · TEAM ${activeIndex + 1}/${team.length} · TURN ${(model.beat ?? 0) + 1}`))
+      : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}% · 編成 ${activeIndex + 1}/${team.length} · ${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}% TEAM${activeIndex + 1}/${team.length} TURN${(model.beat ?? 0) + 1}`))
     : (gaugeRatio >= 1
       ? tr(lang, "奥義 準備完了", "SPECIAL READY")
       : tr(lang, `奥義 ${Math.round(gaugeRatio * 100)}%\n${(model.beat ?? 0) + 1}応酬目`, `SPECIAL ${Math.round(gaugeRatio * 100)}%\nEXCHANGE ${(model.beat ?? 0) + 1}`)));

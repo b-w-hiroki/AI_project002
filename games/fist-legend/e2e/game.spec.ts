@@ -557,7 +557,7 @@ for (const lang of ["ja", "en"] as const) {
     expect(gauge.right).toBeLessThanOrEqual(440);
     expect(gauge.top).toBeGreaterThanOrEqual(66);
     expect(gauge.bottom).toBeLessThanOrEqual(98);
-    expect(gauge.text).toContain(lang === "ja" ? "編成 1/1 · 1応酬目" : "TEAM 1/1 · TURN 1");
+    expect(gauge.text).toContain(lang === "ja" ? "編成 1/1 · 1応酬目" : "TEAM1/1 TURN1");
     await expect.poll(() => page.evaluate(() => !window.__qaGame.scene.getScene("GameScene").cameras.main.flashEffect.isRunning)).toBe(true);
     await page.screenshot({ path: `e2e/screenshots/short-portrait-gauge-${lang}.png` });
     await page.evaluate(() => {
@@ -565,13 +565,16 @@ for (const lang of ["ja", "en"] as const) {
       Reflect.set(scene, "selectedTeam", ["ryuga", "renka", "gaku"]);
       Reflect.set(scene, "activeFighterIndex", 2);
       Reflect.set(scene, "beat", 9);
+      Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerGauge: 99 });
     });
-    await expect.poll(async () => (await read()).text).toContain(lang === "ja" ? "編成 3/3 · 10応酬目" : "TEAM 3/3 · TURN 10");
+    await expect.poll(async () => (await read()).text).toContain(lang === "ja" ? "編成 3/3 · 10応酬目" : "TEAM3/3 TURN10");
     const later = await read();
+    expect(later.text).toContain(lang === "ja" ? "奥義 99%" : "SPECIAL 99%");
     expect(later.left).toBeGreaterThanOrEqual(10);
     expect(later.right).toBeLessThanOrEqual(440);
     expect(later.top).toBeGreaterThanOrEqual(66);
     expect(later.bottom).toBeLessThanOrEqual(98);
+    await page.screenshot({ path: `e2e/screenshots/short-portrait-gauge-later-${lang}.png` });
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerGauge: 100 });
@@ -1503,6 +1506,52 @@ test("three-fighter team persists and leader appears in battle", async ({ page }
   })).toEqual({ label: "PLAYER · 蓮花 [1/3]", texture: "fl-fighter-renka" });
   await checkFrame(page, "portrait-team-leader-battle");
 
+});
+
+test("short portrait switch stays touchable and separate from moves", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.get(scene, "toggleTeamMember").call(scene, "renka");
+    Reflect.get(scene, "startBattle").call(scene);
+  });
+  const read = () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    const find = (nodes: Phaser.GameObjects.GameObject[], name: string): Phaser.GameObjects.Container | undefined => {
+      for (const node of nodes) {
+        if (node.name === name) return node as Phaser.GameObjects.Container;
+        if (node.type === "Container") { const result = find((node as Phaser.GameObjects.Container).list, name); if (result) return result; }
+      }
+      return undefined;
+    };
+    const box = (name: string) => {
+      const button = find(scene.children.list, name)!;
+      const zone = button.list.find(node => node.type === "Zone") as Phaser.GameObjects.Zone;
+      const area = zone.input!.hitArea as Phaser.Geom.Rectangle;
+      return { x: button.x, y: button.y, left: button.x + (area.x - zone.displayOriginX) * button.scaleX,
+        right: button.x + (area.x + area.width - zone.displayOriginX) * button.scaleX,
+        top: button.y + (area.y - zone.displayOriginY) * button.scaleY,
+        bottom: button.y + (area.y + area.height - zone.displayOriginY) * button.scaleY,
+        width: area.width * button.scaleX, height: area.height * button.scaleY, visible: button.visible };
+    };
+    return { switch: box("mobile-switch"), ki: box("mobile-move-ki"), ougi: box("mobile-ougi-landscape"),
+      scale: window.__qaGame.canvas.getBoundingClientRect().width / window.__qaGame.canvas.width };
+  });
+  await expect.poll(async () => (await read()).switch.visible).toBe(true);
+  const layout = await read();
+  expect(layout.switch.width * layout.scale).toBeGreaterThanOrEqual(44);
+  expect(layout.switch.height * layout.scale).toBeGreaterThanOrEqual(44);
+  expect(layout.ki.right).toBeLessThan(layout.switch.left);
+  expect(layout.switch.right).toBeLessThan(layout.ougi.left);
+  await expect.poll(() => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
+  })).toBe(true);
+  await page.screenshot({ path: "e2e/screenshots/short-portrait-switch.png" });
+  await tapPoint(page, layout.switch.x, layout.switch.top + 2);
+  await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "activeFighterIndex"))).toBe(1);
+  expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBe(0);
 });
 
 test("battle switch cycles through the selected team on touch controls", async ({ page }) => {
