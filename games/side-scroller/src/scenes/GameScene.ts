@@ -429,7 +429,7 @@ export class GameScene extends Phaser.Scene {
       const portrait = this.scale.gameSize.width < 600;
       const centerX = this.scale.gameSize.width / 2;
       const centerY = this.scale.gameSize.height / 2;
-      const cardWidth = portrait ? this.scale.gameSize.width - 70 : 130;
+      const cardWidth = portrait ? this.scale.gameSize.width - 70 : 142;
       const cardHeight = portrait ? 72 : 110;
       for (let i = 0; i < 3; i++) {
         const x = portrait ? centerX : centerX - 150 + i * 150;
@@ -1386,7 +1386,7 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) {
       const x = portrait ? centerX : centerX - 150 + i * 150;
       const y = portrait ? centerY - 78 + i * 86 : centerY;
-      const cardWidth = portrait ? width - 70 : 130;
+      const cardWidth = portrait ? width - 70 : 142;
       const cardHeight = portrait ? 72 : 110;
       const cardPanel = drawPanel(this, x, y, cardWidth, cardHeight, {
         radius: 12,

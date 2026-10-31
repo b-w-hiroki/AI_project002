@@ -936,14 +936,19 @@ test.describe("phone visual QA", () => {
     const cards = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const overlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container;
+      const texts = Reflect.get(scene, "stageBuffOverlayTexts") as Phaser.GameObjects.Text[];
       return overlay.list.filter((item): item is Phaser.GameObjects.Rectangle =>
         item.name.startsWith("stage-buff-card-"),
-      ).map(card => ({ x: card.x, y: card.y, left: card.x - card.width / 2, right: card.x + card.width / 2 }));
+      ).map((card, i) => ({ x: card.x, y: card.y, left: card.x - card.width / 2,
+        right: card.x + card.width / 2, textWidth: texts[i]?.width, textHeight: texts[i]?.height,
+        cardWidth: card.width, cardHeight: card.height }));
     });
     expect(cards).toHaveLength(3);
     for (const card of cards) {
       expect(card.left).toBeGreaterThanOrEqual(0);
       expect(card.right).toBeLessThanOrEqual(450);
+      expect(card.textWidth).toBeLessThan(card.cardWidth - 8);
+      expect(card.textHeight).toBeLessThan(card.cardHeight - 8);
     }
     await testInfo.attach("stage-buff-portrait", { body: await page.screenshot(), contentType: "image/png" });
 
@@ -992,11 +997,14 @@ test.describe("phone visual QA", () => {
     const state = await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene("GameScene");
       const overlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container;
+      const texts = Reflect.get(scene, "stageBuffOverlayTexts") as Phaser.GameObjects.Text[];
       const cards = overlay.list.filter((item): item is Phaser.GameObjects.Rectangle =>
         item.name.startsWith("stage-buff-card-"),
       );
       return { visible: Reflect.get(scene, "stageBuffOverlayVisible"), paused: scene.physics.world.isPaused,
-        cards: cards.map(card => ({ x: card.x, y: card.y, left: card.x - card.width / 2, right: card.x + card.width / 2 })) };
+        cards: cards.map((card, i) => ({ x: card.x, y: card.y, left: card.x - card.width / 2,
+          right: card.x + card.width / 2, textWidth: texts[i]?.width, textHeight: texts[i]?.height,
+          cardWidth: card.width, cardHeight: card.height })) };
     });
     expect(state.visible).toBe(true);
     expect(state.paused).toBe(true);
@@ -1004,6 +1012,8 @@ test.describe("phone visual QA", () => {
     for (const card of state.cards) {
       expect(card.left).toBeGreaterThanOrEqual(0);
       expect(card.right).toBeLessThanOrEqual(800);
+      expect(card.textWidth).toBeLessThan(card.cardWidth - 8);
+      expect(card.textHeight).toBeLessThan(card.cardHeight - 8);
     }
     await testInfo.attach("stage-buff-landscape", { body: await page.screenshot(), contentType: "image/png" });
     await tapGamePoint(page, state.cards[1].x, state.cards[1].y);
