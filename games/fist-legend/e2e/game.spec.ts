@@ -547,7 +547,10 @@ test("first battle reaches special and retry through player actions", async ({ p
       return Reflect.get(scene, "accepting") === true && !scene.cameras.main.flashEffect.isRunning && !scene.cameras.main.shakeEffect.isRunning;
     })).toBe(true);
     const tell = (await readBattleTell(page)).text;
-    await tapVisibleText(page, counterFor(tell));
+    const counter = counterFor(tell);
+    if (round < 3) expect(tell).toContain(`${counter}で有利を取ろう`);
+    else expect(tell).toContain("有利: 拳>気>蹴>拳");
+    await tapVisibleText(page, counter);
     await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "beat"))).toBe(round + 1);
   }
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("奥義 準備完了"))).toBe(true);
