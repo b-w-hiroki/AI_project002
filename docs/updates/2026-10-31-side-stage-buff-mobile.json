@@ -6,6 +6,6 @@
       "design": { "status": "updated", "reason": "The chooser now lays out cards by logical viewport size and uses current screen coordinates for selection after resize." }
     }
   },
-  "validation": ["Side-scroller typecheck, lint, unit tests and build", "Playwright portrait selection and portrait-to-landscape rotation with real card taps and screenshots"],
+  "validation": ["Side-scroller typecheck, lint, unit tests and build", "Playwright portrait selection and portrait-to-landscape rotation with real card taps and screenshots", "Chromium and WebKit touch-enabled contexts select a portrait card with touchscreen.tap"],
   "limitations": ["Karma Quest battle-to-report timing remains an independent unresolved issue."]
 }

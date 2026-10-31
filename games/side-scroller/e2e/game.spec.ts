@@ -111,11 +111,15 @@ async function expectActionControlsClear(page: Page): Promise<void> {
   }
 }
 
-test.beforeEach(async ({ page }) => {
+async function exposeQaGame(page: Page): Promise<void> {
   await page.route(/\/src\/main\.ts(?:\?.*)?$/, async route => {
     const response = await route.fetch();
     await route.fulfill({ response, body: `${await response.text()}\nwindow.__qaGame = game;` });
   });
+}
+
+test.beforeEach(async ({ page }) => {
+  await exposeQaGame(page);
   await page.goto("/");
   const canvas = page.locator("canvas");
   try {
@@ -1018,6 +1022,34 @@ test.describe("phone visual QA", () => {
     await testInfo.attach("stage-buff-landscape", { body: await page.screenshot(), contentType: "image/png" });
     await tapGamePoint(page, state.cards[1].x, state.cards[1].y);
     await expectPlayableBattle(page);
+  });
+
+  test("stage-buff chooser accepts a real touch on a portrait phone", async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: "http://localhost:15174",
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+    });
+    try {
+      const page = await context.newPage();
+      await exposeQaGame(page);
+      await page.goto("/?visualqa=battle");
+      await page.waitForFunction(() => !!window.__qaGame);
+      await enterBattleForVisualQa(page, true);
+      await expectPlayableBattle(page);
+      const card = await page.evaluate(() => {
+        const scene = window.__qaGame.scene.getScene("GameScene");
+        Reflect.get(scene, "openStageBuffOverlay").call(scene);
+        const overlay = Reflect.get(scene, "stageBuffOverlay") as Phaser.GameObjects.Container;
+        const first = overlay.list.find(item => item.name === "stage-buff-card-0") as Phaser.GameObjects.Rectangle;
+        return { x: first.x, y: first.y };
+      });
+      await expect.poll(() => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stageBuffOverlayVisible"))).toBe(true);
+      await touchGamePoint(page, card.x, card.y);
+      await expectPlayableBattle(page);
+    } finally {
+      await context.close();
+    }
   });
 
   test("visual QA: game over hides touch controls", async ({ page }) => {
