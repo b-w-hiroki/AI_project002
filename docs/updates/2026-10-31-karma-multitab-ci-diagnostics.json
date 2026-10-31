@@ -1,0 +1,11 @@
+{
+  "summary": "Karma Questの２タブ保存テストのCI失敗を記録し、再発時の診断情報を追加する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "保存時の待機とページ内保持の仕様を変更せず、既存のテスト失敗時の診断を追加する"},
+      "design": {"status": "unchanged", "reason": "ロックや保存処理を変更せず、テストから処理結果と待機時間を記録する"}
+    }
+  },
+  "validation": ["CIでは２タブの累計評価が610ではなく590となりWebKit 52件中１件が失敗した", "WindowsのWebKitで対象テストを診断追加前後に各５回、Chromiumで診断追加後に３回実行し、すべて成功した", "Karma Questのlint・typecheck・単体157件・buildが成功した"],
+  "limitations": ["CI失敗時の待機時間とページ内保持への切替は取得されておらず原因未確定", "物理端末や外部Portalは確認していない"]
+}
