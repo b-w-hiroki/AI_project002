@@ -649,6 +649,13 @@ test("first battle reaches special and retry through player actions", async ({ p
   await tapVisibleText(page, "もう一度");
   await expect.poll(() => phase(page)).toBe("battle");
   await expect.poll(async () => (await readBattleTell(page)).text).toContain("蹴で有利を取ろう");
+  await expect.poll(() => page.evaluate(() => ({
+    currency: localStorage.getItem("fist_legend_currency_v1"),
+    wins: localStorage.getItem("fist_legend_win_count_v1"),
+  }))).toEqual({ currency: "60", wins: "1" });
+  await page.reload();
+  await waitForSceneReady(page);
+  await expect.poll(() => visibleCopy(page)).toContain("豪拳石 60 · 勝利 1");
 });
 
 test("a first battle loss explains the result and allows retry", async ({ page }) => {
