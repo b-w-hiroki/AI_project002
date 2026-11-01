@@ -787,6 +787,26 @@ test("first loop explains modes, coaches a counter, and reports an HP decision",
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("蹴で有利を取ろう"))).toBe(true);
 });
 
+test("equal HP at time up explains the draw and allows retry", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await expect.poll(() => page.locator("canvas").evaluate(node => Math.round(node.getBoundingClientRect().width))).toBe(280);
+  await tapVisibleText(page, "対戦");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("GameScene");
+    Reflect.set(scene, "battle", { ...Reflect.get(scene, "battle"), playerHp: 50, enemyHp: 50 });
+    Reflect.get(scene, "finishBattle").call(scene, true);
+  });
+  await expect.poll(() => phase(page)).toBe("result");
+  await expect.poll(() => visibleCopy(page)).toContain("DRAW");
+  await expect.poll(() => visibleCopy(page)).toContain("引き分け");
+  await expect.poll(() => visibleCopy(page)).toContain("時間切れ · 残りHP 50 対 50");
+  await checkFrame(page, "short-portrait-time-draw");
+  await tapVisibleText(page, "もう一度");
+  await expect.poll(() => phase(page)).toBe("battle");
+  await expect.poll(async () => (await readBattleTell(page)).text).toContain("蹴で有利を取ろう");
+});
+
 test("gacha discloses its illustrative scope before a draw", async ({ page }) => {
   await tapVisibleText(page, "ガチャ");
   await expect.poll(async () => (await visibleCopy(page)).some(value => value.includes("演出のみ・所持や能力には反映されません"))).toBe(true);
