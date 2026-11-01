@@ -100,3 +100,5 @@ HOME_REQUEST_LINESは既知の依頼文5件の表示改行のみを保持する�
 
 討伐終了表示のE2EはSceneのpostupdateで結果を捕捉し、そのフレームでテスト用時計を停止する。700msの報告遷移を外部ポーリングで取り逃さず、描画が遅いCIでは15秒まで待つ。ゲームの1800ms声援受付・700ms結果表示は変更しない。
 - 2026-10-20: Large raid counter text uses a 22 px boss label so portrait WebKit layouts retain the tested 40 px canvas inset without clipping.
+
+自然なbattle→reportの受入条件は実時間5000msを維持し、100ms間隔で観測する。E2E専用の[battleTiming](../../../games/karma-quest/e2e/battleTiming.ts)はClock.nowを累積ゲーム時間と解釈せず、フレームのrawDelta・補正delta・Clock倍率適用後deltaを別々に累積し、結果確定と報告のmilestone、タイマーのactive/pending/removingを記録する。40ms遅延RAFと合成cooldownを与えるsmoothStep有無の対照試験は、時間補正の機構確認に限定する。製品の時計設定を変更せず、過去CIの原因特定・実機再現とは扱わない。証跡と仮説は[調査記録](../../review/karma-battle-report-webkit-2026-10-31.md)を参照する。
