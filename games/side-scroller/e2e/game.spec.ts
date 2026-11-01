@@ -1029,6 +1029,7 @@ test.describe("phone visual QA", () => {
       baseURL: "http://localhost:15174",
       viewport: { width: 390, height: 844 },
       hasTouch: true,
+      isMobile: true,
     });
     try {
       const page = await context.newPage();
