@@ -168,7 +168,7 @@ export function renderResultView(ui: ResultView, model: ResultModel, viewport: {
     if (outcome === "playerWin") ui.resultEnemy.setTint(0x777777);
   }
   ui.resultFinish
-    .setPosition(width / 2, portrait ? 179 : 92)
+    .setPosition(width / 2, portrait ? 173 : 92)
     .setText(outcome === "playerWin" ? (model.battle.enemyHp <= 0 ? "K.O." : "WIN") : outcome === "enemyWin" ? (model.battle.playerHp <= 0 ? "DOWN" : "LOSE") : "DRAW")
     .setColor(outcome === "playerWin" ? "#ffe3a8" : outcome === "enemyWin" ? "#cad6eb" : "#e4d6ff")
     .setScale(portrait ? 1 : 0.72);

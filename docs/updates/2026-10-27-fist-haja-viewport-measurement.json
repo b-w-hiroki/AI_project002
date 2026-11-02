@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い縦画面テストでキャンバス寸法確定後に文字と入力領域を測る",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "実行時の画面や操作は変えず、既存の14pxと44pxの条件を維持した"},
+      "design": {"status": "unchanged", "reason": "レイアウト実装を変えず、既存の320px幅テストと同じキャンバス幅の確定待ちを追加した"}
+    }
+  },
+  "validation": ["head 7990873のLinux WebKit CIでは短い縦画面の文字が12.42pxと測定され失敗した。画面切替途中の計測の可能性があり原因は未確定", "キャンバス幅280pxを待ってから従来の文字・タッチ寸法と非重複を検査し、ローカルWebKitで日英各3回、Chromiumで各1回成功した"],
+  "limitations": ["修正後のLinux CIで再検証が必要。物理iOS Safari・Android Chromeと初見プレイは未確認"]
+}

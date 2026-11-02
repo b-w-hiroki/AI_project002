@@ -1,0 +1,23 @@
+{
+  "summary": "PR #415: frontend-toolchain patch update and separate CI triage",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "開発用の型定義とlint依存のみ更新。ゲームの操作、ルール、表示、保存形式を変更しない。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "実行時依存と責務構成は維持。三国の既存余白修正はmain統合済みPR #412をそのまま取り込む。"
+      }
+    }
+  },
+  "validation": [
+    "Documentation guard: 18 unit tests passed",
+    "開発用依存2種類の差分を確認。各PRの新headでDocumentation、Browser E2E、WebKit Smokeを独立検証する。"
+  ],
+  "limitations": [
+    "新headのCIは未確定。全成功を確認するまで統合しない。",
+    "PR #417のPotion Workshopは変更対象作品と異なる。旧run 41319767038 / job 124887276948では18画面サイズを巡回する単一テストの30秒制限で失敗。依存更新との因果は未確定。"
+  ]
+}

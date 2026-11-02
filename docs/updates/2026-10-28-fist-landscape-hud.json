@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い横画面でHPと残り時間を独立して読みやすく表示する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "横画面のHP・残り時間の表示条件を追加した"},
+      "design": {"status": "updated", "reason": "横画面の3項目と詳細行の配置および日英の検査方法を追加した"}
+    }
+  },
+  "validation": ["568×320の日本語・英語WebKit画面でHPと残り時間の実表示サイズ、項目とHPバーの非重複を確認した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

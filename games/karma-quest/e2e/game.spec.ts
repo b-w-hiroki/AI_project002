@@ -4,6 +4,7 @@ import type Phaser from "phaser";
 import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
 import { KARMA_REQUESTS } from "../src/logic/karma";
 import { OUTCOME_ART, outcomeArtKey } from "../src/outcomeArt";
+import { startBattleTiming, finishBattleTiming } from "./battleTiming";
 
 declare global { interface Window { __qaGame: Phaser.Game } }
 
@@ -575,35 +576,17 @@ test("notch insets and changing browser height preserve choices and touch coordi
 const phase = (page: Page) => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "phase"));
 
 async function expectNaturalBattleReport(page: Page, label: string): Promise<void> {
-  const snapshot = () => page.evaluate(() => {
-    const game = window.__qaGame;
-    const scene = game.scene.getScene("GameScene");
-    const clock = scene.time;
-    return {
-      phase: Reflect.get(scene, "phase"),
-      frame: game.loop.frame,
-      sceneTime: clock.now,
-      scenePaused: clock.paused,
-      sceneTimeScale: clock.timeScale,
-      sceneActive: scene.sys.isActive(),
-      scenePausedByManager: scene.sys.isPaused(),
-      currentBattleResult: Reflect.get(scene, "currentBattleResult") !== null,
-      activeTimers: (Reflect.get(clock, "_activeList") as unknown[] | undefined)?.length ?? null,
-      pendingTimers: (Reflect.get(clock, "_pendingInsertion") as unknown[] | undefined)?.length ?? null,
-      visible: document.visibilityState,
-      focused: document.hasFocus(),
-      wallTime: performance.now(),
-    };
-  });
-  const before = await snapshot();
+  await startBattleTiming(page);
   try {
-    await expect.poll(() => phase(page)).toBe("report");
-  } catch (error) {
+    // Keep the five-second gate; sample every 100ms rather than leaving
+    // a final ~1s blind interval with Playwright's default backoff.
+    await expect.poll(() => phase(page), { timeout: 5000, intervals: [100] }).toBe("report");
+  } finally {
     try {
+      const evidence = await finishBattleTiming(page);
       await mkdir("e2e/screenshots", { recursive: true });
-      await writeFile(`e2e/screenshots/battle-report-${label}.json`, JSON.stringify({ before, after: await snapshot() }, null, 2));
-    } catch { /* Preserve the original transition assertion. */ }
-    throw error;
+      await writeFile(`e2e/screenshots/battle-report-${label}.json`, JSON.stringify({ browser: page.context().browser()?.version(), project: test.info().project.name, retry: test.info().retry, errors: errors.get(page), ...evidence }, null, 2));
+    } catch { /* Diagnostic collection must not replace the transition assertion. */ }
   }
 }
 
@@ -3015,10 +2998,12 @@ test("two tabs serialize raid claims, evaluations, and best years", { tag: "@web
     const update = (target: Page, amount: number, year: number) => target.evaluate(async ({ amount, year }) => {
       const path = "/src/logic/progress.ts";
       const progress = await import(path);
-      await Promise.all([progress.addTotalEvaluation(amount), progress.saveBestStage(year)]);
+      const start = performance.now();
+      const [total] = await Promise.all([progress.addTotalEvaluation(amount), progress.saveBestStage(year)]);
+      return { amount, year, total, elapsedMs: Math.round(performance.now() - start), sessionOnly: progress.hasUnavailableProgress() };
     }, { amount, year });
-    await Promise.all([update(page, 10, 6), update(other, 20, 4)]);
-    expect((await saved()).total).toBe(610);
+    const updates = await Promise.all([update(page, 10, 6), update(other, 20, 4)]);
+    expect((await saved()).total, `Concurrent update results: ${JSON.stringify(updates)}`).toBe(610);
     expect(await page.evaluate(() => localStorage.getItem("karma_quest_best_stage_v1"))).toBe("6");
   } finally { await other.close(); }
 });
@@ -3239,3 +3224,59 @@ test("journey retries after the loader throws during image registration", { tag:
   await expect.poll(() => phase(page)).toBe("karma");
   expect(await page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "stage"))).toBe(1);
 });
+
+
+for (const smoothStep of [true, false]) {
+  test(`controlled frame delay isolates battle timer smoothing=${smoothStep}`, { tag: "@webkit-regression" }, async ({ page }) => {
+    // Mechanism control, not a reproduction of the historical CI runner.
+    // Give both cases the same synthetic startup cooldown and delayed RAF.
+    await page.evaluate(smoothing => {
+      const game = window.__qaGame;
+      const scene = game.scene.getScene("GameScene");
+      const raf = window.requestAnimationFrame;
+      const previousSmoothing = game.loop.smoothStep;
+      const previousCooldown = Reflect.get(game.loop, "_coolDown");
+      window.requestAnimationFrame = callback => raf.call(window, timestamp => {
+        window.setTimeout(() => callback(timestamp), 40);
+      });
+      Reflect.set(window, "__restoreTimingControl", () => {
+        window.requestAnimationFrame = raf;
+        game.loop.smoothStep = previousSmoothing;
+        Reflect.set(game.loop, "_coolDown", previousCooldown);
+      });
+      game.loop.smoothStep = smoothing;
+      Reflect.set(game.loop, "_coolDown", 120);
+      Reflect.get(scene, "titleGroup").setVisible(false);
+      Reflect.get(scene, "showBattlePhase").call(scene);
+    }, smoothStep);
+    await startBattleTiming(page);
+    try {
+      // Fixed observation window is the experimental input, not a readiness wait.
+      await page.waitForTimeout(3500);
+      const evidence = await finishBattleTiming(page);
+      await mkdir("e2e/screenshots", { recursive: true });
+      await writeFile(`e2e/screenshots/battle-frame-control-${smoothStep}.json`, JSON.stringify({ browser: page.context().browser()?.version(), project: test.info().project.name, retry: test.info().retry, errors: errors.get(page), ...evidence }, null, 2));
+      const state = evidence.final;
+      expect(state.clockScale).toBe(1);
+      expect(state.clockPaused).toBe(false);
+      expect(state.frames).toBeGreaterThan(0);
+      if (smoothStep) {
+        expect(state.deltaTotal).toBeLessThan(state.rawTotal * 0.65);
+        expect(state.result).toBe(false);
+        expect(state.phase).toBe("battle");
+      } else {
+        expect(state.deltaTotal).toBeCloseTo(state.rawTotal, 3);
+        expect(state.phase).toBe("report");
+        const result = evidence.milestones.find((sample: { result: boolean }) => sample.result);
+        const report = evidence.milestones.find((sample: { phase: string }) => sample.phase === "report");
+        expect(result).toBeTruthy();
+        expect(report).toBeTruthy();
+        expect(report.clockDeltaTotal - result.clockDeltaTotal).toBeGreaterThanOrEqual(700);
+        expect(report.wallMs).toBeLessThan(5000);
+      }
+    } finally {
+      await finishBattleTiming(page);
+      await page.evaluate(() => Reflect.get(window, "__restoreTimingControl")());
+    }
+  });
+}
