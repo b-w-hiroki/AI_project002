@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { getResponsiveLayout } from "../../shared/mobile";
 import { battleOutcome, type BattleState } from "./logic/battle";
 import { applyHajaAfterBeat, HAJA_DURATION_MS, HAJA_MODE_INFO, HAJA_SHUN_RECOVERY_MS, type HajaMode } from "./logic/haja";
+import { detectLang, tr, type Lang } from "./logic/i18n";
 import { GameScene } from "./scenes/GameScene";
 import { makeButton } from "./ui/theme";
 
@@ -10,6 +11,7 @@ type Method = (this: Phaser.Scene, ...args: unknown[]) => unknown;
 type Methods = Record<string, Method | undefined>;
 type Runtime = Phaser.Scene & {
   phase?: "title" | "battle" | "result";
+  lang?: Lang;
   battle?: BattleState;
   accepting?: boolean;
   playerSprite?: Sprite;
@@ -24,14 +26,21 @@ type Runtime = Phaser.Scene & {
 type Ui = {
   root: Phaser.GameObjects.Container;
   aura: Phaser.GameObjects.Graphics;
+  guidancePlate: Phaser.GameObjects.Graphics;
   status: Phaser.GameObjects.Text;
   hint: Phaser.GameObjects.Text;
   buttons: ReturnType<typeof makeButton>[];
   enabled: boolean | null;
-  compactText: boolean | null;
+  textLayout: "phonePortrait" | "phoneLandscape" | "compactTablet" | "default" | null;
+  plateOffset: number | null;
 };
 
 const MODES: HajaMode[] = ["go", "ju", "shun"];
+const ENGLISH_MODES: Record<HajaMode, { short: string; effect: string }> = {
+  go: { short: "ATK", effect: "Damage +40%" },
+  ju: { short: "DEF", effect: "Damage taken -50%" },
+  shun: { short: "SPD", effect: "Faster special & recovery" },
+};
 const uiByScene = new WeakMap<object, Ui>();
 
 function init(scene: Runtime): void {
@@ -55,16 +64,18 @@ function build(scene: Runtime): Ui {
   const cached = uiByScene.get(scene);
   if (cached) return cached;
   const aura = scene.add.graphics();
+  const guidancePlate = scene.add.graphics();
   const status = scene.add.text(400, 350, "", { fontSize: "14px", fontStyle: "800", color: "#ffe9b0", stroke: "#1d100b", strokeThickness: 4 }).setOrigin(0.5);
   const hint = scene.add.text(400, 368, "", { fontSize: "10px", fontStyle: "800", color: "#d9c7aa", stroke: "#1d100b", strokeThickness: 3 }).setOrigin(0.5);
   const buttons = MODES.map(mode => {
     const info = HAJA_MODE_INFO[mode];
-    return makeButton(scene, 0, 0, 68, 32, info.shortLabel, () => activate(scene, mode), {
+    const lang = scene.lang ?? detectLang();
+    return makeButton(scene, 0, 0, 68, 32, tr(lang, info.shortLabel, ENGLISH_MODES[mode].short), () => activate(scene, mode), {
       fontSize: "14px", fillColor: info.accent, borderColor: info.glow, touchHeight: 64,
     });
   });
-  const root = scene.add.container(0, 0, [aura, status, hint, ...buttons.map(button => button.container)]).setName("haja-mode-controls").setDepth(3400).setVisible(false);
-  const ui = { root, aura, status, hint, buttons, enabled: null, compactText: null };
+  const root = scene.add.container(0, 0, [aura, guidancePlate, status, hint, ...buttons.map(button => button.container)]).setName("haja-mode-controls").setDepth(3400).setVisible(false);
+  const ui = { root, aura, guidancePlate, status, hint, buttons, enabled: null, textLayout: null, plateOffset: null };
   uiByScene.set(scene, ui);
   return ui;
 }
@@ -83,19 +94,44 @@ function refresh(scene: Runtime): void {
   if (!visible) return;
 
   const portrait = !!layout?.isPortrait;
+  const lang = scene.lang ?? detectLang();
   const width = scene.scale.gameSize.width;
   const xs = phone && portrait ? [110, 225, 340] : [330, 400, 470];
-  const y = phone && portrait ? 610 : phone ? 337 : 388;
-  const statusY = phone && portrait ? 570 : phone ? 300 : 350;
-  const hintY = phone && portrait ? 588 : phone ? 317 : 368;
+  const phonePortrait = phone && portrait;
+  const phoneLandscape = phone && !portrait;
+  // Follow the portrait move controls as the canvas grows, leaving their hit areas separate.
+  const phoneOffset = phonePortrait ? Math.max(0, scene.scale.gameSize.height - 910) : 0;
+  const y = phonePortrait ? 583 + phoneOffset : phoneLandscape ? 316 : 388;
+  const statusY = phonePortrait ? 503 + phoneOffset : phoneLandscape ? 250 : compactTablet ? 305 : 350;
+  const hintY = phonePortrait ? 535 + phoneOffset : phoneLandscape ? 281 : compactTablet ? 335 : 368;
   const scale = phone && !portrait ? 0.92 : phone ? 1.08 : 1;
 
-  if (ui.compactText !== compactTablet) {
+  const textLayout = phonePortrait ? "phonePortrait" : phoneLandscape ? "phoneLandscape" : compactTablet ? "compactTablet" : "default";
+  if (ui.textLayout !== textLayout || ui.plateOffset !== phoneOffset) {
+    ui.status.setFontSize(phonePortrait ? 23 : phoneLandscape ? 21 : compactTablet ? 20 : 14);
+    ui.hint.setFontSize(phonePortrait ? 23 : phoneLandscape ? 21 : compactTablet ? 20 : 10);
+    ui.guidancePlate.clear();
+    if (phonePortrait) {
+      ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(10, 487 + phoneOffset, 430, 66, 8);
+    } else if (phoneLandscape) {
+      const plateWidth = lang === "en" ? 420 : 360;
+      ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(400 - plateWidth / 2, 233, plateWidth, 66, 8);
+    } else if (compactTablet) {
+      const plateWidth = lang === "en" ? 420 : 360;
+      ui.guidancePlate.fillStyle(0x160e0b, 0.86).fillRoundedRect(400 - plateWidth / 2, 289, plateWidth, 66, 8);
+    }
     ui.buttons.forEach(button => {
       const label = button.container.list.find(node => node.type === "Text") as Phaser.GameObjects.Text;
-      label.setFontSize(compactTablet ? 20 : 14);
+      label.setFontSize(phonePortrait ? 22 : phoneLandscape ? 23 : compactTablet ? 20 : 14);
+      const hitArea = button.container.input?.hitArea as Phaser.Geom.Rectangle | undefined;
+      if (hitArea) {
+        hitArea.height = phone ? 72 : 64;
+        hitArea.width = phoneLandscape ? 70 : 68;
+        hitArea.x = phoneLandscape ? -1 : 0;
+      }
     });
-    ui.compactText = compactTablet;
+    ui.textLayout = textLayout;
+    ui.plateOffset = phoneOffset;
   }
 
   ui.status.setPosition(width / 2, statusY);
@@ -113,14 +149,14 @@ function refresh(scene: Runtime): void {
 
   if (scene.hajaMode) {
     const info = HAJA_MODE_INFO[scene.hajaMode];
-    ui.status.setText(`${info.label}  ${((scene.hajaRemainingMs ?? 0) / 1000).toFixed(1)}s`).setColor(`#${info.glow.toString(16).padStart(6, "0")}`);
-    ui.hint.setText(info.description);
+    ui.status.setText(`${tr(lang, info.label, `HAJA · ${ENGLISH_MODES[scene.hajaMode].short}`)}  ${((scene.hajaRemainingMs ?? 0) / 1000).toFixed(1)}s`).setColor(`#${info.glow.toString(16).padStart(6, "0")}`);
+    ui.hint.setText(tr(lang, info.description, ENGLISH_MODES[scene.hajaMode].effect));
   } else if (scene.hajaUsed) {
-    ui.status.setText("覇者モード 使用済").setColor("#a99986");
-    ui.hint.setText("次ラウンドで再使用可能");
+    ui.status.setText(tr(lang, "覇者モード 使用済", "HAJA USED")).setColor("#a99986");
+    ui.hint.setText(tr(lang, "次ラウンドで再使用可能", "Ready next round"));
   } else {
-    ui.status.setText("覇者モード 1回 / 5秒").setColor("#ffe9b0");
-    ui.hint.setText("剛=威力  柔=軽減  瞬=速攻");
+    ui.status.setText(tr(lang, "覇者モード 1回 / 5秒", "HAJA · 1 USE / 5s")).setColor("#ffe9b0");
+    ui.hint.setText(tr(lang, "剛=威力  柔=軽減  瞬=速攻", phone ? "ATK Up · DEF Guard · SPD Fast" : "ATK Power · DEF Guard · SPD Fast"));
   }
 
   ui.aura.clear();
@@ -178,9 +214,10 @@ export function installFistHajaMode(): void {
     const adjusted = applyHajaAfterBeat(before, resolved, mode);
     scene.battle = adjusted.state;
     scene.refreshBattleVisual?.call(scene);
-    if (adjusted.bonusDamage) pop(scene, `剛 +${adjusted.bonusDamage}`, HAJA_MODE_INFO.go.glow, true);
-    if (adjusted.preventedDamage) pop(scene, `柔 -${adjusted.preventedDamage}`, HAJA_MODE_INFO.ju.glow, false);
-    if (adjusted.bonusGauge) pop(scene, `瞬 +${adjusted.bonusGauge}%`, HAJA_MODE_INFO.shun.glow, false);
+    const lang = scene.lang ?? detectLang();
+    if (adjusted.bonusDamage) pop(scene, `${tr(lang, "剛", "ATK")} +${adjusted.bonusDamage}`, HAJA_MODE_INFO.go.glow, true);
+    if (adjusted.preventedDamage) pop(scene, `${tr(lang, "柔", "DEF")} -${adjusted.preventedDamage}`, HAJA_MODE_INFO.ju.glow, false);
+    if (adjusted.bonusGauge) pop(scene, `${tr(lang, "瞬", "SPD")} +${adjusted.bonusGauge}%`, HAJA_MODE_INFO.shun.glow, false);
     const outcome = battleOutcome(adjusted.state, false);
     if (!baseOutcome && outcome) {
       scene.accepting = false;

@@ -1137,13 +1137,13 @@ export class GameScene extends Phaser.Scene {
     });
 
     const heading = this.add
-      .text(CX, 90, tr(this.lang, "武将一覧・装備", "Generals / Equipment"), { ...TYPE.h1, color: THEME.textPrimary })
+      .text(CX, 86, tr(this.lang, "武将一覧・装備", "Generals / Equipment"), { ...TYPE.h1, color: THEME.textPrimary })
       .setOrigin(0.5)
       .setName("rosterHeading");
     const hint = this.add
       .text(
         CX,
-        143,
+        139,
         tr(this.lang, "タップで装備を切り替え\n（所持装備からなし→Common→Rare→Epicの順）", "Tap a general to cycle gear\nNone → Common → Rare → Epic"),
         {
           ...TYPE.small,
