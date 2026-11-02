@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い横画面で覇者モードのタッチ領域を広げる",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "横画面の覇者モードの入力領域と隣接操作の分離条件を追加した"},
+      "design": {"status": "updated", "reason": "横スマホの入力幅と高さ、選択肢の位置と検査条件を記録した"}
+    }
+  },
+  "validation": ["修正前の568×320 WebKitで覇者モードの入力幅が43.01pxと測定されることを再現した", "修正後に選択肢の入力幅・高さと隣接操作の分離を検査し、通常技と覇者モードの境界を別々にタップした"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

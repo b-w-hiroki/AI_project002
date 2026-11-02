@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の既存の初見・実機確認シートを現行候補と操作に合わせる",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "現行ゲームの操作や保存仕様を変更せず、人による確認手順を整理する"},
+      "design": {"status": "unchanged", "reason": "実装や画面構成を変更せず既存の実機確認シートを更新する"}
+    }
+  },
+  "validation": ["現行の画面コードと既存QAシートを照合し、通常技３種と覇者モード・奥義・交代を確認対象にした", "候補PRとビルドSHAを区別し、既存データを保護する試行方法を明記した"],
+  "limitations": ["シートは準備であり物理iOS・Android、初見プレイ、外部Portal Previewは未実施"]
+}

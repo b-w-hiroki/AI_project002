@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い横画面で奥義ゲージと応酬数を読みやすくする",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "横画面のゲージと準備完了の表示条件を追加した"},
+      "design": {"status": "updated", "reason": "2行表示、文字サイズ、編成情報の位置と検査条件を追加した"}
+    }
+  },
+  "validation": ["568×320の日英WebKit画面でゲージと応酬数の表示を確認し、満タンと複数人編成の表示領域も検査した", "lint・typecheck・単体62件・build、Chromium 40件に成功。WebKitは初回39件成功・1件失敗後、該当テスト5回と全40件の再実行が成功した"],
+  "limitations": ["WebKit初回は既存の短い縦画面テストで文字を12.42pxと測定した。過去にも同値の失敗があり、断続的な原因は未確定", "物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

@@ -1,0 +1,11 @@
+{
+  "summary": "三国ポチポチの武将一覧でLinux WebKitの文字間隔不足を修正",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {"status": "updated", "reason": "武将一覧の見出し・説明・所持装備を重ねず読む表示条件を明記した"},
+      "design": {"status": "updated", "reason": "見出しと説明の配置、Linux WebKitで再現した間隔不足、既存E2Eの検査を記録した"}
+    }
+  },
+  "validation": ["PR #411のLinux WebKitで説明と所持装備の間隔が3pxとなる失敗を2回確認した", "ローカルでlint・typecheck・単体69件・build、Chromium E2E 14件、WebKit E2E 14件を確認した", "games/sangoku-tap/e2e/screenshots/portrait-roster.png の実画面を確認した"],
+  "limitations": ["修正後のLinux WebKit CIは実行待ち。物理iOS Safari・Android Chrome、外部Portal Previewは未確認"]
+}
