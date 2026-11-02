@@ -1,0 +1,15 @@
+{
+  "summary": "覇拳伝の小型タブレットで覇者モード説明を読みやすくし、スマホからの切替で対戦人物の配置を復元",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "覇者モード説明の文字と操作領域の分離、および戦闘中のタブレット切替を記載した"},
+      "design": {"status": "updated", "reason": "説明面の配置とGameSceneによる人物の旧画面座標・寸法の復元を記載した"}
+    },
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "報告選択の断続的なCI失敗を調査・記録し、ゲームの挙動は変更していない"},
+      "design": {"status": "unchanged", "reason": "ポインター所有者の実装には変更を加えず、原因未確定として記録した"}
+    }
+  },
+  "validation": ["修正前のWebKit E2Eで説明文字が約10.2px、スマホからの切替後に人物が縦画面の位置と200px高さに残ることを確認した", "覇拳伝のlint・typecheck・単体62件・build、ChromiumとWebKit E2E各33件、documentation unit 18件に成功した", "600×600のWebKitで説明・操作領域、選択後の効果、往復切替と技入力を検証し、small-tablet-haja-touch.png・small-tablet-haja-active.png・phone-to-tablet-battle.pngを確認した", "Karma報告選択テストはローカルWebKitで5回成功し、旧headのCI単体再実行では52件成功した"],
+  "limitations": ["Karma報告選択の初回CI失敗の原因は未確定", "物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

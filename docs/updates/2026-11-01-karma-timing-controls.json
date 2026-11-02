@@ -1,0 +1,11 @@
+{
+  "summary": "Karma Questの時間補正対照試験とbattle/report時系列診断を追加",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "製品の1800ms声援・700ms決着表示・戦闘計算・保存処理は変更しない"},
+      "design": {"status": "updated", "reason": "E2E診断の時間の意味と限定的な時間補正対照試験を記載する"}
+    }
+  },
+  "validation": ["初回CI artifact 13027739502をSHA256付きで再照合", "lint・typecheck・157単体テスト・build成功", "追加ブラウザ検証は独立したChromium/WebKit CIで実施する"],
+  "limitations": ["初回CIの根本原因は未確定", "ローカルブラウザは起動制限／未設置のため未検証", "実機・外部Portal未確認"]
+}

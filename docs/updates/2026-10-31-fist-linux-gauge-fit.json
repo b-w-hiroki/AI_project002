@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い縦画面で英語のゲージ表示を短くしLinux WebKitの折り返しに対処する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "奥義・編成・応酬数の表示条件を維持し、英語の余白と区切りを短くする"},
+      "design": {"status": "updated", "reason": "Linux WebKitで２桁応酬数が折り返したため英語の表示形式を記録した"}
+    }
+  },
+  "validation": ["head 507bb13のLinux WebKitとpositive-controlで英語の２桁応酬が折り返しHPバーと重なることを確認した", "修正後は99%・3/3・10応酬の短い縦画面を日英で検査し画像を確認した", "lint・typecheck・単体62件・build、ローカルChromium・WebKit各47件が成功した"],
+  "limitations": ["修正後のLinux WebKit CIは未確認", "物理iOS・Android、初見プレイ、外部Portal Previewは未確認"]
+}

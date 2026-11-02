@@ -44,6 +44,7 @@ type Runtime = Phaser.Scene & {
   storyChapterIndex?: number;
   storyProgress?: number;
   updateLegacyTellCopy?: (compactTablet: boolean) => void;
+  restoreLegacyFighters?: () => void;
   seriesIndex?: number;
   seriesWins?: number;
   showTitle?: () => void;
@@ -153,7 +154,9 @@ function applyLayout(scene: Runtime, layout: ViewportLayout): void {
     ?.setVisible(!ui.phone && layout.width < 800);
   if (!ui.phone) {
     if (scene.gachaGroup) layoutGacha(scene.gachaGroup, false, 600);
-    applySurface(scene, 800, 600); return;
+    applySurface(scene, 800, 600);
+    scene.restoreLegacyFighters?.();
+    return;
   }
 
   ui.portrait = layout.isPortrait;
