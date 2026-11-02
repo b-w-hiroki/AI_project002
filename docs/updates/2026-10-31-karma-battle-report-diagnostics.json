@@ -1,0 +1,11 @@
+{
+  "summary": "Karma QuestのbattleからreportへのWebKit時間切れを記録しタイマー診断を修正する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "戦闘と報告の挙動や待機時間は変更せず、失敗時の診断を記録する"},
+      "design": {"status": "unchanged", "reason": "製品のタイマー処理を変更せず、E2Eのタイマー参照と診断項目を修正する"}
+    }
+  },
+  "validation": ["CIの失敗成果物を確認し、可視状態でフレームが進む一方、戦闘結果が未確定だったことを記録した", "Windows WebKitで対象テスト３回中１回の同じ時間切れを再現し、戦闘結果確定後のタイマー挿入待ちを記録した", "Karma Questのlint・typecheck・単体157件・buildが成功した"],
+  "limitations": ["CI WebKitの同じ失敗ジョブは再実行で成功したが、CIとローカルの失敗時の戦闘状態は異なり、共通原因は未確定", "実機と外部Portalは未確認"]
+}
