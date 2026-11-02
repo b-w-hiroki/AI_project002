@@ -1,0 +1,11 @@
+{
+  "summary": "Karma Questのゲーム内タイマーと低フレーム時の実時間の関係を限定実験で記録する",
+  "areas": {
+    "karma-quest": {
+      "spec": {"status": "unchanged", "reason": "ゲームの戦闘時間や保存動作を変更せず既知の時間切れを調査する"},
+      "design": {"status": "unchanged", "reason": "既存のPhaserタイマー実装を変更せず人工的なフレーム遅延で計測する"}
+    }
+  },
+  "validation": ["ローカルWebKitで通常時とフレームコールバックを40ms遅らせた試行の1800msタイマーを各１回観測した", "遅延試行では実時間4003msでゲーム内タイマー1017ms、未完了だった"],
+  "limitations": ["人為的な低フレーム実験でありCIの失敗原因や実機での発生を証明しない", "CIのbattleからreportへの時間切れは原因未確定のまま"]
+}

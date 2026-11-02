@@ -1,0 +1,22 @@
+{
+  "summary": "PR #413 frontend-toolchain patch updates and CI triage",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "型定義と開発用lint依存のパッチ更新のみ。操作・ゲームルール・保存形式は変更しない。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "実行時依存と責務構成は変更しない。既存余白修正はmain統合済みPR #412をmergeして保持する。"
+      }
+    }
+  },
+  "validation": [
+    "Documentation guard unit tests: 18 passed",
+    "差分確認: package.json / package-lock.jsonの開発用依存更新。新headのBrowser E2E・WebKit Smoke・Documentationで独立検証する。"
+  ],
+  "limitations": [
+    "新headのCI結果はこの記録作成時点では未確定。成功確認までマージしない。"
+  ]
+}

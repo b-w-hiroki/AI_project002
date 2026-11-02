@@ -515,6 +515,18 @@ export class GameScene extends Phaser.Scene {
       : { width: FIGHTER_W, height: FIGHTER_H, y: FIGHTER_Y };
   }
 
+  private restoreLegacyFighters(): void {
+    const bounds = this.fighterBounds();
+    for (const [fighter, x] of [[this.playerSprite, 180], [this.enemySprite, 620]] as const) {
+      this.tweens.killTweensOf(fighter);
+      if (fighter instanceof Phaser.GameObjects.Image) {
+        fighter.setPosition(x, bounds.y).setDisplaySize(bounds.width, bounds.height);
+      } else {
+        fighter.setPosition(x, 300).setScale(1);
+      }
+    }
+  }
+
   private refreshTeamSelection(): void {
     this.teamSummary?.setText(`${tr(this.lang, "編成", "TEAM")} ${this.selectedTeam.length}/3 · ${this.selectedTeam.map(id => fighterName(this.lang, id)).join(" / ")} · ${tr(this.lang, "先頭が出場", "leader starts")}`);
     this.teamButtons.forEach((button, index) => {
@@ -527,15 +539,15 @@ export class GameScene extends Phaser.Scene {
     const leader = fighterById(activeId);
     this.playerLabel?.setText(
       this.phase === "battle"
-        ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
-        : `PLAYER · ${leader.name}`,
+        ? `PLAYER · ${fighterName(this.lang, activeId)} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+        : `PLAYER · ${fighterName(this.lang, activeId)}`,
     );
     this.playerLabel?.setText(tr(this.lang, "プレイヤー", "PLAYER"));
     if (!this.isApprovedMockViewport()) {
       this.playerLabel?.setText(
         this.phase === "battle"
-          ? `PLAYER · ${leader.name} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
-          : `PLAYER · ${leader.name}`,
+          ? `PLAYER · ${fighterName(this.lang, activeId)} [${this.activeFighterIndex + 1}/${this.selectedTeam.length}]`
+          : `PLAYER · ${fighterName(this.lang, activeId)}`,
       );
     }
     if (this.playerSprite instanceof Phaser.GameObjects.Image) {
@@ -1336,7 +1348,7 @@ export class GameScene extends Phaser.Scene {
     const retrySpecialist = retryRead.specialist ? fighterName(this.lang, retryRead.specialist) : null;
     const seriesRestart = this.seriesActive ? `${tr(this.lang, "1戦目から", "From Rival 1")} · ` : "";
     const nextDecision = outcome === "playerWin"
-      ? this.resultPrimaryLabel()
+      ? tr(this.lang, "予兆を見て有利技を選ぼう", "Read the tell, choose the counter")
       : retrySpecialist
         ? `${seriesRestart}${tr(this.lang, "再挑戦", "Retry")} · ${retrySpecialist} → ${moveLabel(this.lang, retryRead.counterMove)} (+18%)`
         : `${seriesRestart}${tr(this.lang, "編成変更", "Team Change")} · ${moveLabel(this.lang, retryRead.counterMove)}${tr(this.lang, "得意を追加", " specialist") }`;
@@ -1415,7 +1427,7 @@ export class GameScene extends Phaser.Scene {
       : null;
     this.resultAccent = this.add.graphics();
     this.resultFinish = this.add
-      .text(400, 136, "", {
+      .text(400, 130, "", {
         fontSize: "58px",
         color: "#ffe3a1",
         fontStyle: "900",
