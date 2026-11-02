@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の短い横画面で通常技のタッチ領域を広げる",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "updated", "reason": "短い横画面の通常技の入力領域に44px以上の条件を追加した"},
+      "design": {"status": "updated", "reason": "横画面の入力Zone拡張、縦画面への復元、覇者モードとの分離を記録した"}
+    }
+  },
+  "validation": ["568×320のChromium・WebKitで3つの通常技の実際の入力領域を測り、覇者モードとの境界付近を別々にタップした", "縦画面への回転後に入力領域が72論理pxへ戻ることを検査した", "lint・typecheck・単体62件・buildとChromium・WebKit各41件が成功した"],
+  "limitations": ["物理iOS Safari・Android Chrome、初見の人によるプレイ、外部Portal Previewは未確認"]
+}

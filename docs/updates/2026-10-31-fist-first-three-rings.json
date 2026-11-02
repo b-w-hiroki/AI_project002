@@ -1,0 +1,11 @@
+{
+  "summary": "覇拳伝の最初の３応酬で金枠と有利技が一致することを通し操作で検証する",
+  "areas": {
+    "fist-legend": {
+      "spec": {"status": "unchanged", "reason": "既存の初回案内と金枠を実操作で検証し、ゲーム仕様は変更しない"},
+      "design": {"status": "unchanged", "reason": "予兆と対応する技の金枠、および４応酬目での非表示を検査し、実装は変更しない"}
+    }
+  },
+  "validation": ["短い縦画面で３応酬の予兆・案内文・金枠を照合し、４応酬目の金枠消失から奥義・結果・再挑戦まで操作した", "対象テストはWebKit３回とChromium１回が成功し、lint・typecheck・単体62件・buildも成功した"],
+  "limitations": ["自動テストは初見の人の理解度や楽しさを評価しない", "物理iOS・Androidと外部Portal Previewは未確認"]
+}

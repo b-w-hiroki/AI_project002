@@ -39,4 +39,4 @@ const game = new Phaser.Game({
   scene: [GameScene],
 });
 
-installResponsiveGame(game, { baseWidth: 800, baseHeight: 600 });
+installResponsiveGame(game, { baseWidth: 800, baseHeight: 600, manageSurface: false });

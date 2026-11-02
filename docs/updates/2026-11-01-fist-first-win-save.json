@@ -1,0 +1,11 @@
+{
+  "summary": "初回勝利と再挑戦の後に報酬と勝利数が再読み込みで復元されることを検証する",
+  "areas": {
+    "fist-legend": {
+      "spec": { "status": "unchanged", "reason": "既存の勝利数と通貨の保存仕様を実操作の検証で確認し、挙動を変更しない" },
+      "design": { "status": "unchanged", "reason": "保存処理や画面の責務を変更せず既存のE2Eに復元確認を追加する" }
+    }
+  },
+  "validation": ["初回対戦の勝利、再挑戦、再読み込み後の所持数と勝利数をChromiumとWebKitで確認"],
+  "limitations": ["物理端末と初見プレイヤーによる確認は未実施"]
+}
