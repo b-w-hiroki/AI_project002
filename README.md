@@ -2,6 +2,8 @@
 
 AIフル活用でゲーム開発
 
+> 現在の状態: **v1.0.0-rc.1**（6作品のビジュアル／使いやすさ完成ラウンドのリリース候補。自動検証は完了し、残りは実機QAとポータル投稿などの人間ゲートのみ）— 詳細は [RELEASE-CANDIDATE.md](RELEASE-CANDIDATE.md) を参照。
+
 ルート（https://b-w-hiroki.github.io/AI_project002/）はゲーム一覧のハブページ。
 
 ## 収録ゲーム
@@ -16,6 +18,34 @@ AIフル活用でゲーム開発
 | 🐎 三国ポチポチ | タップ進撃×武将ガチャ×装備合成のポチポチ系タップRPG | https://b-w-hiroki.github.io/AI_project002/sangoku-tap/ | `games/sangoku-tap/` |
 
 各ゲームは独立した Phaser + TypeScript + Vite プロジェクト。開発ルールは `CLAUDE.md` を参照。
+
+## スクリーンショット
+
+各ゲームの代表画面。画面集全体は [画面と検証結果](docs/review/README.md) と [全画面ギャラリー](docs/review/index.html) を参照。
+
+### ポーション工房
+
+![ポーション工房](docs/review/potion-initial.png)
+
+### 剣戟の森
+
+![剣戟の森](docs/review/sword-playing.png)
+
+### カラーマッチ
+
+![カラーマッチ](docs/review/color-playing.png)
+
+### 覇拳伝
+
+![覇拳伝](docs/review/fist-battle.png)
+
+### カルマクエスト
+
+![カルマクエスト](docs/review/karma-title.png)
+
+### 三国ポチポチ
+
+![三国ポチポチ](docs/review/sangoku-title.png)
 
 ## 現行仕様・設計と更新運用
 
@@ -53,3 +83,5 @@ Human-only gates before final v1.0.0:
 - CrazyGames / PLiCy portal upload and preview checks
 
 See [RELEASE-CANDIDATE.md](RELEASE-CANDIDATE.md) and [docs/review/final-release-gate-2026-09-27.md](docs/review/final-release-gate-2026-09-27.md).
+
+PLiCy / CrazyGames への投稿は [投稿準備資料](docs/submission.md) を参照（各作品の紹介文・カテゴリ・タグ候補を収録）。投稿用ZIPは最新成功した GitHub Pages ワークフローのアーティファクト `game-release-packages`、カバー／preview画像は Marketing Assets ワークフローの成果物を使う。

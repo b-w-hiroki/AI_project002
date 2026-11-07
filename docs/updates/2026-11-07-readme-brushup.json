@@ -1,0 +1,22 @@
+{
+  "summary": "READMEの状態要約・既存スクリーンショット・投稿準備資料への導線を追加",
+  "areas": {
+    "platform": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "READMEの案内のみを補完し、ゲーム動作・公開状態・リリース判定は変更しない"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存画像と文書へのリンク追加のみで、配信構成・ビルド・保存形式を変更しない"
+      }
+    }
+  },
+  "validation": [
+    "Documentation guardの単体18件と変更影響チェックを実行",
+    "READMEで追加されたローカル画像・文書の存在を確認"
+  ],
+  "limitations": [
+    "実機確認や外部Portal投稿を実施済みとは扱わない"
+  ]
+}
