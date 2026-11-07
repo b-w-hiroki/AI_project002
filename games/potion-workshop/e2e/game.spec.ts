@@ -687,10 +687,11 @@ test("portrait blackboard keeps a next action after orders are delivered", async
     Reflect.set(scene, "state", { ...state, completedContracts: [0, 1], totalBrewed: 500_000, townIndex: 0, prestigeCount: 0 });
   });
   await expect.poll(board).toMatch(/転生へ調合|BREW MORE/);
+  await page.screenshot({ path: "e2e/screenshots/potion-next-progress-390x844.png", animations: "disabled" });
   await page.evaluate(() => {
     const scene = window.__qaGame.scene.getScene("idle");
     Reflect.get(scene, "state").totalBrewed = 1_000_000;
   });
   await expect.poll(board).toMatch(/転生できる|ASCEND/);
-  await page.screenshot({ path: "test-results/potion-next-goal-390x844.png" });
+  await page.screenshot({ path: "e2e/screenshots/potion-next-goal-390x844.png", animations: "disabled" });
 });
