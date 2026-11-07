@@ -668,3 +668,30 @@ test("responsive order rewards follow the current town multiplier", async ({ pag
   })).toEqual(expect.arrayContaining([expect.stringMatching(/(?:REP|評判) \+2/)]));
   await page.locator("canvas").screenshot({ path: "e2e/screenshots/portrait-town-reward.png", animations: "disabled" });
 });
+
+test("portrait blackboard keeps a next action after orders are delivered", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForSceneObjects(page, ["workshop-blackboard-text"]);
+  const board = async () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    for (const node of scene.children.list) {
+      if (node.type !== "Container") continue;
+      const text = (node as Phaser.GameObjects.Container).getByName("workshop-blackboard-text") as Phaser.GameObjects.Text | null;
+      if (text) return text.text;
+    }
+    return "";
+  });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const state = Reflect.get(scene, "state") as Record<string, unknown>;
+    Reflect.set(scene, "state", { ...state, completedContracts: [0, 1], totalBrewed: 500_000, townIndex: 0, prestigeCount: 0 });
+  });
+  await expect.poll(board).toMatch(/転生へ調合|BREW MORE/);
+  await page.screenshot({ path: "e2e/screenshots/potion-next-progress-390x844.png", animations: "disabled" });
+  await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    Reflect.get(scene, "state").totalBrewed = 1_000_000;
+  });
+  await expect.poll(board).toMatch(/転生できる|ASCEND/);
+  await page.screenshot({ path: "e2e/screenshots/potion-next-goal-390x844.png", animations: "disabled" });
+});

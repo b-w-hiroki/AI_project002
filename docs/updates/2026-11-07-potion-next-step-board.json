@@ -1,0 +1,1 @@
+{"summary":"注文完了後も縦画面の黒板に次の目標を表示","areas":{"potion-workshop":{"spec":{"status":"updated","reason":"注文完了後の黒板を需要設備または転生の案内へ変更"},"design":{"status":"updated","reason":"既存nextObjectiveを黒板から参照して目標判定を共通化"}}},"validation":["注文完了後と転生可能時を確認する390×844 E2Eを追加。結果はPRに記録"],"limitations":["初見ユーザーの理解度・実機は未確認。保存と経済バランスは変更しない"]}
