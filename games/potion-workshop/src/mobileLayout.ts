@@ -18,6 +18,7 @@ import {
   type GameState,
 } from "./logic/economy";
 import { save } from "./logic/save";
+import { nextObjective } from "./logic/nextObjective";
 import { generatorName, t, townName, type Lang } from "./logic/i18n";
 import { townForState } from "./logic/towns";
 import { IdleScene } from "./scenes/IdleScene";
@@ -614,7 +615,15 @@ function refresh(scene: Runtime): void {
   if (ui.blackboardText) {
     const nextOrder = [0, 1].find(index => !state.completedContracts.includes(index));
     if (nextOrder === undefined) {
-      ui.blackboardText.setText(lang === "ja" ? "本日の依頼\nすべて納品済み ✓" : "TODAY'S ORDERS\nALL DELIVERED ✓");
+      // Keep the next action visible after the two orders instead of a dead-end completion label.
+      const objective = nextObjective(state);
+      const gain = formatNumber(objective.essenceGain ?? 0);
+      const progress = Math.floor(objective.ratio * 100);
+      ui.blackboardText.setText(objective.kind === "ascend"
+        ? (lang === "ja" ? `転生できる\n新しい街へ\n+${gain} ✨` : `ASCEND\nNEW TOWN\n+${gain} ✨`)
+        : objective.kind === "demand_generator"
+          ? (lang === "ja" ? `次の目標\n需要設備\n増設 ${progress}%` : `NEXT GOAL\nTOWN GEAR\n${progress}%`)
+          : (lang === "ja" ? `次の目標\n転生へ調合\n${progress}%` : `NEXT GOAL\nBREW MORE\n${progress}%`));
     } else {
       const cost = contractCost(state, nextOrder);
       ui.blackboardText.setText(

@@ -8,7 +8,7 @@
 [main.ts](../../../games/potion-workshop/src/main.ts) の実行Sceneは [IdleScene](../../../games/potion-workshop/src/scenes/IdleScene.ts)。GameScene.tsは最小動作確認用であり製品の主経路ではない。
 presentation → conceptArt → mobileLayout → wall-clock persistence の組込順を維持する。
 [economy](../../../games/potion-workshop/src/logic/economy.ts) が生産・価格・転生、[contracts](../../../games/potion-workshop/src/logic/contracts.ts) が需要／注文、[towns](../../../games/potion-workshop/src/logic/towns.ts) が街を扱う。
-[nextObjective](../../../games/potion-workshop/src/logic/nextObjective.ts) は転生可能→未完了の初期注文→需要設備→転生進捗の順で案内を決める。
+[nextObjective](../../../games/potion-workshop/src/logic/nextObjective.ts) は転生可能→未完了の初期注文→需要設備→転生進捗の順で案内を決める。縦画面の黒板も注文完了後はこの判定を参照し、別の目標ロジックを持たない。
 
 ## 状態と永続化
 [save.ts](../../../games/potion-workshop/src/logic/save.ts) のキーは ai_project002_save_v1。state / savedAtを保存し、ロード時はnewGameとマージする。
