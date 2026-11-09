@@ -1,0 +1,23 @@
+{
+  "summary": "PR #422: color-match の開発依存 ESLint 10.13.0→10.14.0 / Vite 8.3.5→8.3.6 の影響確認",
+  "areas": {
+    "color-match": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "package.json と lockfile の開発用ツール更新のみ。ゲームルール、操作、保存形式、素材は変更しないため現行仕様本文を維持する。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "ESLint/Vite のバージョン更新であり、Scene責務、読込順序、保存・入力境界、ビルド設定の構成は変更しない。"
+      }
+    }
+  },
+  "validation": [
+    "更新前head c742b1c2066e2345f04a0812c28d6cd44c1214f0 の差分が対象ゲームの package.json / package-lock.json のみであることを確認。",
+    "上記headで Browser E2E / WebKit Smoke の成功を確認: https://github.com/b-w-hiroki/AI_project002/actions/runs/42492867731 ; https://github.com/b-w-hiroki/AI_project002/actions/runs/42492867502 ; https://github.com/b-w-hiroki/AI_project002/actions/runs/42492867501"
+  ],
+  "limitations": [
+    "この記録追加後のheadは別のCI実行で再確認する。過去headの成功を最終headの成功として扱わない。",
+    "実機iOS/Android・外部Portal・本番公開の確認は今回未実施。"
+  ]
+}
