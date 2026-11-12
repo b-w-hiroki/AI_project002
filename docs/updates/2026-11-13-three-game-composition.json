@@ -1,0 +1,42 @@
+{
+  "summary": "三国・剣戟・ポーションの構図改善。旧ローカル作業消失後同一base c4ca89bから復元。",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    },
+    "side-scroller": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    },
+    "potion-workshop": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    }
+  },
+  "validation": [
+    "lint/typecheck/unit/buildを再実行。390×844と1180×757のCIスクリーンショットテスト追加。"
+  ],
+  "limitations": [
+    "ローカルChromiumはsocket制限で起動不可。pushは自動審査拒否で未実施。PR、CI、実画面確認は未完了。",
+    "実機iOS/Android・外部Portalは未確認。"
+  ]
+}

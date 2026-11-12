@@ -506,12 +506,12 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     prestigeText = text(scene, root, 389, 780, "", 1, "#ead5ff", "900").setVisible(false);
 
   } else {
-    panel(scene, root, 588, 170, 388, 190, 0x423124, 0xd4b36e, 0.93, 16);
+    panel(scene, root, 588, 170, 388, 190, 0x302923, 0x75614b, 0.94, 16);
     text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const y = 132 + index * 68;
-      addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x3e765d : 0x4c6e8c);
-      const node = text(scene, root, 588, y, "", 19, "#ffffff", "900")
+      addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x354b42 : 0x36434c);
+      const node = text(scene, root, 588, y, "", 18, "#f0eadc", "700")
         .setName(`workshop-order-${index}`);
       orderTexts.push(node);
       hitButton(scene, root, 588, y, 340, 56, () => {
@@ -520,8 +520,8 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       });
     });
 
-    panel(scene, root, 588, 300, 388, 70, 0x3c2d25, 0xd4b36e, 0.93, 14);
-    recommendationText = text(scene, root, 535, 300, "", 18, "#fff2d6", "900")
+    panel(scene, root, 588, 300, 388, 70, 0x302923, 0x75614b, 0.94, 14);
+    recommendationText = text(scene, root, 535, 300, "", 16, "#e3d8c3", "600")
       .setName("workshop-landscape-recommendation");
     addButtonChrome(scene, root, 720, 300, 90, 44, 0x2e8f65);
     text(scene, root, 720, 300, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
@@ -531,7 +531,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       updateState(scene, buyGenerator(scene.state, rec.id));
     });
 
-    panel(scene, root, 588, 380, 388, 60, 0x2f2927, 0x9b7d57, 0.91, 13);
+    panel(scene, root, 588, 380, 388, 60, 0x292725, 0x62584c, 0.94, 13);
     clickUpgradeText = text(scene, root, 474, 380, "", 17, "#f9e8c9", "900")
       .setName("workshop-landscape-management");
     offlineText = text(scene, root, 590, 380, "", 17, "#d7ecff", "900");

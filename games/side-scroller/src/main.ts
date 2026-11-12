@@ -30,7 +30,7 @@ const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: "game",
   width: 800,
-  height: 600,
+  height: 450,
   backgroundColor: "#aee0ff",
   physics: {
     default: "arcade",
@@ -46,4 +46,4 @@ const game = new Phaser.Game({
   scene: [LoadoutScene, GameScene],
 });
 
-installResponsiveGame(game, { baseWidth: 800, baseHeight: 600 });
+installResponsiveGame(game, { baseWidth: 800, baseHeight: 450 });
