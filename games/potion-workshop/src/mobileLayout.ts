@@ -521,7 +521,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     });
 
     panel(scene, root, 588, 300, 388, 70, 0x302923, 0x75614b, 0.94, 14);
-    recommendationText = text(scene, root, 535, 300, "", 16, "#e3d8c3", "600")
+    recommendationText = text(scene, root, 535, 300, "", 18, "#e3d8c3", "600")
       .setName("workshop-landscape-recommendation");
     addButtonChrome(scene, root, 720, 300, 90, 44, 0x2e8f65);
     text(scene, root, 720, 300, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
