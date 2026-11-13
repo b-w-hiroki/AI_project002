@@ -1,0 +1,28 @@
+{
+  "summary": "ポーション工房の依頼完了後に次目標・具体的行動・進捗を大きく表示",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦画面の完了依頼を次目標カードに置き換える表示契約を記載"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "既存nextObjectiveを使う描画と注文入力の切替を記載"
+      }
+    }
+  },
+  "validation": [
+    "local typecheck/lint/build passed; unit 85 passed; docs checker passed against aaa7597",
+    "Code head c859a32: Potion checks and Chromium E2E passed: https://github.com/b-w-hiroki/AI_project002/actions/runs/43338097275",
+    "Potion WebKit passed: https://github.com/b-w-hiroki/AI_project002/actions/runs/43338097479",
+    "Artifact 13998901207 (Chromium) and 13998836600 (WebKit): inspected Japanese 50% progress, ascension-ready, and longest English equipment goal screenshots; goal text contained and existing character unchanged",
+    "E2E covers Japanese/English bounds, funds-ready and restoring order interaction on a new town",
+    "Local Chromium unavailable: socket() Operation not permitted; CI used for actual browser verification"
+  ],
+  "limitations": [
+    "Merge dependency #427; draft pending complete repository CI",
+    "Unchanged Karma Quest WebKit pointer test failed at e2e/game.spec.ts:681 (job 131599307846); parent coordinating follow-up",
+    "Physical devices and external Portal not verified"
+  ]
+}

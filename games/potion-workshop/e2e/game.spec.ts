@@ -695,3 +695,52 @@ test("portrait blackboard keeps a next action after orders are delivered", async
   await expect.poll(board).toMatch(/転生できる|ASCEND/);
   await page.screenshot({ path: "e2e/screenshots/potion-next-goal-390x844.png", animations: "disabled" });
 });
+
+test("completed orders reveal a readable goal and restore on a new town", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForSceneObjects(page, ["workshop-next-goal"]);
+  const setGoal = async (lang: string, townIndex: number, totalBrewed: number, completedContracts: number[]) => page.evaluate(
+    ({ lang, townIndex, totalBrewed, completedContracts }) => {
+      const scene = window.__qaGame.scene.getScene("idle");
+      Reflect.set(scene, "lang", lang);
+      const state = Reflect.get(scene, "state");
+      Object.assign(state, { townIndex, totalBrewed, completedContracts, potions: 0, prestigeCount: 0 });
+    }, { lang, townIndex, totalBrewed, completedContracts });
+  const read = async () => page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("idle");
+    const root = scene.children.list.find(node => node.type === "Container" &&
+      (node as Phaser.GameObjects.Container).getByName("workshop-next-goal")) as Phaser.GameObjects.Container;
+    const goal = root.getByName("workshop-next-goal") as Phaser.GameObjects.Text;
+    const heading = root.getByName("workshop-orders-label") as Phaser.GameObjects.Text;
+    const hit = root.getByName("workshop-order-hit-0") as Phaser.GameObjects.Zone;
+    const bounds = goal.getBounds();
+    return { text: goal.text, visible: goal.visible, heading: heading.text,
+      enabled: hit.input?.enabled, left: bounds.left, right: bounds.right,
+      top: bounds.top, bottom: bounds.bottom };
+  });
+  for (const lang of ["ja", "en"]) {
+    for (const townIndex of [0, 2, 5]) {
+      await setGoal(lang, townIndex, 500_000, [0, 1]);
+      await expect.poll(async () => (await read()).visible).toBe(true);
+      await expect.poll(async () => (await read()).text).toMatch(townIndex === 0 ? /50%/ : /購入資金|Save for/);
+      const value = await read();
+      expect(value.enabled).toBe(false);
+      expect(value.left).toBeGreaterThanOrEqual(25);
+      expect(value.right).toBeLessThanOrEqual(425);
+      expect(value.top).toBeGreaterThan(558);
+      expect(value.bottom).toBeLessThan(625);
+      await page.screenshot({ path: `e2e/screenshots/potion-goal-${lang}-town${townIndex}.png`, animations: "disabled" });
+    }
+  }
+  await setGoal("ja", 2, 500_000, [0, 1]);
+  await page.evaluate(() => {
+    Reflect.get(window.__qaGame.scene.getScene("idle"), "state").potions = 999_999;
+  });
+  await expect.poll(async () => (await read()).text).toContain("購入資金OK");
+  await setGoal("ja", 0, 1_000_000, [0, 1]);
+  await expect.poll(async () => (await read()).text).toContain("「転生」");
+  await page.screenshot({ path: "e2e/screenshots/potion-goal-ready.png", animations: "disabled" });
+  await setGoal("ja", 1, 0, []);
+  await expect.poll(async () => (await read()).visible).toBe(false);
+  await expect.poll(async () => (await read()).enabled).toBe(true);
+});

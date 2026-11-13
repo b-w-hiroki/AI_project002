@@ -43,6 +43,8 @@ type MobileUi = {
   productionTexts: Phaser.GameObjects.Text[];
   prestigeBar: Phaser.GameObjects.Graphics;
   blackboardText?: Phaser.GameObjects.Text;
+  goalText?: Phaser.GameObjects.Text;
+  goalBar?: Phaser.GameObjects.Graphics;
   hero?: Phaser.GameObjects.Image;
   cauldron?: Phaser.GameObjects.Image;
   brewX: number;
@@ -442,6 +444,12 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       }, orderChrome).setName(`workshop-order-hit-${index}`);
     });
 
+    const goalText = text(scene, root, 225, 588, "", 21, "#fff3d0", "800")
+      .setName("workshop-next-goal").setVisible(false);
+    const goalBar = scene.add.graphics().setName("workshop-goal-progress");
+    root.add(goalBar);
+    root.setData("goalText", goalText).setData("goalBar", goalBar);
+
     // The recommendation duplicated the upgrade/equipment tabs and forced
     // three competing action rows into short portrait. Keep its live value for
     // state refreshes, but disclose upgrades through the dedicated tabs.
@@ -564,6 +572,8 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     productionTexts,
     prestigeBar,
     blackboardText: root.getData("blackboardText") as Phaser.GameObjects.Text | undefined,
+    goalText: root.getData("goalText") as Phaser.GameObjects.Text | undefined,
+    goalBar: root.getData("goalBar") as Phaser.GameObjects.Graphics | undefined,
     hero,
     cauldron,
     brewX,
@@ -610,6 +620,42 @@ function refresh(scene: Runtime): void {
         : `${orderName}  ${formatNumber(cost)}\nDELIVER  +${contractReward(state, index)} REP`);
     node.setAlpha(done ? 0.55 : 1);
   });
+
+  // Reuse completed orders' space so the next step is more prominent.
+  if (ui.goalText && ui.goalBar) {
+    const delivered = [0, 1].every(index => state.completedContracts.includes(index));
+    const heading = ui.root.getByName("workshop-orders-label") as Phaser.GameObjects.Text;
+    heading.setText(delivered
+      ? (lang === "ja" ? "次の目標  ·  依頼 2/2 完了" : "NEXT GOAL  ·  ORDERS 2/2 DONE")
+      : (lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS"));
+    ui.orderTexts.forEach((node, index) => {
+      node.setVisible(!delivered);
+      (ui.root.getByName(`workshop-order-chrome-${index}`) as Phaser.GameObjects.Graphics).setVisible(!delivered);
+      const hit = ui.root.getByName(`workshop-order-hit-${index}`) as Phaser.GameObjects.Zone;
+      hit.setVisible(!delivered);
+      if (hit.input) hit.input.enabled = !delivered;
+    });
+    ui.goalText.setVisible(delivered);
+    ui.goalBar.clear();
+    if (delivered) {
+      const objective = nextObjective(state);
+      const progress = `${formatNumber(objective.current)} / ${formatNumber(objective.target)}`;
+      const percent = Math.floor(objective.ratio * 100);
+      ui.goalText.setText(objective.kind === "ascend"
+        ? (lang === "ja" ? `「転生」から新しい街へ
+エッセンス +${formatNumber(objective.essenceGain ?? 0)}` : `Tap ASCEND for a new town
++${formatNumber(objective.essenceGain ?? 0)} essence ready`)
+        : objective.kind === "demand_generator"
+          ? (lang === "ja" ? `${generatorName(lang, objective.generatorId!)}の購入資金
+${objective.ratio >= 1 ? "購入資金OK" : "調合で貯めよう"}  ${progress}` : `Save for ${generatorName(lang, objective.generatorId!)}
+${objective.ratio >= 1 ? "Funds ready" : "Brew to save"}  ${progress}`)
+          : (lang === "ja" ? `調合を続けて転生を目指そう
+累計 ${progress}  ·  ${percent}%` : `Keep brewing to unlock ASCEND
+Total ${progress}  ·  ${percent}%`));
+      ui.goalBar.fillStyle(0x231c17, 1).fillRoundedRect(38, 628, 374, 6, 3);
+      ui.goalBar.fillStyle(0xe0bd73, 1).fillRoundedRect(38, 628, 374 * objective.ratio, 6, 3);
+    }
+  }
 
   ui.recommendationText.setText(`${lang === "ja" ? "おすすめ" : "Recommended"}  ${generatorName(lang, rec.id)} Lv.${rec.count}\n${lang === "ja" ? "次" : "Next"} ${formatNumber(rec.cost)}`);
   if (ui.blackboardText) {
