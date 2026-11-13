@@ -1,0 +1,27 @@
+{
+  "summary": "Karma Questのタイマー観測丸め誤差と直接emitするpointer所有権検査の非同期割込を分離",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "製品コード・700ms演出待ち・入力所有権・中断時取消の仕様を変えず、検査のみ修正する"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存の実ポインタ中断E2Eを維持し、直接emitの同期契約を1ブラウザタスク内で観測。累積時間差分の許容はIEEE-754演算誤差だけに限定"
+      }
+    }
+  },
+  "validation": [
+    "main ee1d36b Chromium job 131654274462: 700ms lower bound received 699.9999999999998",
+    "Node arithmetic reproduction: 1900 - 1200.0000000000002 = 699.9999999999998; ULP-based tolerance passes this but rejects 699.999ms",
+    "main ee1d36b WebKit job 131654273984: final owner pointerup left selected=1 rather than 0. Historical logs do not identify an interruption; resize/blur/hidden interleaving remains a mechanism hypothesis, not a proven historical root cause",
+    "Ownership E2E now records every state synchronously, and explicitly injects resize/blur/hidden between down/up then verifies fresh press recovery in portrait and landscape",
+    "Local typecheck/lint/build passed; unit 157 tests passed",
+    "Local Chromium attempted normally and with approved escalation: launch blocked by socket() Operation not permitted before test execution. Browser mechanism reproduction and full regression require PR CI"
+  ],
+  "limitations": [
+    "Historical WebKit cancellation event was not logged; mechanism coverage does not establish its precise historical cause.",
+    "Local browser launch blocked; PR CI is pending."
+  ]
+}

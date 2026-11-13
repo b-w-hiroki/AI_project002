@@ -652,7 +652,6 @@ test("custom selections only confirm their pressing pointer", { tag: "@webkit-re
     Reflect.set(scene, "deity", "valor");
     Reflect.get(scene, "showReportPhase").call(scene, { win: true, hpRatioRemaining: 0.5 });
   });
-  const selected = () => page.evaluate(() => (Reflect.get(window.__qaGame.scene.getScene("GameScene"), "highlightRows") as Array<{selected: boolean}>).filter(row => row.selected).length);
   for (const wide of [false, true]) {
     await page.setViewportSize(wide ? { width: 806, height: 456 } : { width: 456, height: 806 });
     await expect.poll(() => page.locator("canvas").evaluate(c => (c as HTMLCanvasElement).width)).toBe(wide ? 800 : 450);
@@ -666,19 +665,42 @@ test("custom selections only confirm their pressing pointer", { tag: "@webkit-re
       scale.on("resize", changed);
       changed();
     }));
-    await foreignRelease(name);
-    expect(await selected()).toBe(0);
-    await emit(name, "pointerup", 101);
-    expect(await selected()).toBe(1);
-    await emit(name, "pointerup", 101);
-    expect(await selected()).toBe(1);
-    await emit(name, "pointerdown", 101);
-    await emit(name, "pointerout", 101);
-    await emit(name, "pointerup", 101);
-    expect(await selected()).toBe(1);
-    await emit(name, "pointerdown", 101);
-    await emit(name, "pointerup", 101);
-    expect(await selected()).toBe(0);
+    // This is a synchronous event-ownership contract, not a real-time gesture.
+    // Separate page.evaluate calls allow legitimate resize/blur cancellation to
+    // interleave with the synthetic press. Real pointer interruptions are tested
+    // separately below and in "home and report selections cancel interrupted presses".
+    const observations = await page.evaluate(name => {
+      const scene = window.__qaGame.scene.getScene("GameScene");
+      let target: Phaser.GameObjects.GameObject | undefined;
+      const visit = (node: Phaser.GameObjects.GameObject) => {
+        if (Reflect.get(node, "visible") === false) return;
+        if (node.name === name) target = node;
+        if ("list" in node) (node as Phaser.GameObjects.Container).list.forEach(visit);
+      };
+      scene.children.list.forEach(visit);
+      if (!target) throw new Error(`Missing visible selection: ${name}`);
+      const emit = (event: string, id = 101) => target!.emit(event, { id });
+      const count = () => (Reflect.get(scene, "highlightRows") as Array<{ selected: boolean }>).filter(row => row.selected).length;
+      const states: number[] = [count()];
+      emit("pointerdown"); emit("pointerdown", 102);
+      emit("pointerup", 102); emit("pointerout", 102);
+      states.push(count());
+      emit("pointerup"); states.push(count());
+      emit("pointerup"); states.push(count());
+      emit("pointerdown"); emit("pointerout"); emit("pointerup"); states.push(count());
+      emit("pointerdown"); emit("pointerup"); states.push(count());
+      // Reproduce the interleaving explicitly: cancellation must suppress the
+      // stale release, and a fresh press must still toggle exactly once.
+      for (const event of ["resize", "blur", "hidden"]) {
+        emit("pointerdown");
+        (event === "resize" ? scene.scale : scene.game.events).emit(event);
+        emit("pointerup"); states.push(count());
+        emit("pointerdown"); emit("pointerup"); states.push(count());
+        emit("pointerdown"); emit("pointerup"); states.push(count());
+      }
+      return states;
+    }, name);
+    expect(observations).toEqual([0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]);
   }
   const deity = () => page.evaluate(() => Reflect.get(window.__qaGame.scene.getScene("GameScene"), "deity"));
   await foreignRelease("report-god-wide:mercy");
@@ -3271,7 +3293,13 @@ for (const smoothStep of [true, false]) {
         const report = evidence.milestones.find((sample: { phase: string }) => sample.phase === "report");
         expect(result).toBeTruthy();
         expect(report).toBeTruthy();
-        expect(report.clockDeltaTotal - result.clockDeltaTotal).toBeGreaterThanOrEqual(700);
+        // Subtracting accumulated IEEE-754 deltas can put an exact 700ms
+        // interval a few ULPs below 700 (observed: 699.9999999999998).
+        // Allow only arithmetic noise, never a frame-sized timing shortfall.
+        const roundingTolerance = Number.EPSILON * Math.max(
+          Math.abs(report.clockDeltaTotal), Math.abs(result.clockDeltaTotal), 700,
+        ) * 8;
+        expect(report.clockDeltaTotal - result.clockDeltaTotal).toBeGreaterThanOrEqual(700 - roundingTolerance);
         expect(report.wallMs).toBeLessThan(5000);
       }
     } finally {
