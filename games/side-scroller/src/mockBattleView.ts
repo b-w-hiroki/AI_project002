@@ -257,8 +257,12 @@ class SideBattleView {
     this.chrome.clear();
     this.chrome.fillStyle(0x03131e, 0.83).fillRoundedRect(7, 7, width - 14, topH, 7);
     this.chrome.lineStyle(1.5, 0xb6e7ee, 0.78).strokeRoundedRect(7, 7, width - 14, topH, 7);
-    this.chrome.fillStyle(0x0a2631, 0.92).fillRoundedRect(14, this.portrait ? 49 : 38, this.portrait ? 184 : 214, 11, 4);
-    this.chrome.fillStyle(hpRatio < 0.34 ? 0xe8534f : 0x42d377, 1).fillRoundedRect(14, this.portrait ? 49 : 38, (this.portrait ? 184 : 214) * hpRatio, 11, 4);
+    // Opaque HP track and a light rim keep remaining health legible on foliage.
+    const hpY = this.portrait ? 47 : 36;
+    const hpW = this.portrait ? 184 : 214;
+    this.chrome.fillStyle(0x020d13, 1).fillRoundedRect(13, hpY - 1, hpW + 2, 17, 4);
+    this.chrome.lineStyle(1, 0xc9e8dc, 0.9).strokeRoundedRect(13, hpY - 1, hpW + 2, 17, 4);
+    this.chrome.fillStyle(hpRatio < 0.34 ? 0xe8534f : 0x42d377, 1).fillRoundedRect(14, hpY, hpW * hpRatio, 15, 4);
     const gaugeX = this.portrait ? 220 : 245;
     const gaugeW = this.portrait ? 216 : 176;
     this.chrome.fillStyle(0x0a2631, 0.92).fillRoundedRect(gaugeX, this.portrait ? 49 : 38, gaugeW, 11, 4);

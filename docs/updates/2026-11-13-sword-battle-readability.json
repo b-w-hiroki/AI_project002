@@ -1,0 +1,6 @@
+{
+ "summary":"剣戟の森の背景・足元・HPの視認性を改善（キャラクター維持）",
+ "areas":{"side-scroller":{"spec":{"status":"updated","reason":"戦闘時の背景とHPの表示方針を明記"},"design":{"status":"updated","reason":"背景暗幕と前景の描画順・HP下地の責務を明記"}}},
+ "validation":["ローカルlint/typecheck/build成功、Vitest 8 files / 141 tests成功", "800x360・844x390・932x430の戦闘スクリーンショットとレイヤー検査E2Eを追加"],
+ "limitations":["ローカルChromiumはsocket() Operation not permittedで起動不可。E2E実行・同一場面比較・実画像レビューはCI待ち", "WebKitおよびiOS/Android実機未確認。視覚改善完了とは扱わない"]
+}
