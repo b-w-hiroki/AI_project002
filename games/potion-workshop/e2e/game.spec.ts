@@ -719,7 +719,7 @@ test("completed orders reveal a readable goal and restore on a new town", async 
       top: bounds.top, bottom: bounds.bottom };
   });
   for (const lang of ["ja", "en"]) {
-    for (const townIndex of [0, 2]) {
+    for (const townIndex of [0, 2, 5]) {
       await setGoal(lang, townIndex, 500_000, [0, 1]);
       await expect.poll(async () => (await read()).visible).toBe(true);
       await expect.poll(async () => (await read()).text).toMatch(townIndex === 0 ? /50%/ : /購入資金|Save for/);
@@ -732,6 +732,11 @@ test("completed orders reveal a readable goal and restore on a new town", async 
       await page.screenshot({ path: `e2e/screenshots/potion-goal-${lang}-town${townIndex}.png`, animations: "disabled" });
     }
   }
+  await setGoal("ja", 2, 500_000, [0, 1]);
+  await page.evaluate(() => {
+    Reflect.get(window.__qaGame.scene.getScene("idle"), "state").potions = 999_999;
+  });
+  await expect.poll(async () => (await read()).text).toContain("購入資金OK");
   await setGoal("ja", 0, 1_000_000, [0, 1]);
   await expect.poll(async () => (await read()).text).toContain("「転生」");
   await page.screenshot({ path: "e2e/screenshots/potion-goal-ready.png", animations: "disabled" });
