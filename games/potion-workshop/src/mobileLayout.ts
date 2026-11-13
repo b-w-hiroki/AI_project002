@@ -618,7 +618,7 @@ function refresh(scene: Runtime): void {
     const ready = !done && state.potions >= cost;
     node.setText(done
       ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
-      : `${orderName} · +${contractReward(state, index)} ${lang === "ja" ? "評判" : "REP"}\n${requirementLabel(state.potions, cost, lang, "deliver")}`);
+      : `${orderName} +${contractReward(state, index)}${lang === "ja" ? "評判" : "REP"}\n${requirementLabel(state.potions, cost, lang, "deliver")}`);
     node.setFontSize(ui.orientation === "portrait" ? 22 : 18);
     node.setColor(ready ? "#ffe19a" : "#f0eadc");
     node.setAlpha(done ? 0.55 : 1);
