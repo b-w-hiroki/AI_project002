@@ -33,10 +33,13 @@
     }
   },
   "validation": [
-    "lint/typecheck/unit/buildを再実行。390×844と1180×757のCIスクリーンショットテスト追加。"
+    "lint/typecheck/unit/buildを再実行。390×844と1180×757のCIスクリーンショットテスト追加。",
+    "実装head aaa759739a0dc6540a0a3684b09d4555a4cfe820: Browser E2E run43332529538、WebKit run43332529553、Documentation run43332529554成功。",
+    "最終実装headの3ゲーム×2サイズの実画像を確認。剣戟のスマホ縦は既存仕様どおり回転案内。",
+    "ポーションのviewport timeoutと無変更karmaの浮動小数点境界失敗は、各job一度だけ再実行して成功。閾値・挙動を変更していない。"
   ],
   "limitations": [
-    "ローカルChromiumはsocket制限で起動不可。pushは自動審査拒否で未実施。PR、CI、実画面確認は未完了。",
-    "実機iOS/Android・外部Portalは未確認。"
+    "実機iOS/Android・外部Portalは未確認。",
+    "この検証記録追記後のheadについてはCIを再確認する。"
   ]
 }
