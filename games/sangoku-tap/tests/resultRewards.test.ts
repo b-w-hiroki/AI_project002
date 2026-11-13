@@ -15,6 +15,11 @@ describe("result reward hierarchy", () => {
     const run = { ...newExpedition(troop), status: "defeat" as const, step: 4, loot: 99 };
     expect(resultRewards(run, 0, "en").map(r => r.text)).toEqual(["49 Coins Secured", "No Gear Reward", "Merit +0"]);
   });
+  it("keeps positive coins ahead of unearned merit without changing the run", () => {
+    const run = { ...newExpedition(troop), status: "retreat" as const, step: 3, loot: 120 };
+    expect(resultRewards(run, 0, "ja").map(r => r.text)).toEqual(["Common装備 +1", "120 持帰り銭", "功績 +0"]);
+    expect(run.loot).toBe(120);
+  });
   it("distinguishes early returns from equipment-eligible returns", () => {
     const run = { ...newExpedition(troop), status: "retreat" as const, step: 2, loot: 0 };
     expect(resultRewards(run, 0, "ja").every(r => !r.earned)).toBe(true);
