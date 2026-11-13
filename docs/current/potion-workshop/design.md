@@ -23,3 +23,6 @@ presentation → conceptArt → mobileLayout → wall-clock persistence の組�
 ## 確認範囲・保留
 現行コードと既存テストを照合した仕様の初版。本作の全機能を今回再プレイしたという意味ではない。
 実機・外部Portal・公開の合否は [リリース資料](../../../RELEASE-CANDIDATE.md) と個別QA記録を参照する。
+
+### 完了依頼領域の再利用
+mobileLayoutの縦UIにgoalText/goalBarを追加。2依頼完了時のみ表示し、旧注文の見た目と入力を同時に無効化する。進捗はnextObjectiveから導出し保存値を追加しない。回転による再構築と新しい街の未完了状態で通常注文表示を復元する。

@@ -1,0 +1,24 @@
+{
+  "summary": "ポーション工房の依頼完了後に次目標・具体的行動・進捗を大きく表示",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦画面の完了依頼を次目標カードに置き換える表示契約を記載"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "既存nextObjectiveを使う描画と注文入力の切替を記載"
+      }
+    }
+  },
+  "validation": [
+    "local typecheck/lint/build passed; unit 85 passed",
+    "Browser E2E追加: 日英の転生進捗・需要設備・転生可能・新しい街への復帰",
+    "local Chromium blocked: socket() Operation not permitted; CI images pending"
+  ],
+  "limitations": [
+    "PR #427の後続差分。CI画像の目視検証が終わるまでDraft",
+    "実機・外部Portal未確認"
+  ]
+}
