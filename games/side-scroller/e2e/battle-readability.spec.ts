@@ -41,5 +41,15 @@ for (const width of [800, 844, 932]) {
     }
     await expect(page.locator('canvas')).toBeVisible();
     await page.screenshot({ path: `e2e/screenshots/readability-${width}.png` });
+    // Same frozen actors/camera: isolate the background/foliage change. HUD stays new.
+    await page.evaluate(() => {
+      const scene = window.__qaGame.scene.getScene('GameScene');
+      (scene.children.getByName('side-battle-background-veil') as Phaser.GameObjects.Rectangle).setVisible(false);
+      for (const node of scene.children.list) {
+        if (node.name === 'side-foreground-foliage') (node as Phaser.GameObjects.Graphics).setDepth(4).setAlpha(0.72);
+      }
+    });
+    await page.waitForTimeout(100);
+    await page.screenshot({ path: `e2e/screenshots/readability-background-before-${width}.png` });
   });
 }
