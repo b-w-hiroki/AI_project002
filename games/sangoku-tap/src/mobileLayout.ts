@@ -1,9 +1,9 @@
 import Phaser from "phaser";
+import { resultRewards } from "./logic/resultRewards";
 import { bindResponsiveScene, getResponsiveLayout, type ViewportLayout } from "../../shared/mobile";
 import { GENERAL_POOL } from "./logic/general";
 import {
   ROLES,
-  expeditionReward,
   newExpedition,
   returnExpedition,
   victoryChance,
@@ -325,9 +325,13 @@ function renderResult(scene: Runtime, root: Phaser.GameObjects.Container): void 
 
   panel(scene, root, 665, 225, 240, 310, 0x151313, 0xd3a657, 0.96, 15);
   label(scene, root, 665, 105, tr(scene.lang ?? "en", "戦果", "Results"), 11, "#dcb977", "900");
-  label(scene, root, 665, 151, `${expeditionReward(run)} ${tr(scene.lang ?? "en", "持帰り銭", "Coins Secured")}`, 30, "#f4cb7f", "900");
-  label(scene, root, 665, 198, run.status === "clear" ? tr(scene.lang ?? "en", "Rare装備 +1", "Rare Gear +1") : run.status !== "defeat" && run.step >= 3 ? tr(scene.lang ?? "en", "Common装備 +1", "Common Gear +1") : tr(scene.lang ?? "en", "装備報酬なし", "No Gear Reward"), 12, "#f1dfc0", "800");
-  label(scene, root, 665, 234, `${tr(scene.lang ?? "en", "功績", "Merit")} +${scene.earnedMerit ?? 0}`, 16, "#9cdbc3", "900");
+  const rewards = resultRewards(run, scene.earnedMerit ?? 0, scene.lang ?? "en");
+  rewards.forEach((reward, index) => {
+    const text = label(scene, root, 665, ([151, 198, 234][index] ?? 234), reward.text,
+      reward.earned ? (index === 0 ? 26 : 22) : 17,
+      reward.earned ? (reward.kind === "merit" ? "#9cdbc3" : "#f4cb7f") : "#b7afa1", "900");
+    text.setName(`result-reward-${reward.kind}`);
+  });
   button(scene, root, 665, 298, 205, 54, tr(scene.lang ?? "en", "戦略地図へ", "Strategy Map"), () => {
     const next = REGIONS.find((r) => isUnlocked(scene.campaign!, r.id) && !scene.campaign!.cleared.includes(r.id));
     scene.view = "camp";

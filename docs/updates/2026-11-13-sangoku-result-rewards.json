@@ -1,0 +1,9 @@
+{
+  "summary": "三国ポチポチの横画面結果で獲得装備・功績を0銭より強調",
+  "areas": {"sangoku-tap": {
+    "spec": {"status": "updated", "reason": "獲得報酬を優先する表示順とゲームルール不変を記録"},
+    "design": {"status": "updated", "reason": "獲得報酬の文字サイズと色による情報階層を記録"}
+  }},
+  "validation": ["typecheck", "lint", "unit 72 passed", "build"],
+  "limitations": ["Chromium E2Eは通常実行と昇格実行の双方でsocket() Operation not permittedにより起動不可。変更後のスクリーンショット・実機検証は未確認。", "勝利・敗走・帰還の表示順を単体テスト、勝利画面の文字階層をE2Eに追加したがE2E実行は環境制約で未完了。"]
+}

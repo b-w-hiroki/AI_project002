@@ -311,6 +311,18 @@ test("expedition result is visually reviewable after a clear", async ({ page }) 
     Reflect.get(scene, "settle").call(scene);
   });
   await expect.poll(() => expeditionView(page)).toBe("result");
+  const rewards = await page.evaluate(() => {
+    const scene = window.__qaGame.scene.getScene("ExpeditionScene");
+    const all = scene.children.list.flatMap(child => child.type === "Container" ? (child as Phaser.GameObjects.Container).list : []);
+    return all.filter(child => child.name.startsWith("result-reward-")).map(child => {
+      const text = child as Phaser.GameObjects.Text;
+      return { name: text.name, text: text.text, y: text.y, size: Number.parseInt(String(text.style.fontSize)) };
+    });
+  });
+  expect(rewards.map(r => r.name)).toEqual(["result-reward-gear", "result-reward-merit", "result-reward-coins"]);
+  expect(rewards[0]?.text).toBe("Rare装備 +1");
+  expect(rewards[0]!.size).toBeGreaterThan(rewards[2]!.size);
+  expect(rewards[1]!.size).toBeGreaterThan(rewards[2]!.size);
   await checkFrame(page, "landscape-result");
 });
 
