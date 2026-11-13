@@ -437,7 +437,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       const x = index === 0 ? 120 : 330;
       const orderChrome = addButtonChrome(scene, root, x, 598, 190, 74, 0x39362e)
         .setName(`workshop-order-chrome-${index}`);
-      const labelNode = text(scene, root, x, 598, "", 18, "#ffffff", "900")
+      const labelNode = text(scene, root, x, 598, "", 22, "#ffffff", "900")
         .setName(`workshop-order-${index}`);
       orderTexts.push(labelNode);
       hitButton(scene, root, x, 598, 190, 74, () => {
@@ -613,13 +613,13 @@ function refresh(scene: Runtime): void {
     const done = state.completedContracts.includes(index);
     const cost = contractCost(state, index);
     const orderName = lang === "ja"
-      ? (index === 0 ? "常備薬" : "商隊納品")
-      : (index === 0 ? "Village supplies" : "Caravan shipment");
+      ? (index === 0 ? "常備薬" : "商隊")
+      : (index === 0 ? "Village" : "Caravan");
     const ready = !done && state.potions >= cost;
     node.setText(done
       ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
-      : `${orderName}\n${requirementLabel(state.potions, cost, lang, "deliver")}\n${lang === "ja" ? "評判" : "REP"} +${contractReward(state, index)}`);
-    node.setFontSize(ui.orientation === "portrait" ? (lang === "ja" ? 18 : 16) : 15);
+      : `${orderName} · +${contractReward(state, index)} ${lang === "ja" ? "評判" : "REP"}\n${requirementLabel(state.potions, cost, lang, "deliver")}`);
+    node.setFontSize(ui.orientation === "portrait" ? 22 : 18);
     node.setColor(ready ? "#ffe19a" : "#f0eadc");
     node.setAlpha(done ? 0.55 : 1);
     node.setData("ready", ready);
@@ -686,7 +686,7 @@ Total ${progress}  ·  ${percent}%`));
   const clickCost = clickUpgradeCost(state);
   const clickReady = state.potions >= clickCost;
   ui.clickUpgradeText.setText(`${lang === "ja" ? "調合強化" : "TAP POWER"}\n${requirementLabel(state.potions, clickCost, lang, "buy")}`)
-    .setColor(clickReady ? "#ffe19a" : "#f9e8c9").setFontSize(15);
+    .setColor(clickReady ? "#ffe19a" : "#f9e8c9").setFontSize(17);
   ui.recommendationText.setColor(state.potions >= rec.cost ? "#ffe19a" : "#e3d8c3");
   if (ui.orientation === "portrait") {
     for (const [index, cost] of [[1, clickCost], [2, rec.cost]] as const) {
