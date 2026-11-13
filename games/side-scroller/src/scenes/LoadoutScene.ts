@@ -1,3 +1,4 @@
+import { buildLoadoutOrientationGuide } from "../ui/orientationGuide";
 import Phaser from "phaser";
 import type { WeaponKind } from "../logic/combat";
 import {
@@ -16,7 +17,7 @@ import {
   type LoadoutSaveData,
 } from "../logic/loadout";
 import { cg } from "../platform/crazygames";
-import { buildOrientationWarning, isTouchDevice, makeTappable } from "../ui/touch";
+import { isTouchDevice, makeTappable } from "../ui/touch";
 import { ELEVATION, THEME, drawPanel, drawWeaponKindIcon, makeButton } from "../ui/theme";
 import { armorName, detectLang, tr, weaponLabel, weaponName, type Lang } from "../logic/i18n";
 
@@ -116,7 +117,7 @@ export class LoadoutScene extends Phaser.Scene {
       .text(245, 412, "", { fontSize: "17px", color: "#4ecca3", fontStyle: "600", align: "center", wordWrap: { width: 440 } })
       .setOrigin(0.5, 0);
 
-    if (isTouchDevice(this)) buildOrientationWarning(this);
+    if (isTouchDevice(this)) buildLoadoutOrientationGuide(this);
 
     this.refresh();
   }
