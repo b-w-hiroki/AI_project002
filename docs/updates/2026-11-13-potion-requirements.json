@@ -1,0 +1,11 @@
+{
+  "summary": "工房の注文・強化・設備に残り必要量と実行可能表示を追加",
+  "areas": {
+    "potion-workshop": {
+      "spec": {"status": "updated", "reason": "不足数と可能時アクセントを日英・縦横で明示する表示契約を追加"},
+      "design": {"status": "updated", "reason": "既存価格関数から不足数を導出する責務と境界検査を記録"}
+    }
+  },
+  "validation": ["typecheck・lint・build成功、unit 87件成功", "日英・390x844/1180x757・所持0/119.5/120/500のE2Eとスクリーンショット出力を追加"],
+  "limitations": ["ローカルChromiumはsocket Operation not permittedで起動不可。E2Eと画像はCIで確認する", "物理端末・外部Portalは未確認"]
+}

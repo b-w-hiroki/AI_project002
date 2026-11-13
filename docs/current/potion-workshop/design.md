@@ -26,3 +26,6 @@ presentation → conceptArt → mobileLayout → wall-clock persistence の組�
 
 ### 完了依頼領域の再利用
 mobileLayoutの縦UIにgoalText/goalBarを追加。2依頼完了時のみ表示し、旧注文の見た目と入力を同時に無効化する。進捗はnextObjectiveから導出し保存値を追加しない。回転による再構築と新しい街の未完了状態で通常注文表示を復元する。
+
+### 不足数の表示
+mobileLayoutは既存contractCost / clickUpgradeCost / recommendedの価格と所持数からrequirementLabelで表示を導出する。購入をシミュレートして価格を推測しない。状態や保存値は追加しない。境界の小数不足をunitで、日英・縦横・未達／達成の文言と文字境界をE2Eで検査する。
