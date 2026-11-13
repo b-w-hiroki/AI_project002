@@ -11,11 +11,15 @@ for (const width of [800, 844, 932]) {
     });
     await page.goto('/?visualqa=battle');
     await page.waitForFunction(() => !!window.__qaGame);
-    await page.evaluate(() => window.__qaGame.scene.start('GameScene'));
+    await page.evaluate(() => {
+      window.__qaGame.scene.stop('LoadoutScene');
+      window.__qaGame.scene.start('GameScene');
+    });
     await page.waitForFunction(() => !!Reflect.get(window.__qaGame.scene.getScene('GameScene'), 'player'));
     await page.waitForTimeout(400); // let the existing camera fade finish before freezing
     await page.evaluate(() => {
       const scene = window.__qaGame.scene.getScene('GameScene');
+      scene.cameras.main.fadeEffect.reset();
       scene.physics.world.pause();
       const player = Reflect.get(scene, 'player') as Phaser.Physics.Arcade.Sprite;
       player.setPosition(200, 470).setVelocity(0, 0).anims.stop();
