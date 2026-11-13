@@ -732,6 +732,11 @@ export class GameScene extends Phaser.Scene {
       sky.setDepth(-2);
     }
 
+    // Keep the approved forest artwork, but reduce its bright leaf/ruin detail
+    // behind combatants. World-space veil stays behind every platform and actor.
+    this.add.rectangle(ARENA_WIDTH / 2, 300, ARENA_WIDTH, 600, 0x142b31, 0.32)
+      .setName("side-battle-background-veil").setDepth(-1);
+
     this.platforms = this.physics.add.staticGroup();
     for (let x = 0; x < ARENA_WIDTH; x += 64) {
       this.platforms.create(x + 32, GROUND_Y + 32, "solid").setVisible(false);
@@ -769,7 +774,7 @@ export class GameScene extends Phaser.Scene {
     const clusters = [90, 315, 610, 910, 1240, 1510];
     clusters.forEach((x, clusterIndex) => {
       const foliage = this.add.graphics({ x, y: GROUND_Y + 7 });
-      foliage.setName("side-foreground-foliage").setDepth(4).setScrollFactor(0.82).setAlpha(0.72);
+      foliage.setName("side-foreground-foliage").setDepth(0.5).setScrollFactor(0.82).setAlpha(0.4);
       foliage.fillStyle(clusterIndex % 2 === 0 ? 0x183c2b : 0x26563a, 0.9);
       for (let blade = 0; blade < 7; blade += 1) {
         const offsetX = blade * 10 - 30;
