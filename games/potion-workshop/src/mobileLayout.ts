@@ -661,7 +661,7 @@ Total ${progress}  ·  ${percent}%`));
     }
   }
 
-  ui.recommendationText.setText(`${lang === "ja" ? "おすすめ" : "Recommended"}  ${generatorName(lang, rec.id)} Lv.${rec.count}\n${requirementLabel(state.potions, rec.cost, lang, "buy")}`);
+  ui.recommendationText.setText(`${generatorName(lang, rec.id)} Lv.${rec.count}\n${requirementLabel(state.potions, rec.cost, lang, "buy")}`);
   if (ui.blackboardText) {
     const nextOrder = [0, 1].find(index => !state.completedContracts.includes(index));
     if (nextOrder === undefined) {
