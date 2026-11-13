@@ -13,12 +13,16 @@
     }
   },
   "validation": [
-    "local typecheck/lint/build passed; unit 85 passed",
-    "Browser E2E追加: 日英の転生進捗・需要設備・転生可能・新しい街への復帰",
-    "local Chromium blocked: socket() Operation not permitted; CI images pending"
+    "local typecheck/lint/build passed; unit 85 passed; docs checker passed against aaa7597",
+    "Code head c859a32: Potion checks and Chromium E2E passed: https://github.com/b-w-hiroki/AI_project002/actions/runs/43338097275",
+    "Potion WebKit passed: https://github.com/b-w-hiroki/AI_project002/actions/runs/43338097479",
+    "Artifact 13998901207 (Chromium) and 13998836600 (WebKit): inspected Japanese 50% progress, ascension-ready, and longest English equipment goal screenshots; goal text contained and existing character unchanged",
+    "E2E covers Japanese/English bounds, funds-ready and restoring order interaction on a new town",
+    "Local Chromium unavailable: socket() Operation not permitted; CI used for actual browser verification"
   ],
   "limitations": [
-    "PR #427の後続差分。CI画像の目視検証が終わるまでDraft",
-    "実機・外部Portal未確認"
+    "Merge dependency #427; draft pending complete repository CI",
+    "Unchanged Karma Quest WebKit pointer test failed at e2e/game.spec.ts:681 (job 131599307846); parent coordinating follow-up",
+    "Physical devices and external Portal not verified"
   ]
 }
