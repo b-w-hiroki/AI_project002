@@ -790,7 +790,7 @@ test("requirements show shortages and accent only affordable actions in both lay
         await expect.poll(async () => (await read())[1]!.ready).toBe(potions >= 500);
         const rows = await read();
         for (const row of rows) {
-          expect(row.width).toBeLessThan(viewport.width === 390 ? 186 : 332);
+          expect(row.width, `${lang} ${potions}: ${row.text}`).toBeLessThan(viewport.width === 390 ? 186 : 332);
           expect(row.height).toBeLessThan(viewport.width === 390 ? 73 : 56);
         }
         if (potions === 0 || potions === 120) await page.screenshot({

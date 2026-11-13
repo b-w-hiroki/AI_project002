@@ -619,7 +619,7 @@ function refresh(scene: Runtime): void {
     node.setText(done
       ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
       : `${orderName} +${contractReward(state, index)}${lang === "ja" ? "評判" : "REP"}\n${requirementLabel(state.potions, cost, lang, "deliver")}`);
-    node.setFontSize(ui.orientation === "portrait" ? 22 : 18);
+    node.setFontSize(ui.orientation === "portrait" ? (lang === "en" ? 20 : 22) : 18);
     node.setColor(ready ? "#ffe19a" : "#f0eadc");
     node.setAlpha(done ? 0.55 : 1);
     node.setData("ready", ready);
