@@ -18,10 +18,11 @@
     "main ee1d36b WebKit job 131654273984: final owner pointerup left selected=1 rather than 0. Historical logs do not identify an interruption; resize/blur/hidden interleaving remains a mechanism hypothesis, not a proven historical root cause",
     "Ownership E2E now records every state synchronously, and explicitly injects resize/blur/hidden between down/up then verifies fresh press recovery in portrait and landscape",
     "Local typecheck/lint/build passed; unit 157 tests passed",
-    "Local Chromium attempted normally and with approved escalation: launch blocked by socket() Operation not permitted before test execution. Browser mechanism reproduction and full regression require PR CI"
+    "Local Chromium attempted normally and with approved escalation: launch blocked by socket() Operation not permitted before test execution. Browser mechanism reproduction and full regression require PR CI",
+    "Existing Playwright Chromium headless_shell alternative launches successfully: ownership + real-pointer interruption + both timing controls, 3 repetitions each = 12 passed. Injected resize now supplies actual ScaleManager event payload."
   ],
   "limitations": [
     "Historical WebKit cancellation event was not logged; mechanism coverage does not establish its precise historical cause.",
-    "Local browser launch blocked; PR CI is pending."
+    "Full PR CI and WebKit remain pending; local Chromium focused checks are not full regression."
   ]
 }

@@ -693,7 +693,13 @@ test("custom selections only confirm their pressing pointer", { tag: "@webkit-re
       // stale release, and a fresh press must still toggle exactly once.
       for (const event of ["resize", "blur", "hidden"]) {
         emit("pointerdown");
-        (event === "resize" ? scene.scale : scene.game.events).emit(event);
+        if (event === "resize") {
+          const scale = scene.scale;
+          scale.emit(event, scale.gameSize, scale.baseSize, scale.displaySize, scale.width, scale.height);
+        } else {
+          scene.game.events.emit(event);
+          scene.game.events.emit(event === "blur" ? "focus" : "visible");
+        }
         emit("pointerup"); states.push(count());
         emit("pointerdown"); emit("pointerup"); states.push(count());
         emit("pointerdown"); emit("pointerup"); states.push(count());
