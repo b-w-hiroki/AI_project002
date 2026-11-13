@@ -26,7 +26,7 @@ const ART_BG_KEY = "sf-bg-forest";
 const KIND_ACCENT: Readonly<Record<WeaponKind, number>> = { melee: 0xff6b8a, mid: 0xffd166, ranged: 0x7fd1ff };
 
 const RARITY_COLOR: Readonly<Record<string, string>> = {
-  N: "#6a7a95",
+  N: "#b9c7d8",
   R: "#1f8a63",
   SR: "#2f8fd1",
   SSR: "#8a4fd1",
@@ -81,7 +81,7 @@ export class LoadoutScene extends Phaser.Scene {
     cg.gameplayStart();
     // The loadout is landscape-only on touch devices. Match the battle canvas
     // so labels do not get reduced by the old 800x600 fit at phone height.
-    if (isTouchDevice(this) && this.scale.gameSize.height !== 450) {
+    if (this.scale.gameSize.height !== 450) {
       this.scale.resize(800, 450);
     }
     this.data_ = loadLoadout(window.localStorage);
@@ -93,7 +93,7 @@ export class LoadoutScene extends Phaser.Scene {
     this.buildBackground();
 
     this.add
-      .text(400, 12, tr(this.lang, "⚔️ 剣戟の森", "⚔️ Blade Woods"), { fontSize: "28px", color: THEME.textPrimary, fontStyle: "700" })
+      .text(400, 12, tr(this.lang, "剣戟の森", "Blade Woods"), { fontSize: "28px", color: THEME.textPrimary, fontStyle: "700" })
       .setOrigin(0.5, 0);
     this.add
       .text(400, 44, tr(this.lang, "ロードアウト設定 — 所持武器を選んでスロットに設定してください", "Loadout — Choose owned weapons for each slot"), {
@@ -147,21 +147,21 @@ export class LoadoutScene extends Phaser.Scene {
   private buildSlotPanel(): void {
     const kinds: WeaponKind[] = ["melee", "mid", "ranged"];
     kinds.forEach((kind, i) => {
-      const x = 140 + i * 180;
+      const x = 90 + i * 155;
       const y = 100;
-      drawPanel(this, x, y, 160, 70, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
+      drawPanel(this, x, y, 140, 70, { radius: 12, borderColor: KIND_ACCENT[kind], borderAlpha: 0.45 });
       this.add
         .text(x, y - 24, weaponLabel(this.lang, kind), { fontSize: "17px", color: THEME.textMuted, fontStyle: "600" })
         .setOrigin(0.5);
       const text = this.add
-        .text(x, y + 8, tr(this.lang, "(未設定)", "(Not Set)"), { fontSize: "18px", color: "#8a97a8", align: "center", wordWrap: { width: 150 } })
+        .text(x, y + 8, tr(this.lang, "(未設定)", "(Not Set)"), { fontSize: "18px", color: "#8a97a8", align: "center", wordWrap: { width: 130 } })
         .setOrigin(0.5);
       this.slotTexts[kind] = text;
 
       // 未設定スロットに気付きやすいよう、パネルの外周をゆっくりパルスさせるグローを重ねる
       const glow = this.add.graphics({ x, y });
       glow.lineStyle(3, KIND_ACCENT[kind], 1);
-      glow.strokeRoundedRect(-84, -39, 168, 78, 14);
+      glow.strokeRoundedRect(-74, -39, 148, 78, 14);
       this.slotGlows[kind] = glow;
       this.tweens.add({
         targets: glow,
@@ -172,15 +172,15 @@ export class LoadoutScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
 
-      const zone = this.add.zone(x, y, 160, 70).setInteractive({ useHandCursor: true });
+      const zone = this.add.zone(x, y, 140, 70).setName(`loadout-slot-${kind}`).setInteractive({ useHandCursor: true });
       zone.on("pointerdown", () => this.assignSelectedToSlot(kind));
     });
   }
 
   private buildInventoryPanel(): void {
     // スロットパネル（近/中/遠距離、下端y=175）との間に隙間を空け、枠線同士が接触しないようにする
-    drawPanel(this, 245, 285, 460, 290, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    this.add.text(20, 150, tr(this.lang, "🗡️ 所持武器（タップして選択）", "🗡️ Owned Weapons (tap to select)"), { fontSize: "18px", color: THEME.textPrimary, fontStyle: "600" });
+    drawPanel(this, 245, 285, 460, 290, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.96, borderAlpha: 0.25 });
+    this.add.text(20, 150, tr(this.lang, "所持武器（タップして選択）", "Owned Weapons (tap to select)"), { fontSize: "18px", color: THEME.textPrimary, fontStyle: "600" });
     // 所持武器のレアリティ内訳を積み上げバーで可視化する（実データはrefresh()で反映）
     this.rarityBar = this.add.graphics();
     // 選択中の武器の詳細ステータスをここにまとめて表示する（カード自体は名前とレアリティのみのスッキリ表示にする）
@@ -212,8 +212,8 @@ export class LoadoutScene extends Phaser.Scene {
 
   private buildAcquirePanel(): void {
     // ボタンがゾーンパネルの外にはみ出さないよう、パネル上端(180)から十分な余白を確保する
-    drawPanel(this, 640, 178, 300, 190, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    const chestBtn = makeButton(this, 640, 105, 260, 40, tr(this.lang, "🎁 宝箱を開ける (100)", "🎁 Open Chest (100)"), () => {
+    drawPanel(this, 640, 178, 300, 190, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.96, borderAlpha: 0.25 });
+    const chestBtn = makeButton(this, 640, 105, 260, 44, tr(this.lang, "宝箱を開ける (100)", "Open Chest (100)"), () => {
       if (this.data_.currency < 100) {
         this.setHint(tr(this.lang, "通貨が足りません", "Not enough currency"));
         return;
@@ -230,14 +230,15 @@ export class LoadoutScene extends Phaser.Scene {
     }, { fillColor: 0x2a3a2f, borderColor: 0x4ecca3, textColor: "#4ecca3", fontSize: "19px", radius: 8 });
     chestBtn.container.setDepth(1);
 
-    let y = 138;
-    for (const template of WEAPON_TEMPLATES) {
+    WEAPON_TEMPLATES.forEach((template, index) => {
+      const x = 565 + (index % 2) * 145;
+      const y = 149 + Math.floor(index / 2) * 44;
       const cost = BLACKSMITH_COST.N;
-      this.add.text(500, y, `🔨 ${weaponName(this.lang, template.id, template.name)} ${tr(this.lang, "を鍛治", "Forge")} (${cost})`, { fontSize: "17px", color: "#ff7daa" });
-      // 密なリスト（行間20px）のため高さは行間ぎりぎりまで、横幅は右端まで広げて妥協する
-      makeTappable(this, 640, y + 8, 300, 24, () => this.craft(template.id));
-      y += 25;
-    }
+      this.add.text(x, y, `${weaponName(this.lang, template.id, template.name)}\n${tr(this.lang, "鍛冶", "Forge")} ${cost} G`, {
+        fontSize: "17px", color: "#f0c9d6", align: "center", lineSpacing: 2,
+      }).setOrigin(0.5);
+      makeTappable(this, x, y, 140, 44, () => this.craft(template.id));
+    });
   }
 
   /**
@@ -245,8 +246,8 @@ export class LoadoutScene extends Phaser.Scene {
    * 選択のたびにコストを支払い、選んだTierの耐久でステージに出撃する。
    */
   private buildArmorPanel(): void {
-    drawPanel(this, 640, 326, 300, 116, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.92, borderAlpha: 0.4 });
-    this.add.text(500, 278, tr(this.lang, "🛡️ 防具を選択（出撃ごとに購入）", "🛡️ Choose Armor (purchased per run)"), { fontSize: "17px", color: THEME.textPrimary, fontStyle: "600" });
+    drawPanel(this, 640, 326, 300, 116, { radius: 14, fillColor: ELEVATION.zone, fillAlpha: 0.96, borderAlpha: 0.25 });
+    this.add.text(500, 278, tr(this.lang, "防具を選択（出撃ごとに購入）", "Choose Armor (purchased per run)"), { fontSize: "17px", color: THEME.textPrimary, fontStyle: "600" });
     let y = 298;
     for (const armor of ARMOR_TEMPLATES) {
       const label =
@@ -340,12 +341,12 @@ export class LoadoutScene extends Phaser.Scene {
   }
 
   private refresh(): void {
-    this.currencyText?.setText(`💰 ${this.data_.currency}`);
+    this.currencyText?.setText(`${this.data_.currency} G`);
     this.renderRarityBar();
 
     for (const { id, label, text } of this.armorTexts) {
       const selected = id === this.data_.selectedArmorId;
-      text.setColor(selected ? "#1f8a63" : "#2f8fd1").setText(selected ? `▶ ${label}` : label);
+      text.setColor(selected ? "#80e0b4" : "#9bdcff").setText(selected ? `▶ ${label}` : label);
     }
 
     for (const kind of ["melee", "mid", "ranged"] as const) {
@@ -354,7 +355,7 @@ export class LoadoutScene extends Phaser.Scene {
       const text = this.slotTexts[kind];
       if (!text) continue;
       if (!instance) {
-        text.setText(tr(this.lang, "(未設定)", "(Not Set)")).setColor("#62628a");
+        text.setText(tr(this.lang, "(未設定)", "(Not Set)")).setColor("#b9c7d8");
         this.slotGlows[kind]?.setVisible(true);
         continue;
       }

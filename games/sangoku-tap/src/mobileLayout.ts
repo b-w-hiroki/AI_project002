@@ -424,17 +424,19 @@ function renderLandscapeHome(scene: Runtime, root: Phaser.GameObjects.Container)
     tr(scene.lang ?? "en", "本陣から編成し、戦略地図へ進軍する", "Form your army at base, then advance on the strategy map"),
   );
 
-  panel(scene, root, 236, 258, 430, 344, 0x21140f, 0xc89855, 0.72, 18);
+  panel(scene, root, 236, 258, 430, 344, 0x21140f, 0xc89855, 0.95, 18);
   if (scene.textures.exists("st-generated-capital-bg")) {
-    root.add(scene.add.image(236, 258, "st-generated-capital-bg").setDisplaySize(412, 326).setAlpha(0.72));
+    root.add(scene.add.image(236, 258, "st-generated-capital-bg").setDisplaySize(412, 326).setAlpha(0.55));
   }
   if (scene.textures.exists("st-generated-hero")) {
-    root.add(scene.add.image(218, 275, "st-generated-hero").setDisplaySize(190, 350));
+    // Treat the existing backed artwork as a framed portrait, never a floating cutout.
+    panel(scene, root, 178, 258, 182, 326, 0xe1cba8, 0xc89855, 1, 8);
+    root.add(scene.add.image(178, 268, "st-generated-hero").setDisplaySize(168, 310).setBlendMode(Phaser.BlendModes.MULTIPLY).setName("landscape-home-hero"));
   } else if (scene.textures.exists("st-general-hakuen")) {
     root.add(scene.add.image(218, 275, "st-general-hakuen").setDisplaySize(190, 300));
   }
   label(scene, root, 350, 142, tr(scene.lang ?? "en", "主公の本陣", "LORD'S BASE"), 28, "#fff1c8", "900").setStroke("#5d1d15", 5);
-  label(scene, root, 350, 181, tr(scene.lang ?? "en", "武将を率いて天下統一へ", "Lead your generals toward unification"), 17, "#f6d69d", "800");
+  label(scene, root, 350, 181, tr(scene.lang ?? "en", "武将と天下統一へ", "Lead your generals"), 17, "#f6d69d", "800");
 
   panel(scene, root, 628, 244, 300, 330, 0x15100f, 0xd3a657, 0.96, 18);
   label(scene, root, 628, 103, tr(scene.lang ?? "en", "出撃準備", "READY TO DEPLOY"), 27, "#fff0d1", "900");

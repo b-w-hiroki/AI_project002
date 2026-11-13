@@ -1,0 +1,45 @@
+{
+  "summary": "三国・剣戟・ポーションの構図改善。旧ローカル作業消失後同一base c4ca89bから復元。",
+  "areas": {
+    "sangoku-tap": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    },
+    "side-scroller": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    },
+    "potion-workshop": {
+      "spec": {
+        "status": "updated",
+        "reason": "ホーム画面の表示配置・視覚的優先度の変更を仕様書に追記。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存Scene内の表示のみ変更。ルール・保存・キャラ画像を維持。"
+      }
+    }
+  },
+  "validation": [
+    "lint/typecheck/unit/buildを再実行。390×844と1180×757のCIスクリーンショットテスト追加。",
+    "実装head aaa759739a0dc6540a0a3684b09d4555a4cfe820: Browser E2E run43332529538、WebKit run43332529553、Documentation run43332529554成功。",
+    "最終実装headの3ゲーム×2サイズの実画像を確認。剣戟のスマホ縦は既存仕様どおり回転案内。",
+    "ポーションのviewport timeoutと無変更karmaの浮動小数点境界失敗は、各job一度だけ再実行して成功。閾値・挙動を変更していない。"
+  ],
+  "limitations": [
+    "実機iOS/Android・外部Portalは未確認。",
+    "この検証記録追記後のheadについてはCIを再確認する。"
+  ]
+}
