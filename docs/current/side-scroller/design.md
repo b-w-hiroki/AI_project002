@@ -35,3 +35,6 @@ BattleInputAdapterはキーごとに押下識別子をWeakMapで保持し、次�
 
 ### 戦闘の視認性（2026-11-13）
 既存の森背景とキャラクター素材は維持する。背景専用の暗幕（不透明度32%、depth -1）で細部の明暗差を抑え、前景の葉は敵・主人公より後ろ（depth 0.5、不透明度40%）へ移して足元を隠さない。通常HUDのHPバーは15px高、不透明な暗い下地と明るい縁を持つ。HPの数値・色・戦闘ロジック・入力領域は変えない。
+
+### 縦持ち開始案内
+LoadoutSceneは専用DOMのorientationGuideを生成する。800×450のFIT Canvasの外で文字サイズを維持し、resize/orientationchangeで表示とScene入力を切り替える。SHUTDOWNで要素とイベントを破棄する。GameSceneの既存buildOrientationWarningは変更しない。案内画像は既存sf-hero-approved-idle-v3.pngを参照し、新素材・アニメーションは追加しない。

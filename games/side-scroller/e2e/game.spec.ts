@@ -30,6 +30,15 @@ async function touchGamePoint(page: Page, x: number, y: number): Promise<void> {
 }
 
 async function enterBattleForVisualQa(page: Page, isolatePickups = false): Promise<void> {
+  // The loadout requires landscape. Enter through the actual rotate/start flow,
+  // then restore portrait for the battle-specific coverage below.
+  const viewport = page.viewportSize();
+  const rotated = !!viewport && viewport.height > viewport.width;
+  if (rotated) {
+    await page.setViewportSize({ width: viewport.height, height: viewport.width });
+    await page.waitForTimeout(300);
+  }
+  try {
   if (isolatePickups) {
     // Input tests use a stable battle fixture; pickup/overlay behavior has its own test.
     await page.evaluate(() => {
@@ -57,6 +66,12 @@ async function enterBattleForVisualQa(page: Page, isolatePickups = false): Promi
     }
   }
   throw new Error("GameScene did not start after three loadout attempts");
+  } finally {
+    if (rotated) {
+      await page.setViewportSize(viewport);
+      await page.waitForTimeout(300);
+    }
+  }
 }
 
 async function expectPlayableBattle(page: Page): Promise<void> {

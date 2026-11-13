@@ -62,6 +62,17 @@
       #game { filter:none; }
       #game canvas { max-width:100%; max-height:100%; border-radius:0; }
       #game::before, #game::after { display:none; }
+
+.orientation-guide { position:fixed; inset:0; z-index:9997; display:grid; place-items:center; padding:calc(64px + env(safe-area-inset-top)) 24px calc(48px + env(safe-area-inset-bottom)); background:#101e20; overflow:auto; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif; text-align:center; }
+.orientation-guide[hidden], .orientation-guide__hero[hidden] { display:none; }
+.orientation-guide__content { width:min(100%,360px); margin:auto; }
+.orientation-guide__eyebrow { color:#c6b98d; font-size:11px; letter-spacing:.2em; margin:0 0 14px; }
+.orientation-guide__hero { display:block; width:min(100%,280px); height:160px; object-fit:contain; margin:0 auto 12px; }
+.orientation-guide__diagram { display:block; width:150px; height:67px; color:#e9c77f; margin:0 auto 16px; }
+.orientation-guide h1 { color:#fff6df; font-size:24px; line-height:1.4; margin:0 0 12px; }
+.orientation-guide__instruction { color:#e1e8df; font-size:16px; line-height:1.8; margin:0; }
+.orientation-guide__hint { color:#b1c1b8; font-size:12px; line-height:1.7; max-width:270px; margin:24px auto 0; }
+@media (max-height:650px) { .orientation-guide { padding-top:60px; padding-bottom:40px; } .orientation-guide__hero { height:115px; width:230px; margin-bottom:4px; } .orientation-guide__diagram { height:50px; margin-bottom:10px; } .orientation-guide__hint { margin-top:16px; } }
 </style>
   </head>
   <body>

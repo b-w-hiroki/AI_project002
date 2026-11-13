@@ -1,0 +1,22 @@
+{
+  "summary": "剣戟の森の縦持ち開始案内を既存主人公と回転図で明確化",
+  "areas": {
+    "side-scroller": {
+      "spec": {
+        "status": "updated",
+        "reason": "縦持ちロードアウトの案内・入力抑止・画像欠損時の表示を明記"
+      },
+      "design": {
+        "status": "updated",
+        "reason": "DOM案内の寿命と回転イベント・Canvas入力制御を明記"
+      }
+    }
+  },
+  "validation": [
+    "typecheck/lint/build成功、単体141件成功",
+    "390×844・320×568、反復回転、画像欠損、横持ち開始E2Eを追加。ローカルChromiumはsocket権限エラーで起動不可。CI結果をPRに記録する。"
+  ],
+  "limitations": [
+    "物理iOS/Android、外部Portalは未確認"
+  ]
+}
