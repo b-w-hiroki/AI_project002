@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type Phaser from "phaser";
-import { expectResponsiveCanvas } from "../../shared/mobile/e2eViewport";
+import { expectResponsiveCanvas, RESPONSIVE_VIEWPORTS } from "../../shared/mobile/e2eViewport";
 
 declare global { interface Window { __qaGame: Phaser.Game } }
 
@@ -45,7 +45,21 @@ test.afterEach(async ({ page }) => {
 });
 
 test("representative phone and tablet sizes preserve the canvas", async ({ page }) => {
-  await expectResponsiveCanvas(page);
+  // This is one continuous resize/rotation journey, not 18 independent tests.
+  // The helper alone permits 18 * 20 * 100ms of settling, exceeding Playwright's
+  // default 30s before browser work and scene rebuilds are counted. Keep every
+  // viewport and assertion; give the full journey a bounded per-size budget.
+  test.setTimeout(15_000 + RESPONSIVE_VIEWPORTS.length * 5_000);
+  const started = Date.now();
+  await expectResponsiveCanvas({
+    setViewportSize: async viewport => {
+      console.log(`[responsive-canvas] ${viewport.width}x${viewport.height} at ${Date.now() - started}ms`);
+      await page.setViewportSize(viewport);
+    },
+    locator: selector => page.locator(selector),
+    waitForTimeout: milliseconds => page.waitForTimeout(milliseconds),
+  });
+  console.log(`[responsive-canvas] all ${RESPONSIVE_VIEWPORTS.length} sizes passed in ${Date.now() - started}ms`);
 });
 
 test("short portrait separates workshop status from the next order", async ({ page }) => {
