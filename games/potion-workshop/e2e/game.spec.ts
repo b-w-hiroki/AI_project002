@@ -192,7 +192,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(responsiveLabels.labels).toContain("Potion Workshop");
   expect(responsiveLabels.labels).toContain("✦  BREW POTION  ✦");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
-  expect(responsiveLabels.labels).toContain("UPGRADE");
+  expect(responsiveLabels.labels).toContain("UPGRADE\n50 more");
   expect(responsiveLabels.labels).not.toContain("Let's brew something\nwonderful today!");
 
   const modalLabels = await page.evaluate(() => {
@@ -757,4 +757,46 @@ test("completed orders reveal a readable goal and restore on a new town", async 
   await setGoal("ja", 1, 0, []);
   await expect.poll(async () => (await read()).visible).toBe(false);
   await expect.poll(async () => (await read()).enabled).toBe(true);
+});
+
+test("requirements show shortages and accent only affordable actions in both layouts", async ({ page }) => {
+  test.setTimeout(60_000);
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1180, height: 757 }]) {
+    await page.setViewportSize(viewport);
+    await waitForSceneObjects(page, ["workshop-order-0"]);
+    for (const lang of ["ja", "en"]) {
+      await page.goto(`/?lang=${lang}`);
+      await page.waitForFunction(() => !!window.__qaGame);
+      await waitForSceneObjects(page, ["workshop-order-0"]);
+      for (const potions of [0, 119.5, 120, 500]) {
+        await page.evaluate(({ lang, potions }) => {
+          const scene = window.__qaGame.scene.getScene("idle");
+          Reflect.set(scene, "lang", lang);
+          Object.assign(Reflect.get(scene, "state"), { potions, completedContracts: [], clickPower: 1, prestigeCount: 0, counts: {} });
+        }, { lang, potions });
+        const read = () => page.evaluate(() => {
+          const scene = window.__qaGame.scene.getScene("idle");
+          const root = scene.children.list.find(node => node.type === "Container" &&
+            (node as Phaser.GameObjects.Container).getByName("workshop-order-0")) as Phaser.GameObjects.Container;
+          return [0, 1].map(index => {
+            const node = root.getByName(`workshop-order-${index}`) as Phaser.GameObjects.Text;
+            return { text: node.text, ready: node.getData("ready"), width: node.width, height: node.height };
+          });
+        });
+        await expect.poll(async () => (await read())[0]!.ready).toBe(potions >= 120);
+        await expect.poll(async () => (await read())[0]!.text).toContain(
+          potions >= 120 ? (lang === "ja" ? "納品できる" : "Deliver now") :
+            (lang === "ja" ? `あと${Math.ceil(120 - potions)}` : `${Math.ceil(120 - potions)} more`));
+        await expect.poll(async () => (await read())[1]!.ready).toBe(potions >= 500);
+        const rows = await read();
+        for (const row of rows) {
+          expect(row.width, `${lang} ${potions}: ${row.text}`).toBeLessThan(viewport.width === 390 ? 186 : 332);
+          expect(row.height).toBeLessThan(viewport.width === 390 ? 73 : 56);
+        }
+        if (potions === 0 || potions === 120) await page.screenshot({
+          path: `e2e/screenshots/potion-requirements-${lang}-${viewport.width}-${potions}.png`, animations: "disabled",
+        });
+      }
+    }
+  }
 });

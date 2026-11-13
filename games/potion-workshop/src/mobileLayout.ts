@@ -8,6 +8,7 @@ import {
   buyGenerator,
   buyOfflineExtension,
   click,
+  clickUpgradeCost,
   essenceMultiplier,
   essenceOnPrestige,
   formatNumber,
@@ -17,6 +18,7 @@ import {
   productionPerSec,
   type GameState,
 } from "./logic/economy";
+import { requirementLabel } from "./logic/requirementLabel";
 import { save } from "./logic/save";
 import { nextObjective } from "./logic/nextObjective";
 import { generatorName, t, townName, type Lang } from "./logic/i18n";
@@ -433,7 +435,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       .setName("workshop-orders-label");
     [0, 1].forEach((index) => {
       const x = index === 0 ? 120 : 330;
-      const orderChrome = addButtonChrome(scene, root, x, 598, 190, 74, index === 0 ? 0x356f59 : 0x416887)
+      const orderChrome = addButtonChrome(scene, root, x, 598, 190, 74, 0x39362e)
         .setName(`workshop-order-chrome-${index}`);
       const labelNode = text(scene, root, x, 598, "", 22, "#ffffff", "900")
         .setName(`workshop-order-${index}`);
@@ -502,7 +504,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
       },
     ];
     navItems.forEach((item, index) => {
-      const navChrome = addButtonChrome(scene, root, item.x, 706, 100, 72, index === 0 ? 0x126276 : 0x453126)
+      const navChrome = addButtonChrome(scene, root, item.x, 706, 100, 72, 0x453126)
         .setName(`workshop-nav-chrome-${index}`);
       addNavIcon(scene, root, item.x, 691, item.kind);
       text(scene, root, item.x, 720, lang === "ja" ? item.ja : item.en, 22, "#fff3d0", "900")
@@ -518,7 +520,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     text(scene, root, 420, 95, lang === "ja" ? "本日の依頼" : "TODAY'S ORDERS", 17, "#f6dcaa", "900").setOrigin(0, 0.5);
     [0, 1].forEach((index) => {
       const y = 132 + index * 68;
-      addButtonChrome(scene, root, 588, y, 340, 56, index === 0 ? 0x354b42 : 0x36434c);
+      addButtonChrome(scene, root, 588, y, 340, 56, 0x39362e);
       const node = text(scene, root, 588, y, "", 18, "#f0eadc", "700")
         .setName(`workshop-order-${index}`);
       orderTexts.push(node);
@@ -531,7 +533,7 @@ function build(scene: Runtime, orientation: "portrait" | "landscape"): MobileUi 
     panel(scene, root, 588, 300, 388, 70, 0x302923, 0x75614b, 0.94, 14);
     recommendationText = text(scene, root, 535, 300, "", 18, "#e3d8c3", "600")
       .setName("workshop-landscape-recommendation");
-    addButtonChrome(scene, root, 720, 300, 90, 44, 0x2e8f65);
+    addButtonChrome(scene, root, 720, 300, 90, 44, 0x453126);
     text(scene, root, 720, 300, lang === "ja" ? "強化" : "UPGRADE", 19, "#ffffff", "900");
     hitButton(scene, root, 720, 300, 90, 50, () => {
       if (!scene.state) return;
@@ -611,14 +613,16 @@ function refresh(scene: Runtime): void {
     const done = state.completedContracts.includes(index);
     const cost = contractCost(state, index);
     const orderName = lang === "ja"
-      ? (index === 0 ? "常備薬" : "商隊納品")
-      : (index === 0 ? "Village supplies" : "Caravan shipment");
+      ? (index === 0 ? "常備薬" : "商隊")
+      : (index === 0 ? "Village" : "Caravan");
+    const ready = !done && state.potions >= cost;
     node.setText(done
       ? `${orderName}\n${lang === "ja" ? "納品済み" : "Delivered"} ✓`
-      : lang === "ja"
-        ? `${orderName}  ${formatNumber(cost)}\n納品  評判+${contractReward(state, index)}`
-        : `${orderName}  ${formatNumber(cost)}\nDELIVER  +${contractReward(state, index)} REP`);
+      : `${orderName} +${contractReward(state, index)}${lang === "ja" ? "評判" : "REP"}\n${requirementLabel(state.potions, cost, lang, "deliver")}`);
+    node.setFontSize(ui.orientation === "portrait" ? (lang === "en" ? 20 : 22) : 18);
+    node.setColor(ready ? "#ffe19a" : "#f0eadc");
     node.setAlpha(done ? 0.55 : 1);
+    node.setData("ready", ready);
   });
 
   // Reuse completed orders' space so the next step is more prominent.
@@ -657,7 +661,7 @@ Total ${progress}  ·  ${percent}%`));
     }
   }
 
-  ui.recommendationText.setText(`${lang === "ja" ? "おすすめ" : "Recommended"}  ${generatorName(lang, rec.id)} Lv.${rec.count}\n${lang === "ja" ? "次" : "Next"} ${formatNumber(rec.cost)}`);
+  ui.recommendationText.setText(`${generatorName(lang, rec.id)} Lv.${rec.count}\n${requirementLabel(state.potions, rec.cost, lang, "buy")}`);
   if (ui.blackboardText) {
     const nextOrder = [0, 1].find(index => !state.completedContracts.includes(index));
     if (nextOrder === undefined) {
@@ -679,12 +683,20 @@ Total ${progress}  ·  ${percent}%`));
       );
     }
   }
-  const clickCost = (() => {
-    const next = buyClickUpgrades({ ...state, potions: Number.MAX_SAFE_INTEGER }, 1);
-    if (!next) return 0;
-    return Math.max(0, state.potions - (buyClickUpgrades(state, 1)?.potions ?? state.potions));
-  })();
-  ui.clickUpgradeText.setText(`${lang === "ja" ? "調合強化" : "TAP POWER"}\nLv.${state.clickPower}${clickCost > 0 ? ` ${formatNumber(clickCost)}` : ""}`);
+  const clickCost = clickUpgradeCost(state);
+  const clickReady = state.potions >= clickCost;
+  ui.clickUpgradeText.setText(`${lang === "ja" ? "調合強化" : "TAP POWER"}\n${requirementLabel(state.potions, clickCost, lang, "buy")}`)
+    .setColor(clickReady ? "#ffe19a" : "#f9e8c9").setFontSize(17);
+  ui.recommendationText.setColor(state.potions >= rec.cost ? "#ffe19a" : "#e3d8c3");
+  if (ui.orientation === "portrait") {
+    for (const [index, cost] of [[1, clickCost], [2, rec.cost]] as const) {
+      const label = ui.root.getByName(`workshop-nav-label-${index}`) as Phaser.GameObjects.Text;
+      const ready = state.potions >= cost;
+      label.setText(`${lang === "ja" ? (index === 1 ? "強化" : "設備") : (index === 1 ? "UPGRADE" : "EQUIP")}\n${requirementLabel(state.potions, cost, lang, "buy")}`)
+        .setFontSize(lang === "ja" ? 16 : 14).setY(719)
+        .setColor(ready ? "#ffe19a" : "#fff3d0").setData("ready", ready);
+    }
+  }
   const offlineCost = offlineExtensionCost(state);
   ui.offlineText.setText(`${lang === "ja" ? "放置" : "Offline"} ${Math.round(offlineCapSec(state) / 3600)}h\n${offlineCost === null ? "MAX" : `${offlineCost} ${lang === "ja" ? "エッセンス" : "Essence"}`}`);
   const essenceGain = essenceOnPrestige(state);
