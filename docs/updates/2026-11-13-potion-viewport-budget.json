@@ -1,0 +1,24 @@
+{
+  "summary": "Potionの連続18サイズ検査に有限のサイズ別時間予算と経過ログを付ける",
+  "areas": {
+    "potion-workshop": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "ゲーム表示・操作・保存・既存キャラは一切変更せず、E2Eの総時間予算のみ変更する"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "共有の18サイズ・収まり・比率の判定・リトライ回数は維持し、ゲームの構造は変えない"
+      }
+    }
+  },
+  "validation": [
+    "main b13cc57 Browser E2E 43347460339 attempt 2: Potion 20 passed, existing viewport journey 30s timeout at shared/mobile/e2eViewport.ts:45",
+    "18 viewports x 20 polling attempts x 100ms = 36s permitted settling, excluding browser overhead; old overall timeout 30s",
+    "Local Chromium attempted both default and approved escalation: blocked at socket() Operation not permitted before any test step; CI browser validation pending"
+  ],
+  "limitations": [
+    "Budget mismatch is confirmed; exact browser/rendering contribution to timeout is not yet measured. Progress logs will expose each viewport and total duration.",
+    "No physical device or external Portal validation; no performance claim from a longer timeout"
+  ]
+}
