@@ -192,7 +192,7 @@ test("English locale covers responsive workshop and town choice", async ({ page 
   expect(responsiveLabels.labels).toContain("Potion Workshop");
   expect(responsiveLabels.labels).toContain("✦  BREW POTION  ✦");
   expect(responsiveLabels.labels).toContain("TODAY'S ORDERS");
-  expect(responsiveLabels.labels).toContain("UPGRADE");
+  expect(responsiveLabels.labels).toContain("UPGRADE\n50 more");
   expect(responsiveLabels.labels).not.toContain("Let's brew something\nwonderful today!");
 
   const modalLabels = await page.evaluate(() => {
@@ -765,6 +765,9 @@ test("requirements show shortages and accent only affordable actions in both lay
     await page.setViewportSize(viewport);
     await waitForSceneObjects(page, ["workshop-order-0"]);
     for (const lang of ["ja", "en"]) {
+      await page.goto(`/?lang=${lang}`);
+      await page.waitForFunction(() => !!window.__qaGame);
+      await waitForSceneObjects(page, ["workshop-order-0"]);
       for (const potions of [0, 119.5, 120, 500]) {
         await page.evaluate(({ lang, potions }) => {
           const scene = window.__qaGame.scene.getScene("idle");
@@ -784,8 +787,8 @@ test("requirements show shortages and accent only affordable actions in both lay
         await expect.poll(async () => (await read())[0]!.text).toContain(
           potions >= 120 ? (lang === "ja" ? "納品できる" : "Deliver now") :
             (lang === "ja" ? `あと${Math.ceil(120 - potions)}` : `${Math.ceil(120 - potions)} more`));
+        await expect.poll(async () => (await read())[1]!.ready).toBe(potions >= 500);
         const rows = await read();
-        expect(rows[1]!.ready).toBe(potions >= 500);
         for (const row of rows) {
           expect(row.width).toBeLessThan(viewport.width === 390 ? 186 : 332);
           expect(row.height).toBeLessThan(viewport.width === 390 ? 73 : 56);

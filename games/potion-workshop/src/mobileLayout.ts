@@ -693,7 +693,7 @@ Total ${progress}  ·  ${percent}%`));
       const label = ui.root.getByName(`workshop-nav-label-${index}`) as Phaser.GameObjects.Text;
       const ready = state.potions >= cost;
       label.setText(`${lang === "ja" ? (index === 1 ? "強化" : "設備") : (index === 1 ? "UPGRADE" : "EQUIP")}\n${requirementLabel(state.potions, cost, lang, "buy")}`)
-        .setFontSize(lang === "ja" ? 16 : 14).setY(723)
+        .setFontSize(lang === "ja" ? 16 : 14).setY(719)
         .setColor(ready ? "#ffe19a" : "#fff3d0").setData("ready", ready);
     }
   }
