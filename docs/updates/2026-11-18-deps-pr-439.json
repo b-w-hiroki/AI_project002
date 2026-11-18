@@ -1,0 +1,22 @@
+{
+  "summary": "PR #439: karma-quest の開発用ツールチェーンを更新（Playwright 1.65.0、typescript-eslint 8.72.2、Vite 8.3.8）。",
+  "areas": {
+    "karma-quest": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "変更は開発依存とロックファイルに限定し、ゲームルール・操作・画面・保存形式の製品コードを変更しないため。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存のビルド・テスト構成を維持したバージョン更新で、Sceneの責務・描画層・永続化構造は変更しないため。"
+      }
+    }
+  },
+  "validation": [
+    "修正前 head b33a219c08defbb4062f1cd050b87ffe743884ac の GitHub checks / Browser E2E / WebKit が成功。PR https://github.com/b-w-hiroki/AI_project002/pull/439",
+    "Documentation の失敗は本PRの影響記録不足。記録追加後の最新headはCIで再検証する。"
+  ],
+  "limitations": [
+    "ローカル全suiteと物理端末の再検証は未実施。修正前headの成功を記録追加後headの成功として扱わない。"
+  ]
+}
