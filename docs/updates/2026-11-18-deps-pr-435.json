@@ -1,0 +1,22 @@
+{
+  "summary": "PR #435: fist-legend の開発用ツールチェーンを更新（Playwright 1.65.0、typescript-eslint 8.72.2、Vite 8.3.8）。",
+  "areas": {
+    "fist-legend": {
+      "spec": {
+        "status": "unchanged",
+        "reason": "変更は開発依存とロックファイルに限定し、ゲームルール・操作・画面・保存形式の製品コードを変更しないため。"
+      },
+      "design": {
+        "status": "unchanged",
+        "reason": "既存のビルド・テスト構成を維持したバージョン更新で、Sceneの責務・描画層・永続化構造は変更しないため。"
+      }
+    }
+  },
+  "validation": [
+    "修正前 head bb06be712f0a6c042adf64e49cc4d942c475abb7 の GitHub checks / Browser E2E / WebKit が成功。PR https://github.com/b-w-hiroki/AI_project002/pull/435",
+    "Documentation の失敗は本PRの影響記録不足。記録追加後の最新headはCIで再検証する。"
+  ],
+  "limitations": [
+    "ローカル全suiteと物理端末の再検証は未実施。修正前headの成功を記録追加後headの成功として扱わない。"
+  ]
+}
